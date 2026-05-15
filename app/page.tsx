@@ -80,6 +80,7 @@ const getIcon = (category: string) => {
     Productivity: "⚡",
     Automation: "🔁",
   };
+
   return icons[category] || "✨";
 };
 
@@ -105,36 +106,72 @@ export default function Home() {
   }, [activeCategory, search]);
 
   const featuredTools = tools.filter((tool) => tool.featured).slice(0, 8);
+  const trendingTools = tools.slice(0, 12);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 sm:text-sm">
-            AI Tools Directory
-          </p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-6xl md:text-7xl">
-            AiFinder
-          </h1>
-          <p className="mt-4 max-w-2xl text-base text-slate-400 sm:text-lg">
-            Find the best AI tools for chat, images, video, voice, music, coding,
-            writing, productivity, and automation.
-          </p>
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white">
+      <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+        <nav className="mb-6 flex items-center justify-between rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-4 backdrop-blur-xl">
+          <div>
+            <p className="text-lg font-black">AiFinder</p>
+            <p className="text-xs text-slate-400">AI Tools Directory</p>
+          </div>
+          <a
+            href="#categories"
+            className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-200"
+          >
+            Explore
+          </a>
+        </nav>
 
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setActiveCategory(null);
-            }}
-            placeholder="Search AI tools, categories, or use cases..."
-            className="mt-8 w-full rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-white outline-none placeholder:text-slate-500"
-          />
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl sm:p-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/20 blur-3xl" />
+
+          <div className="relative z-10">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 sm:text-sm">
+              Discover • Compare • Launch
+            </p>
+
+            <h1 className="mt-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
+              Find the best AI tools fast.
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+              Explore premium AI tools for chat, images, video, voice, music, coding,
+              writing, productivity, and automation.
+            </p>
+
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setActiveCategory(null);
+              }}
+              placeholder="Search AI tools, categories, or use cases..."
+              className="mt-8 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white shadow-xl outline-none backdrop-blur-md placeholder:text-slate-500 focus:border-cyan-400"
+            />
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {["chatbots", "image ai", "video ai", "coding", "music ai", "automation"].map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setSearch(tag);
+                    setActiveCategory(null);
+                  }}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-cyan-400/20 hover:text-white"
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {!activeCategory && !search && (
           <>
-            <section className="mt-8 sm:mt-10">
+            <section id="categories" className="mt-10">
               <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 sm:text-sm">
@@ -152,9 +189,11 @@ export default function Home() {
                   <button
                     key={category}
                     onClick={() => setActiveCategory(category)}
-                    className="rounded-3xl border border-white/10 bg-white/5 p-5 text-left transition hover:-translate-y-1 hover:bg-white/10"
+                    className="group rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition duration-300 hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] hover:shadow-2xl"
                   >
-                    <div className="text-3xl">{getIcon(category)}</div>
+                    <div className="text-3xl transition duration-300 group-hover:scale-110">
+                      {getIcon(category)}
+                    </div>
                     <h3 className="mt-4 text-lg font-bold sm:text-xl">{category}</h3>
                     <p className="mt-2 text-sm text-slate-400">
                       {tools.filter((tool) => tool.category === category).length} tools
@@ -164,7 +203,7 @@ export default function Home() {
               </div>
             </section>
 
-            <section className="mt-10 sm:mt-12">
+            <section className="mt-12">
               <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 sm:text-sm">
                 Featured
               </p>
@@ -174,6 +213,21 @@ export default function Home() {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {featuredTools.map((tool) => (
+                  <ToolCard key={tool.name} tool={tool} />
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-12">
+              <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 sm:text-sm">
+                Trending
+              </p>
+              <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
+                Trending AI Tools
+              </h2>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {trendingTools.map((tool) => (
                   <ToolCard key={tool.name} tool={tool} />
                 ))}
               </div>
@@ -225,9 +279,11 @@ function ToolCard({ tool }: { tool: Tool }) {
       href={tool.website}
       target="_blank"
       rel="noopener noreferrer"
-      className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:bg-white/10"
+      className="group rounded-3xl border border-white/10 bg-white/[0.04] p-5 transition duration-300 hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] hover:shadow-2xl"
     >
-      <ToolLogo tool={tool} />
+      <div className="transition duration-300 group-hover:scale-110">
+        <ToolLogo tool={tool} />
+      </div>
       <h3 className="mt-4 font-bold">{tool.name}</h3>
       <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
       <p className="mt-2 text-sm text-slate-400">{tool.description}</p>
@@ -267,11 +323,9 @@ function ToolList({
               href={tool.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-start gap-4 border-b border-white/10 p-4 last:border-b-0 hover:bg-white/10 sm:items-center sm:p-5"
+              className="flex items-start gap-4 border-b border-white/10 p-4 transition last:border-b-0 hover:bg-white/10 sm:items-center sm:p-5"
             >
-              <div className="pt-3 text-sm text-slate-500 sm:pt-0">
-                {index + 1}.
-              </div>
+              <div className="pt-3 text-sm text-slate-500 sm:pt-0">{index + 1}.</div>
               <ToolLogo tool={tool} />
               <div>
                 <h3 className="font-bold">{tool.name}</h3>
