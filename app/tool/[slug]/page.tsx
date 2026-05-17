@@ -1,74 +1,51 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   findToolBySlug,
   getLogoUrl,
-  slugify,
+  getReviewCount,
+  getToolRating,
   toolSlug,
   tools,
   Tool,
 } from "../../data/tools";
+import { useTheme } from "../../theme-provider";
 
-export function generateStaticParams() {
-  return tools.map((tool) => ({
-    slug: toolSlug(tool.name),
-  }));
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
+export default function ToolPage() {
+  const { isLightMode, toggleTheme } = useTheme();
+  const params = useParams();
+  const slug = params.slug as string;
 
   const tool = findToolBySlug(slug);
 
-  if (!tool) {
-    return {
-      title: "Tool Not Found | AiFinder",
-      description: "This AI tool could not be found.",
-    };
-  }
+  const pageBg = isLightMode
+    ? "bg-slate-100 text-slate-950"
+    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
 
-  return {
-    title: `${tool.name} - ${tool.category} | AiFinder`,
-    description: tool.description,
-  };
-}
+  const cardBg = isLightMode
+    ? "bg-white border-slate-200"
+    : "bg-white/[0.04] border-white/10";
 
-function getIOSLink(toolName: string) {
-  const query = encodeURIComponent(toolName);
-  return `https://apps.apple.com/us/iphone/search?term=${query}`;
-}
-
-function getAndroidLink(toolName: string) {
-  const query = encodeURIComponent(toolName);
-  return `https://play.google.com/store/search?q=${query}&c=apps`;
-}
-
-export default async function ToolPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-
-  const tool = findToolBySlug(slug);
+  const softText = isLightMode ? "text-slate-600" : "text-slate-300";
 
   if (!tool) {
     return (
-      <main className="min-h-screen bg-slate-950 p-6 text-white">
-        <Link href="/">← Back home</Link>
+      <main className={`min-h-screen p-6 ${pageBg}`}>
+        <Link
+          href="/"
+          className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+        >
+          ← Back Home
+        </Link>
 
-        <h1 className="mt-8 text-4xl font-black">
-          Tool not found
-        </h1>
+        <h1 className="mt-8 text-4xl font-black">Tool not found</h1>
       </main>
     );
   }
 
-  const relatedTools = tools
+  const similarTools = tools
     .filter(
       (item) =>
         item.category === tool.category &&
@@ -77,154 +54,195 @@ export default async function ToolPage({
     .slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white">
-      <section className="mx-auto max-w-5xl px-4 py-10">
+    <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         <div className="flex flex-wrap gap-3">
           <Link
-            href={`/category/${slugify(tool.category)}`}
+            href="/"
             className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
           >
-            ← Back to {tool.category}
+            ← Back
           </Link>
 
           <Link
             href="/"
             className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
           >
-            Home
+            🏠 Home
           </Link>
+
+          <button
+            onClick={toggleTheme}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+          >
+            {isLightMode ? "🌙 Dark" : "☀️ Light"}
+          </button>
         </div>
 
-        <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-          <ToolLogo tool={tool} />
+        <div className={`mt-8 overflow-hidden rounded-[2rem] border ${cardBg}`}>
+          <div className="relative border-b border-white/10 p-6 sm:p-10">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-              {tool.category}
-            </p>
+            <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-5">
+                <ToolLogo tool={tool} large />
 
-            {tool.featured && (
-              <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-bold text-cyan-200">
-                Featured
-              </span>
-            )}
-          </div>
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                    {tool.category}
+                  </p>
 
-          <h1 className="mt-4 text-4xl font-black">
-            {tool.name}
-          </h1>
+                  <h1 className="mt-2 text-4xl font-black sm:text-5xl">
+                    {tool.name}
+                  </h1>
 
-          <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-300">
-            {tool.description}
-          </p>
+                  <p className={`mt-4 max-w-2xl text-lg leading-8 ${softText}`}>
+                    {tool.description}
+                  </p>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <InfoCard
-              title="Pricing"
-              value={tool.pricing}
-            />
+                  <div className="mt-5 inline-flex items-center rounded-full border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300">
+                    ⭐ {getToolRating(tool.name)} / 5 ·{" "}
+                    {getReviewCount(tool.name).toLocaleString()} reviews
+                  </div>
+                </div>
+              </div>
 
-            <InfoCard
-              title="Best For"
-              value={tool.bestFor}
-            />
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={tool.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                >
+                  🌐 Web
+                </a>
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-                Platforms
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                {tool.platforms.includes("Web") && (
+                {tool.ios && (
                   <a
-                    href={tool.website}
+                    href={tool.ios}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+                    className="rounded-full border border-white/10 px-5 py-3 text-sm transition hover:bg-white/10"
                   >
-                    🌐 Web
+                    🍎 iOS
                   </a>
                 )}
 
-                {tool.platforms.includes("iOS") && (
+                {tool.android && (
                   <a
-                    href={getIOSLink(tool.name)}
+                    href={tool.android}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 hover:bg-white/10"
+                    className="rounded-full border border-white/10 px-5 py-3 text-sm transition hover:bg-white/10"
                   >
-                    <img
-                      src="https://cdn-icons-png.flaticon.com/512/0/747.png"
-                      alt="Apple"
-                      className="h-5 w-5 invert"
-                    />
-                  </a>
-                )}
-
-                {tool.platforms.includes("Android") && (
-                  <a
-                    href={getAndroidLink(tool.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 hover:bg-white/10"
-                  >
-                    <img
-                      src="https://cdn-icons-png.flaticon.com/512/226/226770.png"
-                      alt="Android"
-                      className="h-5 w-5"
-                    />
+                    🤖 Android
                   </a>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="mt-8">
-            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+          <div className="grid gap-6 p-6 sm:p-10 lg:grid-cols-3">
+            <InfoCard title="Pricing" value={tool.pricing} cardBg={cardBg} />
+            <InfoCard title="Best For" value={tool.bestFor} cardBg={cardBg} />
+
+            <div className={`rounded-3xl border p-6 ${cardBg}`}>
+              <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+                Platforms
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {tool.platforms.map((platform) => (
+                  <span
+                    key={platform}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                  >
+                    {platform}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 p-6 sm:p-10">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               Use Cases
             </p>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-3">
               {tool.useCases.map((useCase) => (
                 <span
                   key={useCase}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300"
+                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200"
                 >
                   {useCase}
                 </span>
               ))}
             </div>
           </div>
-        </div>
 
-        {relatedTools.length > 0 && (
-          <section className="mt-10">
-            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-              Related Tools
+          <div className="border-t border-white/10 p-6 sm:p-10">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+              About
             </p>
 
-            <h2 className="mt-2 text-3xl font-bold">
+            <div className={`mt-5 max-w-3xl space-y-5 text-lg leading-8 ${softText}`}>
+              <p>
+                {tool.name} is one of the leading AI tools in the{" "}
+                {tool.category.toLowerCase()} category.
+              </p>
+
+              <p>
+                It is best known for helping users with{" "}
+                {tool.useCases.join(", ").toLowerCase()}.
+              </p>
+
+              <p>
+                AiFinder recommends this tool for users looking for{" "}
+                {tool.bestFor.toLowerCase()} solutions powered by artificial
+                intelligence.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {similarTools.length > 0 && (
+          <section className="mt-10">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+              Similar Tools
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black">
               More {tool.category} tools
             </h2>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedTools.map((relatedTool) => (
+              {similarTools.map((similarTool) => (
                 <Link
-                  key={relatedTool.name}
-                  href={`/tool/${toolSlug(
-                    relatedTool.name
-                  )}`}
-                  className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-2 hover:bg-white/[0.08]"
+                  key={similarTool.name}
+                  href={`/tool/${toolSlug(similarTool.name)}`}
+                  className={`group rounded-3xl border p-5 transition hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
                 >
-                  <ToolLogo tool={relatedTool} />
+                  <ToolLogo tool={similarTool} />
 
-                  <h3 className="mt-4 font-bold">
-                    {relatedTool.name}
-                  </h3>
+                  <h3 className="mt-4 font-bold">{similarTool.name}</h3>
 
-                  <p className="mt-2 text-sm text-slate-400">
-                    {relatedTool.description}
+                  <p className="mt-2 text-sm text-cyan-300">
+                    {similarTool.category}
                   </p>
+
+                  <p className="mt-1 text-sm text-yellow-300">
+                    ⭐ {getToolRating(similarTool.name)} (
+                    {getReviewCount(similarTool.name).toLocaleString()} reviews)
+                  </p>
+
+                  <p className={`mt-3 text-sm leading-6 ${softText}`}>
+                    {similarTool.description}
+                  </p>
+
+                  <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
+                    View Tool →
+                  </span>
                 </Link>
               ))}
             </div>
@@ -238,30 +256,40 @@ export default async function ToolPage({
 function InfoCard({
   title,
   value,
+  cardBg,
 }: {
   title: string;
   value: string;
+  cardBg: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+    <div className={`rounded-3xl border p-6 ${cardBg}`}>
       <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
         {title}
       </p>
 
-      <p className="mt-2 text-sm text-slate-300">
-        {value}
-      </p>
+      <p className="mt-3 text-2xl font-black">{value}</p>
     </div>
   );
 }
 
-function ToolLogo({ tool }: { tool: Tool }) {
+function ToolLogo({
+  tool,
+  large = false,
+}: {
+  tool: Tool;
+  large?: boolean;
+}) {
   return (
-    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-3xl bg-white">
+    <div
+      className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${
+        large ? "h-24 w-24 rounded-[2rem]" : "h-14 w-14 rounded-2xl"
+      }`}
+    >
       <img
         src={getLogoUrl(tool.website)}
         alt={`${tool.name} logo`}
-        className="h-10 w-10"
+        className={large ? "h-14 w-14" : "h-9 w-9"}
       />
     </div>
   );

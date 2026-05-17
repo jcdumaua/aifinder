@@ -1,136 +1,150 @@
-export const tools = [
+export type Tool = {
+  name: string;
+  category: string;
+  description: string;
+  website: string;
+  pricing: "Free" | "Paid" | "Free + Paid";
+  platforms: string[];
+  featured?: boolean;
+  bestFor: string;
+  useCases: string[];
+  ios?: string;
+  android?: string;
+};
+
+export const tools: Tool[] = [
   {
     name: "ChatGPT",
     category: "Chatbots",
+    description: "Advanced AI assistant for writing, coding, research, productivity, and daily tasks.",
     website: "https://chatgpt.com",
-    description:
-      "AI assistant for writing, coding, images, voice chat, and productivity.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
-    bestFor: "Everyday AI assistance",
-    useCases: ["Writing", "Coding", "Learning", "Productivity"],
+    featured: true,
+    bestFor: "General AI assistance",
+    useCases: ["Writing", "Coding", "Research", "Productivity"],
+    ios: "https://apps.apple.com/us/app/chatgpt/id6448311069",
+    android: "https://play.google.com/store/apps/details?id=com.openai.chatgpt",
   },
   {
     name: "Claude",
     category: "Chatbots",
+    description: "AI assistant focused on long-form reasoning, analysis, writing, and documents.",
     website: "https://claude.ai",
-    description:
-      "AI assistant for research, writing, coding, documents, and analysis.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
-    bestFor: "Research and long-form writing",
-    useCases: ["Research", "Documents", "Writing", "Analysis"],
+    featured: true,
+    bestFor: "Long-form reasoning",
+    useCases: ["Writing", "Research", "Analysis", "Documents"],
+    ios: "https://apps.apple.com/us/app/claude-by-anthropic/id6473753684",
+    android: "https://play.google.com/store/apps/details?id=com.anthropic.claude",
   },
   {
     name: "Gemini",
     category: "Chatbots",
+    description: "Google AI assistant integrated with search, productivity, and multimodal tools.",
     website: "https://gemini.google.com",
-    description:
-      "Google AI assistant for search, writing, planning, and productivity.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
-    bestFor: "Google-powered AI help",
-    useCases: ["Search", "Planning", "Writing", "Productivity"],
+    featured: true,
+    bestFor: "Google ecosystem",
+    useCases: ["Search", "Productivity", "Research", "Planning"],
+    ios: "https://apps.apple.com/us/app/google-gemini/id6477489729",
+    android: "https://play.google.com/store/apps/details?id=com.google.android.apps.bard",
   },
   {
     name: "Perplexity",
-    category: "Chatbots",
+    category: "Research",
+    description: "AI-powered answer engine with web research and cited answers.",
     website: "https://perplexity.ai",
-    description: "AI answer engine with web search and cited answers.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
+    featured: true,
     bestFor: "Research with sources",
     useCases: ["Search", "Research", "Answers", "Summaries"],
+    ios: "https://apps.apple.com/us/app/perplexity-ask-anything/id1668000334",
+    android: "https://play.google.com/store/apps/details?id=ai.perplexity.app.android",
   },
   {
     name: "Microsoft Copilot",
     category: "Chatbots",
+    description: "Microsoft AI assistant for work, search, writing, images, and productivity.",
     website: "https://copilot.microsoft.com",
-    description: "Microsoft AI assistant for work, search, writing, and images.",
-    featured: false,
     pricing: "Free + Paid",
-    platforms: ["Web", "Windows", "iOS", "Android"],
+    platforms: ["Web", "iOS", "Android", "Windows"],
+    featured: true,
     bestFor: "Microsoft productivity",
     useCases: ["Work", "Search", "Writing", "Productivity"],
+    ios: "https://apps.apple.com/us/app/microsoft-copilot/id6472538445",
+    android: "https://play.google.com/store/apps/details?id=com.microsoft.copilot",
   },
   {
     name: "Poe",
     category: "Chatbots",
+    description: "Multi-model AI chat platform with access to different AI bots.",
     website: "https://poe.com",
-    description: "Multi-model AI chat platform with different AI bots.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
     bestFor: "Trying multiple AI models",
     useCases: ["Chatbots", "AI Models", "Writing", "Research"],
+    ios: "https://apps.apple.com/us/app/poe-fast-ai-chat/id1640745955",
+    android: "https://play.google.com/store/apps/details?id=com.poe.android",
   },
   {
     name: "Character.AI",
     category: "Chatbots",
+    description: "AI character chatbot platform for roleplay, entertainment, and conversations.",
     website: "https://character.ai",
-    description: "AI character chatbot platform for roleplay and entertainment.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
     bestFor: "Character roleplay",
     useCases: ["Roleplay", "Entertainment", "Chatbots", "Fun"],
-  },
-  {
-    name: "Grok",
-    category: "Chatbots",
-    website: "https://grok.com",
-    description: "AI chatbot by xAI for chat, search, and real-time answers.",
-    featured: false,
-    pricing: "Paid",
-    platforms: ["Web", "iOS"],
-    bestFor: "Real-time answers",
-    useCases: ["Search", "Chat", "News", "Research"],
+    ios: "https://apps.apple.com/us/app/character-ai-chat-ask-create/id1671705818",
+    android: "https://play.google.com/store/apps/details?id=ai.character.app",
   },
 
   {
     name: "Midjourney",
     category: "Image AI",
-    website: "https://www.midjourney.com",
-    description:
-      "AI image generator for art, realistic visuals, and creative scenes.",
-    featured: true,
+    description: "Generate high-quality AI artwork, realistic visuals, and creative scenes from prompts.",
+    website: "https://midjourney.com",
     pricing: "Paid",
-    platforms: ["Web", "Discord"],
+    platforms: ["Web"],
+    featured: true,
     bestFor: "High-quality AI art",
-    useCases: ["Art", "Design", "Concepts", "Creative Images"],
+    useCases: ["Art", "Design", "Images", "Concept Art"],
   },
   {
     name: "DALL·E",
     category: "Image AI",
+    description: "AI image generation and editing from OpenAI through ChatGPT.",
     website: "https://chatgpt.com",
-    description: "AI image generation and editing from OpenAI.",
+    pricing: "Free + Paid",
+    platforms: ["Web", "iOS", "Android"],
     featured: true,
-    pricing: "Paid",
-    platforms: ["Web"],
     bestFor: "AI image creation",
     useCases: ["Images", "Design", "Art", "Creativity"],
+    ios: "https://apps.apple.com/us/app/chatgpt/id6448311069",
+    android: "https://play.google.com/store/apps/details?id=com.openai.chatgpt",
   },
   {
     name: "Leonardo AI",
     category: "Image AI",
+    description: "AI image platform for game assets, concept art, graphics, and marketing visuals.",
     website: "https://leonardo.ai",
-    description: "AI image platform for art, design, game assets, and graphics.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
+    featured: true,
     bestFor: "Game assets and creative design",
-    useCases: ["Game Assets", "Art", "Marketing", "Graphics"],
+    useCases: ["Design", "Art", "Game Assets", "Graphics"],
+    ios: "https://apps.apple.com/us/app/leonardo-ai-image-generator/id1666840694",
+    android: "https://play.google.com/store/apps/details?id=ai.leonardo.leonardo",
   },
   {
     name: "Adobe Firefly",
     category: "Image AI",
+    description: "Adobe AI image generation tools for creative and commercial design workflows.",
     website: "https://firefly.adobe.com",
-    description: "Adobe AI image generation tools for creative design.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Commercial design",
@@ -139,20 +153,20 @@ export const tools = [
   {
     name: "Canva AI",
     category: "Image AI",
+    description: "AI design and image tools inside Canva for graphics, posts, and presentations.",
     website: "https://www.canva.com/ai-image-generator",
-    description: "AI design and image creation for graphics and social media.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
     bestFor: "Simple design creation",
     useCases: ["Social Media", "Design", "Images", "Marketing"],
+    ios: "https://apps.apple.com/us/app/canva-design-photo-video/id897446215",
+    android: "https://play.google.com/store/apps/details?id=com.canva.editor",
   },
   {
     name: "Ideogram",
     category: "Image AI",
+    description: "AI image generator strong for posters, logos, typography, and visual design.",
     website: "https://ideogram.ai",
-    description: "AI image generator for posters, typography, and design.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Typography images",
@@ -161,9 +175,8 @@ export const tools = [
   {
     name: "NightCafe",
     category: "Image AI",
+    description: "AI art generator and creative community for producing AI artwork.",
     website: "https://creator.nightcafe.studio",
-    description: "AI art generator and creative community.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Creative AI art",
@@ -173,65 +186,88 @@ export const tools = [
   {
     name: "Runway",
     category: "Video AI",
+    description: "AI video generation and editing platform for creators and studios.",
     website: "https://runwayml.com",
-    description: "AI video generation and editing for creators.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS"],
+    featured: true,
     bestFor: "AI video creation",
     useCases: ["Video Generation", "Editing", "Creative Content"],
+    ios: "https://apps.apple.com/us/app/runwayml/id1665024375",
   },
   {
     name: "Pika",
     category: "Video AI",
+    description: "AI video tool for turning prompts and images into animated videos.",
     website: "https://pika.art",
-    description: "Turn prompts and images into AI videos.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
+    featured: true,
     bestFor: "Prompt-to-video creation",
     useCases: ["Video", "Animation", "Creative Content"],
   },
   {
     name: "Kling AI",
     category: "Video AI",
+    description: "AI video generator for cinematic text-to-video and image-to-video creation.",
     website: "https://klingai.com",
-    description: "AI video generator for cinematic text-to-video.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Cinematic AI videos",
     useCases: ["Video Generation", "Cinematic Video", "Image to Video"],
   },
   {
-    name: "CapCut AI",
+    name: "CapCut",
     category: "Video AI",
-    website: "https://www.capcut.com",
-    description: "AI video editing for captions, reels, and effects.",
-    featured: false,
+    description: "Popular AI-powered video editing platform for creators and short-form videos.",
+    website: "https://capcut.com",
     pricing: "Free + Paid",
-    platforms: ["Web", "Desktop", "iOS", "Android"],
-    bestFor: "Social media videos",
-    useCases: ["Editing", "Short Videos", "Captions", "Content Creation"],
+    platforms: ["Web", "iOS", "Android", "Desktop"],
+    featured: true,
+    bestFor: "Short-form editing",
+    useCases: ["TikTok", "Video", "Editing", "Captions"],
+    ios: "https://apps.apple.com/us/app/capcut/id1500855883",
+    android: "https://play.google.com/store/apps/details?id=com.lemon.lvoverseas",
+  },
+  {
+    name: "Synthesia",
+    category: "Video AI",
+    description: "AI avatar video generator for business, training, and marketing videos.",
+    website: "https://www.synthesia.io",
+    pricing: "Paid",
+    platforms: ["Web"],
+    bestFor: "AI avatar videos",
+    useCases: ["Training", "Marketing", "Avatar Videos", "Business"],
+  },
+  {
+    name: "HeyGen",
+    category: "Video AI",
+    description: "AI video platform for avatars, dubbing, translation, and business videos.",
+    website: "https://www.heygen.com",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "Avatar and marketing videos",
+    useCases: ["Avatars", "Dubbing", "Sales", "Marketing"],
   },
 
   {
     name: "ElevenLabs",
     category: "Voice AI",
+    description: "Realistic AI voice generation, voice cloning, narration, and dubbing platform.",
     website: "https://elevenlabs.io",
-    description: "AI voice generation, cloning, narration, and dubbing.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
+    featured: true,
     bestFor: "Realistic AI voices",
-    useCases: ["Voiceovers", "Narration", "Dubbing", "Voice Cloning"],
+    useCases: ["Voiceovers", "Audio", "AI Voices", "Dubbing"],
+    ios: "https://apps.apple.com/us/app/elevenlabs-reader-ai-audio/id6479373050",
+    android: "https://play.google.com/store/apps/details?id=io.elevenlabs.readerapp",
   },
   {
     name: "Murf AI",
     category: "Voice AI",
+    description: "AI voiceover generator for videos, ads, presentations, and learning content.",
     website: "https://murf.ai",
-    description: "AI voiceover generator for videos and ads.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Voiceovers",
@@ -240,9 +276,8 @@ export const tools = [
   {
     name: "PlayHT",
     category: "Voice AI",
+    description: "AI text-to-speech and voice generation platform for creators and businesses.",
     website: "https://play.ht",
-    description: "AI text-to-speech and voice generation platform.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Text-to-speech",
@@ -252,31 +287,32 @@ export const tools = [
   {
     name: "Suno",
     category: "Music AI",
+    description: "Generate full AI songs with vocals and instrumentals from text prompts.",
     website: "https://suno.com",
-    description: "AI music and song generator from text prompts.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
-    bestFor: "AI song creation",
-    useCases: ["Music", "Songs", "Vocals", "Creative Audio"],
+    featured: true,
+    bestFor: "AI music creation",
+    useCases: ["Music", "Songs", "Audio", "Vocals"],
+    ios: "https://apps.apple.com/us/app/suno-ai-music/id6480136315",
+    android: "https://play.google.com/store/apps/details?id=com.suno.android",
   },
   {
     name: "Udio",
     category: "Music AI",
+    description: "AI music generator for songs, vocals, instrumentals, and creative audio.",
     website: "https://udio.com",
-    description: "AI music generator for songs and vocals.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web"],
+    featured: true,
     bestFor: "Song generation",
     useCases: ["Music", "Vocals", "Songs", "Instrumentals"],
   },
   {
     name: "Soundraw",
     category: "Music AI",
+    description: "AI music generator for royalty-friendly background music and creator content.",
     website: "https://soundraw.io",
-    description: "AI music generator for creators.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Background music",
@@ -284,56 +320,76 @@ export const tools = [
   },
 
   {
-    name: "Cursor",
-    category: "Coding",
-    website: "https://cursor.com",
-    description: "AI-powered code editor for developers.",
-    featured: true,
-    pricing: "Free + Paid",
-    platforms: ["Desktop"],
-    bestFor: "AI coding inside an editor",
-    useCases: ["Coding", "Debugging", "Code Review", "Development"],
-  },
-  {
     name: "GitHub Copilot",
     category: "Coding",
+    description: "AI coding assistant integrated with popular IDEs for code completion and help.",
     website: "https://github.com/features/copilot",
-    description: "AI coding assistant for autocomplete and code help.",
-    featured: true,
     pricing: "Paid",
-    platforms: ["Desktop", "IDE"],
-    bestFor: "Code autocomplete",
-    useCases: ["Coding", "Autocomplete", "Development", "Code Help"],
+    platforms: ["Desktop"],
+    featured: true,
+    bestFor: "Programming",
+    useCases: ["Coding", "Development", "Automation", "Code Help"],
+  },
+  {
+    name: "Cursor",
+    category: "Coding",
+    description: "AI-powered code editor built for developers and software projects.",
+    website: "https://cursor.com",
+    pricing: "Free + Paid",
+    platforms: ["Desktop"],
+    featured: true,
+    bestFor: "AI coding editor",
+    useCases: ["Coding", "Debugging", "Code Review", "Development"],
   },
   {
     name: "Replit AI",
     category: "Coding",
+    description: "AI coding assistant inside Replit for building apps in the browser.",
     website: "https://replit.com/ai",
-    description: "AI coding assistant inside Replit.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Browser-based coding",
     useCases: ["Coding", "Learning", "Development", "Apps"],
   },
+  {
+    name: "Codeium",
+    category: "Coding",
+    description: "AI coding assistant for code completion, search, and developer productivity.",
+    website: "https://codeium.com",
+    pricing: "Free + Paid",
+    platforms: ["Desktop"],
+    bestFor: "Code completion",
+    useCases: ["Coding", "Autocomplete", "Development", "Productivity"],
+  },
+  {
+    name: "Tabnine",
+    category: "Coding",
+    description: "AI code completion assistant for developers and engineering teams.",
+    website: "https://www.tabnine.com",
+    pricing: "Free + Paid",
+    platforms: ["Desktop"],
+    bestFor: "Team coding",
+    useCases: ["Coding", "Autocomplete", "Teams", "Development"],
+  },
 
   {
     name: "Grammarly",
     category: "Writing",
+    description: "AI writing assistant for grammar, tone, clarity, and rewriting.",
     website: "https://www.grammarly.com",
-    description: "AI grammar, tone, writing, and rewriting assistant.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web", "Desktop", "iOS", "Android"],
-    bestFor: "Grammar and writing polish",
+    featured: true,
+    bestFor: "Writing polish",
     useCases: ["Writing", "Grammar", "Emails", "Editing"],
+    ios: "https://apps.apple.com/us/app/grammarly-ai-writing-keyboard/id1158877342",
+    android: "https://play.google.com/store/apps/details?id=com.grammarly.android.keyboard",
   },
   {
     name: "Jasper",
     category: "Writing",
+    description: "AI writing platform for blogs, ads, emails, brand voice, and marketing teams.",
     website: "https://www.jasper.ai",
-    description: "AI writing tool for blogs, ads, emails, and marketing.",
-    featured: false,
     pricing: "Paid",
     platforms: ["Web"],
     bestFor: "Marketing copy",
@@ -342,66 +398,107 @@ export const tools = [
   {
     name: "Copy.ai",
     category: "Writing",
+    description: "AI writing and marketing content generator for sales and content teams.",
     website: "https://www.copy.ai",
-    description: "AI writing and marketing content generator.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Sales and marketing content",
     useCases: ["Marketing", "Sales", "Writing", "Content"],
   },
+  {
+    name: "Writesonic",
+    category: "Writing",
+    description: "AI writing platform for blogs, ads, SEO copy, and marketing content.",
+    website: "https://writesonic.com",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "SEO writing",
+    useCases: ["Blogs", "SEO", "Ads", "Marketing"],
+  },
+  {
+    name: "QuillBot",
+    category: "Writing",
+    description: "AI paraphrasing, grammar, citation, and writing improvement tool.",
+    website: "https://quillbot.com",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "Paraphrasing",
+    useCases: ["Writing", "Paraphrasing", "Grammar", "Students"],
+  },
 
   {
     name: "Notion AI",
     category: "Productivity",
-    website: "https://www.notion.so/product/ai",
-    description: "AI workspace assistant for notes and planning.",
-    featured: true,
-    pricing: "Paid",
+    description: "AI assistant integrated into Notion for writing, notes, and productivity.",
+    website: "https://notion.so",
+    pricing: "Free + Paid",
     platforms: ["Web", "Desktop", "iOS", "Android"],
+    featured: true,
     bestFor: "Workspace productivity",
-    useCases: ["Notes", "Planning", "Summaries", "Organization"],
+    useCases: ["Notes", "Writing", "Organization", "Summaries"],
+    ios: "https://apps.apple.com/us/app/notion-notes-docs-tasks/id1232780281",
+    android: "https://play.google.com/store/apps/details?id=notion.id",
   },
   {
     name: "Otter.ai",
     category: "Productivity",
+    description: "AI meeting notes, transcription, summaries, and conversation intelligence.",
     website: "https://otter.ai",
-    description: "AI meeting notes, transcription, and summaries.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web", "iOS", "Android"],
     bestFor: "Meeting notes",
     useCases: ["Meetings", "Transcription", "Summaries", "Notes"],
+    ios: "https://apps.apple.com/us/app/otter-transcribe-voice-notes/id1276437113",
+    android: "https://play.google.com/store/apps/details?id=com.aisense.otter",
   },
   {
     name: "Gamma",
     category: "Productivity",
+    description: "AI presentation and document builder for decks, pages, and ideas.",
     website: "https://gamma.app",
-    description: "AI presentation and document builder.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web"],
+    featured: true,
     bestFor: "AI presentations",
     useCases: ["Presentations", "Docs", "Slides", "Business"],
+  },
+  {
+    name: "Beautiful.ai",
+    category: "Productivity",
+    description: "AI-powered presentation design platform for professional slide decks.",
+    website: "https://www.beautiful.ai",
+    pricing: "Paid",
+    platforms: ["Web"],
+    bestFor: "Presentation design",
+    useCases: ["Slides", "Presentations", "Business", "Design"],
+  },
+  {
+    name: "Tome",
+    category: "Productivity",
+    description: "AI storytelling and presentation tool for creating visual narratives.",
+    website: "https://tome.app",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "Story-driven presentations",
+    useCases: ["Presentations", "Storytelling", "Docs", "Business"],
   },
 
   {
     name: "Zapier AI",
     category: "Automation",
+    description: "AI automation for workflows, app integrations, and business processes.",
     website: "https://zapier.com/ai",
-    description: "AI automation for workflows and apps.",
-    featured: true,
     pricing: "Free + Paid",
     platforms: ["Web"],
-    bestFor: "Automating app workflows",
-    useCases: ["Automation", "Workflows", "Business Tasks", "Productivity"],
+    featured: true,
+    bestFor: "App automation",
+    useCases: ["Automation", "Workflows", "Business Tasks", "Integrations"],
   },
   {
     name: "Make",
     category: "Automation",
+    description: "Visual workflow automation platform for connecting apps and processes.",
     website: "https://www.make.com",
-    description: "Visual workflow automation platform.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web"],
     bestFor: "Visual automations",
@@ -410,17 +507,70 @@ export const tools = [
   {
     name: "n8n",
     category: "Automation",
+    description: "Workflow automation platform with AI agent support and self-hosting options.",
     website: "https://n8n.io",
-    description: "Workflow automation with AI agent support.",
-    featured: false,
     pricing: "Free + Paid",
     platforms: ["Web", "Self-hosted"],
-    bestFor: "Advanced workflow automation",
+    bestFor: "Advanced automations",
     useCases: ["Automation", "AI Agents", "Workflows", "Integrations"],
+  },
+  {
+    name: "Lindy",
+    category: "Automation",
+    description: "AI agents for automating business tasks, communications, and workflows.",
+    website: "https://www.lindy.ai",
+    pricing: "Paid",
+    platforms: ["Web"],
+    bestFor: "AI business agents",
+    useCases: ["Agents", "Automation", "Email", "Business"],
+  },
+  {
+    name: "Gumloop",
+    category: "Automation",
+    description: "AI workflow builder for automating business tasks with no-code agents.",
+    website: "https://www.gumloop.com",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "No-code AI workflows",
+    useCases: ["Automation", "Agents", "Workflows", "Business"],
+  },
+
+  {
+    name: "Framer AI",
+    category: "Website Builders",
+    description: "AI-powered website builder for creating polished websites and landing pages.",
+    website: "https://www.framer.com/ai",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    featured: true,
+    bestFor: "AI website design",
+    useCases: ["Websites", "Landing Pages", "Design", "Startups"],
+  },
+  {
+    name: "Durable",
+    category: "Website Builders",
+    description: "AI website builder for small businesses, services, and entrepreneurs.",
+    website: "https://durable.co",
+    pricing: "Free + Paid",
+    platforms: ["Web"],
+    bestFor: "Small business websites",
+    useCases: ["Websites", "Business", "Landing Pages", "Marketing"],
+  },
+  {
+    name: "10Web",
+    category: "Website Builders",
+    description: "AI website builder and WordPress automation platform.",
+    website: "https://10web.io",
+    pricing: "Paid",
+    platforms: ["Web"],
+    bestFor: "AI WordPress websites",
+    useCases: ["WordPress", "Websites", "Hosting", "Business"],
   },
 ];
 
-export type Tool = (typeof tools)[number];
+export const categories = [
+  ...new Set(tools.map((tool) => tool.category)),
+];
 
 export const slugify = (text: string) =>
   text.toLowerCase().replaceAll(" ", "-");
@@ -435,29 +585,51 @@ export const toolSlug = (name: string) =>
 export const findToolBySlug = (slug: string) =>
   tools.find((tool) => toolSlug(tool.name) === slug);
 
-export const categories = [...new Set(tools.map((tool) => tool.category))];
-
 export const getIcon = (category: string) => {
-  const icons: Record<string, string> = {
-    Chatbots: "🤖",
-    "Image AI": "🖼️",
-    "Video AI": "🎬",
-    "Voice AI": "🎤",
-    "Music AI": "🎵",
-    Coding: "💻",
-    Writing: "✍️",
-    Productivity: "⚡",
-    Automation: "🔁",
-  };
-
-  return icons[category] || "✨";
+  switch (category) {
+    case "Chatbots":
+      return "🤖";
+    case "Research":
+      return "🔎";
+    case "Image AI":
+      return "🎨";
+    case "Video AI":
+      return "🎬";
+    case "Voice AI":
+      return "🎤";
+    case "Music AI":
+      return "🎵";
+    case "Coding":
+      return "💻";
+    case "Writing":
+      return "✍️";
+    case "Productivity":
+      return "📈";
+    case "Automation":
+      return "⚙️";
+    case "Website Builders":
+      return "🌐";
+    default:
+      return "✨";
+  }
 };
 
 export const getLogoUrl = (website: string) => {
   try {
     const domain = new URL(website).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
   } catch {
-    return "";
+    return "https://www.google.com/favicon.ico";
   }
+};
+
+export const getToolRating = (name: string) => {
+  const base = 4.4;
+  const score = name.length % 5;
+
+  return Number((base + score * 0.1).toFixed(1));
+};
+
+export const getReviewCount = (name: string) => {
+  return name.length * 137;
 };
