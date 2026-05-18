@@ -2,23 +2,80 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   findToolBySlug,
   getLogoUrl,
   getReviewCount,
   getToolRating,
   toolSlug,
-  tools,
+  tools as staticTools,
   Tool,
 } from "../../data/tools";
 import { useTheme } from "../../theme-provider";
+import { supabase } from "../../../lib/supabase";
 
 export default function ToolPage() {
   const { isLightMode, toggleTheme } = useTheme();
   const params = useParams();
   const slug = params.slug as string;
 
-  const tool = findToolBySlug(slug);
+  const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadToolsFromSupabase() {
+      const { data, error } = await supabase
+        .from("tools")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase tool page error:", error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      const formattedTools: Tool[] =
+        data?.map((tool) => ({
+          name: tool.name,
+          category:
+            tool.category === "Chat"
+              ? "Chatbots"
+              : tool.category === "Image"
+                ? "Image AI"
+                : tool.category === "Video"
+                  ? "Video AI"
+                  : tool.category === "Audio"
+                    ? "Voice AI"
+                    : tool.category,
+          description: tool.description,
+          website: tool.website,
+          logoUrl: tool.logo_url || undefined,
+          pricing:
+            tool.pricing === "Freemium"
+              ? "Free + Paid"
+              : tool.pricing || "Free + Paid",
+          platforms: tool.platforms || [],
+          featured: tool.featured || false,
+          bestFor: tool.best_for || "General use",
+          useCases: tool.use_cases || [],
+          ios: tool.ios || undefined,
+          android: tool.android || undefined,
+        })) || [];
+
+      setDatabaseTools(formattedTools);
+      setIsLoading(false);
+    }
+
+    loadToolsFromSupabase();
+  }, []);
+
+  const databaseTool = databaseTools.find((item) => toolSlug(item.name) === slug);
+  const fallbackTool = findToolBySlug(slug);
+  const tool = databaseTool || fallbackTool;
+
+  const allTools = databaseTools.length > 0 ? databaseTools : staticTools;
 
   const pageBg = isLightMode
     ? "bg-slate-100 text-slate-950"
@@ -29,6 +86,21 @@ export default function ToolPage() {
     : "bg-white/[0.04] border-white/10";
 
   const softText = isLightMode ? "text-slate-600" : "text-slate-300";
+
+  if (isLoading && !tool) {
+    return (
+      <main className={`min-h-screen p-6 ${pageBg}`}>
+        <Link
+          href="/"
+          className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+        >
+          ← Back Home
+        </Link>
+
+        <h1 className="mt-8 text-4xl font-black">Loading tool...</h1>
+      </main>
+    );
+  }
 
   if (!tool) {
     return (
@@ -45,7 +117,12 @@ export default function ToolPage() {
     );
   }
 
-  const similarTools = tools
+  const platforms = tool.platforms || [];
+  const useCases = tool.useCases || [];
+  const bestFor = tool.bestFor || "General use";
+  const pricing = tool.pricing || "Free + Paid";
+
+  const similarTools = allTools
     .filter(
       (item) =>
         item.category === tool.category &&
@@ -143,8 +220,8 @@ export default function ToolPage() {
           </div>
 
           <div className="grid gap-6 p-6 sm:p-10 lg:grid-cols-3">
-            <InfoCard title="Pricing" value={tool.pricing} cardBg={cardBg} />
-            <InfoCard title="Best For" value={tool.bestFor} cardBg={cardBg} />
+            <InfoCard title="Pricing" value={pricing} cardBg={cardBg} />
+            <InfoCard title="Best For" value={bestFor} cardBg={cardBg} />
 
             <div className={`rounded-3xl border p-6 ${cardBg}`}>
               <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
@@ -152,14 +229,20 @@ export default function ToolPage() {
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {tool.platforms.map((platform) => (
-                  <span
-                    key={platform}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                  >
-                    {platform}
+                {platforms.length > 0 ? (
+                  platforms.map((platform) => (
+                    <span
+                      key={platform}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                    >
+                      {platform}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                    Web
                   </span>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -170,14 +253,20 @@ export default function ToolPage() {
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              {tool.useCases.map((useCase) => (
-                <span
-                  key={useCase}
-                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200"
-                >
-                  {useCase}
+              {useCases.length > 0 ? (
+                useCases.map((useCase) => (
+                  <span
+                    key={useCase}
+                    className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200"
+                  >
+                    {useCase}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200">
+                  General AI use
                 </span>
-              ))}
+              )}
             </div>
           </div>
 
@@ -188,18 +277,20 @@ export default function ToolPage() {
 
             <div className={`mt-5 max-w-3xl space-y-5 text-lg leading-8 ${softText}`}>
               <p>
-                {tool.name} is one of the leading AI tools in the{" "}
+                {tool.name} is one of the AI tools in the{" "}
                 {tool.category.toLowerCase()} category.
               </p>
 
               <p>
-                It is best known for helping users with{" "}
-                {tool.useCases.join(", ").toLowerCase()}.
+                It can help users with{" "}
+                {useCases.length > 0
+                  ? useCases.join(", ").toLowerCase()
+                  : "everyday AI-powered tasks"}.
               </p>
 
               <p>
                 AiFinder recommends this tool for users looking for{" "}
-                {tool.bestFor.toLowerCase()} solutions powered by artificial
+                {bestFor.toLowerCase()} solutions powered by artificial
                 intelligence.
               </p>
             </div>
@@ -280,6 +371,11 @@ function ToolLogo({
   tool: Tool;
   large?: boolean;
 }) {
+  const [logoError, setLogoError] = useState(false);
+
+  const logoSrc =
+    !logoError && tool.logoUrl ? tool.logoUrl : getLogoUrl(tool.website);
+
   return (
     <div
       className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${
@@ -287,9 +383,10 @@ function ToolLogo({
       }`}
     >
       <img
-        src={getLogoUrl(tool.website)}
+        src={logoSrc}
         alt={`${tool.name} logo`}
-        className={large ? "h-14 w-14" : "h-9 w-9"}
+        className={large ? "h-14 w-14 object-contain" : "h-9 w-9 object-contain"}
+        onError={() => setLogoError(true)}
       />
     </div>
   );
