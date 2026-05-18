@@ -11,12 +11,11 @@ import {
   getToolRating,
   slugify,
   toolSlug,
-  tools,
   Tool,
 } from "./data/tools";
 import { useTheme } from "./theme-provider";
 import { useCompare } from "./compare-provider";
-
+import { supabase } from "../lib/supabase";
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
 const popularSearches = ["ChatGPT", "Video AI", "Coding", "Automation", "Writing"];
@@ -29,7 +28,56 @@ const fadeUp = {
 export default function Home() {
   const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
-
+  const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
+  const [isLoadingTools, setIsLoadingTools] = useState(true);
+  
+  const tools = databaseTools;
+  useEffect(() => {
+    async function loadToolsFromSupabase() {
+      const { data, error } = await supabase
+        .from("tools")
+        .select("*")
+        .order("created_at", { ascending: false });
+  
+      if (error) {
+        console.error("Supabase tools error:", error.message);
+        setIsLoadingTools(false);
+        return;
+      }
+  
+      const formattedTools: Tool[] =
+        data?.map((tool) => ({
+          name: tool.name,
+          category:
+            tool.category === "Chat"
+              ? "Chatbots"
+              : tool.category === "Image"
+                ? "Image AI"
+                : tool.category === "Video"
+                  ? "Video AI"
+                  : tool.category === "Audio"
+                    ? "Voice AI"
+                    : tool.category,
+          description: tool.description,
+          website: tool.website,
+          pricing:
+            tool.pricing === "Freemium"
+              ? "Free + Paid"
+              : tool.pricing,
+          platforms: tool.platforms || [],
+          featured: tool.featured || false,
+          bestFor: tool.best_for,
+          useCases: tool.use_cases || [],
+          ios: tool.ios || undefined,
+          android: tool.android || undefined,
+        })) || [];
+  
+      setDatabaseTools(formattedTools);
+      setIsLoadingTools(false);
+    }
+  
+    loadToolsFromSupabase();
+  }, []);
   const [search, setSearch] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
