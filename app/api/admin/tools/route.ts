@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       description: body.description,
       website: body.website,
       pricing: body.pricing || null,
+      logo_url: body.logo_url || null,
       platforms: [],
       featured: false,
       best_for: "General use",
@@ -69,6 +70,7 @@ export async function PUT(request: Request) {
       description: body.description,
       website: body.website,
       pricing: body.pricing || null,
+      logo_url: body.logo_url || null,
     })
     .eq("id", body.id);
 

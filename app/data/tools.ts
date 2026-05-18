@@ -3,6 +3,7 @@ export type Tool = {
   category: string;
   description: string;
   website: string;
+  logoUrl?: string;
   pricing: "Free" | "Paid" | "Free + Paid";
   platforms: string[];
   featured?: boolean;

@@ -16,6 +16,7 @@ import {
 import { useTheme } from "./theme-provider";
 import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
+
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
 const popularSearches = ["ChatGPT", "Video AI", "Coding", "Automation", "Writing"];
@@ -28,23 +29,25 @@ const fadeUp = {
 export default function Home() {
   const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
+
   const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
   const [isLoadingTools, setIsLoadingTools] = useState(true);
-  
+
   const tools = databaseTools;
+
   useEffect(() => {
     async function loadToolsFromSupabase() {
       const { data, error } = await supabase
         .from("tools")
         .select("*")
         .order("created_at", { ascending: false });
-  
+
       if (error) {
         console.error("Supabase tools error:", error.message);
         setIsLoadingTools(false);
         return;
       }
-  
+
       const formattedTools: Tool[] =
         data?.map((tool) => ({
           name: tool.name,
@@ -60,24 +63,26 @@ export default function Home() {
                     : tool.category,
           description: tool.description,
           website: tool.website,
+          logoUrl: tool.logo_url || undefined,
           pricing:
             tool.pricing === "Freemium"
               ? "Free + Paid"
-              : tool.pricing,
+              : tool.pricing || "Free + Paid",
           platforms: tool.platforms || [],
           featured: tool.featured || false,
-          bestFor: tool.best_for,
+          bestFor: tool.best_for || "General use",
           useCases: tool.use_cases || [],
           ios: tool.ios || undefined,
           android: tool.android || undefined,
         })) || [];
-  
+
       setDatabaseTools(formattedTools);
       setIsLoadingTools(false);
     }
-  
+
     loadToolsFromSupabase();
   }, []);
+
   const [search, setSearch] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -162,7 +167,7 @@ export default function Home() {
         matchesPlatform
       );
     });
-  }, [search, selectedCategory, selectedPricing, selectedPlatform]);
+  }, [tools, search, selectedCategory, selectedPricing, selectedPlatform]);
 
   const featuredTools = tools.filter((tool) => tool.featured).slice(0, 8);
   const trendingTools = tools.filter((tool) => tool.featured).slice(0, 6);
@@ -375,6 +380,12 @@ export default function Home() {
                 Clear filters
               </button>
             )}
+
+            {isLoadingTools && (
+              <p className="mt-4 text-sm text-slate-400">
+                Loading AI tools...
+              </p>
+            )}
           </div>
         </motion.div>
 
@@ -515,80 +526,80 @@ export default function Home() {
             cardBg={cardBg}
           />
         )}
-      <footer className="mt-20 border-t border-white/10 py-10">
-  <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-    <div>
-      <h3 className="text-2xl font-black">AiFinder</h3>
 
-      <p className="mt-3 max-w-md text-sm leading-7 text-slate-400">
-        Discover, compare, and explore the best AI tools for
-        productivity, creativity, automation, coding, research,
-        writing, video, images, and more.
-      </p>
+        <footer className="mt-20 border-t border-white/10 py-10">
+          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-2xl font-black">AiFinder</h3>
 
-      <p className="mt-4 text-xs text-slate-500">
-        © 2026 AiFinder. All rights reserved.
-      </p>
-    </div>
+              <p className="mt-3 max-w-md text-sm leading-7 text-slate-400">
+                Discover, compare, and explore the best AI tools for
+                productivity, creativity, automation, coding, research,
+                writing, video, images, and more.
+              </p>
 
-    <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-      <div>
-        <p className="text-sm font-bold text-cyan-300">
-          Explore
-        </p>
+              <p className="mt-4 text-xs text-slate-500">
+                © 2026 AiFinder. All rights reserved.
+              </p>
+            </div>
 
-        <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-          <a href="#categories" className="hover:text-cyan-300">
-            Categories
-          </a>
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+              <div>
+                <p className="text-sm font-bold text-cyan-300">
+                  Explore
+                </p>
 
-          <a href="#favorites" className="hover:text-cyan-300">
-            Bookmarks
-          </a>
+                <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
+                  <a href="#categories" className="hover:text-cyan-300">
+                    Categories
+                  </a>
 
-          <Link href="/compare" className="hover:text-cyan-300">
-            Compare
-          </Link>
-        </div>
-      </div>
+                  <a href="#favorites" className="hover:text-cyan-300">
+                    Bookmarks
+                  </a>
 
-      <div>
-        <p className="text-sm font-bold text-cyan-300">
-          Platform
-        </p>
+                  <Link href="/compare" className="hover:text-cyan-300">
+                    Compare
+                  </Link>
+                </div>
+              </div>
 
-        <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-          <Link href="/submit" className="hover:text-cyan-300">
-            Submit Tool
-          </Link>
+              <div>
+                <p className="text-sm font-bold text-cyan-300">
+                  Platform
+                </p>
 
-          <button className="text-left hover:text-cyan-300">
-            Trending
-          </button>
+                <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
+                  <Link href="/submit" className="hover:text-cyan-300">
+                    Submit Tool
+                  </Link>
 
-          <button className="text-left hover:text-cyan-300">
-            Top Rated
-          </button>
-        </div>
-      </div>
+                  <button className="text-left hover:text-cyan-300">
+                    Trending
+                  </button>
 
-      <div>
-        <p className="text-sm font-bold text-cyan-300">
-          Stats
-        </p>
+                  <button className="text-left hover:text-cyan-300">
+                    Top Rated
+                  </button>
+                </div>
+              </div>
 
-        <div className="mt-4 space-y-3 text-sm text-slate-400">
-          <p>{tools.length}+ AI tools</p>
-          <p>{categories.length} categories</p>
-          <p>Compare up to 3 tools</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</footer>
+              <div>
+                <p className="text-sm font-bold text-cyan-300">
+                  Stats
+                </p>
 
-</section>
-</main>
+                <div className="mt-4 space-y-3 text-sm text-slate-400">
+                  <p>{tools.length}+ AI tools</p>
+                  <p>{categories.length} categories</p>
+                  <p>Compare up to 3 tools</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </section>
+    </main>
   );
 }
 
@@ -845,12 +856,18 @@ function CompareBar({
 }
 
 function ToolLogo({ tool }: { tool: Tool }) {
+  const [logoError, setLogoError] = useState(false);
+
+  const logoSrc =
+    !logoError && tool.logoUrl ? tool.logoUrl : getLogoUrl(tool.website);
+
   return (
     <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
       <img
-        src={getLogoUrl(tool.website)}
+        src={logoSrc}
         alt={`${tool.name} logo`}
-        className="h-8 w-8"
+        className="h-8 w-8 object-contain"
+        onError={() => setLogoError(true)}
       />
     </div>
   );

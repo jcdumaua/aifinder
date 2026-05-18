@@ -7,6 +7,7 @@ export default function SubmitToolPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [website, setWebsite] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [pricing, setPricing] = useState("");
   const [description, setDescription] = useState("");
   const [submitterName, setSubmitterName] = useState("");
@@ -28,6 +29,7 @@ export default function SubmitToolPage() {
         name,
         category,
         website,
+        logo_url: logoUrl || null,
         pricing,
         description,
         submitter_name: submitterName,
@@ -46,6 +48,7 @@ export default function SubmitToolPage() {
     setName("");
     setCategory("");
     setWebsite("");
+    setLogoUrl("");
     setPricing("");
     setDescription("");
     setSubmitterName("");
@@ -103,6 +106,13 @@ export default function SubmitToolPage() {
 
             <input
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              placeholder="Logo image URL"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+            />
+
+            <input
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Pricing"
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
@@ -117,7 +127,7 @@ export default function SubmitToolPage() {
 
             <input
               type="email"
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
               placeholder="Your email"
               value={submitterEmail}
               onChange={(e) => setSubmitterEmail(e.target.value)}

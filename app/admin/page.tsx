@@ -10,6 +10,7 @@ type Tool = {
   description: string;
   website: string;
   pricing?: string | null;
+  logo_url?: string | null;
 };
 
 type SubmittedTool = {
@@ -19,6 +20,7 @@ type SubmittedTool = {
   description: string;
   website: string;
   pricing?: string | null;
+  logo_url?: string | null;
   submitter_name?: string | null;
   submitter_email?: string | null;
   status: string;
@@ -58,6 +60,7 @@ export default function AdminPage() {
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [website, setWebsite] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
   const [pricing, setPricing] = useState("");
 
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
@@ -65,6 +68,7 @@ export default function AdminPage() {
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editWebsite, setEditWebsite] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
   const [editPricing, setEditPricing] = useState("");
 
   const [editingSubmission, setEditingSubmission] =
@@ -74,6 +78,7 @@ export default function AdminPage() {
   const [submissionEditDescription, setSubmissionEditDescription] =
     useState("");
   const [submissionEditWebsite, setSubmissionEditWebsite] = useState("");
+  const [submissionEditLogoUrl, setSubmissionEditLogoUrl] = useState("");
   const [submissionEditPricing, setSubmissionEditPricing] = useState("");
 
   const adminPassword = "aifinder2026";
@@ -98,7 +103,7 @@ export default function AdminPage() {
     let result = tools.filter((tool) => {
       const searchText = `${tool.name} ${tool.category} ${tool.description} ${
         tool.website
-      } ${tool.pricing || ""}`.toLowerCase();
+      } ${tool.logo_url || ""} ${tool.pricing || ""}`.toLowerCase();
 
       const matchesSearch = searchText.includes(toolSearch.toLowerCase());
 
@@ -126,9 +131,11 @@ export default function AdminPage() {
     return submissions.filter((submission) => {
       const searchText = `${submission.name} ${submission.category} ${
         submission.description
-      } ${submission.website} ${submission.pricing || ""} ${
-        submission.submitter_name || ""
-      } ${submission.submitter_email || ""}`.toLowerCase();
+      } ${submission.website} ${submission.logo_url || ""} ${
+        submission.pricing || ""
+      } ${submission.submitter_name || ""} ${
+        submission.submitter_email || ""
+      }`.toLowerCase();
 
       const matchesSearch = searchText.includes(
         submissionSearch.toLowerCase()
@@ -251,6 +258,7 @@ export default function AdminPage() {
     setSubmissionEditCategory(submission.category);
     setSubmissionEditDescription(submission.description);
     setSubmissionEditWebsite(submission.website);
+    setSubmissionEditLogoUrl(submission.logo_url || "");
     setSubmissionEditPricing(submission.pricing || "");
   }
 
@@ -260,6 +268,7 @@ export default function AdminPage() {
     setSubmissionEditCategory("");
     setSubmissionEditDescription("");
     setSubmissionEditWebsite("");
+    setSubmissionEditLogoUrl("");
     setSubmissionEditPricing("");
   }
 
@@ -288,6 +297,7 @@ export default function AdminPage() {
         category: submissionEditCategory,
         description: submissionEditDescription,
         website: submissionEditWebsite,
+        logo_url: submissionEditLogoUrl,
         pricing: submissionEditPricing,
       }),
     });
@@ -337,6 +347,7 @@ export default function AdminPage() {
         category,
         description,
         website,
+        logo_url: logoUrl,
         pricing,
       }),
     });
@@ -352,6 +363,7 @@ export default function AdminPage() {
     setCategory("");
     setDescription("");
     setWebsite("");
+    setLogoUrl("");
     setPricing("");
 
     fetchTools();
@@ -364,6 +376,7 @@ export default function AdminPage() {
     setEditCategory(tool.category);
     setEditDescription(tool.description);
     setEditWebsite(tool.website);
+    setEditLogoUrl(tool.logo_url || "");
     setEditPricing(tool.pricing || "");
   }
 
@@ -373,6 +386,7 @@ export default function AdminPage() {
     setEditCategory("");
     setEditDescription("");
     setEditWebsite("");
+    setEditLogoUrl("");
     setEditPricing("");
   }
 
@@ -396,6 +410,7 @@ export default function AdminPage() {
         category: editCategory,
         description: editDescription,
         website: editWebsite,
+        logo_url: editLogoUrl,
         pricing: editPricing,
       }),
     });
@@ -439,6 +454,41 @@ export default function AdminPage() {
 
     fetchTools();
     fetchSubmissions();
+  }
+
+  function LogoPreview({
+    logoUrl,
+    name,
+    accent,
+  }: {
+    logoUrl?: string | null;
+    name: string;
+    accent: "cyan" | "yellow";
+  }) {
+    if (logoUrl) {
+      return (
+        <img
+          src={logoUrl}
+          alt={`${name} logo`}
+          className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      );
+    }
+
+    return (
+      <div
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
+          accent === "cyan"
+            ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+            : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
+        } text-xl font-black`}
+      >
+        {name.charAt(0).toUpperCase()}
+      </div>
+    );
   }
 
   if (!isUnlocked) {
@@ -581,6 +631,13 @@ export default function AdminPage() {
 
             <input
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              placeholder="Logo Image URL"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+            />
+
+            <input
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
               placeholder="Pricing"
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
@@ -657,37 +714,53 @@ export default function AdminPage() {
                   className="rounded-3xl border border-yellow-400/20 bg-yellow-400/5 p-5"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold">{submission.name}</h3>
+                    <div className="flex gap-4">
+                      <LogoPreview
+                        logoUrl={submission.logo_url}
+                        name={submission.name}
+                        accent="yellow"
+                      />
 
-                      <p className="text-sm text-yellow-300">
-                        {submission.category}
-                      </p>
+                      <div>
+                        <h3 className="text-xl font-bold">
+                          {submission.name}
+                        </h3>
 
-                      <p className="mt-2 text-sm leading-6 text-slate-300">
-                        {submission.description}
-                      </p>
-
-                      <p className="mt-3 break-all text-xs text-slate-500">
-                        Website: {submission.website}
-                      </p>
-
-                      {submission.pricing && (
-                        <p className="mt-2 text-xs text-slate-400">
-                          Pricing: {submission.pricing}
+                        <p className="text-sm text-yellow-300">
+                          {submission.category}
                         </p>
-                      )}
 
-                      {(submission.submitter_name ||
-                        submission.submitter_email) && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          Submitted by:{" "}
-                          {submission.submitter_name || "Unknown"}{" "}
-                          {submission.submitter_email
-                            ? `(${submission.submitter_email})`
-                            : ""}
+                        <p className="mt-2 text-sm leading-6 text-slate-300">
+                          {submission.description}
                         </p>
-                      )}
+
+                        <p className="mt-3 break-all text-xs text-slate-500">
+                          Website: {submission.website}
+                        </p>
+
+                        {submission.logo_url && (
+                          <p className="mt-2 break-all text-xs text-slate-500">
+                            Logo: {submission.logo_url}
+                          </p>
+                        )}
+
+                        {submission.pricing && (
+                          <p className="mt-2 text-xs text-slate-400">
+                            Pricing: {submission.pricing}
+                          </p>
+                        )}
+
+                        {(submission.submitter_name ||
+                          submission.submitter_email) && (
+                          <p className="mt-2 text-xs text-slate-500">
+                            Submitted by:{" "}
+                            {submission.submitter_name || "Unknown"}{" "}
+                            {submission.submitter_email
+                              ? `(${submission.submitter_email})`
+                              : ""}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
@@ -785,24 +858,40 @@ export default function AdminPage() {
                   key={tool.id}
                   className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <h3 className="text-xl font-bold">{tool.name}</h3>
+                  <div className="flex gap-4">
+                    <LogoPreview
+                      logoUrl={tool.logo_url}
+                      name={tool.name}
+                      accent="cyan"
+                    />
 
-                    <p className="text-sm text-cyan-300">{tool.category}</p>
+                    <div>
+                      <h3 className="text-xl font-bold">{tool.name}</h3>
 
-                    <p className="mt-2 text-sm text-slate-400">
-                      {tool.description}
-                    </p>
-
-                    <p className="mt-2 text-xs text-slate-500">
-                      {tool.website}
-                    </p>
-
-                    {tool.pricing && (
-                      <p className="mt-2 text-xs text-yellow-300">
-                        {tool.pricing}
+                      <p className="text-sm text-cyan-300">
+                        {tool.category}
                       </p>
-                    )}
+
+                      <p className="mt-2 text-sm text-slate-400">
+                        {tool.description}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-500">
+                        {tool.website}
+                      </p>
+
+                      {tool.logo_url && (
+                        <p className="mt-2 break-all text-xs text-slate-500">
+                          Logo: {tool.logo_url}
+                        </p>
+                      )}
+
+                      {tool.pricing && (
+                        <p className="mt-2 text-xs text-yellow-300">
+                          {tool.pricing}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-3">
@@ -872,11 +961,31 @@ export default function AdminPage() {
 
                 <input
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
+                  placeholder="Logo Image URL"
+                  value={submissionEditLogoUrl}
+                  onChange={(e) => setSubmissionEditLogoUrl(e.target.value)}
+                />
+
+                <input
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400 sm:col-span-2"
                   placeholder="Pricing"
                   value={submissionEditPricing}
                   onChange={(e) => setSubmissionEditPricing(e.target.value)}
                 />
               </div>
+
+              {submissionEditLogoUrl && (
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <LogoPreview
+                    logoUrl={submissionEditLogoUrl}
+                    name={submissionEditName || "Tool"}
+                    accent="yellow"
+                  />
+                  <p className="break-all text-xs text-slate-400">
+                    {submissionEditLogoUrl}
+                  </p>
+                </div>
+              )}
 
               <textarea
                 className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
@@ -953,11 +1062,31 @@ export default function AdminPage() {
 
                 <input
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                  placeholder="Logo Image URL"
+                  value={editLogoUrl}
+                  onChange={(e) => setEditLogoUrl(e.target.value)}
+                />
+
+                <input
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
                   placeholder="Pricing"
                   value={editPricing}
                   onChange={(e) => setEditPricing(e.target.value)}
                 />
               </div>
+
+              {editLogoUrl && (
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <LogoPreview
+                    logoUrl={editLogoUrl}
+                    name={editName || "Tool"}
+                    accent="cyan"
+                  />
+                  <p className="break-all text-xs text-slate-400">
+                    {editLogoUrl}
+                  </p>
+                </div>
+              )}
 
               <textarea
                 className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"

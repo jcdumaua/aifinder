@@ -47,10 +47,7 @@ export async function GET(request: Request) {
     totalToolsError || pendingError || approvedError || rejectedError;
 
   if (statsError) {
-    return NextResponse.json(
-      { error: statsError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: statsError.message }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -101,6 +98,7 @@ export async function POST(request: Request) {
       description: submission.description,
       website: submission.website,
       pricing: submission.pricing || "Free + Paid",
+      logo_url: submission.logo_url || null,
       platforms: [],
       featured: false,
       best_for: "General use",
@@ -151,6 +149,7 @@ export async function PUT(request: Request) {
       description: body.description,
       website: body.website,
       pricing: body.pricing,
+      logo_url: body.logo_url || null,
     })
     .eq("id", body.id);
 
