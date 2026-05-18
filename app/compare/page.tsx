@@ -1,22 +1,77 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   getLogoUrl,
   getReviewCount,
   getToolRating,
   toolSlug,
-  tools,
+  tools as staticTools,
   Tool,
 } from "../data/tools";
 import { useCompare } from "../compare-provider";
 import { useTheme } from "../theme-provider";
+import { supabase } from "../../lib/supabase";
 
 export default function ComparePage() {
   const { compareSlugs, clearCompare } = useCompare();
   const { isLightMode, toggleTheme } = useTheme();
 
-  const compareTools = tools.filter((tool) =>
+  const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadToolsFromSupabase() {
+      const { data, error } = await supabase
+        .from("tools")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase compare page error:", error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      const formattedTools: Tool[] =
+        data?.map((tool) => ({
+          name: tool.name,
+          category:
+            tool.category === "Chat"
+              ? "Chatbots"
+              : tool.category === "Image"
+                ? "Image AI"
+                : tool.category === "Video"
+                  ? "Video AI"
+                  : tool.category === "Audio"
+                    ? "Voice AI"
+                    : tool.category,
+          description: tool.description,
+          website: tool.website,
+          logoUrl: tool.logo_url || undefined,
+          pricing:
+            tool.pricing === "Freemium"
+              ? "Free + Paid"
+              : tool.pricing || "Free + Paid",
+          platforms: tool.platforms || [],
+          featured: tool.featured || false,
+          bestFor: tool.best_for || "General use",
+          useCases: tool.use_cases || [],
+          ios: tool.ios || undefined,
+          android: tool.android || undefined,
+        })) || [];
+
+      setDatabaseTools(formattedTools);
+      setIsLoading(false);
+    }
+
+    loadToolsFromSupabase();
+  }, []);
+
+  const allTools = databaseTools.length > 0 ? databaseTools : staticTools;
+
+  const compareTools = allTools.filter((tool) =>
     compareSlugs.includes(toolSlug(tool.name))
   );
 
@@ -69,6 +124,12 @@ export default function ComparePage() {
             Compare pricing, platforms, ratings, use cases, and best use cases
             side-by-side.
           </p>
+
+          {isLoading && (
+            <p className="mt-4 text-sm text-slate-400">
+              Loading comparison tools...
+            </p>
+          )}
         </div>
 
         {compareTools.length === 0 ? (
@@ -84,7 +145,7 @@ export default function ComparePage() {
               className={`min-w-[850px] overflow-hidden rounded-3xl border ${cardBg}`}
             >
               <div
-                className={`grid border-b border-white/10`}
+                className="grid border-b border-white/10"
                 style={{
                   gridTemplateColumns: `180px repeat(${compareTools.length}, minmax(220px, 1fr))`,
                 }}
@@ -116,22 +177,32 @@ export default function ComparePage() {
 
               <CompareRow
                 label="Pricing"
-                values={compareTools.map((tool) => tool.pricing)}
+                values={compareTools.map((tool) => tool.pricing || "Free + Paid")}
               />
 
               <CompareRow
                 label="Best For"
-                values={compareTools.map((tool) => tool.bestFor)}
+                values={compareTools.map(
+                  (tool) => tool.bestFor || "General use"
+                )}
               />
 
               <CompareRow
                 label="Platforms"
-                values={compareTools.map((tool) => tool.platforms.join(", "))}
+                values={compareTools.map((tool) =>
+                  tool.platforms && tool.platforms.length > 0
+                    ? tool.platforms.join(", ")
+                    : "Web"
+                )}
               />
 
               <CompareRow
                 label="Use Cases"
-                values={compareTools.map((tool) => tool.useCases.join(", "))}
+                values={compareTools.map((tool) =>
+                  tool.useCases && tool.useCases.length > 0
+                    ? tool.useCases.join(", ")
+                    : "General AI use"
+                )}
               />
 
               <CompareRow
@@ -194,12 +265,18 @@ function CompareRow({
 }
 
 function ToolLogo({ tool }: { tool: Tool }) {
+  const [logoError, setLogoError] = useState(false);
+
+  const logoSrc =
+    !logoError && tool.logoUrl ? tool.logoUrl : getLogoUrl(tool.website);
+
   return (
     <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white">
       <img
-        src={getLogoUrl(tool.website)}
+        src={logoSrc}
         alt={`${tool.name} logo`}
-        className="h-9 w-9"
+        className="h-9 w-9 object-contain"
+        onError={() => setLogoError(true)}
       />
     </div>
   );

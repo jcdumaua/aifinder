@@ -81,6 +81,11 @@ export default function AdminPage() {
   const [submissionEditLogoUrl, setSubmissionEditLogoUrl] = useState("");
   const [submissionEditPricing, setSubmissionEditPricing] = useState("");
 
+  const [isUploadingAddLogo, setIsUploadingAddLogo] = useState(false);
+  const [isUploadingEditLogo, setIsUploadingEditLogo] = useState(false);
+  const [isUploadingSubmissionLogo, setIsUploadingSubmissionLogo] =
+    useState(false);
+
   const adminPassword = "aifinder2026";
 
   const toolCategories = useMemo(() => {
@@ -161,6 +166,37 @@ export default function AdminPage() {
   function logoutAdmin() {
     setIsUnlocked(false);
     localStorage.removeItem("aifinder-admin-unlocked");
+  }
+
+  async function uploadLogoFile(
+    file: File,
+    setUrl: (url: string) => void,
+    setUploading: (value: boolean) => void
+  ) {
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/admin/upload-logo", {
+      method: "POST",
+      headers: {
+        "x-admin-password": adminPassword,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    setUploading(false);
+
+    if (!response.ok) {
+      alert(result.error || "Failed to upload logo");
+      return;
+    }
+
+    setUrl(result.logoUrl);
+    alert("Logo uploaded successfully.");
   }
 
   async function fetchTools() {
@@ -636,13 +672,46 @@ export default function AdminPage() {
               onChange={(e) => setLogoUrl(e.target.value)}
             />
 
+            <label className="cursor-pointer rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">
+              {isUploadingAddLogo ? "Uploading logo..." : "Upload Logo File"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file) {
+                    await uploadLogoFile(
+                      file,
+                      setLogoUrl,
+                      setIsUploadingAddLogo
+                    );
+                  }
+
+                  event.target.value = "";
+                }}
+              />
+            </label>
+
             <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Pricing"
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
             />
           </div>
+
+          {logoUrl && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <LogoPreview
+                logoUrl={logoUrl}
+                name={name || "Tool"}
+                accent="cyan"
+              />
+              <p className="break-all text-xs text-slate-400">{logoUrl}</p>
+            </div>
+          )}
 
           <textarea
             className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
@@ -966,8 +1035,32 @@ export default function AdminPage() {
                   onChange={(e) => setSubmissionEditLogoUrl(e.target.value)}
                 />
 
+                <label className="cursor-pointer rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-center text-sm font-bold text-yellow-200 hover:bg-yellow-400/20">
+                  {isUploadingSubmissionLogo
+                    ? "Uploading logo..."
+                    : "Upload Logo File"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+
+                      if (file) {
+                        await uploadLogoFile(
+                          file,
+                          setSubmissionEditLogoUrl,
+                          setIsUploadingSubmissionLogo
+                        );
+                      }
+
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+
                 <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400 sm:col-span-2"
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
                   placeholder="Pricing"
                   value={submissionEditPricing}
                   onChange={(e) => setSubmissionEditPricing(e.target.value)}
@@ -1067,8 +1160,30 @@ export default function AdminPage() {
                   onChange={(e) => setEditLogoUrl(e.target.value)}
                 />
 
+                <label className="cursor-pointer rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">
+                  {isUploadingEditLogo ? "Uploading logo..." : "Upload Logo File"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+
+                      if (file) {
+                        await uploadLogoFile(
+                          file,
+                          setEditLogoUrl,
+                          setIsUploadingEditLogo
+                        );
+                      }
+
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+
                 <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                   placeholder="Pricing"
                   value={editPricing}
                   onChange={(e) => setEditPricing(e.target.value)}
