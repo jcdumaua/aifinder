@@ -13,7 +13,32 @@ export default function SubmitToolPage() {
   const [submitterName, setSubmitterName] = useState("");
   const [submitterEmail, setSubmitterEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  async function uploadLogoFile(file: File) {
+    setIsUploadingLogo(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/upload-logo", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    setIsUploadingLogo(false);
+
+    if (!response.ok) {
+      alert(result.error || "Failed to upload logo");
+      return;
+    }
+
+    setLogoUrl(result.logoUrl);
+    alert("Logo uploaded successfully.");
+  }
 
   async function submitTool() {
     if (!name || !category || !website || !description) {
@@ -111,6 +136,24 @@ export default function SubmitToolPage() {
               onChange={(e) => setLogoUrl(e.target.value)}
             />
 
+            <label className="cursor-pointer rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">
+              {isUploadingLogo ? "Uploading logo..." : "Upload Logo File"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file) {
+                    await uploadLogoFile(file);
+                  }
+
+                  event.target.value = "";
+                }}
+              />
+            </label>
+
             <input
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Pricing"
@@ -127,12 +170,27 @@ export default function SubmitToolPage() {
 
             <input
               type="email"
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 sm:col-span-2"
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Your email"
               value={submitterEmail}
               onChange={(e) => setSubmitterEmail(e.target.value)}
             />
           </div>
+
+          {logoUrl && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <img
+                src={logoUrl}
+                alt="Uploaded logo preview"
+                className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+
+              <p className="break-all text-xs text-slate-400">{logoUrl}</p>
+            </div>
+          )}
 
           <textarea
             className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
@@ -144,7 +202,7 @@ export default function SubmitToolPage() {
 
           <button
             onClick={submitTool}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingLogo}
             className="mt-6 rounded-full bg-cyan-400 px-7 py-4 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Submitting..." : "Submit for Review"}

@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 export async function POST(request: Request) {
-  const adminPassword = request.headers.get("x-admin-password");
-
-  if (adminPassword !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
 
@@ -39,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   const fileExtension = file.name.split(".").pop();
-  const fileName = `admin/${Date.now()}-${Math.random()
+  const fileName = `submissions/${Date.now()}-${Math.random()
     .toString(36)
     .substring(2)}.${fileExtension}`;
 
