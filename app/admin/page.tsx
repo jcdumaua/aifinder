@@ -34,9 +34,205 @@ type AdminStats = {
   rejectedSubmissions: number;
 };
 
+type PopupMessage = {
+  type: "success" | "error";
+  title: string;
+  message: string;
+};
+
+type ConfirmDialog = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  confirmTone: "green" | "red" | "yellow";
+  onConfirm: () => Promise<void> | void;
+};
+
+const CATEGORIES = [
+  "Chatbots",
+  "Image AI",
+  "Video AI",
+  "Voice AI",
+  "Writing",
+  "Coding",
+  "Business",
+  "Productivity",
+  "Education AI",
+  "Marketing AI",
+  "SEO AI",
+  "Design AI",
+  "AI Agents",
+];
+
+const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
+
+const BLOCKED_FILE_EXTENSIONS = [
+  ".exe",
+  ".zip",
+  ".rar",
+  ".7z",
+  ".apk",
+  ".dmg",
+  ".pkg",
+  ".msi",
+  ".bat",
+  ".cmd",
+  ".scr",
+  ".ps1",
+  ".vbs",
+  ".jar",
+  ".iso",
+  ".torrent",
+];
+
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+
+function getSafeHttpsUrl(value?: string | null) {
+  if (!value) return "";
+
+  try {
+    const url = new URL(value.trim());
+
+    if (url.protocol !== "https:") return "";
+    if (url.username || url.password) return "";
+
+    const hostname = url.hostname.toLowerCase();
+
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return "";
+    }
+
+    let pathname = "";
+
+    try {
+      pathname = decodeURIComponent(url.pathname).toLowerCase();
+    } catch {
+      pathname = url.pathname.toLowerCase();
+    }
+
+    if (BLOCKED_FILE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
+      return "";
+    }
+
+    url.hash = "";
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function SafeExternalLink({
+  url,
+  label,
+  accent = "cyan",
+}: {
+  url?: string | null;
+  label: string;
+  accent?: "cyan" | "yellow";
+}) {
+  const safeUrl = getSafeHttpsUrl(url);
+
+  if (!safeUrl) {
+    return (
+      <span className="rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs font-bold text-red-300">
+        Unsafe or invalid link blocked
+      </span>
+    );
+  }
+
+  return (
+    <a
+      href={safeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`rounded-full border px-3 py-1 text-xs font-bold ${
+        accent === "yellow"
+          ? "border-yellow-400/20 bg-yellow-400/10 text-yellow-200 hover:bg-yellow-400/20"
+          : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
+      }`}
+    >
+      {label}
+    </a>
+  );
+}
+
+function LogoPreview({
+  logoUrl,
+  name,
+  accent,
+}: {
+  logoUrl?: string | null;
+  name: string;
+  accent: "cyan" | "yellow";
+}) {
+  const [logoError, setLogoError] = useState(false);
+  const safeLogoUrl = getSafeHttpsUrl(logoUrl);
+
+  if (safeLogoUrl && !logoError) {
+    return (
+      <img
+        src={safeLogoUrl}
+        alt={`${name} logo`}
+        className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
+        onError={() => setLogoError(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
+        accent === "cyan"
+          ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+          : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
+      } text-xl font-black`}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function SubmissionSafeIcon({ name }: { name: string }) {
+  return (
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-yellow-400/20 bg-yellow-400/10 text-xl font-black text-yellow-300">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-6 w-6"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
+      />
+    </svg>
+  );
+}
+
 export default function AdminPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [tools, setTools] = useState<Tool[]>([]);
   const [submissions, setSubmissions] = useState<SubmittedTool[]>([]);
@@ -86,7 +282,11 @@ export default function AdminPage() {
   const [isUploadingSubmissionLogo, setIsUploadingSubmissionLogo] =
     useState(false);
 
-  const adminPassword = "aifinder2026";
+  const [popup, setPopup] = useState<PopupMessage | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
+    null
+  );
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const toolCategories = useMemo(() => {
     return Array.from(
@@ -97,9 +297,7 @@ export default function AdminPage() {
   const submissionCategories = useMemo(() => {
     return Array.from(
       new Set(
-        submissions
-          .map((submission) => submission.category)
-          .filter(Boolean)
+        submissions.map((submission) => submission.category).filter(Boolean)
       )
     ).sort();
   }, [submissions]);
@@ -154,18 +352,123 @@ export default function AdminPage() {
     });
   }, [submissions, submissionSearch, submissionCategoryFilter]);
 
-  function unlockAdmin() {
-    if (password === adminPassword) {
-      setIsUnlocked(true);
-      localStorage.setItem("aifinder-admin-unlocked", "true");
-    } else {
-      alert("Wrong password");
+  function showSuccess(message: string, title = "Success") {
+    setPopup({
+      type: "success",
+      title,
+      message,
+    });
+  }
+
+  function showError(message: string, title = "Action Failed") {
+    setPopup({
+      type: "error",
+      title,
+      message,
+    });
+  }
+
+  function askConfirm(dialog: ConfirmDialog) {
+    setConfirmDialog(dialog);
+  }
+
+  async function runConfirmAction() {
+    if (!confirmDialog) return;
+
+    setIsConfirming(true);
+
+    try {
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
+    } catch (error) {
+      showError(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setIsConfirming(false);
     }
   }
 
-  function logoutAdmin() {
+  async function checkAdminSession() {
+    setIsCheckingSession(true);
+
+    try {
+      const response = await fetch("/api/admin/session", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      setIsUnlocked(Boolean(response.ok && result?.authenticated));
+    } catch {
+      setIsUnlocked(false);
+    } finally {
+      setIsCheckingSession(false);
+    }
+  }
+
+  async function unlockAdmin() {
+    if (!password.trim()) {
+      showError("Please enter the admin password.", "Admin Access Denied");
+      return;
+    }
+
+    setIsLoggingIn(true);
+
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          password,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        showError(
+          result?.error || "Wrong password. Please try again.",
+          "Admin Access Denied"
+        );
+        return;
+      }
+
+      setPassword("");
+      setIsUnlocked(true);
+    } catch {
+      showError("Admin login failed. Please try again.", "Admin Access Denied");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }
+
+  async function logoutAdmin() {
+    try {
+      await fetch("/api/admin/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+    } catch {
+      // Continue clearing local UI state even if logout request fails.
+    }
+
     setIsUnlocked(false);
-    localStorage.removeItem("aifinder-admin-unlocked");
+    setPassword("");
+    setTools([]);
+    setSubmissions([]);
+    setStats({
+      totalTools: 0,
+      pendingSubmissions: 0,
+      approvedSubmissions: 0,
+      rejectedSubmissions: 0,
+    });
   }
 
   async function uploadLogoFile(
@@ -173,30 +476,48 @@ export default function AdminPage() {
     setUrl: (url: string) => void,
     setUploading: (value: boolean) => void
   ) {
-    setUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/admin/upload-logo", {
-      method: "POST",
-      headers: {
-        "x-admin-password": adminPassword,
-      },
-      body: formData,
-    });
-
-    const result = await response.json();
-
-    setUploading(false);
-
-    if (!response.ok) {
-      alert(result.error || "Failed to upload logo");
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      showError("Only PNG, JPG, JPEG, and WEBP logo files are allowed.");
       return;
     }
 
-    setUrl(result.logoUrl);
-    alert("Logo uploaded successfully.");
+    if (file.size > MAX_LOGO_SIZE) {
+      showError("Logo file must be under 2MB.");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/admin/upload-logo", {
+        method: "POST",
+        credentials: "same-origin",
+        body: formData,
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        showError("Your admin session expired. Please log in again.");
+        logoutAdmin();
+        return;
+      }
+
+      if (!response.ok || !result?.logoUrl) {
+        showError(result?.error || "Failed to upload logo.");
+        return;
+      }
+
+      setUrl(result.logoUrl);
+      showSuccess("Logo uploaded successfully.", "Logo Uploaded");
+    } catch {
+      showError("Failed to upload logo.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function fetchTools() {
@@ -212,80 +533,111 @@ export default function AdminPage() {
 
   async function fetchSubmissions() {
     const response = await fetch("/api/admin/submissions", {
-      headers: {
-        "x-admin-password": adminPassword,
-      },
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      alert(result.error || "Failed to load submissions");
+    if (response.status === 401) {
+      showError("Your admin session expired. Please log in again.");
+      logoutAdmin();
       return;
     }
 
-    setSubmissions(result.submissions || []);
+    if (!response.ok) {
+      showError(result?.error || "Failed to load submissions.");
+      return;
+    }
 
-    if (result.stats) {
+    setSubmissions(result?.submissions || []);
+
+    if (result?.stats) {
       setStats(result.stats);
     }
   }
 
-  async function approveSubmission(submissionId: number) {
-    const confirmApprove = confirm("Approve this submitted tool?");
+  function approveSubmission(submissionId: number) {
+    askConfirm({
+      title: "Approve Submission?",
+      message:
+        "This will add the submitted tool to the live AiFinder database.",
+      confirmLabel: "Approve",
+      confirmTone: "green",
+      onConfirm: async () => {
+        const response = await fetch("/api/admin/submissions", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            submissionId,
+          }),
+        });
 
-    if (!confirmApprove) return;
+        const result = await response.json().catch(() => null);
 
-    const response = await fetch("/api/admin/submissions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
+        if (response.status === 401) {
+          showError("Your admin session expired. Please log in again.");
+          logoutAdmin();
+          return;
+        }
+
+        if (!response.ok) {
+          showError(result?.error || "Failed to approve submission.");
+          return;
+        }
+
+        showSuccess(
+          "Tool approved and added to AiFinder.",
+          "Submission Approved"
+        );
+
+        fetchSubmissions();
+        fetchTools();
       },
-      body: JSON.stringify({
-        submissionId,
-      }),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert(result.error || "Failed to approve submission");
-      return;
-    }
-
-    alert("Tool approved and added to AiFinder.");
-
-    fetchSubmissions();
-    fetchTools();
   }
 
-  async function rejectSubmission(submissionId: number) {
-    const confirmReject = confirm("Reject this submitted tool?");
+  function rejectSubmission(submissionId: number) {
+    askConfirm({
+      title: "Reject Submission?",
+      message:
+        "This will mark the submitted tool as rejected. It will not appear publicly.",
+      confirmLabel: "Reject",
+      confirmTone: "red",
+      onConfirm: async () => {
+        const response = await fetch("/api/admin/submissions", {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            submissionId,
+          }),
+        });
 
-    if (!confirmReject) return;
+        const result = await response.json().catch(() => null);
 
-    const response = await fetch("/api/admin/submissions", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
+        if (response.status === 401) {
+          showError("Your admin session expired. Please log in again.");
+          logoutAdmin();
+          return;
+        }
+
+        if (!response.ok) {
+          showError(result?.error || "Failed to reject submission.");
+          return;
+        }
+
+        showSuccess("Submission rejected.", "Submission Rejected");
+
+        fetchSubmissions();
       },
-      body: JSON.stringify({
-        submissionId,
-      }),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert(result.error || "Failed to reject submission");
-      return;
-    }
-
-    alert("Submission rejected.");
-
-    fetchSubmissions();
   }
 
   function openSubmissionEditModal(submission: SubmittedTool) {
@@ -317,15 +669,15 @@ export default function AdminPage() {
       !submissionEditDescription ||
       !submissionEditWebsite
     ) {
-      alert("Please fill all required fields");
+      showError("Please fill all required fields.");
       return;
     }
 
     const response = await fetch("/api/admin/submissions", {
       method: "PUT",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
       },
       body: JSON.stringify({
         id: editingSubmission.id,
@@ -338,25 +690,27 @@ export default function AdminPage() {
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      alert(result.error || "Failed to update submission");
+    if (response.status === 401) {
+      showError("Your admin session expired. Please log in again.");
+      logoutAdmin();
       return;
     }
 
-    alert("Submission updated.");
+    if (!response.ok) {
+      showError(result?.error || "Failed to update submission.");
+      return;
+    }
+
+    showSuccess("Submission updated.", "Submission Updated");
 
     closeSubmissionEditModal();
     fetchSubmissions();
   }
 
   useEffect(() => {
-    const savedUnlock = localStorage.getItem("aifinder-admin-unlocked");
-
-    if (savedUnlock === "true") {
-      setIsUnlocked(true);
-    }
+    checkAdminSession();
   }, []);
 
   useEffect(() => {
@@ -368,15 +722,15 @@ export default function AdminPage() {
 
   async function addTool() {
     if (!name || !category || !description || !website) {
-      alert("Please fill all required fields");
+      showError("Please fill all required fields.");
       return;
     }
 
     const response = await fetch("/api/admin/tools", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
       },
       body: JSON.stringify({
         name,
@@ -388,10 +742,16 @@ export default function AdminPage() {
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => null);
+
+    if (response.status === 401) {
+      showError("Your admin session expired. Please log in again.");
+      logoutAdmin();
+      return;
+    }
 
     if (!response.ok) {
-      alert(result.error || "Failed to add tool");
+      showError(result?.error || "Failed to add tool.");
       return;
     }
 
@@ -401,6 +761,8 @@ export default function AdminPage() {
     setWebsite("");
     setLogoUrl("");
     setPricing("");
+
+    showSuccess("Tool added to AiFinder.", "Tool Added");
 
     fetchTools();
     fetchSubmissions();
@@ -430,15 +792,15 @@ export default function AdminPage() {
     if (!editingTool?.id) return;
 
     if (!editName || !editCategory || !editDescription || !editWebsite) {
-      alert("Please fill all required fields");
+      showError("Please fill all required fields.");
       return;
     }
 
     const response = await fetch("/api/admin/tools", {
       method: "PUT",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
       },
       body: JSON.stringify({
         id: editingTool.id,
@@ -451,85 +813,192 @@ export default function AdminPage() {
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      alert(result.error || "Failed to update tool");
+    if (response.status === 401) {
+      showError("Your admin session expired. Please log in again.");
+      logoutAdmin();
       return;
     }
+
+    if (!response.ok) {
+      showError(result?.error || "Failed to update tool.");
+      return;
+    }
+
+    showSuccess("Tool updated successfully.", "Tool Updated");
 
     closeEditModal();
     fetchTools();
     fetchSubmissions();
   }
 
-  async function deleteTool(id?: number) {
+  function deleteTool(id?: number) {
     if (!id) return;
 
-    const confirmDelete = confirm("Delete this tool?");
+    askConfirm({
+      title: "Delete Tool?",
+      message:
+        "This will remove the tool from the live AiFinder database. This action cannot be undone.",
+      confirmLabel: "Delete",
+      confirmTone: "red",
+      onConfirm: async () => {
+        const response = await fetch("/api/admin/tools", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id,
+          }),
+        });
 
-    if (!confirmDelete) return;
+        const result = await response.json().catch(() => null);
 
-    const response = await fetch("/api/admin/tools", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
+        if (response.status === 401) {
+          showError("Your admin session expired. Please log in again.");
+          logoutAdmin();
+          return;
+        }
+
+        if (!response.ok) {
+          showError(result?.error || "Failed to delete tool.");
+          return;
+        }
+
+        showSuccess("Tool deleted successfully.", "Tool Deleted");
+
+        fetchTools();
+        fetchSubmissions();
       },
-      body: JSON.stringify({
-        id,
-      }),
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert(result.error || "Failed to delete tool");
-      return;
-    }
-
-    fetchTools();
-    fetchSubmissions();
   }
 
-  function LogoPreview({
-    logoUrl,
-    name,
-    accent,
-  }: {
-    logoUrl?: string | null;
-    name: string;
-    accent: "cyan" | "yellow";
-  }) {
-    if (logoUrl) {
-      return (
-        <img
-          src={logoUrl}
-          alt={`${name} logo`}
-          className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-      );
-    }
+  const isSuccessPopup = popup?.type === "success";
 
-    return (
+  const messagePopup = popup && (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
       <div
-        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
-          accent === "cyan"
-            ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
-            : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
-        } text-xl font-black`}
+        className={`w-full max-w-md rounded-[2rem] border p-7 text-center shadow-2xl ${
+          isSuccessPopup
+            ? "border-green-400/30 bg-slate-950"
+            : "border-red-400/30 bg-slate-950"
+        }`}
       >
-        {name.charAt(0).toUpperCase()}
+        <div
+          className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
+            isSuccessPopup
+              ? "bg-green-400/15 text-green-300"
+              : "bg-red-400/15 text-red-300"
+          }`}
+        >
+          {isSuccessPopup ? "✓" : "!"}
+        </div>
+
+        <h2 className="mt-5 text-2xl font-black text-white">
+          {popup.title}
+        </h2>
+
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          {popup.message}
+        </p>
+
+        <button
+          onClick={() => setPopup(null)}
+          className={`mt-6 rounded-full px-7 py-3 text-sm font-bold text-slate-950 ${
+            isSuccessPopup
+              ? "bg-green-400 hover:bg-green-300"
+              : "bg-red-400 hover:bg-red-300"
+          }`}
+        >
+          OK
+        </button>
       </div>
+    </div>
+  );
+
+  const confirmationPopup = confirmDialog && (
+    <div
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950 p-7 text-center shadow-2xl">
+        <div
+          className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
+            confirmDialog.confirmTone === "green"
+              ? "bg-green-400/15 text-green-300"
+              : confirmDialog.confirmTone === "red"
+                ? "bg-red-400/15 text-red-300"
+                : "bg-yellow-400/15 text-yellow-300"
+          }`}
+        >
+          ?
+        </div>
+
+        <h2 className="mt-5 text-2xl font-black text-white">
+          {confirmDialog.title}
+        </h2>
+
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          {confirmDialog.message}
+        </p>
+
+        <div className="mt-6 flex justify-center gap-3">
+          <button
+            onClick={() => setConfirmDialog(null)}
+            disabled={isConfirming}
+            className="rounded-full border border-white/10 px-7 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={runConfirmAction}
+            disabled={isConfirming}
+            className={`rounded-full px-7 py-3 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60 ${
+              confirmDialog.confirmTone === "green"
+                ? "bg-green-400 hover:bg-green-300"
+                : confirmDialog.confirmTone === "red"
+                  ? "bg-red-400 hover:bg-red-300"
+                  : "bg-yellow-400 hover:bg-yellow-300"
+            }`}
+          >
+            {isConfirming ? "Working..." : confirmDialog.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isCheckingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
+          <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+            AiFinder Admin
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black">Checking session...</h1>
+
+          <p className="mt-4 text-sm text-slate-400">
+            Please wait a moment.
+          </p>
+        </div>
+      </main>
     );
   }
 
   if (!isUnlocked) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+        {messagePopup}
+
         <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
           <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
             Admin Access
@@ -545,25 +1014,27 @@ export default function AdminPage() {
             type="password"
             placeholder="Admin password"
             value={password}
+            disabled={isLoggingIn}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !isLoggingIn) {
                 unlockAdmin();
               }
             }}
-            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           />
 
           <button
             onClick={unlockAdmin}
-            className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
+            disabled={isLoggingIn}
+            className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Unlock Dashboard
+            {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
           </button>
 
           <p className="mt-4 text-xs text-slate-500">
-            Temporary MVP password protection. We’ll replace this with real
-            login later.
+            Admin password is checked securely on the server. A secure cookie
+            session is used after login.
           </p>
         </div>
       </main>
@@ -572,6 +1043,9 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black p-6 text-white">
+      {confirmationPopup}
+      {messagePopup}
+
       <section className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -588,7 +1062,7 @@ export default function AdminPage() {
             onClick={logoutAdmin}
             className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
           >
-            Lock Admin
+            Log Out
           </button>
         </div>
 
@@ -648,58 +1122,92 @@ export default function AdminPage() {
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Tool Name"
               value={name}
+              maxLength={80}
               onChange={(e) => setName(e.target.value)}
             />
 
-            <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-              placeholder="Category"
+            <select
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-            />
+            >
+              <option className="bg-slate-950" value="">
+                Select category
+              </option>
+
+              {CATEGORIES.map((item) => (
+                <option className="bg-slate-950" key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
 
             <input
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               placeholder="Website URL"
               value={website}
+              maxLength={500}
               onChange={(e) => setWebsite(e.target.value)}
             />
 
-            <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-              placeholder="Logo Image URL"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-            />
-
-            <label className="cursor-pointer rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">
-              {isUploadingAddLogo ? "Uploading logo..." : "Upload Logo File"}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                className="hidden"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-
-                  if (file) {
-                    await uploadLogoFile(
-                      file,
-                      setLogoUrl,
-                      setIsUploadingAddLogo
-                    );
-                  }
-
-                  event.target.value = "";
-                }}
-              />
-            </label>
-
-            <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-              placeholder="Pricing"
+            <select
+              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
-            />
+            >
+              <option className="bg-slate-950" value="">
+                Select pricing
+              </option>
+
+              {PRICING_OPTIONS.map((item) => (
+                <option className="bg-slate-950" key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            <div className="sm:col-span-2">
+              <div className="grid grid-cols-[1fr_76px] gap-3">
+                <input
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                  placeholder="Logo Image URL"
+                  value={logoUrl}
+                  maxLength={500}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                />
+
+                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-slate-400 hover:bg-white/10">
+                  {isUploadingAddLogo ? (
+                    <span className="text-xl">…</span>
+                  ) : (
+                    <UploadIcon />
+                  )}
+
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={async (event) => {
+                      const file = event.target.files?.[0];
+
+                      if (file) {
+                        await uploadLogoFile(
+                          file,
+                          setLogoUrl,
+                          setIsUploadingAddLogo
+                        );
+                      }
+
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+
+              <p className="mt-2 text-xs text-slate-500">
+                Admin logo upload accepts PNG, JPG, JPEG, or WEBP only.
+              </p>
+            </div>
           </div>
 
           {logoUrl && (
@@ -717,6 +1225,7 @@ export default function AdminPage() {
             className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
             placeholder="Description"
             value={description}
+            maxLength={500}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
           />
@@ -749,6 +1258,12 @@ export default function AdminPage() {
             </button>
           </div>
 
+          <p className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-xs leading-6 text-yellow-100">
+            Security note: user-submitted websites and logo URLs are shown as
+            text first. Links open only in a new protected tab. No website
+            preview or iframe is loaded in the admin dashboard.
+          </p>
+
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             <input
               className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
@@ -762,9 +1277,16 @@ export default function AdminPage() {
               value={submissionCategoryFilter}
               onChange={(e) => setSubmissionCategoryFilter(e.target.value)}
             >
-              <option value="All">All Categories</option>
+              <option className="bg-slate-950" value="All">
+                All Categories
+              </option>
+
               {submissionCategories.map((categoryName) => (
-                <option key={categoryName} value={categoryName}>
+                <option
+                  className="bg-slate-950"
+                  key={categoryName}
+                  value={categoryName}
+                >
                   {categoryName}
                 </option>
               ))}
@@ -784,11 +1306,7 @@ export default function AdminPage() {
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex gap-4">
-                      <LogoPreview
-                        logoUrl={submission.logo_url}
-                        name={submission.name}
-                        accent="yellow"
-                      />
+                      <SubmissionSafeIcon name={submission.name} />
 
                       <div>
                         <h3 className="text-xl font-bold">
@@ -800,18 +1318,34 @@ export default function AdminPage() {
                         </p>
 
                         <p className="mt-2 text-sm leading-6 text-slate-300">
-                          {submission.description}
+                          Description: {submission.description}
                         </p>
 
-                        <p className="mt-3 break-all text-xs text-slate-500">
-                          Website: {submission.website}
-                        </p>
-
-                        {submission.logo_url && (
-                          <p className="mt-2 break-all text-xs text-slate-500">
-                            Logo: {submission.logo_url}
+                        <div className="mt-3 space-y-2">
+                          <p className="break-all text-xs text-slate-500">
+                            Website: {submission.website}
                           </p>
-                        )}
+
+                          <SafeExternalLink
+                            url={submission.website}
+                            label="Review Website"
+                            accent="yellow"
+                          />
+
+                          {submission.logo_url && (
+                            <>
+                              <p className="break-all text-xs text-slate-500">
+                                Logo URL: {submission.logo_url}
+                              </p>
+
+                              <SafeExternalLink
+                                url={submission.logo_url}
+                                label="Review Logo"
+                                accent="yellow"
+                              />
+                            </>
+                          )}
+                        </div>
 
                         {submission.pricing && (
                           <p className="mt-2 text-xs text-slate-400">
@@ -898,9 +1432,16 @@ export default function AdminPage() {
               value={toolCategoryFilter}
               onChange={(e) => setToolCategoryFilter(e.target.value)}
             >
-              <option value="All">All Categories</option>
+              <option className="bg-slate-950" value="All">
+                All Categories
+              </option>
+
               {toolCategories.map((categoryName) => (
-                <option key={categoryName} value={categoryName}>
+                <option
+                  className="bg-slate-950"
+                  key={categoryName}
+                  value={categoryName}
+                >
                   {categoryName}
                 </option>
               ))}
@@ -911,8 +1452,12 @@ export default function AdminPage() {
               value={toolSort}
               onChange={(e) => setToolSort(e.target.value)}
             >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
+              <option className="bg-slate-950" value="newest">
+                Newest First
+              </option>
+              <option className="bg-slate-950" value="oldest">
+                Oldest First
+              </option>
             </select>
           </div>
 
@@ -945,9 +1490,17 @@ export default function AdminPage() {
                         {tool.description}
                       </p>
 
-                      <p className="mt-2 text-xs text-slate-500">
-                        {tool.website}
-                      </p>
+                      <div className="mt-2 space-y-2">
+                        <p className="break-all text-xs text-slate-500">
+                          {tool.website}
+                        </p>
+
+                        <SafeExternalLink
+                          url={tool.website}
+                          label="Review Website"
+                          accent="cyan"
+                        />
+                      </div>
 
                       {tool.logo_url && (
                         <p className="mt-2 break-all text-xs text-slate-500">
@@ -986,7 +1539,7 @@ export default function AdminPage() {
 
         {editingSubmission && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-2xl rounded-[2rem] border border-yellow-400/20 bg-slate-950 p-6 shadow-2xl">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-yellow-400/20 bg-slate-950 p-6 shadow-2xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
@@ -1011,72 +1564,112 @@ export default function AdminPage() {
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
                   placeholder="Tool Name"
                   value={submissionEditName}
+                  maxLength={80}
                   onChange={(e) => setSubmissionEditName(e.target.value)}
                 />
 
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
-                  placeholder="Category"
+                <select
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-yellow-400"
                   value={submissionEditCategory}
-                  onChange={(e) => setSubmissionEditCategory(e.target.value)}
-                />
+                  onChange={(e) =>
+                    setSubmissionEditCategory(e.target.value)
+                  }
+                >
+                  <option className="bg-slate-950" value="">
+                    Select category
+                  </option>
+
+                  {CATEGORIES.map((item) => (
+                    <option className="bg-slate-950" key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
 
                 <input
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
                   placeholder="Website URL"
                   value={submissionEditWebsite}
+                  maxLength={500}
                   onChange={(e) => setSubmissionEditWebsite(e.target.value)}
                 />
 
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
-                  placeholder="Logo Image URL"
-                  value={submissionEditLogoUrl}
-                  onChange={(e) => setSubmissionEditLogoUrl(e.target.value)}
-                />
-
-                <label className="cursor-pointer rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-center text-sm font-bold text-yellow-200 hover:bg-yellow-400/20">
-                  {isUploadingSubmissionLogo
-                    ? "Uploading logo..."
-                    : "Upload Logo File"}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    className="hidden"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-
-                      if (file) {
-                        await uploadLogoFile(
-                          file,
-                          setSubmissionEditLogoUrl,
-                          setIsUploadingSubmissionLogo
-                        );
-                      }
-
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
-                  placeholder="Pricing"
+                <select
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-yellow-400"
                   value={submissionEditPricing}
                   onChange={(e) => setSubmissionEditPricing(e.target.value)}
-                />
+                >
+                  <option className="bg-slate-950" value="">
+                    Select pricing
+                  </option>
+
+                  {PRICING_OPTIONS.map((item) => (
+                    <option className="bg-slate-950" key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="sm:col-span-2">
+                  <div className="grid grid-cols-[1fr_76px] gap-3">
+                    <input
+                      className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
+                      placeholder="Logo Image URL"
+                      value={submissionEditLogoUrl}
+                      maxLength={500}
+                      onChange={(e) =>
+                        setSubmissionEditLogoUrl(e.target.value)
+                      }
+                    />
+
+                    <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-slate-400 hover:bg-white/10">
+                      {isUploadingSubmissionLogo ? (
+                        <span className="text-xl">…</span>
+                      ) : (
+                        <UploadIcon />
+                      )}
+
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+
+                          if (file) {
+                            await uploadLogoFile(
+                              file,
+                              setSubmissionEditLogoUrl,
+                              setIsUploadingSubmissionLogo
+                            );
+                          }
+
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    For security, submitted logo URLs are not auto-previewed
+                    here. Open the logo link safely if you need to review it.
+                  </p>
+                </div>
               </div>
 
               {submissionEditLogoUrl && (
-                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <LogoPreview
-                    logoUrl={submissionEditLogoUrl}
-                    name={submissionEditName || "Tool"}
-                    accent="yellow"
-                  />
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
                   <p className="break-all text-xs text-slate-400">
                     {submissionEditLogoUrl}
                   </p>
+
+                  <div className="mt-3">
+                    <SafeExternalLink
+                      url={submissionEditLogoUrl}
+                      label="Review Logo"
+                      accent="yellow"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1084,6 +1677,7 @@ export default function AdminPage() {
                 className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
                 placeholder="Description"
                 value={submissionEditDescription}
+                maxLength={500}
                 onChange={(e) =>
                   setSubmissionEditDescription(e.target.value)
                 }
@@ -1111,7 +1705,7 @@ export default function AdminPage() {
 
         {editingTool && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-2xl rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-2xl">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-2xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
@@ -1136,58 +1730,88 @@ export default function AdminPage() {
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                   placeholder="Tool Name"
                   value={editName}
+                  maxLength={80}
                   onChange={(e) => setEditName(e.target.value)}
                 />
 
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-                  placeholder="Category"
+                <select
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value)}
-                />
+                >
+                  <option className="bg-slate-950" value="">
+                    Select category
+                  </option>
+
+                  {CATEGORIES.map((item) => (
+                    <option className="bg-slate-950" key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
 
                 <input
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                   placeholder="Website URL"
                   value={editWebsite}
+                  maxLength={500}
                   onChange={(e) => setEditWebsite(e.target.value)}
                 />
 
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-                  placeholder="Logo Image URL"
-                  value={editLogoUrl}
-                  onChange={(e) => setEditLogoUrl(e.target.value)}
-                />
-
-                <label className="cursor-pointer rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">
-                  {isUploadingEditLogo ? "Uploading logo..." : "Upload Logo File"}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    className="hidden"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-
-                      if (file) {
-                        await uploadLogoFile(
-                          file,
-                          setEditLogoUrl,
-                          setIsUploadingEditLogo
-                        );
-                      }
-
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-
-                <input
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-                  placeholder="Pricing"
+                <select
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
                   value={editPricing}
                   onChange={(e) => setEditPricing(e.target.value)}
-                />
+                >
+                  <option className="bg-slate-950" value="">
+                    Select pricing
+                  </option>
+
+                  {PRICING_OPTIONS.map((item) => (
+                    <option className="bg-slate-950" key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="sm:col-span-2">
+                  <div className="grid grid-cols-[1fr_76px] gap-3">
+                    <input
+                      className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                      placeholder="Logo Image URL"
+                      value={editLogoUrl}
+                      maxLength={500}
+                      onChange={(e) => setEditLogoUrl(e.target.value)}
+                    />
+
+                    <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-slate-400 hover:bg-white/10">
+                      {isUploadingEditLogo ? (
+                        <span className="text-xl">…</span>
+                      ) : (
+                        <UploadIcon />
+                      )}
+
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+
+                          if (file) {
+                            await uploadLogoFile(
+                              file,
+                              setEditLogoUrl,
+                              setIsUploadingEditLogo
+                            );
+                          }
+
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {editLogoUrl && (
@@ -1207,6 +1831,7 @@ export default function AdminPage() {
                 className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                 placeholder="Description"
                 value={editDescription}
+                maxLength={500}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={5}
               />

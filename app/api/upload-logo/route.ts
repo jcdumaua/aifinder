@@ -1,59 +1,214 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file") as File | null;
+export const runtime = "nodejs";
 
-  if (!file) {
-    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_REQUEST_SIZE_BYTES = 3 * 1024 * 1024; // 3MB including form data
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_LIMIT_MAX_UPLOADS = 10; // 10 logo uploads per hour per IP
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function jsonResponse(data: object, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0].trim();
   }
 
-  const allowedTypes = [
-    "image/png",
-    "image/jpeg",
-    "image/webp",
-    "image/svg+xml",
-  ];
+  return realIp || "unknown";
+}
 
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json(
-      { error: "Only PNG, JPG, WEBP, and SVG files are allowed" },
-      { status: 400 }
-    );
-  }
+function checkRateLimit(ip: string) {
+  const now = Date.now();
+  const current = rateLimitMap.get(ip);
 
-  const maxSize = 2 * 1024 * 1024;
-
-  if (file.size > maxSize) {
-    return NextResponse.json(
-      { error: "Logo file must be under 2MB" },
-      { status: 400 }
-    );
-  }
-
-  const fileExtension = file.name.split(".").pop();
-  const fileName = `submissions/${Date.now()}-${Math.random()
-    .toString(36)
-    .substring(2)}.${fileExtension}`;
-
-  const { error } = await supabaseAdmin.storage
-    .from("tool-logos")
-    .upload(fileName, file, {
-      cacheControl: "3600",
-      upsert: false,
+  if (!current || current.resetAt <= now) {
+    rateLimitMap.set(ip, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
     });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return true;
   }
 
-  const { data } = supabaseAdmin.storage
-    .from("tool-logos")
-    .getPublicUrl(fileName);
+  if (current.count >= RATE_LIMIT_MAX_UPLOADS) {
+    return false;
+  }
 
-  return NextResponse.json({
-    success: true,
-    logoUrl: data.publicUrl,
-  });
+  current.count += 1;
+  rateLimitMap.set(ip, current);
+
+  return true;
+}
+
+function getExtensionFromMimeType(mimeType: string) {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+
+  return "";
+}
+
+function hasValidImageSignature(bytes: Uint8Array, mimeType: string) {
+  if (mimeType === "image/png") {
+    return (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    );
+  }
+
+  if (mimeType === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (mimeType === "image/webp") {
+    const header = String.fromCharCode(...bytes.slice(0, 12));
+
+    return header.startsWith("RIFF") && header.slice(8, 12) === "WEBP";
+  }
+
+  return false;
+}
+
+export async function POST(request: Request) {
+  try {
+    const clientIp = getClientIp(request);
+
+    if (!checkRateLimit(clientIp)) {
+      return jsonResponse(
+        {
+          error:
+            "Too many logo uploads. Please wait before uploading another logo.",
+        },
+        429
+      );
+    }
+
+    const contentType = request.headers.get("content-type") || "";
+
+    if (!contentType.includes("multipart/form-data")) {
+      return jsonResponse({ error: "Invalid upload format." }, 415);
+    }
+
+    const contentLengthHeader = request.headers.get("content-length");
+    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
+
+    if (contentLength > MAX_REQUEST_SIZE_BYTES) {
+      return jsonResponse(
+        { error: "Upload is too large. Logo file must be under 2MB." },
+        413
+      );
+    }
+
+    const formData = await request.formData();
+    const uploadedFiles = formData
+      .getAll("file")
+      .filter((item): item is File => item instanceof File);
+
+    if (uploadedFiles.length !== 1) {
+      return jsonResponse(
+        { error: "Please upload one logo file only." },
+        400
+      );
+    }
+
+    const file = uploadedFiles[0];
+
+    if (!file || file.size === 0) {
+      return jsonResponse({ error: "No file uploaded." }, 400);
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return jsonResponse(
+        { error: "Logo file must be under 2MB." },
+        400
+      );
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return jsonResponse(
+        { error: "Only PNG, JPG, JPEG, and WEBP logo files are allowed." },
+        400
+      );
+    }
+
+    const fileBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(fileBuffer);
+
+    if (!hasValidImageSignature(bytes, file.type)) {
+      return jsonResponse(
+        {
+          error:
+            "Invalid image file. Please upload a real PNG, JPG, JPEG, or WEBP image.",
+        },
+        400
+      );
+    }
+
+    const fileExtension = getExtensionFromMimeType(file.type);
+
+    if (!fileExtension) {
+      return jsonResponse({ error: "Unsupported logo file type." }, 400);
+    }
+
+    const fileName = `submissions/${crypto.randomUUID()}.${fileExtension}`;
+
+    const safeFile = new Blob([fileBuffer], {
+      type: file.type,
+    });
+
+    const { error } = await supabaseAdmin.storage
+      .from("tool-logos")
+      .upload(fileName, safeFile, {
+        cacheControl: "3600",
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Logo upload error:", error.message);
+
+      return jsonResponse(
+        { error: "Unable to upload logo. Please try again later." },
+        500
+      );
+    }
+
+    const { data } = supabaseAdmin.storage
+      .from("tool-logos")
+      .getPublicUrl(fileName);
+
+    return jsonResponse({
+      success: true,
+      logoUrl: data.publicUrl,
+    });
+  } catch (error) {
+    console.error("Logo upload route error:", error);
+
+    return jsonResponse(
+      { error: "Logo upload failed. Please try again." },
+      500
+    );
+  }
 }
