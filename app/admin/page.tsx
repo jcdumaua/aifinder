@@ -2104,132 +2104,187 @@ export default function AdminPage() {
           </button>
         </div>
 
-        <div className="mb-10 rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-                Dashboard Summary
-              </p>
-
-              <h2 className="mt-2 text-2xl font-bold">
-                AiFinder Stats
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                {stats.totalTools} tools • {stats.pendingSubmissions} pending •{" "}
-                {stats.approvedSubmissions} approved • {stats.rejectedSubmissions} rejected
-              </p>
-            </div>
-
-            <button
-              onClick={() => setIsStatsModalOpen(true)}
-              className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
-            >
-              Open Stats
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-10 rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
-                Security Audit
-              </p>
-
-              <h2 className="mt-2 text-2xl font-bold">
-                Recent Admin Activity
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-400">
-                View audit logs in a popup to keep the dashboard clean.
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                setIsAuditLogModalOpen(true);
-                fetchAuditLogs();
-              }}
-              className="rounded-full bg-purple-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-purple-300"
-            >
-              Open Audit Logs
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-10 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-10 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-                  Add Tool
+                  Compact Control Panel
                 </p>
 
-                <h2 className="mt-2 text-2xl font-bold">Add New Tool</h2>
+                <h2 className="mt-2 text-3xl font-black">
+                  AiFinder Admin Center
+                </h2>
 
-                <p className="mt-2 text-sm text-slate-400">
-                  Open the add tool form in a popup to keep this dashboard clean.
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                  Manage tools, submissions, stats, and audit logs from one clean
+                  dashboard. All detailed sections open in popups.
                 </p>
               </div>
 
               <button
-                onClick={() => setIsAddToolModalOpen(true)}
-                className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+                onClick={logoutAdmin}
+                className="rounded-full border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-400/20"
               >
-                Open Add Tool
+                Log Out
               </button>
             </div>
-          </div>
 
-          <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-400/10 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
-                  Admin Review
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+                  Tools
                 </p>
-
-                <h2 className="mt-2 text-2xl font-bold">
-                  Pending User Submissions ({filteredSubmissions.length})
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-400">
-                  Review, edit, approve, or reject submitted tools in a popup.
+                <p className="mt-2 text-4xl font-black text-white">
+                  {stats.totalTools}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Live database
                 </p>
               </div>
+
+              <div className="rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-yellow-300">
+                  Pending
+                </p>
+                <p className="mt-2 text-4xl font-black text-white">
+                  {stats.pendingSubmissions}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Needs review
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-green-400/20 bg-green-400/10 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-green-300">
+                  Approved
+                </p>
+                <p className="mt-2 text-4xl font-black text-white">
+                  {stats.approvedSubmissions}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Accepted
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-purple-300">
+                  Audit
+                </p>
+                <p className="mt-2 text-4xl font-black text-white">
+                  {auditLogs.length}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Recent logs shown
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <button
+                onClick={() => setIsAddToolModalOpen(true)}
+                className="rounded-3xl border border-cyan-400/20 bg-cyan-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-cyan-950/30 hover:bg-cyan-300"
+              >
+                <p className="text-xs font-black uppercase tracking-widest">
+                  Create
+                </p>
+                <p className="mt-2 text-xl font-black">Add Tool</p>
+                <p className="mt-1 text-xs font-bold opacity-70">
+                  Add a new AI tool
+                </p>
+              </button>
 
               <button
                 onClick={() => setIsAdminReviewModalOpen(true)}
-                className="rounded-full bg-yellow-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-yellow-300"
+                className="rounded-3xl border border-yellow-400/20 bg-yellow-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-yellow-950/30 hover:bg-yellow-300"
               >
-                Open Review
+                <p className="text-xs font-black uppercase tracking-widest">
+                  Review
+                </p>
+                <p className="mt-2 text-xl font-black">
+                  Submissions ({filteredSubmissions.length})
+                </p>
+                <p className="mt-1 text-xs font-bold opacity-70">
+                  Approve or reject
+                </p>
+              </button>
+
+              <button
+                onClick={() => setIsLiveDatabaseModalOpen(true)}
+                className="rounded-3xl border border-blue-400/20 bg-blue-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-blue-950/30 hover:bg-blue-300"
+              >
+                <p className="text-xs font-black uppercase tracking-widest">
+                  Database
+                </p>
+                <p className="mt-2 text-xl font-black">
+                  Live Tools ({filteredTools.length})
+                </p>
+                <p className="mt-1 text-xs font-bold opacity-70">
+                  Search, edit, delete
+                </p>
+              </button>
+
+              <button
+                onClick={() => setIsStatsModalOpen(true)}
+                className="rounded-3xl border border-green-400/20 bg-green-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-green-950/30 hover:bg-green-300"
+              >
+                <p className="text-xs font-black uppercase tracking-widest">
+                  Summary
+                </p>
+                <p className="mt-2 text-xl font-black">Stats</p>
+                <p className="mt-1 text-xs font-bold opacity-70">
+                  View totals
+                </p>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsAuditLogModalOpen(true);
+                  fetchAuditLogs();
+                }}
+                className="rounded-3xl border border-purple-400/20 bg-purple-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-purple-950/30 hover:bg-purple-300"
+              >
+                <p className="text-xs font-black uppercase tracking-widest">
+                  Security
+                </p>
+                <p className="mt-2 text-xl font-black">Audit Logs</p>
+                <p className="mt-1 text-xs font-bold opacity-70">
+                  View activity
+                </p>
               </button>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-10 rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-                Live Database
-              </p>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <p className="text-sm font-black text-white">
+                  Security status
+                </p>
+                <p className="mt-2 text-xs leading-6 text-slate-400">
+                  Cookie session, CSRF, route guard, RLS, storage restrictions,
+                  security headers, and audit logs are active.
+                </p>
+              </div>
 
-              <h2 className="mt-2 text-2xl font-bold">
-                Tools in Database ({filteredTools.length})
-              </h2>
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <p className="text-sm font-black text-white">
+                  Quick note
+                </p>
+                <p className="mt-2 text-xs leading-6 text-slate-400">
+                  User-submitted links are reviewed safely. No iframe or website
+                  preview is loaded in the admin dashboard.
+                </p>
+              </div>
 
-              <p className="mt-2 text-sm text-slate-400">
-                Search, filter, edit, or delete live tools in a popup.
-              </p>
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <p className="text-sm font-black text-white">
+                  Archive rule
+                </p>
+                <p className="mt-2 text-xs leading-6 text-slate-400">
+                  Audit logs stay compact. Older logs are compressed into
+                  downloadable archives after the live log limit is reached.
+                </p>
+              </div>
             </div>
-
-            <button
-              onClick={() => setIsLiveDatabaseModalOpen(true)}
-              className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
-            >
-              Open Live Database
-            </button>
           </div>
         </div>
 
