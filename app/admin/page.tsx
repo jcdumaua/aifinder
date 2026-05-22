@@ -297,6 +297,8 @@ export default function AdminPage() {
 
   const [tools, setTools] = useState<Tool[]>([]);
   const [submissions, setSubmissions] = useState<SubmittedTool[]>([]);
+  const [isLoadingTools, setIsLoadingTools] = useState(false);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [auditArchives, setAuditArchives] = useState<AdminAuditArchive[]>([]);
   const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
@@ -420,6 +422,25 @@ export default function AdminPage() {
       return matchesSearch && matchesCategory;
     });
   }, [submissions, submissionSearch, submissionCategoryFilter]);
+
+  const hasActiveToolFilters =
+    Boolean(toolSearch.trim()) ||
+    toolCategoryFilter !== "All" ||
+    toolSort !== "newest";
+
+  const hasActiveSubmissionFilters =
+    Boolean(submissionSearch.trim()) || submissionCategoryFilter !== "All";
+
+  function resetToolFilters() {
+    setToolSearch("");
+    setToolCategoryFilter("All");
+    setToolSort("newest");
+  }
+
+  function resetSubmissionFilters() {
+    setSubmissionSearch("");
+    setSubmissionCategoryFilter("All");
+  }
 
   function showSuccess(message: string, title = "Success") {
     setPopup({
@@ -577,6 +598,8 @@ export default function AdminPage() {
     setSubmissions([]);
     setAuditLogs([]);
     setAuditArchives([]);
+    setIsLoadingTools(false);
+    setIsLoadingSubmissions(false);
     setStats({
       totalTools: 0,
       pendingSubmissions: 0,
@@ -660,38 +683,53 @@ export default function AdminPage() {
   }
 
   async function fetchTools() {
-    const { data, error } = await supabase
-      .from("tools")
-      .select("*")
-      .order("id", { ascending: false });
+    setIsLoadingTools(true);
 
-    if (!error && data) {
-      setTools(data);
+    try {
+      const { data, error } = await supabase
+        .from("tools")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (error) {
+        showError("Failed to load live tools.");
+        return;
+      }
+
+      setTools(data || []);
+    } finally {
+      setIsLoadingTools(false);
     }
   }
 
   async function fetchSubmissions() {
-    const response = await fetch("/api/admin/submissions", {
-      method: "GET",
-      credentials: "same-origin",
-      cache: "no-store",
-    });
+    setIsLoadingSubmissions(true);
 
-    const result = await response.json().catch(() => null);
+    try {
+      const response = await fetch("/api/admin/submissions", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
 
-    if (handleSecurityFailure(response.status)) {
-      return;
-    }
+      const result = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      showError(result?.error || "Failed to load submissions.");
-      return;
-    }
+      if (handleSecurityFailure(response.status)) {
+        return;
+      }
 
-    setSubmissions(result?.submissions || []);
+      if (!response.ok) {
+        showError(result?.error || "Failed to load submissions.");
+        return;
+      }
 
-    if (result?.stats) {
-      setStats(result.stats);
+      setSubmissions(result?.submissions || []);
+
+      if (result?.stats) {
+        setStats(result.stats);
+      }
+    } finally {
+      setIsLoadingSubmissions(false);
     }
   }
 
@@ -1684,12 +1722,23 @@ export default function AdminPage() {
               </h2>
             </div>
 
-            <button
-              onClick={fetchSubmissions}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
-            >
-              Refresh
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={resetSubmissionFilters}
+                disabled={!hasActiveSubmissionFilters}
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Clear Filters
+              </button>
+
+              <button
+                onClick={fetchSubmissions}
+                disabled={isLoadingSubmissions}
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoadingSubmissions ? "Loading..." : "Refresh"}
+              </button>
+            </div>
           </div>
 
           <p className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-xs leading-6 text-yellow-100">
@@ -1726,10 +1775,35 @@ export default function AdminPage() {
             </select>
           </div>
 
-          {filteredSubmissions.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-400">
-              No matching pending submissions.
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+              Showing {filteredSubmissions.length} of {submissions.length} pending
+            </span>
+            {submissionSearch.trim() && (
+              <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-yellow-200">
+                Search: {submissionSearch.trim()}
+              </span>
+            )}
+            {submissionCategoryFilter !== "All" && (
+              <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-yellow-200">
+                Category: {submissionCategoryFilter}
+              </span>
+            )}
+          </div>
+
+          {isLoadingSubmissions ? (
+            <p className="mt-6 rounded-3xl border border-yellow-400/20 bg-yellow-400/5 p-6 text-sm text-yellow-100">
+              Loading pending submissions...
             </p>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-black/20 p-6">
+              <p className="text-sm font-bold text-white">
+                No matching pending submissions.
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                Try clearing the search/category filter or click Refresh.
+              </p>
+            </div>
           ) : (
             <div className="mt-6 space-y-4">
               {filteredSubmissions.map((submission) => (
@@ -1854,12 +1928,22 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsLiveDatabaseModalOpen(false)}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
-          >
-            Close
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={fetchTools}
+              disabled={isLoadingTools}
+              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingTools ? "Loading..." : "Refresh Tools"}
+            </button>
+
+            <button
+              onClick={() => setIsLiveDatabaseModalOpen(false)}
+              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="overflow-y-auto p-6">
@@ -1876,12 +1960,9 @@ export default function AdminPage() {
               </div>
 
               <button
-                onClick={() => {
-                  setToolSearch("");
-                  setToolCategoryFilter("All");
-                  setToolSort("newest");
-                }}
-                className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+                onClick={resetToolFilters}
+                disabled={!hasActiveToolFilters}
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear Filters
               </button>
@@ -1928,11 +2009,41 @@ export default function AdminPage() {
               </select>
             </div>
 
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+                Showing {filteredTools.length} of {tools.length} tools
+              </span>
+              {toolSearch.trim() && (
+                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-cyan-200">
+                  Search: {toolSearch.trim()}
+                </span>
+              )}
+              {toolCategoryFilter !== "All" && (
+                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-cyan-200">
+                  Category: {toolCategoryFilter}
+                </span>
+              )}
+              {toolSort !== "newest" && (
+                <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-cyan-200">
+                  Sort: Oldest First
+                </span>
+              )}
+            </div>
+
             <div className="mt-5 space-y-4">
-              {filteredTools.length === 0 ? (
-                <p className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm text-slate-400">
-                  No matching tools found.
+              {isLoadingTools ? (
+                <p className="rounded-3xl border border-cyan-400/20 bg-cyan-400/5 p-6 text-sm text-cyan-100">
+                  Loading live tools...
                 </p>
+              ) : filteredTools.length === 0 ? (
+                <div className="rounded-3xl border border-white/10 bg-black/20 p-6">
+                  <p className="text-sm font-bold text-white">
+                    No matching tools found.
+                  </p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Try clearing the filters or refresh the live database.
+                  </p>
+                </div>
               ) : (
                 filteredTools.map((tool) => (
                   <div
