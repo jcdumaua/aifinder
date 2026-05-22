@@ -2,17 +2,21 @@ import type { MetadataRoute } from "next";
 import { supabaseAdmin } from "../lib/supabase-admin";
 import { categories, slugify, toolSlug } from "./data/tools";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 300;
+
 const siteUrl = "https://aifinder-eight.vercel.app";
 
 type ToolSitemapRow = {
   name?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
 };
 
 async function getToolUrls() {
   const { data, error } = await supabaseAdmin
     .from("tools")
-    .select("name, created_at")
+    .select("name, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -24,7 +28,7 @@ async function getToolUrls() {
     .filter((tool) => Boolean(tool.name))
     .map((tool) => ({
       url: `${siteUrl}/tool/${toolSlug(tool.name || "")}`,
-      lastModified: tool.created_at || new Date(),
+      lastModified: tool.updated_at || tool.created_at || new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }));
