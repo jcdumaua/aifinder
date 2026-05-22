@@ -46,6 +46,18 @@ type AdminAuditLog = {
   created_at: string;
 };
 
+type AdminAuditArchive = {
+  id: string;
+  file_name: string;
+  storage_bucket: string;
+  storage_path: string;
+  log_count: number;
+  compressed_size_bytes: number;
+  first_log_at?: string | null;
+  last_log_at?: string | null;
+  created_at: string;
+};
+
 type PopupMessage = {
   type: "success" | "error";
   title: string;
@@ -261,6 +273,21 @@ function formatAuditDate(value: string) {
   }
 }
 
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 export default function AdminPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -271,8 +298,13 @@ export default function AdminPage() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [submissions, setSubmissions] = useState<SubmittedTool[]>([]);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
+  const [auditArchives, setAuditArchives] = useState<AdminAuditArchive[]>([]);
   const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
   const [isAuditLogModalOpen, setIsAuditLogModalOpen] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
+  const [isAdminReviewModalOpen, setIsAdminReviewModalOpen] = useState(false);
+  const [isLiveDatabaseModalOpen, setIsLiveDatabaseModalOpen] = useState(false);
 
   const [stats, setStats] = useState<AdminStats>({
     totalTools: 0,
@@ -544,6 +576,7 @@ export default function AdminPage() {
     setTools([]);
     setSubmissions([]);
     setAuditLogs([]);
+    setAuditArchives([]);
     setStats({
       totalTools: 0,
       pendingSubmissions: 0,
@@ -684,11 +717,53 @@ export default function AdminPage() {
       }
 
       setAuditLogs(result?.logs || []);
+      setAuditArchives(result?.archives || []);
     } catch {
       showError("Failed to load admin audit logs.");
     } finally {
       setIsLoadingAuditLogs(false);
     }
+  }
+
+  function downloadAuditArchive(archiveId: string) {
+    window.open(`/api/admin/audit-logs/archive/${archiveId}`, "_blank", "noopener,noreferrer");
+  }
+
+  function deleteAuditArchive(archiveId: string, fileName: string) {
+    askConfirm({
+      title: "Delete Audit Archive?",
+      message:
+        "This will permanently delete the compressed audit archive file. This action cannot be undone.",
+      confirmLabel: "Delete",
+      confirmTone: "red",
+      onConfirm: async () => {
+        const secureToken = await getCsrfToken();
+
+        if (!secureToken) return;
+
+        const response = await fetch(`/api/admin/audit-logs/archive/${archiveId}`, {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            "x-csrf-token": secureToken,
+          },
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (handleSecurityFailure(response.status)) {
+          return;
+        }
+
+        if (!response.ok) {
+          showError(result?.error || "Failed to delete audit archive.");
+          return;
+        }
+
+        showSuccess(`Deleted archive: ${fileName}`, "Audit Archive Deleted");
+        fetchAuditLogs();
+      },
+    });
   }
 
   function approveSubmission(submissionId: number) {
@@ -1141,7 +1216,7 @@ export default function AdminPage() {
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[2rem] border border-purple-400/20 bg-slate-950 shadow-2xl">
+      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-purple-400/20 bg-slate-950 shadow-2xl">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
@@ -1153,7 +1228,8 @@ export default function AdminPage() {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              Latest admin actions recorded from your secure server routes.
+              Latest 50 logs stay visible. When live logs go over 100, the oldest
+              logs are compressed into a small .json.gz archive with date and time.
             </p>
           </div>
 
@@ -1175,221 +1251,268 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="overflow-y-auto p-6">
-          {auditLogs.length === 0 ? (
-            <p className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
-              No audit logs yet. Try logging out/in or adding a test tool.
-            </p>
-          ) : (
-            <div className="overflow-hidden rounded-3xl border border-white/10">
-              <div className="hidden grid-cols-[170px_1fr_1fr_120px] gap-4 border-b border-white/10 bg-black/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
-                <span>Time</span>
-                <span>Action</span>
-                <span>Target</span>
-                <span>IP</span>
+        <div className="space-y-6 overflow-y-auto p-6">
+          <section>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-white">
+                  Live Audit Logs
+                </h3>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Shows the newest activity. Older logs are archived automatically after 100 live logs.
+                </p>
               </div>
 
-              <div className="divide-y divide-white/10">
-                {auditLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
-                  >
-                    <p className="text-slate-400">
-                      {formatAuditDate(log.created_at)}
-                    </p>
-
-                    <p className="font-bold text-white">
-                      {formatAuditAction(log.action)}
-                    </p>
-
-                    <p className="break-words text-slate-300">
-                      {log.target_name || log.target_type || "Admin session"}
-                      {log.target_id ? (
-                        <span className="text-slate-500"> #{log.target_id}</span>
-                      ) : null}
-                    </p>
-
-                    <p className="break-all text-xs text-slate-500">
-                      {log.ip_address || "Unknown"}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <span className="rounded-full border border-purple-400/20 bg-purple-400/10 px-4 py-2 text-xs font-bold text-purple-200">
+                {auditLogs.length} shown
+              </span>
             </div>
-          )}
+
+            {auditLogs.length === 0 ? (
+              <p className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+                No audit logs yet. Try logging out/in or adding a test tool.
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-3xl border border-white/10">
+                <div className="hidden grid-cols-[170px_1fr_1fr_120px] gap-4 border-b border-white/10 bg-black/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
+                  <span>Time</span>
+                  <span>Action</span>
+                  <span>Target</span>
+                  <span>IP</span>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {auditLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
+                    >
+                      <p className="text-slate-400">
+                        {formatAuditDate(log.created_at)}
+                      </p>
+
+                      <p className="font-bold text-white">
+                        {formatAuditAction(log.action)}
+                      </p>
+
+                      <p className="break-words text-slate-300">
+                        {log.target_name || log.target_type || "Admin session"}
+                        {log.target_id ? (
+                          <span className="text-slate-500"> #{log.target_id}</span>
+                        ) : null}
+                      </p>
+
+                      <p className="break-all text-xs text-slate-500">
+                        {log.ip_address || "Unknown"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-white">
+                  Compressed Archives
+                </h3>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Download or delete archived logs. Files are stored privately in Supabase Storage.
+                </p>
+              </div>
+
+              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-200">
+                {auditArchives.length} archive{auditArchives.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {auditArchives.length === 0 ? (
+              <p className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+                No compressed audit archives yet. Archives appear after live logs go over 100.
+              </p>
+            ) : (
+              <div className="overflow-hidden rounded-3xl border border-white/10">
+                <div className="hidden grid-cols-[1fr_100px_100px_210px] gap-4 border-b border-white/10 bg-black/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
+                  <span>Archive</span>
+                  <span>Logs</span>
+                  <span>Size</span>
+                  <span>Actions</span>
+                </div>
+
+                <div className="divide-y divide-white/10">
+                  {auditArchives.map((archive) => (
+                    <div
+                      key={archive.id}
+                      className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[1fr_100px_100px_210px] md:items-center md:gap-4"
+                    >
+                      <div>
+                        <p className="break-all font-bold text-white">
+                          {archive.file_name}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Created {formatAuditDate(archive.created_at)}
+                          {archive.first_log_at && archive.last_log_at
+                            ? ` • ${formatAuditDate(archive.first_log_at)} to ${formatAuditDate(archive.last_log_at)}`
+                            : ""}
+                        </p>
+                      </div>
+
+                      <p className="text-slate-300">
+                        {archive.log_count}
+                      </p>
+
+                      <p className="text-slate-300">
+                        {formatBytes(archive.compressed_size_bytes)}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => downloadAuditArchive(archive.id)}
+                          className="rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300"
+                        >
+                          Download
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            deleteAuditArchive(archive.id, archive.file_name)
+                          }
+                          className="rounded-full bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </div>
   );
 
-  if (isCheckingSession) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
-          <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-            AiFinder Admin
-          </p>
-
-          <h1 className="mt-3 text-3xl font-black">Checking session...</h1>
-
-          <p className="mt-4 text-sm text-slate-400">
-            Please wait a moment.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!isUnlocked) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
-        {messagePopup}
-
-        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
-          <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-            Admin Access
-          </p>
-
-          <h1 className="mt-3 text-4xl font-black">AiFinder Admin</h1>
-
-          <p className="mt-4 text-sm leading-7 text-slate-400">
-            Enter the admin password to manage AI tools.
-          </p>
-
-          <input
-            type="password"
-            placeholder="Admin password"
-            value={password}
-            disabled={isLoggingIn}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !isLoggingIn) {
-                unlockAdmin();
-              }
-            }}
-            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-          />
-
-          <button
-            onClick={unlockAdmin}
-            disabled={isLoggingIn}
-            className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
-          </button>
-
-          <p className="mt-4 text-xs text-slate-500">
-            Admin password is checked securely on the server. A secure cookie
-            session is used after login.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black p-6 text-white">
-      {confirmationPopup}
-      {messagePopup}
-      {auditLogsPopup}
-
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+  const statsPopup = isStatsModalOpen && (
+    <div
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-              Admin Dashboard
+              Dashboard Summary
             </p>
 
-            <h1 className="mt-2 text-4xl font-black">
-              Manage AiFinder Tools
-            </h1>
+            <h2 className="mt-2 text-3xl font-black text-white">
+              AiFinder Stats
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Quick overview of live tools and user submission status.
+            </p>
           </div>
 
           <button
-            onClick={logoutAdmin}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+            onClick={() => setIsStatsModalOpen(false)}
+            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
           >
-            Log Out
+            Close
           </button>
         </div>
 
-        <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
-              Total Tools
-            </p>
-            <h2 className="mt-3 text-4xl font-black">{stats.totalTools}</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Live tools in database
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-400/10 p-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
-              Pending
-            </p>
-            <h2 className="mt-3 text-4xl font-black">
-              {stats.pendingSubmissions}
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Waiting for review
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-green-400/20 bg-green-400/10 p-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-green-300">
-              Approved
-            </p>
-            <h2 className="mt-3 text-4xl font-black">
-              {stats.approvedSubmissions}
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Accepted submissions
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-red-400/20 bg-red-400/10 p-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-red-300">
-              Rejected
-            </p>
-            <h2 className="mt-3 text-4xl font-black">
-              {stats.rejectedSubmissions}
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Declined submissions
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-10 rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
-                Security Audit
+        <div className="overflow-y-auto p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                Total Tools
               </p>
-
-              <h2 className="mt-2 text-2xl font-bold">
-                Recent Admin Activity
-              </h2>
-
+              <h2 className="mt-3 text-5xl font-black">{stats.totalTools}</h2>
               <p className="mt-2 text-sm text-slate-400">
-                View audit logs in a popup to keep the dashboard clean.
+                Live tools in database
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setIsAuditLogModalOpen(true);
-                fetchAuditLogs();
-              }}
-              className="rounded-full bg-purple-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-purple-300"
-            >
-              Open Audit Logs
-            </button>
+            <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-400/10 p-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
+                Pending
+              </p>
+              <h2 className="mt-3 text-5xl font-black">
+                {stats.pendingSubmissions}
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Waiting for review
+              </p>
+            </div>
+
+            <div className="rounded-[2rem] border border-green-400/20 bg-green-400/10 p-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-green-300">
+                Approved
+              </p>
+              <h2 className="mt-3 text-5xl font-black">
+                {stats.approvedSubmissions}
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Accepted submissions
+              </p>
+            </div>
+
+            <div className="rounded-[2rem] border border-red-400/20 bg-red-400/10 p-6">
+              <p className="text-sm font-bold uppercase tracking-widest text-red-300">
+                Rejected
+              </p>
+              <h2 className="mt-3 text-5xl font-black">
+                {stats.rejectedSubmissions}
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Declined submissions
+              </p>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
 
+
+  const addToolPopup = isAddToolModalOpen && (
+    <div
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+              Add Tool
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black text-white">
+              Add New Tool
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Add a new approved AI tool directly to the live AiFinder database.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsAddToolModalOpen(false)}
+            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-6">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
           <h2 className="text-2xl font-bold">Add New Tool</h2>
 
@@ -1513,8 +1636,43 @@ export default function AdminPage() {
             Add Tool
           </button>
         </div>
+        </div>
+      </div>
+    </div>
+  );
 
-        <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+  const adminReviewPopup = isAdminReviewModalOpen && (
+    <div
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-yellow-400/20 bg-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
+              Admin Review
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black text-white">
+              Pending User Submissions
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Review user-submitted tools safely before approving or rejecting them.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsAdminReviewModalOpen(false)}
+            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-6">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
@@ -1669,9 +1827,389 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        </div>
+      </div>
+    </div>
+  );
 
-        <div className="mt-10">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+  const liveDatabasePopup = isLiveDatabaseModalOpen && (
+    <div
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+              Live Database
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black text-white">
+              Tools in Database
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Search, filter, edit, or delete live AiFinder tools in a popup.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsLiveDatabaseModalOpen(false)}
+            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="overflow-y-auto p-6">
+          <div>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                  Live Database
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold">
+                  Tools in Database ({filteredTools.length})
+                </h2>
+              </div>
+
+              <button
+                onClick={() => {
+                  setToolSearch("");
+                  setToolCategoryFilter("All");
+                  setToolSort("newest");
+                }}
+                className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+              >
+                Clear Filters
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-3 lg:grid-cols-3">
+              <input
+                className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                placeholder="Search live tools..."
+                value={toolSearch}
+                onChange={(e) => setToolSearch(e.target.value)}
+              />
+
+              <select
+                className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
+                value={toolCategoryFilter}
+                onChange={(e) => setToolCategoryFilter(e.target.value)}
+              >
+                <option className="bg-slate-950" value="All">
+                  All Categories
+                </option>
+                {toolCategories.map((categoryName) => (
+                  <option
+                    className="bg-slate-950"
+                    key={categoryName}
+                    value={categoryName}
+                  >
+                    {categoryName}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
+                value={toolSort}
+                onChange={(e) => setToolSort(e.target.value)}
+              >
+                <option className="bg-slate-950" value="newest">
+                  Newest First
+                </option>
+                <option className="bg-slate-950" value="oldest">
+                  Oldest First
+                </option>
+              </select>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {filteredTools.length === 0 ? (
+                <p className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm text-slate-400">
+                  No matching tools found.
+                </p>
+              ) : (
+                filteredTools.map((tool) => (
+                  <div
+                    key={tool.id}
+                    className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex gap-4">
+                      <LogoPreview
+                        logoUrl={tool.logo_url}
+                        name={tool.name}
+                        accent="cyan"
+                      />
+
+                      <div>
+                        <h3 className="text-xl font-bold">{tool.name}</h3>
+
+                        <p className="text-sm text-cyan-300">
+                          {tool.category}
+                        </p>
+
+                        <p className="mt-2 text-sm text-slate-400">
+                          {tool.description}
+                        </p>
+
+                        <div className="mt-2 space-y-2">
+                          <p className="break-all text-xs text-slate-500">
+                            {tool.website}
+                          </p>
+
+                          <SafeExternalLink
+                            url={tool.website}
+                            label="Review Website"
+                            accent="cyan"
+                          />
+                        </div>
+
+                        {tool.logo_url && (
+                          <p className="mt-2 break-all text-xs text-slate-500">
+                            Logo: {tool.logo_url}
+                          </p>
+                        )}
+
+                        {tool.pricing && (
+                          <p className="mt-2 text-xs text-yellow-300">
+                            {tool.pricing}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => openEditModal(tool)}
+                        className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => deleteTool(tool.id)}
+                        className="rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+
+  if (isCheckingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
+          <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+            AiFinder Admin
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black">Checking session...</h1>
+
+          <p className="mt-4 text-sm text-slate-400">
+            Please wait a moment.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isUnlocked) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+        {messagePopup}
+
+        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
+          <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+            Admin Access
+          </p>
+
+          <h1 className="mt-3 text-4xl font-black">AiFinder Admin</h1>
+
+          <p className="mt-4 text-sm leading-7 text-slate-400">
+            Enter the admin password to manage AI tools.
+          </p>
+
+          <input
+            type="password"
+            placeholder="Admin password"
+            value={password}
+            disabled={isLoggingIn}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isLoggingIn) {
+                unlockAdmin();
+              }
+            }}
+            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+          />
+
+          <button
+            onClick={unlockAdmin}
+            disabled={isLoggingIn}
+            className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
+          </button>
+
+          <p className="mt-4 text-xs text-slate-500">
+            Admin password is checked securely on the server. A secure cookie
+            session is used after login.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black p-6 text-white">
+      {confirmationPopup}
+      {messagePopup}
+      {auditLogsPopup}
+      {statsPopup}
+      {addToolPopup}
+      {adminReviewPopup}
+      {liveDatabasePopup}
+
+      <section className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+              Admin Dashboard
+            </p>
+
+            <h1 className="mt-2 text-4xl font-black">
+              Manage AiFinder Tools
+            </h1>
+          </div>
+
+          <button
+            onClick={logoutAdmin}
+            className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+          >
+            Log Out
+          </button>
+        </div>
+
+        <div className="mb-10 rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                Dashboard Summary
+              </p>
+
+              <h2 className="mt-2 text-2xl font-bold">
+                AiFinder Stats
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-400">
+                {stats.totalTools} tools • {stats.pendingSubmissions} pending •{" "}
+                {stats.approvedSubmissions} approved • {stats.rejectedSubmissions} rejected
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsStatsModalOpen(true)}
+              className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+            >
+              Open Stats
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-10 rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
+                Security Audit
+              </p>
+
+              <h2 className="mt-2 text-2xl font-bold">
+                Recent Admin Activity
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-400">
+                View audit logs in a popup to keep the dashboard clean.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsAuditLogModalOpen(true);
+                fetchAuditLogs();
+              }}
+              className="rounded-full bg-purple-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-purple-300"
+            >
+              Open Audit Logs
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-10 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                  Add Tool
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold">Add New Tool</h2>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Open the add tool form in a popup to keep this dashboard clean.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsAddToolModalOpen(true)}
+                className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              >
+                Open Add Tool
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-yellow-400/20 bg-yellow-400/10 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
+                  Admin Review
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold">
+                  Pending User Submissions ({filteredSubmissions.length})
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-400">
+                  Review, edit, approve, or reject submitted tools in a popup.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsAdminReviewModalOpen(true)}
+                className="rounded-full bg-yellow-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-yellow-300"
+              >
+                Open Review
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
                 Live Database
@@ -1680,134 +2218,18 @@ export default function AdminPage() {
               <h2 className="mt-2 text-2xl font-bold">
                 Tools in Database ({filteredTools.length})
               </h2>
+
+              <p className="mt-2 text-sm text-slate-400">
+                Search, filter, edit, or delete live tools in a popup.
+              </p>
             </div>
 
             <button
-              onClick={() => {
-                setToolSearch("");
-                setToolCategoryFilter("All");
-                setToolSort("newest");
-              }}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+              onClick={() => setIsLiveDatabaseModalOpen(true)}
+              className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
             >
-              Clear Filters
+              Open Live Database
             </button>
-          </div>
-
-          <div className="mt-6 grid gap-3 lg:grid-cols-3">
-            <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
-              placeholder="Search live tools..."
-              value={toolSearch}
-              onChange={(e) => setToolSearch(e.target.value)}
-            />
-
-            <select
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
-              value={toolCategoryFilter}
-              onChange={(e) => setToolCategoryFilter(e.target.value)}
-            >
-              <option className="bg-slate-950" value="All">
-                All Categories
-              </option>
-              {toolCategories.map((categoryName) => (
-                <option
-                  className="bg-slate-950"
-                  key={categoryName}
-                  value={categoryName}
-                >
-                  {categoryName}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
-              value={toolSort}
-              onChange={(e) => setToolSort(e.target.value)}
-            >
-              <option className="bg-slate-950" value="newest">
-                Newest First
-              </option>
-              <option className="bg-slate-950" value="oldest">
-                Oldest First
-              </option>
-            </select>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {filteredTools.length === 0 ? (
-              <p className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm text-slate-400">
-                No matching tools found.
-              </p>
-            ) : (
-              filteredTools.map((tool) => (
-                <div
-                  key={tool.id}
-                  className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex gap-4">
-                    <LogoPreview
-                      logoUrl={tool.logo_url}
-                      name={tool.name}
-                      accent="cyan"
-                    />
-
-                    <div>
-                      <h3 className="text-xl font-bold">{tool.name}</h3>
-
-                      <p className="text-sm text-cyan-300">
-                        {tool.category}
-                      </p>
-
-                      <p className="mt-2 text-sm text-slate-400">
-                        {tool.description}
-                      </p>
-
-                      <div className="mt-2 space-y-2">
-                        <p className="break-all text-xs text-slate-500">
-                          {tool.website}
-                        </p>
-
-                        <SafeExternalLink
-                          url={tool.website}
-                          label="Review Website"
-                          accent="cyan"
-                        />
-                      </div>
-
-                      {tool.logo_url && (
-                        <p className="mt-2 break-all text-xs text-slate-500">
-                          Logo: {tool.logo_url}
-                        </p>
-                      )}
-
-                      {tool.pricing && (
-                        <p className="mt-2 text-xs text-yellow-300">
-                          {tool.pricing}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => openEditModal(tool)}
-                      className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => deleteTool(tool.id)}
-                      className="rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         </div>
 
