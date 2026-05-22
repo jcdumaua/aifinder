@@ -207,7 +207,7 @@ function LogoPreview({
       <img
         src={safeLogoUrl}
         alt={`${name} logo`}
-        className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
+        className="h-12 w-12 rounded-2xl border border-white/10 bg-white object-contain p-2 sm:h-14 sm:w-14"
         onError={() => setLogoError(true)}
       />
     );
@@ -215,7 +215,7 @@ function LogoPreview({
 
   return (
     <div
-      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border ${
+      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border sm:h-14 sm:w-14 ${
         accent === "cyan"
           ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
           : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
@@ -1151,12 +1151,12 @@ export default function AdminPage() {
 
   const messagePopup = popup && (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`w-full max-w-md rounded-[2rem] border p-7 text-center shadow-2xl ${
+        className={`w-full max-w-md rounded-t-[2rem] border p-5 text-center shadow-2xl sm:rounded-[2rem] sm:p-7 ${
           isSuccessPopup
             ? "border-green-400/30 bg-slate-950"
             : "border-red-400/30 bg-slate-950"
@@ -1196,11 +1196,11 @@ export default function AdminPage() {
 
   const confirmationPopup = confirmDialog && (
     <div
-      className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+      className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/80 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950 p-7 text-center shadow-2xl">
+      <div className="w-full max-w-md rounded-t-[2rem] border border-white/10 bg-slate-950 p-5 text-center shadow-2xl sm:rounded-[2rem] sm:p-7">
         <div
           className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
             confirmDialog.confirmTone === "green"
@@ -1250,18 +1250,18 @@ export default function AdminPage() {
 
   const auditLogsPopup = isAuditLogModalOpen && (
     <div
-      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9997] flex items-end justify-center bg-black/80 px-2 py-2 backdrop-blur-md sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-purple-400/20 bg-slate-950 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+      <div className="flex max-h-[94dvh] w-full max-w-6xl flex-col rounded-t-[2rem] border border-purple-400/20 bg-slate-950 shadow-2xl sm:max-h-[88vh] sm:rounded-[2rem]">
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
               Security Audit
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               Recent Admin Activity
             </h2>
 
@@ -1271,25 +1271,25 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
             <button
               onClick={fetchAuditLogs}
               disabled={isLoadingAuditLogs}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {isLoadingAuditLogs ? "Loading..." : "Refresh Logs"}
             </button>
 
             <button
               onClick={() => setIsAuditLogModalOpen(false)}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+              className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 sm:w-auto"
             >
               Close
             </button>
           </div>
         </div>
 
-        <div className="space-y-6 overflow-y-auto p-6">
+        <div className="space-y-6 overflow-y-auto p-4 sm:p-6">
           <section>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -1324,7 +1324,7 @@ export default function AdminPage() {
                   {auditLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
+                      className="grid min-w-0 gap-2 px-4 py-4 text-sm sm:px-5 md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
                     >
                       <p className="text-slate-400">
                         {formatAuditDate(log.created_at)}
@@ -1385,7 +1385,7 @@ export default function AdminPage() {
                   {auditArchives.map((archive) => (
                     <div
                       key={archive.id}
-                      className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[1fr_100px_100px_210px] md:items-center md:gap-4"
+                      className="grid min-w-0 gap-3 px-4 py-4 text-sm sm:px-5 md:grid-cols-[1fr_100px_100px_210px] md:items-center md:gap-4"
                     >
                       <div>
                         <p className="break-all font-bold text-white">
@@ -1411,7 +1411,7 @@ export default function AdminPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => downloadAuditArchive(archive.id)}
-                          className="rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300"
+                          className="w-full rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto"
                         >
                           Download
                         </button>
@@ -1420,7 +1420,7 @@ export default function AdminPage() {
                           onClick={() =>
                             deleteAuditArchive(archive.id, archive.file_name)
                           }
-                          className="rounded-full bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600"
+                          className="w-full rounded-full bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 sm:w-auto"
                         >
                           Delete
                         </button>
@@ -1438,18 +1438,18 @@ export default function AdminPage() {
 
   const statsPopup = isStatsModalOpen && (
     <div
-      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9997] flex items-end justify-center bg-black/80 px-2 py-2 backdrop-blur-md sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+      <div className="flex max-h-[94dvh] w-full max-w-4xl flex-col rounded-t-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl sm:max-h-[88vh] sm:rounded-[2rem]">
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
               Dashboard Summary
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               AiFinder Stats
             </h2>
 
@@ -1460,19 +1460,19 @@ export default function AdminPage() {
 
           <button
             onClick={() => setIsStatsModalOpen(false)}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+            className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 sm:w-auto"
           >
             Close
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6">
+        <div className="overflow-y-auto p-4 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-6">
               <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
                 Total Tools
               </p>
-              <h2 className="mt-3 text-5xl font-black">{stats.totalTools}</h2>
+              <h2 className="mt-3 text-4xl font-black sm:text-5xl">{stats.totalTools}</h2>
               <p className="mt-2 text-sm text-slate-400">
                 Live tools in database
               </p>
@@ -1482,7 +1482,7 @@ export default function AdminPage() {
               <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
                 Pending
               </p>
-              <h2 className="mt-3 text-5xl font-black">
+              <h2 className="mt-3 text-4xl font-black sm:text-5xl">
                 {stats.pendingSubmissions}
               </h2>
               <p className="mt-2 text-sm text-slate-400">
@@ -1494,7 +1494,7 @@ export default function AdminPage() {
               <p className="text-sm font-bold uppercase tracking-widest text-green-300">
                 Approved
               </p>
-              <h2 className="mt-3 text-5xl font-black">
+              <h2 className="mt-3 text-4xl font-black sm:text-5xl">
                 {stats.approvedSubmissions}
               </h2>
               <p className="mt-2 text-sm text-slate-400">
@@ -1506,7 +1506,7 @@ export default function AdminPage() {
               <p className="text-sm font-bold uppercase tracking-widest text-red-300">
                 Rejected
               </p>
-              <h2 className="mt-3 text-5xl font-black">
+              <h2 className="mt-3 text-4xl font-black sm:text-5xl">
                 {stats.rejectedSubmissions}
               </h2>
               <p className="mt-2 text-sm text-slate-400">
@@ -1522,18 +1522,18 @@ export default function AdminPage() {
 
   const addToolPopup = isAddToolModalOpen && (
     <div
-      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9997] flex items-end justify-center bg-black/80 px-2 py-2 backdrop-blur-md sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+      <div className="flex max-h-[94dvh] w-full max-w-5xl flex-col rounded-t-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl sm:max-h-[88vh] sm:rounded-[2rem]">
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
               Add Tool
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               Add New Tool
             </h2>
 
@@ -1544,15 +1544,15 @@ export default function AdminPage() {
 
           <button
             onClick={() => setIsAddToolModalOpen(false)}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+            className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 sm:w-auto"
           >
             Close
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6">
+        <div className="overflow-y-auto p-4 sm:p-6">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-2xl font-bold">Add New Tool</h2>
+          <h2 className="text-xl font-bold sm:text-2xl">Add New Tool</h2>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <input
@@ -1604,7 +1604,7 @@ export default function AdminPage() {
             </select>
 
             <div className="sm:col-span-2">
-              <div className="grid grid-cols-[1fr_76px] gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
                 <input
                   className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                   placeholder="Logo Image URL"
@@ -1681,18 +1681,18 @@ export default function AdminPage() {
 
   const adminReviewPopup = isAdminReviewModalOpen && (
     <div
-      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9997] flex items-end justify-center bg-black/80 px-2 py-2 backdrop-blur-md sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-yellow-400/20 bg-slate-950 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+      <div className="flex max-h-[94dvh] w-full max-w-6xl flex-col rounded-t-[2rem] border border-yellow-400/20 bg-slate-950 shadow-2xl sm:max-h-[88vh] sm:rounded-[2rem]">
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
               Admin Review
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               Pending User Submissions
             </h2>
 
@@ -1703,13 +1703,13 @@ export default function AdminPage() {
 
           <button
             onClick={() => setIsAdminReviewModalOpen(false)}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+            className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 sm:w-auto"
           >
             Close
           </button>
         </div>
 
-        <div className="overflow-y-auto p-6">
+        <div className="overflow-y-auto p-4 sm:p-6">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -1717,16 +1717,16 @@ export default function AdminPage() {
                 Admin Review
               </p>
 
-              <h2 className="mt-2 text-2xl font-bold">
+              <h2 className="mt-2 text-xl font-bold sm:text-2xl">
                 Pending User Submissions ({filteredSubmissions.length})
               </h2>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
               <button
                 onClick={resetSubmissionFilters}
                 disabled={!hasActiveSubmissionFilters}
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
               >
                 Clear Filters
               </button>
@@ -1734,7 +1734,7 @@ export default function AdminPage() {
               <button
                 onClick={fetchSubmissions}
                 disabled={isLoadingSubmissions}
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isLoadingSubmissions ? "Loading..." : "Refresh"}
               </button>
@@ -1809,14 +1809,14 @@ export default function AdminPage() {
               {filteredSubmissions.map((submission) => (
                 <div
                   key={submission.id}
-                  className="rounded-3xl border border-yellow-400/20 bg-yellow-400/5 p-5"
+                  className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4 sm:rounded-3xl sm:p-5"
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex gap-4">
+                  <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 gap-3 sm:gap-4">
                       <SubmissionSafeIcon name={submission.name} />
 
-                      <div>
-                        <h3 className="text-xl font-bold">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-lg font-bold sm:text-xl">
                           {submission.name}
                         </h3>
 
@@ -1873,24 +1873,24 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
                       <button
                         onClick={() => approveSubmission(submission.id)}
-                        className="rounded-full bg-green-500 px-5 py-3 text-sm font-bold text-white hover:bg-green-600"
+                        className="w-full rounded-full bg-green-500 px-5 py-3 text-sm font-bold text-white hover:bg-green-600 sm:w-auto"
                       >
                         Approve
                       </button>
 
                       <button
                         onClick={() => openSubmissionEditModal(submission)}
-                        className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+                        className="w-full rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400 sm:w-auto"
                       >
                         Edit
                       </button>
 
                       <button
                         onClick={() => rejectSubmission(submission.id)}
-                        className="rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600"
+                        className="w-full rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600 sm:w-auto"
                       >
                         Reject
                       </button>
@@ -1908,18 +1908,18 @@ export default function AdminPage() {
 
   const liveDatabasePopup = isLiveDatabaseModalOpen && (
     <div
-      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9997] flex items-end justify-center bg-black/80 px-2 py-2 backdrop-blur-md sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex max-h-[88vh] w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+      <div className="flex max-h-[94dvh] w-full max-w-6xl flex-col rounded-t-[2rem] border border-cyan-400/20 bg-slate-950 shadow-2xl sm:max-h-[88vh] sm:rounded-[2rem]">
+        <div className="flex flex-col items-start justify-between gap-4 border-b border-white/10 p-4 sm:flex-row sm:p-6">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
               Live Database
             </p>
 
-            <h2 className="mt-2 text-3xl font-black text-white">
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               Tools in Database
             </h2>
 
@@ -1928,25 +1928,25 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
             <button
               onClick={fetchTools}
               disabled={isLoadingTools}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {isLoadingTools ? "Loading..." : "Refresh Tools"}
             </button>
 
             <button
               onClick={() => setIsLiveDatabaseModalOpen(false)}
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+              className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 sm:w-auto"
             >
               Close
             </button>
           </div>
         </div>
 
-        <div className="overflow-y-auto p-6">
+        <div className="overflow-y-auto p-4 sm:p-6">
           <div>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -1954,7 +1954,7 @@ export default function AdminPage() {
                   Live Database
                 </p>
 
-                <h2 className="mt-2 text-2xl font-bold">
+                <h2 className="mt-2 text-xl font-bold sm:text-2xl">
                   Tools in Database ({filteredTools.length})
                 </h2>
               </div>
@@ -1962,7 +1962,7 @@ export default function AdminPage() {
               <button
                 onClick={resetToolFilters}
                 disabled={!hasActiveToolFilters}
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
               >
                 Clear Filters
               </button>
@@ -2048,17 +2048,17 @@ export default function AdminPage() {
                 filteredTools.map((tool) => (
                   <div
                     key={tool.id}
-                    className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex min-w-0 flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between sm:rounded-3xl sm:p-5"
                   >
-                    <div className="flex gap-4">
+                    <div className="flex min-w-0 gap-3 sm:gap-4">
                       <LogoPreview
                         logoUrl={tool.logo_url}
                         name={tool.name}
                         accent="cyan"
                       />
 
-                      <div>
-                        <h3 className="text-xl font-bold">{tool.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="break-words text-lg font-bold sm:text-xl">{tool.name}</h3>
 
                         <p className="text-sm text-cyan-300">
                           {tool.category}
@@ -2094,17 +2094,17 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
                       <button
                         onClick={() => openEditModal(tool)}
-                        className="rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+                        className="w-full rounded-full bg-yellow-500 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-400 sm:w-auto"
                       >
                         Edit
                       </button>
 
                       <button
                         onClick={() => deleteTool(tool.id)}
-                        className="rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600"
+                        className="w-full rounded-full bg-red-500 px-5 py-3 text-sm font-bold text-white hover:bg-red-600 sm:w-auto"
                       >
                         Delete
                       </button>
@@ -2123,7 +2123,7 @@ export default function AdminPage() {
   if (isCheckingSession) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-6 text-center shadow-2xl sm:rounded-[2rem] sm:p-8">
           <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
             AiFinder Admin
           </p>
@@ -2143,12 +2143,12 @@ export default function AdminPage() {
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
         {messagePopup}
 
-        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
+        <div className="w-full max-w-md rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl sm:rounded-[2rem] sm:p-8">
           <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
             Admin Access
           </p>
 
-          <h1 className="mt-3 text-4xl font-black">AiFinder Admin</h1>
+          <h1 className="mt-3 text-3xl font-black sm:text-4xl">AiFinder Admin</h1>
 
           <p className="mt-4 text-sm leading-7 text-slate-400">
             Enter the admin password to manage AI tools.
@@ -2186,7 +2186,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black p-6 text-white">
+    <main className="min-h-screen overflow-x-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-black px-3 py-4 text-white sm:p-6">
       {confirmationPopup}
       {messagePopup}
       {auditLogsPopup}
@@ -2196,26 +2196,26 @@ export default function AdminPage() {
       {liveDatabasePopup}
 
       <section className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:mb-8 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
               Admin Dashboard
             </p>
 
-            <h1 className="mt-2 text-4xl font-black">
+            <h1 className="mt-2 text-3xl font-black sm:text-4xl">
               Manage AiFinder Tools
             </h1>
           </div>
 
           <button
             onClick={logoutAdmin}
-            className="rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10"
+            className="w-full rounded-full border border-white/10 px-5 py-3 text-sm hover:bg-white/10 sm:w-auto"
           >
             Log Out
           </button>
         </div>
 
-        <div className="mb-10 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
+        <div className="mb-8 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 shadow-2xl sm:mb-10 sm:rounded-[2rem] sm:p-6">
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -2223,30 +2223,34 @@ export default function AdminPage() {
                   Compact Control Panel
                 </p>
 
-                <h2 className="mt-2 text-3xl font-black">
+                <h2 className="mt-2 text-2xl font-black sm:text-3xl">
                   AiFinder Admin Center
                 </h2>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
                   Manage tools, submissions, stats, and audit logs from one clean
-                  dashboard. All detailed sections open in popups.
+                  dashboard. All detailed sections open in mobile-friendly popups.
+                </p>
+
+                <p className="mt-3 inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-slate-300 sm:hidden">
+                  Tip: popups open as bottom sheets on mobile.
                 </p>
               </div>
 
               <button
                 onClick={logoutAdmin}
-                className="rounded-full border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-400/20"
+                className="w-full rounded-full border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-400/20 sm:w-auto"
               >
                 Log Out
               </button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
                   Tools
                 </p>
-                <p className="mt-2 text-4xl font-black text-white">
+                <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
                   {stats.totalTools}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
@@ -2254,11 +2258,11 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-yellow-400/20 bg-yellow-400/10 p-5">
+              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-xs font-bold uppercase tracking-widest text-yellow-300">
                   Pending
                 </p>
-                <p className="mt-2 text-4xl font-black text-white">
+                <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
                   {stats.pendingSubmissions}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
@@ -2266,11 +2270,11 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-green-400/20 bg-green-400/10 p-5">
+              <div className="rounded-2xl border border-green-400/20 bg-green-400/10 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-xs font-bold uppercase tracking-widest text-green-300">
                   Approved
                 </p>
-                <p className="mt-2 text-4xl font-black text-white">
+                <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
                   {stats.approvedSubmissions}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
@@ -2278,11 +2282,11 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
+              <div className="rounded-2xl border border-purple-400/20 bg-purple-400/10 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-xs font-bold uppercase tracking-widest text-purple-300">
                   Audit
                 </p>
-                <p className="mt-2 text-4xl font-black text-white">
+                <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
                   {auditLogs.length}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
@@ -2291,10 +2295,10 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <button
                 onClick={() => setIsAddToolModalOpen(true)}
-                className="rounded-3xl border border-cyan-400/20 bg-cyan-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-cyan-950/30 hover:bg-cyan-300"
+                className="rounded-2xl border border-cyan-400/20 bg-cyan-400 px-4 py-4 text-left text-slate-950 shadow-lg shadow-cyan-950/30 hover:bg-cyan-300 sm:rounded-3xl sm:px-5 sm:py-5"
               >
                 <p className="text-xs font-black uppercase tracking-widest">
                   Create
@@ -2307,7 +2311,7 @@ export default function AdminPage() {
 
               <button
                 onClick={() => setIsAdminReviewModalOpen(true)}
-                className="rounded-3xl border border-yellow-400/20 bg-yellow-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-yellow-950/30 hover:bg-yellow-300"
+                className="rounded-2xl border border-yellow-400/20 bg-yellow-400 px-4 py-4 text-left text-slate-950 shadow-lg shadow-yellow-950/30 hover:bg-yellow-300 sm:rounded-3xl sm:px-5 sm:py-5"
               >
                 <p className="text-xs font-black uppercase tracking-widest">
                   Review
@@ -2322,7 +2326,7 @@ export default function AdminPage() {
 
               <button
                 onClick={() => setIsLiveDatabaseModalOpen(true)}
-                className="rounded-3xl border border-blue-400/20 bg-blue-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-blue-950/30 hover:bg-blue-300"
+                className="rounded-2xl border border-blue-400/20 bg-blue-400 px-4 py-4 text-left text-slate-950 shadow-lg shadow-blue-950/30 hover:bg-blue-300 sm:rounded-3xl sm:px-5 sm:py-5"
               >
                 <p className="text-xs font-black uppercase tracking-widest">
                   Database
@@ -2337,7 +2341,7 @@ export default function AdminPage() {
 
               <button
                 onClick={() => setIsStatsModalOpen(true)}
-                className="rounded-3xl border border-green-400/20 bg-green-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-green-950/30 hover:bg-green-300"
+                className="rounded-2xl border border-green-400/20 bg-green-400 px-4 py-4 text-left text-slate-950 shadow-lg shadow-green-950/30 hover:bg-green-300 sm:rounded-3xl sm:px-5 sm:py-5"
               >
                 <p className="text-xs font-black uppercase tracking-widest">
                   Summary
@@ -2353,7 +2357,7 @@ export default function AdminPage() {
                   setIsAuditLogModalOpen(true);
                   fetchAuditLogs();
                 }}
-                className="rounded-3xl border border-purple-400/20 bg-purple-400 px-5 py-5 text-left text-slate-950 shadow-lg shadow-purple-950/30 hover:bg-purple-300"
+                className="rounded-2xl border border-purple-400/20 bg-purple-400 px-4 py-4 text-left text-slate-950 shadow-lg shadow-purple-950/30 hover:bg-purple-300 sm:rounded-3xl sm:px-5 sm:py-5"
               >
                 <p className="text-xs font-black uppercase tracking-widest">
                   Security
@@ -2366,7 +2370,7 @@ export default function AdminPage() {
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-sm font-black text-white">
                   Security status
                 </p>
@@ -2376,7 +2380,7 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-sm font-black text-white">
                   Quick note
                 </p>
@@ -2386,7 +2390,7 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:rounded-3xl sm:p-5">
                 <p className="text-sm font-black text-white">
                   Archive rule
                 </p>
@@ -2400,15 +2404,15 @@ export default function AdminPage() {
         </div>
 
         {editingSubmission && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-yellow-400/20 bg-slate-950 p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-4">
+            <div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-yellow-400/20 bg-slate-950 p-4 shadow-2xl sm:max-h-[90vh] sm:rounded-[2rem] sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-widest text-yellow-300">
                     Edit Submission
                   </p>
 
-                  <h2 className="mt-2 text-3xl font-black">
+                  <h2 className="mt-2 text-2xl font-black sm:text-3xl">
                     {editingSubmission.name}
                   </h2>
                 </div>
@@ -2473,7 +2477,7 @@ export default function AdminPage() {
                 </select>
 
                 <div className="sm:col-span-2">
-                  <div className="grid grid-cols-[1fr_76px] gap-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
                     <input
                       className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-yellow-400"
                       placeholder="Logo Image URL"
@@ -2546,17 +2550,17 @@ export default function AdminPage() {
                 rows={5}
               />
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <button
                   onClick={updateSubmission}
-                  className="rounded-full bg-yellow-500 px-6 py-3 text-sm font-bold text-black hover:bg-yellow-400"
+                  className="w-full rounded-full bg-yellow-500 px-6 py-3 text-sm font-bold text-black hover:bg-yellow-400 sm:w-auto"
                 >
                   Save Submission
                 </button>
 
                 <button
                   onClick={closeSubmissionEditModal}
-                  className="rounded-full border border-white/10 px-6 py-3 text-sm hover:bg-white/10"
+                  className="w-full rounded-full border border-white/10 px-6 py-3 text-sm hover:bg-white/10 sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -2566,15 +2570,15 @@ export default function AdminPage() {
         )}
 
         {editingTool && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-white/10 bg-slate-950 p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-4">
+            <div className="max-h-[94dvh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-white/10 bg-slate-950 p-4 shadow-2xl sm:max-h-[90vh] sm:rounded-[2rem] sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
                     Edit Tool
                   </p>
 
-                  <h2 className="mt-2 text-3xl font-black">
+                  <h2 className="mt-2 text-2xl font-black sm:text-3xl">
                     {editingTool.name}
                   </h2>
                 </div>
@@ -2637,7 +2641,7 @@ export default function AdminPage() {
                 </select>
 
                 <div className="sm:col-span-2">
-                  <div className="grid grid-cols-[1fr_76px] gap-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
                     <input
                       className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
                       placeholder="Logo Image URL"
@@ -2698,17 +2702,17 @@ export default function AdminPage() {
                 rows={5}
               />
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <button
                   onClick={updateTool}
-                  className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+                  className="w-full rounded-full bg-cyan-400 px-6 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto"
                 >
                   Save Changes
                 </button>
 
                 <button
                   onClick={closeEditModal}
-                  className="rounded-full border border-white/10 px-6 py-3 text-sm hover:bg-white/10"
+                  className="w-full rounded-full border border-white/10 px-6 py-3 text-sm hover:bg-white/10 sm:w-auto"
                 >
                   Cancel
                 </button>
