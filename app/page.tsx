@@ -19,12 +19,90 @@ import { supabase } from "../lib/supabase";
 
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
-const popularSearches = ["ChatGPT", "Video AI", "Coding", "Automation", "Writing"];
+
+const popularSearches = [
+  "ChatGPT",
+  "Video AI",
+  "Coding",
+  "Automation",
+  "Writing",
+];
+
+const seoCategoryCopy = [
+  {
+    title: "Chatbots",
+    href: "/category/chatbots",
+    text: "Find AI chatbots for answering questions, customer support, research, brainstorming, and daily productivity.",
+  },
+  {
+    title: "Image AI",
+    href: "/category/image-ai",
+    text: "Explore AI image generators and visual design tools for marketing, social content, thumbnails, and creative projects.",
+  },
+  {
+    title: "Video AI",
+    href: "/category/video-ai",
+    text: "Compare AI video tools for editing, captions, avatars, short-form content, presentations, and creative production.",
+  },
+  {
+    title: "Coding",
+    href: "/category/coding",
+    text: "Discover AI coding assistants for debugging, documentation, code generation, app building, and developer productivity.",
+  },
+  {
+    title: "Business",
+    href: "/category/business",
+    text: "Browse AI business tools for operations, automation, analytics, workflows, customer support, and team productivity.",
+  },
+  {
+    title: "AI Agents",
+    href: "/category/ai-agents",
+    text: "Find AI agents that can automate multi-step tasks, connect apps, research topics, and support advanced workflows.",
+  },
+];
+
+const faqItems = [
+  {
+    question: "What is AiFinder?",
+    answer:
+      "AiFinder is an AI tools directory that helps people discover, search, bookmark, and compare useful AI tools by category, pricing, platform, and use case.",
+  },
+  {
+    question: "What types of AI tools can I find?",
+    answer:
+      "You can browse AI tools for chatbots, image generation, video creation, voice AI, writing, coding, business, productivity, education, marketing, SEO, design, and AI agents.",
+  },
+  {
+    question: "Can I compare AI tools?",
+    answer:
+      "Yes. AiFinder lets you select tools and compare important details such as category, pricing, platform support, ratings, and use cases side-by-side.",
+  },
+  {
+    question: "Can I submit a new AI tool?",
+    answer:
+      "Yes. You can submit an AI tool through the Submit Tool page. Submissions are reviewed before they appear publicly on AiFinder.",
+  },
+];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0 },
 };
+
+function normalizeCategory(category: string | null | undefined) {
+  if (category === "Chat") return "Chatbots";
+  if (category === "Image") return "Image AI";
+  if (category === "Video") return "Video AI";
+  if (category === "Audio") return "Voice AI";
+
+  return category || "Productivity";
+}
+
+function normalizePricing(pricing: string | null | undefined) {
+  if (pricing === "Freemium") return "Free + Paid";
+
+  return pricing || "Free + Paid";
+}
 
 export default function Home() {
   const { isLightMode, toggleTheme } = useTheme();
@@ -32,6 +110,12 @@ export default function Home() {
 
   const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
   const [isLoadingTools, setIsLoadingTools] = useState(true);
+  const [search, setSearch] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedPricing, setSelectedPricing] = useState("All");
+  const [selectedPlatform, setSelectedPlatform] = useState("All");
+  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
 
   const tools = databaseTools;
 
@@ -51,26 +135,13 @@ export default function Home() {
       const formattedTools: Tool[] =
         data?.map((tool) => ({
           name: tool.name,
-          category:
-            tool.category === "Chat"
-              ? "Chatbots"
-              : tool.category === "Image"
-                ? "Image AI"
-                : tool.category === "Video"
-                  ? "Video AI"
-                  : tool.category === "Audio"
-                    ? "Voice AI"
-                    : tool.category,
+          category: normalizeCategory(tool.category),
           description: tool.description,
           website: tool.website,
-          logoUrl: tool.logo_url || undefined,
-          pricing:
-            tool.pricing === "Freemium"
-              ? "Free + Paid"
-              : tool.pricing || "Free + Paid",
-          platforms: tool.platforms || [],
+          pricing: normalizePricing(tool.pricing),
+          platforms: tool.platforms || ["Web"],
           featured: tool.featured || false,
-          bestFor: tool.best_for || "General use",
+          bestFor: tool.best_for || tool.description,
           useCases: tool.use_cases || [],
           ios: tool.ios || undefined,
           android: tool.android || undefined,
@@ -82,13 +153,6 @@ export default function Home() {
 
     loadToolsFromSupabase();
   }, []);
-
-  const [search, setSearch] = useState("");
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedPricing, setSelectedPricing] = useState("All");
-  const [selectedPlatform, setSelectedPlatform] = useState("All");
-  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
 
   useEffect(() => {
     const savedFavorites = localStorage.getItem("aifinder-favorites");
@@ -146,8 +210,11 @@ export default function Home() {
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
+      const useCases = Array.isArray(tool.useCases) ? tool.useCases : [];
+      const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
+
       const searchText =
-        `${tool.name} ${tool.category} ${tool.description} ${tool.bestFor} ${tool.useCases.join(
+        `${tool.name} ${tool.category} ${tool.description} ${tool.bestFor || ""} ${useCases.join(
           " "
         )}`.toLowerCase();
 
@@ -157,8 +224,7 @@ export default function Home() {
       const matchesPricing =
         selectedPricing === "All" || tool.pricing === selectedPricing;
       const matchesPlatform =
-        selectedPlatform === "All" ||
-        tool.platforms.includes(selectedPlatform);
+        selectedPlatform === "All" || platforms.includes(selectedPlatform);
 
       return (
         matchesSearch &&
@@ -170,13 +236,15 @@ export default function Home() {
   }, [tools, search, selectedCategory, selectedPricing, selectedPlatform]);
 
   const featuredTools = tools.filter((tool) => tool.featured).slice(0, 8);
-  const trendingTools = tools.filter((tool) => tool.featured).slice(0, 6);
+  const trendingTools = featuredTools.length
+    ? featuredTools.slice(0, 6)
+    : tools.slice(0, 6);
 
   const topRatedTools = [...tools]
     .sort((a, b) => getToolRating(b.name) - getToolRating(a.name))
     .slice(0, 8);
 
-  const newTools = [...tools].slice(-8).reverse();
+  const newTools = [...tools].slice(0, 8);
 
   const resetFilters = () => {
     setSearch("");
@@ -209,6 +277,7 @@ export default function Home() {
     : "bg-black/20 border-white/10 text-white placeholder:text-slate-500";
 
   const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
+  const softText = isLightMode ? "text-slate-700" : "text-slate-300";
 
   return (
     <main
@@ -220,7 +289,7 @@ export default function Home() {
           animate="show"
           variants={fadeUp}
           transition={{ duration: 0.5 }}
-          className={`relative z-10 mb-6 flex items-center justify-between rounded-3xl border px-5 py-4 backdrop-blur-xl ${cardBg}`}
+          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between ${cardBg}`}
         >
           <Link href="/" className="text-lg font-black">
             AiFinder
@@ -239,6 +308,13 @@ export default function Home() {
               className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-200"
             >
               Explore
+            </a>
+
+            <a
+              href="#how-it-works"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            >
+              How it works
             </a>
 
             <a
@@ -265,20 +341,44 @@ export default function Home() {
           className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-xl sm:p-10 ${cardBg}`}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
 
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-              Discover • Compare • Launch
+              AI Tools Directory • Search • Compare • Bookmark
             </p>
 
-            <h1 className="mt-3 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
-              Find the best AI tools fast.
+            <h1 className="mt-3 max-w-5xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
+              Discover the best AI tools for work, creativity, and automation.
             </h1>
 
-            <p className={`mt-4 max-w-2xl text-base leading-7 sm:text-lg ${mutedText}`}>
-              Explore premium AI tools for chat, images, video, voice, music,
-              coding, writing, productivity, automation, and more.
+            <p className={`mt-5 max-w-3xl text-base leading-8 sm:text-lg ${mutedText}`}>
+              AiFinder helps you find useful AI tools faster. Browse tools for
+              chatbots, image AI, video AI, voice AI, writing, coding, business,
+              productivity, education, marketing, SEO, design, and AI agents.
             </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#categories"
+                className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              >
+                Browse Categories
+              </a>
+
+              <Link
+                href="/submit"
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold hover:bg-white/10"
+              >
+                Submit an AI Tool
+              </Link>
+            </div>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <StatCard label="AI tools" value={`${tools.length}+`} />
+              <StatCard label="Categories" value={`${categories.length}`} />
+              <StatCard label="Compare" value="Up to 3" />
+            </div>
 
             <input
               value={search}
@@ -380,16 +480,16 @@ export default function Home() {
                 Clear filters
               </button>
             )}
-
-            {isLoadingTools && (
-              <p className="mt-4 text-sm text-slate-400">
-                Loading AI tools...
-              </p>
-            )}
           </div>
         </motion.div>
 
-        {!hasActiveFilters && (
+        {isLoadingTools && (
+          <div className={`mt-8 rounded-3xl border p-6 ${cardBg}`}>
+            <p className={mutedText}>Loading AI tools...</p>
+          </div>
+        )}
+
+        {!isLoadingTools && !hasActiveFilters && (
           <>
             <Section
               title="Your Saved AI Tools"
@@ -400,6 +500,7 @@ export default function Home() {
               onToggleCompare={toggleCompare}
               emptyText="No bookmarks yet. Click the ☆ on any tool to save it here."
               cardBg={cardBg}
+              mutedText={mutedText}
             />
 
             <Section
@@ -411,6 +512,7 @@ export default function Home() {
               onToggleCompare={toggleCompare}
               badge="Trending"
               cardBg={cardBg}
+              mutedText={mutedText}
             />
 
             <Section
@@ -422,6 +524,7 @@ export default function Home() {
               onToggleCompare={toggleCompare}
               badge="Top Rated"
               cardBg={cardBg}
+              mutedText={mutedText}
             />
 
             <Section
@@ -433,6 +536,7 @@ export default function Home() {
               onToggleCompare={toggleCompare}
               badge="New"
               cardBg={cardBg}
+              mutedText={mutedText}
             />
 
             <motion.section
@@ -444,7 +548,20 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="mt-12"
             >
-              <h2 className="text-3xl font-black">Popular Categories</h2>
+              <div className="max-w-3xl">
+                <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+                  Browse by Category
+                </p>
+
+                <h2 className="mt-2 text-3xl font-black">
+                  Explore AI tools by what you need to do
+                </h2>
+
+                <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+                  Start with a category, then narrow your search by pricing,
+                  platform, rating, and use case.
+                </p>
+              </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {categories.map((category, index) => (
@@ -461,7 +578,7 @@ export default function Home() {
                   >
                     <Link
                       href={`/category/${slugify(category)}`}
-                      className={`block rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+                      className={`block h-full rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
                     >
                       <div className="text-3xl">{getIcon(category)}</div>
 
@@ -480,6 +597,10 @@ export default function Home() {
                 ))}
               </div>
             </motion.section>
+
+            <SeoCategorySection cardBg={cardBg} mutedText={mutedText} />
+            <HowItWorksSection cardBg={cardBg} mutedText={mutedText} />
+            <FaqSection cardBg={cardBg} mutedText={mutedText} softText={softText} />
           </>
         )}
 
@@ -527,79 +648,20 @@ export default function Home() {
           />
         )}
 
-        <footer className="mt-20 border-t border-white/10 py-10">
-          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-2xl font-black">AiFinder</h3>
-
-              <p className="mt-3 max-w-md text-sm leading-7 text-slate-400">
-                Discover, compare, and explore the best AI tools for
-                productivity, creativity, automation, coding, research,
-                writing, video, images, and more.
-              </p>
-
-              <p className="mt-4 text-xs text-slate-500">
-                © 2026 AiFinder. All rights reserved.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-              <div>
-                <p className="text-sm font-bold text-cyan-300">
-                  Explore
-                </p>
-
-                <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-                  <a href="#categories" className="hover:text-cyan-300">
-                    Categories
-                  </a>
-
-                  <a href="#favorites" className="hover:text-cyan-300">
-                    Bookmarks
-                  </a>
-
-                  <Link href="/compare" className="hover:text-cyan-300">
-                    Compare
-                  </Link>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-bold text-cyan-300">
-                  Platform
-                </p>
-
-                <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-                  <Link href="/submit" className="hover:text-cyan-300">
-                    Submit Tool
-                  </Link>
-
-                  <button className="text-left hover:text-cyan-300">
-                    Trending
-                  </button>
-
-                  <button className="text-left hover:text-cyan-300">
-                    Top Rated
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-bold text-cyan-300">
-                  Stats
-                </p>
-
-                <div className="mt-4 space-y-3 text-sm text-slate-400">
-                  <p>{tools.length}+ AI tools</p>
-                  <p>{categories.length} categories</p>
-                  <p>Compare up to 3 tools</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </footer>
+        <Footer toolsCount={tools.length} mutedText={mutedText} />
       </section>
     </main>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
   );
 }
 
@@ -613,6 +675,7 @@ function Section({
   badge,
   emptyText,
   cardBg,
+  mutedText,
 }: {
   title: string;
   tools: Tool[];
@@ -623,6 +686,7 @@ function Section({
   badge?: string;
   emptyText?: string;
   cardBg: string;
+  mutedText: string;
 }) {
   return (
     <motion.section
@@ -637,7 +701,7 @@ function Section({
       <h2 className="text-3xl font-black">{title}</h2>
 
       {tools.length === 0 ? (
-        <div className={`mt-5 rounded-3xl border p-6 text-slate-400 ${cardBg}`}>
+        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg}`}>
           {emptyText}
         </div>
       ) : (
@@ -657,6 +721,174 @@ function Section({
           ))}
         </div>
       )}
+    </motion.section>
+  );
+}
+
+function SeoCategorySection({
+  cardBg,
+  mutedText,
+}: {
+  cardBg: string;
+  mutedText: string;
+}) {
+  return (
+    <motion.section
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true }}
+      variants={fadeUp}
+      transition={{ duration: 0.5 }}
+      className="mt-16"
+    >
+      <div className="max-w-3xl">
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          AI Tools Directory
+        </p>
+
+        <h2 className="mt-2 text-3xl font-black">
+          Find AI tools for every workflow
+        </h2>
+
+        <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+          AiFinder is built to help users quickly discover practical AI software.
+          Whether you need a chatbot, image generator, video editor, AI writing
+          assistant, coding copilot, SEO tool, design app, or AI agent, you can
+          search by purpose and compare options before opening a tool.
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {seoCategoryCopy.map((item) => (
+          <Link
+            key={item.title}
+            href={item.href}
+            className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+          >
+            <h3 className="text-xl font-black">{item.title}</h3>
+            <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+              {item.text}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
+function HowItWorksSection({
+  cardBg,
+  mutedText,
+}: {
+  cardBg: string;
+  mutedText: string;
+}) {
+  const steps = [
+    {
+      title: "Search",
+      text: "Use the search bar to find AI tools by name, category, task, or use case.",
+    },
+    {
+      title: "Filter",
+      text: "Narrow results by category, pricing, and platform so you can find the right option faster.",
+    },
+    {
+      title: "Compare",
+      text: "Add up to three tools to the compare view and review details side-by-side.",
+    },
+    {
+      title: "Save",
+      text: "Bookmark useful tools locally in your browser so you can come back to them later.",
+    },
+  ];
+
+  return (
+    <motion.section
+      id="how-it-works"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true }}
+      variants={fadeUp}
+      transition={{ duration: 0.5 }}
+      className="mt-16"
+    >
+      <div className="max-w-3xl">
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          How it works
+        </p>
+
+        <h2 className="mt-2 text-3xl font-black">
+          A faster way to choose AI tools
+        </h2>
+
+        <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+          Instead of opening many websites one by one, AiFinder gives you one
+          clean place to explore, search, bookmark, and compare AI tools.
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, index) => (
+          <div key={step.title} className={`rounded-3xl border p-5 ${cardBg}`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400 font-black text-slate-950">
+              {index + 1}
+            </div>
+
+            <h3 className="mt-4 text-lg font-black">{step.title}</h3>
+
+            <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+              {step.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
+function FaqSection({
+  cardBg,
+  mutedText,
+  softText,
+}: {
+  cardBg: string;
+  mutedText: string;
+  softText: string;
+}) {
+  return (
+    <motion.section
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true }}
+      variants={fadeUp}
+      transition={{ duration: 0.5 }}
+      className="mt-16"
+    >
+      <div className="max-w-3xl">
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          FAQ
+        </p>
+
+        <h2 className="mt-2 text-3xl font-black">
+          Questions about AiFinder
+        </h2>
+
+        <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
+          Quick answers for people searching for an AI tools directory.
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {faqItems.map((item) => (
+          <div key={item.question} className={`rounded-3xl border p-5 ${cardBg}`}>
+            <h3 className="text-lg font-black">{item.question}</h3>
+
+            <p className={`mt-3 text-sm leading-7 ${softText}`}>
+              {item.answer}
+            </p>
+          </div>
+        ))}
+      </div>
     </motion.section>
   );
 }
@@ -697,7 +929,9 @@ function ToolList({
             onClick={() => onToggleCompare(toolSlug(tool.name))}
             className="absolute right-4 top-14 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
           >
-            {compareSlugs.includes(toolSlug(tool.name)) ? "✓ Compare" : "+ Compare"}
+            {compareSlugs.includes(toolSlug(tool.name))
+              ? "✓ Compare"
+              : "+ Compare"}
           </button>
 
           <Link
@@ -779,7 +1013,7 @@ function ToolCard({
 
       <Link
         href={`/tool/${toolSlug(tool.name)}`}
-        className={`block rounded-3xl border p-5 pr-14 transition hover:bg-white/[0.08] ${cardBg}`}
+        className={`block h-full rounded-3xl border p-5 pr-14 transition hover:bg-white/[0.08] ${cardBg}`}
       >
         {badge && (
           <span className="mb-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
@@ -855,19 +1089,90 @@ function CompareBar({
   );
 }
 
+function Footer({
+  toolsCount,
+  mutedText,
+}: {
+  toolsCount: number;
+  mutedText: string;
+}) {
+  return (
+    <footer className="mt-20 border-t border-white/10 py-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="text-2xl font-black">AiFinder</h3>
+
+          <p className={`mt-3 max-w-xl text-sm leading-7 ${mutedText}`}>
+            AiFinder is a searchable AI tools directory for discovering,
+            comparing, and bookmarking useful AI tools for productivity,
+            creativity, automation, coding, research, writing, video, image
+            generation, business, marketing, SEO, design, and AI agents.
+          </p>
+
+          <p className="mt-4 text-xs text-slate-500">
+            © 2026 AiFinder. All rights reserved.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          <div>
+            <p className="text-sm font-bold text-cyan-300">Explore</p>
+
+            <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
+              <a href="#categories" className="hover:text-cyan-300">
+                Categories
+              </a>
+
+              <a href="#favorites" className="hover:text-cyan-300">
+                Bookmarks
+              </a>
+
+              <Link href="/compare" className="hover:text-cyan-300">
+                Compare
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-bold text-cyan-300">Platform</p>
+
+            <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
+              <Link href="/submit" className="hover:text-cyan-300">
+                Submit Tool
+              </Link>
+
+              <a href="#how-it-works" className="hover:text-cyan-300">
+                How it works
+              </a>
+
+              <a href="#categories" className="hover:text-cyan-300">
+                AI categories
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-bold text-cyan-300">Stats</p>
+
+            <div className="mt-4 space-y-3 text-sm text-slate-400">
+              <p>{toolsCount}+ AI tools</p>
+              <p>{categories.length} categories</p>
+              <p>Compare up to 3 tools</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 function ToolLogo({ tool }: { tool: Tool }) {
-  const [logoError, setLogoError] = useState(false);
-
-  const logoSrc =
-    !logoError && tool.logoUrl ? tool.logoUrl : getLogoUrl(tool.website);
-
   return (
     <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
       <img
-        src={logoSrc}
+        src={getLogoUrl(tool.website)}
         alt={`${tool.name} logo`}
-        className="h-8 w-8 object-contain"
-        onError={() => setLogoError(true)}
+        className="h-8 w-8"
       />
     </div>
   );
