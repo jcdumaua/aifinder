@@ -1,206 +1,362 @@
-"use client";
-
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 import {
   categories,
-  getIcon,
   getLogoUrl,
   getReviewCount,
   getToolRating,
   slugify,
   toolSlug,
-  tools,
-  Tool,
 } from "../../data/tools";
-import { useTheme } from "../../theme-provider";
+import CategoryDetailClient, {
+  CategoryPageTool,
+} from "./category-detail-client";
 
-export default function CategoryPage() {
-  const { isLightMode, toggleTheme } = useTheme();
-  const params = useParams();
-  const slug = params.slug as string;
+export const revalidate = 300;
 
-  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+const siteUrl = "https://aifinder-eight.vercel.app";
 
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem("aifinder-favorites");
+type PageProps = {
+  params: Promise<{
+    slug: string;
+  }>;
+};
 
-    if (savedFavorites) {
-      setFavoriteSlugs(JSON.parse(savedFavorites));
-    }
-  }, []);
+type ToolRow = {
+  id?: number;
+  name?: string | null;
+  category?: string | null;
+  description?: string | null;
+  website?: string | null;
+  pricing?: string | null;
+  logo_url?: string | null;
+  platforms?: string[] | null;
+  featured?: boolean | null;
+  best_for?: string | null;
+  use_cases?: string[] | null;
+  ios?: string | null;
+  android?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
 
-  const saveFavorites = (newFavorites: string[]) => {
-    setFavoriteSlugs(newFavorites);
-    localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
-  };
+const categoryDescriptions: Record<string, string> = {
+  Chatbots:
+    "Discover AI chatbot tools for research, customer support, brainstorming, productivity, and everyday questions.",
+  Research:
+    "Find AI research tools for summarizing information, exploring sources, organizing notes, and learning faster.",
+  "Image AI":
+    "Explore AI image tools for generating visuals, editing images, designing graphics, and creating marketing assets.",
+  "Video AI":
+    "Browse AI video tools for editing, captions, avatars, presentations, short-form content, and video production.",
+  "Voice AI":
+    "Discover voice AI tools for text-to-speech, transcription, audio editing, dubbing, and voice generation.",
+  "Music AI":
+    "Find music AI tools for generating songs, audio ideas, background tracks, and creative sound workflows.",
+  Coding:
+    "Compare AI coding tools for app building, debugging, documentation, code generation, and developer productivity.",
+  Business:
+    "Browse AI business tools for operations, workflows, analytics, automation, customer support, and team productivity.",
+  Productivity:
+    "Find AI productivity tools that help with focus, planning, automation, task management, and daily work.",
+  "Education AI":
+    "Explore education AI tools for studying, tutoring, lesson planning, research, and skill building.",
+  "Marketing AI":
+    "Discover marketing AI tools for campaigns, content planning, social media, copywriting, and customer insights.",
+  "SEO AI":
+    "Find SEO AI tools for keyword research, content optimization, search analysis, and website growth.",
+  "Design AI":
+    "Browse design AI tools for branding, layouts, graphics, presentations, prototypes, and creative workflows.",
+  "AI Agents":
+    "Explore AI agents that can handle multi-step tasks, automate workflows, research topics, and connect apps.",
+};
 
-  const toggleFavorite = (tool: Tool) => {
-    const slug = toolSlug(tool.name);
+function normalizeCategory(category: string | null | undefined) {
+  if (category === "Chat") return "Chatbots";
+  if (category === "Image") return "Image AI";
+  if (category === "Video") return "Video AI";
+  if (category === "Audio") return "Voice AI";
 
-    if (favoriteSlugs.includes(slug)) {
-      saveFavorites(favoriteSlugs.filter((item) => item !== slug));
-    } else {
-      saveFavorites([...favoriteSlugs, slug]);
-    }
-  };
+  return category || "Productivity";
+}
 
-  const category = categories.find((cat) => slugify(cat) === slug);
-  const categoryTools = tools.filter((tool) => tool.category === category);
-
-  const pageBg = isLightMode
-    ? "bg-slate-100 text-slate-950"
-    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
-
-  const cardBg = isLightMode
-    ? "bg-white border-slate-200"
-    : "bg-white/[0.04] border-white/10";
-
-  const softText = isLightMode ? "text-slate-600" : "text-slate-400";
-
-  if (!category) {
-    return (
-      <main className={`min-h-screen p-6 ${pageBg}`}>
-        <Link
-          href="/"
-          className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
-        >
-          ← Back home
-        </Link>
-
-        <h1 className="mt-8 text-4xl font-black">Category not found</h1>
-      </main>
-    );
+function normalizePricing(pricing: string | null | undefined) {
+  if (pricing === "Free" || pricing === "Paid" || pricing === "Free + Paid") {
+    return pricing;
   }
 
+  if (pricing === "Freemium") return "Free + Paid";
+
+  return "Free + Paid";
+}
+
+function cleanText(value: string | null | undefined, fallback = "") {
+  return (value || fallback).trim();
+}
+
+function toArray(value: unknown, fallback: string[] = []) {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is string =>
+          typeof item === "string" && item.trim().length > 0
+      )
+    : fallback;
+}
+
+function trimDescription(value: string, maxLength = 155) {
+  const cleanValue = value.replace(/\s+/g, " ").trim();
+
+  if (cleanValue.length <= maxLength) return cleanValue;
+
+  return `${cleanValue.slice(0, maxLength - 1).trim()}…`;
+}
+
+function getCategoryFromSlug(slug: string) {
+  const decodedSlug = decodeURIComponent(slug);
+
+  return categories.find((category) => slugify(category) === decodedSlug) || null;
+}
+
+function getCategoryDescription(category: string) {
   return (
-    <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            ← Back
-          </Link>
-
-          <Link
-            href="/#favorites"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            ⭐ Bookmarks
-          </Link>
-
-          <button
-            onClick={toggleTheme}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            {isLightMode ? "🌙 Dark" : "☀️ Light"}
-          </button>
-        </div>
-
-        <div className={`mt-8 rounded-[2rem] border p-6 sm:p-8 ${cardBg}`}>
-          <div className="text-5xl">{getIcon(category)}</div>
-
-          <p className="mt-5 text-sm font-bold uppercase tracking-widest text-cyan-300">
-            Category
-          </p>
-
-          <h1 className="mt-2 text-4xl font-black sm:text-5xl">
-            {category}
-          </h1>
-
-          <p className={`mt-4 max-w-2xl text-lg leading-8 ${softText}`}>
-            Discover the best {category.toLowerCase()} tools for productivity,
-            creativity, business, and AI workflows.
-          </p>
-
-          <div className="mt-6 inline-block rounded-full bg-white/5 px-5 py-3 text-sm">
-            {categoryTools.length} AI tools listed
-          </div>
-        </div>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categoryTools.map((tool) => {
-            const isFavorite = favoriteSlugs.includes(toolSlug(tool.name));
-
-            return (
-              <div
-                key={tool.name}
-                className={`group relative rounded-3xl border p-5 transition duration-300 hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
-              >
-                <button
-                  onClick={() => toggleFavorite(tool)}
-                  className="absolute right-4 top-4 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
-                >
-                  {isFavorite ? "★" : "☆"}
-                </button>
-
-                <Link href={`/tool/${toolSlug(tool.name)}`}>
-                  <ToolLogo tool={tool} />
-
-                  <div className="mt-5 flex items-center gap-2 pr-10">
-                    <h3 className="font-bold">{tool.name}</h3>
-
-                    {tool.featured && (
-                      <span className="rounded-full bg-cyan-400/20 px-2 py-1 text-xs font-bold text-cyan-200">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-2 text-sm text-cyan-300">
-                    {tool.category}
-                  </p>
-
-                  <p className="mt-1 text-sm text-yellow-300">
-                    ⭐ {getToolRating(tool.name)} (
-                    {getReviewCount(tool.name).toLocaleString()} reviews)
-                  </p>
-
-                  <p className={`mt-3 text-sm leading-7 ${softText}`}>
-                    {tool.description}
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {tool.useCases?.slice(0, 3).map((useCase) => (
-                      <span
-                        key={useCase}
-                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs"
-                      >
-                        {useCase}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-between">
-                    <span className="text-sm text-cyan-300">
-                      {tool.pricing}
-                    </span>
-
-                    <span className="text-sm font-bold group-hover:text-cyan-300">
-                      View Tool →
-                    </span>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    </main>
+    categoryDescriptions[category] ||
+    `Browse the best ${category} tools on AiFinder. Search, compare, and discover useful AI software by category, pricing, platform, and use case.`
   );
 }
 
-function ToolLogo({ tool }: { tool: Tool }) {
+function buildToolData(row: ToolRow): CategoryPageTool | null {
+  const name = cleanText(row.name);
+  const website = cleanText(row.website);
+  const description = cleanText(row.description);
+
+  if (!name || !website || !description) {
+    return null;
+  }
+
+  const category = normalizeCategory(row.category);
+
+  return {
+    name,
+    slug: toolSlug(name),
+    category,
+    description,
+    website,
+    pricing: normalizePricing(row.pricing),
+    logoUrl: cleanText(row.logo_url) || getLogoUrl(website),
+    platforms: toArray(row.platforms, ["Web"]),
+    featured: Boolean(row.featured),
+    bestFor: cleanText(row.best_for) || description,
+    useCases: toArray(row.use_cases, [category, `${category} tools`]),
+    rating: getToolRating(name),
+    reviewCount: getReviewCount(name),
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || row.created_at || null,
+  };
+}
+
+async function getTools() {
+  const { data, error } = await supabaseAdmin
+    .from("tools")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Category page tools load error:", error.message);
+    return [];
+  }
+
+  return ((data || []) as ToolRow[])
+    .map(buildToolData)
+    .filter((tool): tool is CategoryPageTool => Boolean(tool));
+}
+
+async function getCategoryPageData(slug: string) {
+  const category = getCategoryFromSlug(slug);
+
+  if (!category) {
+    return {
+      category: null,
+      categoryTools: [],
+      featuredTools: [],
+      relatedCategories: [],
+    };
+  }
+
+  const tools = await getTools();
+  const categoryTools = tools.filter((tool) => tool.category === category);
+  const featuredTools = categoryTools
+    .filter((tool) => tool.featured)
+    .slice(0, 6);
+
+  const relatedCategories = categories
+    .filter((item) => item !== category)
+    .slice(0, 6)
+    .map((item) => ({
+      name: item,
+      slug: slugify(item),
+      description: getCategoryDescription(item),
+      count: tools.filter((tool) => tool.category === item).length,
+    }));
+
+  return {
+    category,
+    categoryTools,
+    featuredTools,
+    relatedCategories,
+  };
+}
+
+function getCategoryJsonLd({
+  category,
+  categoryTools,
+}: {
+  category: string;
+  categoryTools: CategoryPageTool[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${category} AI Tools`,
+    url: `${siteUrl}/category/${slugify(category)}`,
+    description: getCategoryDescription(category),
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: categoryTools.length,
+      itemListElement: categoryTools.slice(0, 20).map((tool, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${siteUrl}/tool/${tool.slug}`,
+        name: tool.name,
+        description: tool.description,
+      })),
+    },
+  };
+}
+
+function getBreadcrumbJsonLd(category: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "AiFinder",
+        item: siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: `${category} AI Tools`,
+        item: `${siteUrl}/category/${slugify(category)}`,
+      },
+    ],
+  };
+}
+
+export async function generateStaticParams() {
+  return categories.map((category) => ({
+    slug: slugify(category),
+  }));
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const category = getCategoryFromSlug(slug);
+
+  if (!category) {
+    return {
+      title: "AI Category Not Found",
+      description: "This AI tools category could not be found on AiFinder.",
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
+
+  const title = `${category} AI Tools — Search, Compare & Discover`;
+  const description = trimDescription(getCategoryDescription(category));
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/category/${slugify(category)}`,
+    },
+    openGraph: {
+      type: "website",
+      url: `${siteUrl}/category/${slugify(category)}`,
+      siteName: "AiFinder",
+      title,
+      description,
+      images: [
+        {
+          url: "/opengraph-image",
+          width: 1200,
+          height: 630,
+          alt: `${category} AI Tools on AiFinder`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/twitter-image"],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+  };
+}
+
+export default async function CategoryPage({ params }: PageProps) {
+  const { slug } = await params;
+  const { category, categoryTools, featuredTools, relatedCategories } =
+    await getCategoryPageData(slug);
+
+  if (!category) {
+    notFound();
+  }
+
+  const categoryJsonLd = getCategoryJsonLd({
+    category,
+    categoryTools,
+  });
+  const breadcrumbJsonLd = getBreadcrumbJsonLd(category);
+
   return (
-    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-3xl bg-white">
-      <img
-        src={getLogoUrl(tool.website)}
-        alt={`${tool.name} logo`}
-        className="h-9 w-9"
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(categoryJsonLd).replace(/</g, "\\u003c"),
+        }}
       />
-    </div>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+
+      <CategoryDetailClient
+        category={category}
+        description={getCategoryDescription(category)}
+        tools={categoryTools}
+        featuredTools={featuredTools}
+        relatedCategories={relatedCategories}
+      />
+    </>
   );
 }
