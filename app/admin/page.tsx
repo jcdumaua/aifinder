@@ -34,6 +34,18 @@ type AdminStats = {
   rejectedSubmissions: number;
 };
 
+type AdminAuditLog = {
+  id: number;
+  action: string;
+  target_type?: string | null;
+  target_id?: string | null;
+  target_name?: string | null;
+  details?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+};
+
 type PopupMessage = {
   type: "success" | "error";
   title: string;
@@ -229,6 +241,26 @@ function UploadIcon() {
   );
 }
 
+function formatAuditAction(action: string) {
+  return action
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatAuditDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
 export default function AdminPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -238,6 +270,9 @@ export default function AdminPage() {
 
   const [tools, setTools] = useState<Tool[]>([]);
   const [submissions, setSubmissions] = useState<SubmittedTool[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
+  const [isAuditLogModalOpen, setIsAuditLogModalOpen] = useState(false);
 
   const [stats, setStats] = useState<AdminStats>({
     totalTools: 0,
@@ -508,6 +543,7 @@ export default function AdminPage() {
     setCsrfToken("");
     setTools([]);
     setSubmissions([]);
+    setAuditLogs([]);
     setStats({
       totalTools: 0,
       pendingSubmissions: 0,
@@ -582,6 +618,7 @@ export default function AdminPage() {
 
       setUrl(result.logoUrl);
       showSuccess("Logo uploaded successfully.", "Logo Uploaded");
+      fetchAuditLogs();
     } catch {
       showError("Failed to upload logo.");
     } finally {
@@ -622,6 +659,35 @@ export default function AdminPage() {
 
     if (result?.stats) {
       setStats(result.stats);
+    }
+  }
+
+  async function fetchAuditLogs() {
+    setIsLoadingAuditLogs(true);
+
+    try {
+      const response = await fetch("/api/admin/audit-logs", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (handleSecurityFailure(response.status)) {
+        return;
+      }
+
+      if (!response.ok) {
+        showError(result?.error || "Failed to load admin audit logs.");
+        return;
+      }
+
+      setAuditLogs(result?.logs || []);
+    } catch {
+      showError("Failed to load admin audit logs.");
+    } finally {
+      setIsLoadingAuditLogs(false);
     }
   }
 
@@ -667,6 +733,7 @@ export default function AdminPage() {
 
         fetchSubmissions();
         fetchTools();
+        fetchAuditLogs();
       },
     });
   }
@@ -709,6 +776,7 @@ export default function AdminPage() {
         showSuccess("Submission rejected.", "Submission Rejected");
 
         fetchSubmissions();
+        fetchAuditLogs();
       },
     });
   }
@@ -783,6 +851,7 @@ export default function AdminPage() {
 
     closeSubmissionEditModal();
     fetchSubmissions();
+    fetchAuditLogs();
   }
 
   useEffect(() => {
@@ -793,6 +862,7 @@ export default function AdminPage() {
     if (isUnlocked) {
       fetchTools();
       fetchSubmissions();
+      fetchAuditLogs();
       fetchCsrfToken();
     }
   }, [isUnlocked]);
@@ -846,6 +916,7 @@ export default function AdminPage() {
 
     fetchTools();
     fetchSubmissions();
+    fetchAuditLogs();
   }
 
   function openEditModal(tool: Tool) {
@@ -914,6 +985,7 @@ export default function AdminPage() {
     closeEditModal();
     fetchTools();
     fetchSubmissions();
+    fetchAuditLogs();
   }
 
   function deleteTool(id?: number) {
@@ -957,6 +1029,7 @@ export default function AdminPage() {
 
         fetchTools();
         fetchSubmissions();
+        fetchAuditLogs();
       },
     });
   }
@@ -1062,6 +1135,94 @@ export default function AdminPage() {
     </div>
   );
 
+  const auditLogsPopup = isAuditLogModalOpen && (
+    <div
+      className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[2rem] border border-purple-400/20 bg-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 p-6">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
+              Security Audit
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black text-white">
+              Recent Admin Activity
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Latest admin actions recorded from your secure server routes.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={fetchAuditLogs}
+              disabled={isLoadingAuditLogs}
+              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingAuditLogs ? "Loading..." : "Refresh Logs"}
+            </button>
+
+            <button
+              onClick={() => setIsAuditLogModalOpen(false)}
+              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto p-6">
+          {auditLogs.length === 0 ? (
+            <p className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+              No audit logs yet. Try logging out/in or adding a test tool.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-3xl border border-white/10">
+              <div className="hidden grid-cols-[170px_1fr_1fr_120px] gap-4 border-b border-white/10 bg-black/30 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 md:grid">
+                <span>Time</span>
+                <span>Action</span>
+                <span>Target</span>
+                <span>IP</span>
+              </div>
+
+              <div className="divide-y divide-white/10">
+                {auditLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
+                  >
+                    <p className="text-slate-400">
+                      {formatAuditDate(log.created_at)}
+                    </p>
+
+                    <p className="font-bold text-white">
+                      {formatAuditAction(log.action)}
+                    </p>
+
+                    <p className="break-words text-slate-300">
+                      {log.target_name || log.target_type || "Admin session"}
+                      {log.target_id ? (
+                        <span className="text-slate-500"> #{log.target_id}</span>
+                      ) : null}
+                    </p>
+
+                    <p className="break-all text-xs text-slate-500">
+                      {log.ip_address || "Unknown"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   if (isCheckingSession) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
@@ -1119,8 +1280,8 @@ export default function AdminPage() {
           </button>
 
           <p className="mt-4 text-xs text-slate-500">
-            Temporary MVP password protection. Next security upgrade should
-            replace this with real admin authentication.
+            Admin password is checked securely on the server. A secure cookie
+            session is used after login.
           </p>
         </div>
       </main>
@@ -1131,6 +1292,7 @@ export default function AdminPage() {
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black p-6 text-white">
       {confirmationPopup}
       {messagePopup}
+      {auditLogsPopup}
 
       <section className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -1197,6 +1359,34 @@ export default function AdminPage() {
             <p className="mt-2 text-sm text-slate-400">
               Declined submissions
             </p>
+          </div>
+        </div>
+
+        <div className="mb-10 rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-purple-300">
+                Security Audit
+              </p>
+
+              <h2 className="mt-2 text-2xl font-bold">
+                Recent Admin Activity
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-400">
+                View audit logs in a popup to keep the dashboard clean.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsAuditLogModalOpen(true);
+                fetchAuditLogs();
+              }}
+              className="rounded-full bg-purple-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-purple-300"
+            >
+              Open Audit Logs
+            </button>
           </div>
         </div>
 
