@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   isAuthorizedAdminRequest,
   verifyAdminCsrfRequest,
@@ -386,6 +387,18 @@ export async function POST(request: Request) {
       return jsonResponse({ error: "Failed to add tool." }, 500);
     }
 
+    await createAdminAuditLog({
+      request,
+      action: "tool_added",
+      targetType: "tool",
+      targetName: cleanBody.name,
+      details: {
+        category: cleanBody.category,
+        website: cleanBody.website,
+        pricing: cleanBody.pricing,
+      },
+    });
+
     return jsonResponse({
       success: true,
       message: "Tool added.",
@@ -446,6 +459,19 @@ export async function PUT(request: Request) {
       );
     }
 
+    await createAdminAuditLog({
+      request,
+      action: "tool_updated",
+      targetType: "tool",
+      targetId: cleanBody.id,
+      targetName: cleanBody.name,
+      details: {
+        category: cleanBody.category,
+        website: cleanBody.website,
+        pricing: cleanBody.pricing,
+      },
+    });
+
     return jsonResponse({
       success: true,
       message: "Tool updated.",
@@ -476,7 +502,7 @@ export async function DELETE(request: Request) {
       .from("tools")
       .delete()
       .eq("id", id)
-      .select("id")
+      .select("id, name, website")
       .single();
 
     if (error || !data) {
@@ -487,6 +513,17 @@ export async function DELETE(request: Request) {
         404
       );
     }
+
+    await createAdminAuditLog({
+      request,
+      action: "tool_deleted",
+      targetType: "tool",
+      targetId: data.id,
+      targetName: data.name,
+      details: {
+        website: data.website,
+      },
+    });
 
     return jsonResponse({
       success: true,

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import { ADMIN_SESSION_COOKIE_NAME } from "../../../../lib/admin-auth";
 
 export const runtime = "nodejs";
@@ -76,6 +77,14 @@ export async function POST(request: Request) {
     const clientIp = getClientIp(request);
 
     if (!checkRateLimit(clientIp)) {
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "rate_limited",
+        },
+      });
+
       return jsonResponse(
         { error: "Too many login attempts. Please wait and try again." },
         429
@@ -90,6 +99,14 @@ export async function POST(request: Request) {
         "ADMIN_PASSWORD or ADMIN_SESSION_SECRET is missing from environment variables."
       );
 
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "missing_server_environment",
+        },
+      });
+
       return jsonResponse(
         { error: "Admin login is temporarily unavailable." },
         500
@@ -99,6 +116,14 @@ export async function POST(request: Request) {
     const contentType = request.headers.get("content-type") || "";
 
     if (!contentType.includes("application/json")) {
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "invalid_content_type",
+        },
+      });
+
       return jsonResponse({ error: "Invalid login format." }, 415);
     }
 
@@ -106,12 +131,28 @@ export async function POST(request: Request) {
     const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
 
     if (contentLength > MAX_BODY_SIZE_BYTES) {
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "request_too_large",
+        },
+      });
+
       return jsonResponse({ error: "Login request is too large." }, 413);
     }
 
     const body = await request.json().catch(() => null);
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "invalid_body",
+        },
+      });
+
       return jsonResponse({ error: "Invalid login request." }, 400);
     }
 
@@ -123,6 +164,14 @@ export async function POST(request: Request) {
       typeof typedBody.password === "string" ? typedBody.password : "";
 
     if (!password || !safeCompare(password, expectedPassword)) {
+      await createAdminAuditLog({
+        request,
+        action: "admin_login_failed",
+        details: {
+          reason: "wrong_password",
+        },
+      });
+
       return jsonResponse({ error: "Wrong password. Please try again." }, 401);
     }
 
@@ -130,6 +179,14 @@ export async function POST(request: Request) {
     const payload = `admin:${expiresAt}`;
     const signature = signSession(payload, sessionSecret);
     const sessionValue = `${payload}.${signature}`;
+
+    await createAdminAuditLog({
+      request,
+      action: "admin_login_success",
+      details: {
+        sessionMaxAgeSeconds: SESSION_MAX_AGE_SECONDS,
+      },
+    });
 
     const response = jsonResponse({
       success: true,
@@ -147,6 +204,14 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error("Admin login error:", error);
+
+    await createAdminAuditLog({
+      request,
+      action: "admin_login_failed",
+      details: {
+        reason: "server_error",
+      },
+    });
 
     return jsonResponse({ error: "Admin login failed." }, 500);
   }

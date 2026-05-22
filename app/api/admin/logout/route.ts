@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   ADMIN_CSRF_COOKIE_NAME,
   ADMIN_SESSION_COOKIE_NAME,
@@ -17,7 +18,12 @@ function jsonResponse(data: object, status = 200) {
   });
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  await createAdminAuditLog({
+    request,
+    action: "admin_logout",
+  });
+
   const response = jsonResponse({
     success: true,
     message: "Admin logged out.",

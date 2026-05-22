@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
+import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   isAuthorizedAdminRequest,
   verifyAdminCsrfRequest,
@@ -248,6 +249,20 @@ export async function POST(request: Request) {
     const { data } = supabaseAdmin.storage
       .from("tool-logos")
       .getPublicUrl(fileName);
+
+    await createAdminAuditLog({
+      request,
+      action: "logo_uploaded",
+      targetType: "storage_object",
+      targetId: fileName,
+      targetName: fileName,
+      details: {
+        bucket: "tool-logos",
+        contentType: file.type,
+        sizeBytes: file.size,
+        publicUrl: data.publicUrl,
+      },
+    });
 
     return jsonResponse({
       success: true,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   isAuthorizedAdminRequest,
   verifyAdminCsrfRequest,
@@ -572,6 +573,19 @@ export async function POST(request: Request) {
       );
     }
 
+    await createAdminAuditLog({
+      request,
+      action: "submission_approved",
+      targetType: "submission",
+      targetId: submissionId,
+      targetName: name,
+      details: {
+        category,
+        website: safeWebsite,
+        pricing: pricing || "Free + Paid",
+      },
+    });
+
     return jsonResponse({
       success: true,
       message: "Submission approved and added to tools.",
@@ -654,6 +668,19 @@ export async function PUT(request: Request) {
       );
     }
 
+    await createAdminAuditLog({
+      request,
+      action: "submission_updated",
+      targetType: "submission",
+      targetId: cleanBody.id,
+      targetName: cleanBody.name,
+      details: {
+        category: cleanBody.category,
+        website: cleanBody.website,
+        pricing: cleanBody.pricing,
+      },
+    });
+
     return jsonResponse({
       success: true,
       message: "Submission updated.",
@@ -687,7 +714,7 @@ export async function PATCH(request: Request) {
       .update({ status: "rejected" })
       .eq("id", submissionId)
       .eq("status", "pending")
-      .select("id")
+      .select("id, name, website")
       .single();
 
     if (error || !data) {
@@ -698,6 +725,17 @@ export async function PATCH(request: Request) {
         404
       );
     }
+
+    await createAdminAuditLog({
+      request,
+      action: "submission_rejected",
+      targetType: "submission",
+      targetId: data.id,
+      targetName: data.name,
+      details: {
+        website: data.website,
+      },
+    });
 
     return jsonResponse({
       success: true,
