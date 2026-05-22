@@ -272,13 +272,9 @@ export default function Home() {
     ? "bg-slate-100 text-slate-950"
     : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
 
-  const cardBg = isLightMode
-    ? "bg-white border-slate-200"
-    : "bg-white/[0.04] border-white/10";
+  const cardBg = "bg-slate-950/65 border-cyan-400/20 shadow-[0_0_45px_rgba(34,211,238,0.12)] backdrop-blur-xl";
 
-  const inputBg = isLightMode
-    ? "bg-white border-slate-300 text-slate-950 placeholder:text-slate-400"
-    : "bg-black/20 border-white/10 text-white placeholder:text-slate-500";
+  const inputBg = "bg-slate-950/70 border-cyan-400/30 text-white placeholder:text-cyan-200/50 shadow-[0_0_35px_rgba(34,211,238,0.18)] backdrop-blur-xl focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/20";
 
   const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
   const softText = isLightMode ? "text-slate-700" : "text-slate-300";
@@ -353,7 +349,7 @@ export default function Home() {
             </p>
 
             <h1 className="mt-3 max-w-5xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
-              Discover the best AI tools for work, creativity, and automation.
+              AI Operating System for work, creativity, and automation.
             </h1>
 
             <p className={`mt-5 max-w-3xl text-base leading-8 sm:text-lg ${mutedText}`}>
@@ -391,7 +387,7 @@ export default function Home() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRecentSearch(search);
               }}
-              placeholder="Search AI tools, categories, or use cases..."
+              placeholder="Ask AI Finder anything..."
               className={`mt-8 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg}`}
             />
 
@@ -408,7 +404,7 @@ export default function Home() {
             </div>
 
             {recentSearches.length > 0 && (
-              <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4">
+              <div className="mt-4 rounded-3xl ai-panel border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-bold text-cyan-300">
                     Recent searches
@@ -440,7 +436,7 @@ export default function Home() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg}`}
+                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 <option value="All">All Categories</option>
 
@@ -454,7 +450,7 @@ export default function Home() {
               <select
                 value={selectedPricing}
                 onChange={(e) => setSelectedPricing(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg}`}
+                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {pricingOptions.map((price) => (
                   <option key={price} value={price}>
@@ -466,7 +462,7 @@ export default function Home() {
               <select
                 value={selectedPlatform}
                 onChange={(e) => setSelectedPlatform(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg}`}
+                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {platformOptions.map((platform) => (
                   <option key={platform} value={platform}>
@@ -488,7 +484,7 @@ export default function Home() {
         </motion.div>
 
         {isLoadingTools && (
-          <div className={`mt-8 rounded-3xl border p-6 ${cardBg}`}>
+          <div className={`mt-8 rounded-3xl border p-6 ${cardBg} transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-[0_0_60px_rgba(34,211,238,0.25)]`}>
             <p className={mutedText}>Loading AI tools...</p>
           </div>
         )}
