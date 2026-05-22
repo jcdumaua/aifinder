@@ -98,10 +98,14 @@ function normalizeCategory(category: string | null | undefined) {
   return category || "Productivity";
 }
 
-function normalizePricing(pricing: string | null | undefined) {
+function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {
+  if (pricing === "Free" || pricing === "Paid" || pricing === "Free + Paid") {
+    return pricing;
+  }
+
   if (pricing === "Freemium") return "Free + Paid";
 
-  return pricing || "Free + Paid";
+  return "Free + Paid";
 }
 
 export default function Home() {
