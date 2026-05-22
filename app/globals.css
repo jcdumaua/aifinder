@@ -597,3 +597,48 @@ h1, h2, h3 {
   }
 }
 
+
+/* AI status chips */
+.ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  padding: 0.45rem 0.85rem;
+
+  border-radius: 9999px;
+
+  border: 1px solid rgba(34,211,238,0.28);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(8,47,73,0.42),
+      rgba(15,23,42,0.7)
+    );
+
+  color: #a5f3fc;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  box-shadow:
+    0 0 22px rgba(34,211,238,0.12);
+
+  backdrop-filter: blur(18px);
+}
+
+.ai-chip-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+
+  border-radius: 9999px;
+
+  background: #22d3ee;
+
+  box-shadow:
+    0 0 16px rgba(34,211,238,0.9);
+}
+
