@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE_NAME } from "../../../../lib/admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
       message: "Admin login successful.",
     });
 
-    response.cookies.set("aifinder_admin_session", sessionValue, {
+    response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionValue, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

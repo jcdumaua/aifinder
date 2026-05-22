@@ -1,6 +1,7 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
-const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
+export const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
+export const ADMIN_CSRF_COOKIE_NAME = "aifinder_admin_csrf_token";
 
 function signSession(payload: string, secret: string) {
   return createHmac("sha256", secret).update(payload).digest("hex");
@@ -65,6 +66,35 @@ function isValidAdminSession(request: Request) {
   }
 
   return true;
+}
+
+export function createAdminCsrfToken() {
+  return randomBytes(32).toString("hex");
+}
+
+export function verifyAdminCsrfRequest(request: Request) {
+  const method = request.method.toUpperCase();
+
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+    return true;
+  }
+
+  const csrfHeader = request.headers.get("x-csrf-token") || "";
+  const csrfCookie = getCookieValue(request, ADMIN_CSRF_COOKIE_NAME);
+
+  if (!csrfHeader || !csrfCookie) {
+    return false;
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(csrfHeader)) {
+    return false;
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(csrfCookie)) {
+    return false;
+  }
+
+  return safeCompare(csrfHeader, csrfCookie);
 }
 
 export function isAuthorizedAdminRequest(request: Request) {

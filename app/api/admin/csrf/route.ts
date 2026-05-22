@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import {
   ADMIN_CSRF_COOKIE_NAME,
-  ADMIN_SESSION_COOKIE_NAME,
+  createAdminCsrfToken,
+  isAuthorizedAdminRequest,
 } from "../../../../lib/admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const CSRF_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 4; // 4 hours
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -17,25 +20,23 @@ function jsonResponse(data: object, status = 200) {
   });
 }
 
-export async function POST() {
+export async function GET(request: Request) {
+  if (!isAuthorizedAdminRequest(request)) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const csrfToken = createAdminCsrfToken();
+
   const response = jsonResponse({
     success: true,
-    message: "Admin logged out.",
+    csrfToken,
   });
 
-  response.cookies.set(ADMIN_SESSION_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 0,
-    path: "/",
-  });
-
-  response.cookies.set(ADMIN_CSRF_COOKIE_NAME, "", {
+  response.cookies.set(ADMIN_CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 0,
+    maxAge: CSRF_TOKEN_MAX_AGE_SECONDS,
     path: "/",
   });
 

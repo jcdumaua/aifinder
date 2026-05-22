@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminRequest } from "../../../../lib/admin-auth";
+import {
+  isAuthorizedAdminRequest,
+  verifyAdminCsrfRequest,
+} from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const CATEGORIES = [
   "Chatbots",
@@ -41,7 +47,7 @@ const BLOCKED_FILE_EXTENSIONS = [
 
 const MAX_BODY_SIZE_BYTES = 20 * 1024; // 20KB
 const ADMIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const ADMIN_RATE_LIMIT_MAX_REQUESTS = 80; // per IP
+const ADMIN_RATE_LIMIT_MAX_REQUESTS = 80;
 
 const adminRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -97,6 +103,28 @@ function checkAdminRateLimit(request: Request) {
   adminRateLimitMap.set(ip, current);
 
   return true;
+}
+
+function requireAdminSecurity(request: Request) {
+  if (!checkAdminRateLimit(request)) {
+    return jsonResponse(
+      { error: "Too many admin requests. Please wait and try again." },
+      429
+    );
+  }
+
+  if (!isAuthorizedAdminRequest(request)) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  if (!verifyAdminCsrfRequest(request)) {
+    return jsonResponse(
+      { error: "Security token missing or expired. Please log in again." },
+      403
+    );
+  }
+
+  return null;
 }
 
 function cleanText(value: unknown, maxLength: number) {
@@ -317,15 +345,10 @@ async function findDuplicateWebsiteDomain(
 
 export async function POST(request: Request) {
   try {
-    if (!checkAdminRateLimit(request)) {
-      return jsonResponse(
-        { error: "Too many admin requests. Please wait and try again." },
-        429
-      );
-    }
+    const securityError = requireAdminSecurity(request);
 
-    if (!isAuthorizedAdminRequest(request)) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    if (securityError) {
+      return securityError;
     }
 
     const body = await readJsonBody(request);
@@ -370,8 +393,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to add tool.",
+        error: error instanceof Error ? error.message : "Failed to add tool.",
       },
       400
     );
@@ -380,15 +402,10 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    if (!checkAdminRateLimit(request)) {
-      return jsonResponse(
-        { error: "Too many admin requests. Please wait and try again." },
-        429
-      );
-    }
+    const securityError = requireAdminSecurity(request);
 
-    if (!isAuthorizedAdminRequest(request)) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    if (securityError) {
+      return securityError;
     }
 
     const body = await readJsonBody(request);
@@ -446,15 +463,10 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!checkAdminRateLimit(request)) {
-      return jsonResponse(
-        { error: "Too many admin requests. Please wait and try again." },
-        429
-      );
-    }
+    const securityError = requireAdminSecurity(request);
 
-    if (!isAuthorizedAdminRequest(request)) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    if (securityError) {
+      return securityError;
     }
 
     const body = await readJsonBody(request);

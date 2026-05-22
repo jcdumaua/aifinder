@@ -95,6 +95,7 @@ function getSafeHttpsUrl(value?: string | null) {
     const url = new URL(value.trim());
 
     if (url.protocol !== "https:") return "";
+
     if (url.username || url.password) return "";
 
     const hostname = url.hostname.toLowerCase();
@@ -233,6 +234,7 @@ export default function AdminPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [csrfToken, setCsrfToken] = useState("");
 
   const [tools, setTools] = useState<Tool[]>([]);
   const [submissions, setSubmissions] = useState<SubmittedTool[]>([]);
@@ -409,6 +411,41 @@ export default function AdminPage() {
     }
   }
 
+  async function fetchCsrfToken() {
+    try {
+      const response = await fetch("/api/admin/csrf", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        showError("Your admin session expired. Please log in again.");
+        logoutAdmin();
+        return "";
+      }
+
+      if (!response.ok || !result?.csrfToken) {
+        showError("Unable to prepare secure admin actions. Please refresh.");
+        return "";
+      }
+
+      setCsrfToken(result.csrfToken);
+      return result.csrfToken as string;
+    } catch {
+      showError("Unable to prepare secure admin actions. Please refresh.");
+      return "";
+    }
+  }
+
+  async function getCsrfToken() {
+    if (csrfToken) return csrfToken;
+
+    return fetchCsrfToken();
+  }
+
   async function unlockAdmin() {
     if (!password.trim()) {
       showError("Please enter the admin password.", "Admin Access Denied");
@@ -450,10 +487,17 @@ export default function AdminPage() {
 
   async function logoutAdmin() {
     try {
+      const headers: Record<string, string> = {};
+
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+
       await fetch("/api/admin/logout", {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
+        headers,
       });
     } catch {
       // Continue clearing local UI state even if logout request fails.
@@ -461,6 +505,7 @@ export default function AdminPage() {
 
     setIsUnlocked(false);
     setPassword("");
+    setCsrfToken("");
     setTools([]);
     setSubmissions([]);
     setStats({
@@ -469,6 +514,25 @@ export default function AdminPage() {
       approvedSubmissions: 0,
       rejectedSubmissions: 0,
     });
+  }
+
+  function handleSecurityFailure(responseStatus: number) {
+    if (responseStatus === 401) {
+      showError("Your admin session expired. Please log in again.");
+      logoutAdmin();
+      return true;
+    }
+
+    if (responseStatus === 403) {
+      showError(
+        "Your security token expired. Please log in again.",
+        "Security Check Failed"
+      );
+      logoutAdmin();
+      return true;
+    }
+
+    return false;
   }
 
   async function uploadLogoFile(
@@ -486,6 +550,10 @@ export default function AdminPage() {
       return;
     }
 
+    const secureToken = await getCsrfToken();
+
+    if (!secureToken) return;
+
     setUploading(true);
 
     try {
@@ -495,14 +563,15 @@ export default function AdminPage() {
       const response = await fetch("/api/admin/upload-logo", {
         method: "POST",
         credentials: "same-origin",
+        headers: {
+          "x-csrf-token": secureToken,
+        },
         body: formData,
       });
 
       const result = await response.json().catch(() => null);
 
-      if (response.status === 401) {
-        showError("Your admin session expired. Please log in again.");
-        logoutAdmin();
+      if (handleSecurityFailure(response.status)) {
         return;
       }
 
@@ -540,9 +609,7 @@ export default function AdminPage() {
 
     const result = await response.json().catch(() => null);
 
-    if (response.status === 401) {
-      showError("Your admin session expired. Please log in again.");
-      logoutAdmin();
+    if (handleSecurityFailure(response.status)) {
       return;
     }
 
@@ -566,11 +633,16 @@ export default function AdminPage() {
       confirmLabel: "Approve",
       confirmTone: "green",
       onConfirm: async () => {
+        const secureToken = await getCsrfToken();
+
+        if (!secureToken) return;
+
         const response = await fetch("/api/admin/submissions", {
           method: "POST",
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
+            "x-csrf-token": secureToken,
           },
           body: JSON.stringify({
             submissionId,
@@ -579,9 +651,7 @@ export default function AdminPage() {
 
         const result = await response.json().catch(() => null);
 
-        if (response.status === 401) {
-          showError("Your admin session expired. Please log in again.");
-          logoutAdmin();
+        if (handleSecurityFailure(response.status)) {
           return;
         }
 
@@ -609,11 +679,16 @@ export default function AdminPage() {
       confirmLabel: "Reject",
       confirmTone: "red",
       onConfirm: async () => {
+        const secureToken = await getCsrfToken();
+
+        if (!secureToken) return;
+
         const response = await fetch("/api/admin/submissions", {
           method: "PATCH",
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
+            "x-csrf-token": secureToken,
           },
           body: JSON.stringify({
             submissionId,
@@ -622,9 +697,7 @@ export default function AdminPage() {
 
         const result = await response.json().catch(() => null);
 
-        if (response.status === 401) {
-          showError("Your admin session expired. Please log in again.");
-          logoutAdmin();
+        if (handleSecurityFailure(response.status)) {
           return;
         }
 
@@ -673,11 +746,16 @@ export default function AdminPage() {
       return;
     }
 
+    const secureToken = await getCsrfToken();
+
+    if (!secureToken) return;
+
     const response = await fetch("/api/admin/submissions", {
       method: "PUT",
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
+        "x-csrf-token": secureToken,
       },
       body: JSON.stringify({
         id: editingSubmission.id,
@@ -692,9 +770,7 @@ export default function AdminPage() {
 
     const result = await response.json().catch(() => null);
 
-    if (response.status === 401) {
-      showError("Your admin session expired. Please log in again.");
-      logoutAdmin();
+    if (handleSecurityFailure(response.status)) {
       return;
     }
 
@@ -717,6 +793,7 @@ export default function AdminPage() {
     if (isUnlocked) {
       fetchTools();
       fetchSubmissions();
+      fetchCsrfToken();
     }
   }, [isUnlocked]);
 
@@ -726,11 +803,16 @@ export default function AdminPage() {
       return;
     }
 
+    const secureToken = await getCsrfToken();
+
+    if (!secureToken) return;
+
     const response = await fetch("/api/admin/tools", {
       method: "POST",
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
+        "x-csrf-token": secureToken,
       },
       body: JSON.stringify({
         name,
@@ -744,9 +826,7 @@ export default function AdminPage() {
 
     const result = await response.json().catch(() => null);
 
-    if (response.status === 401) {
-      showError("Your admin session expired. Please log in again.");
-      logoutAdmin();
+    if (handleSecurityFailure(response.status)) {
       return;
     }
 
@@ -796,11 +876,16 @@ export default function AdminPage() {
       return;
     }
 
+    const secureToken = await getCsrfToken();
+
+    if (!secureToken) return;
+
     const response = await fetch("/api/admin/tools", {
       method: "PUT",
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
+        "x-csrf-token": secureToken,
       },
       body: JSON.stringify({
         id: editingTool.id,
@@ -815,9 +900,7 @@ export default function AdminPage() {
 
     const result = await response.json().catch(() => null);
 
-    if (response.status === 401) {
-      showError("Your admin session expired. Please log in again.");
-      logoutAdmin();
+    if (handleSecurityFailure(response.status)) {
       return;
     }
 
@@ -843,11 +926,16 @@ export default function AdminPage() {
       confirmLabel: "Delete",
       confirmTone: "red",
       onConfirm: async () => {
+        const secureToken = await getCsrfToken();
+
+        if (!secureToken) return;
+
         const response = await fetch("/api/admin/tools", {
           method: "DELETE",
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
+            "x-csrf-token": secureToken,
           },
           body: JSON.stringify({
             id,
@@ -856,9 +944,7 @@ export default function AdminPage() {
 
         const result = await response.json().catch(() => null);
 
-        if (response.status === 401) {
-          showError("Your admin session expired. Please log in again.");
-          logoutAdmin();
+        if (handleSecurityFailure(response.status)) {
           return;
         }
 
@@ -1021,7 +1107,7 @@ export default function AdminPage() {
                 unlockAdmin();
               }
             }}
-            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
           />
 
           <button
@@ -1033,8 +1119,8 @@ export default function AdminPage() {
           </button>
 
           <p className="mt-4 text-xs text-slate-500">
-            Admin password is checked securely on the server. A secure cookie
-            session is used after login.
+            Temporary MVP password protection. Next security upgrade should
+            replace this with real admin authentication.
           </p>
         </div>
       </main>
@@ -1280,7 +1366,6 @@ export default function AdminPage() {
               <option className="bg-slate-950" value="All">
                 All Categories
               </option>
-
               {submissionCategories.map((categoryName) => (
                 <option
                   className="bg-slate-950"
@@ -1435,7 +1520,6 @@ export default function AdminPage() {
               <option className="bg-slate-950" value="All">
                 All Categories
               </option>
-
               {toolCategories.map((categoryName) => (
                 <option
                   className="bg-slate-950"

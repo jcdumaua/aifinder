@@ -1,6 +1,9 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminRequest } from "../../../../lib/admin-auth";
+import {
+  isAuthorizedAdminRequest,
+  verifyAdminCsrfRequest,
+} from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -59,6 +62,33 @@ function checkRateLimit(ip: string) {
   return true;
 }
 
+function requireAdminSecurity(request: Request) {
+  const clientIp = getClientIp(request);
+
+  if (!checkRateLimit(clientIp)) {
+    return jsonResponse(
+      {
+        error:
+          "Too many logo uploads. Please wait before uploading another logo.",
+      },
+      429
+    );
+  }
+
+  if (!isAuthorizedAdminRequest(request)) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  if (!verifyAdminCsrfRequest(request)) {
+    return jsonResponse(
+      { error: "Security token missing or expired. Please log in again." },
+      403
+    );
+  }
+
+  return null;
+}
+
 function getExtensionFromMimeType(mimeType: string) {
   if (mimeType === "image/png") return "png";
   if (mimeType === "image/jpeg") return "jpg";
@@ -111,20 +141,10 @@ function looksLikeSvgOrHtml(bytes: Uint8Array) {
 
 export async function POST(request: Request) {
   try {
-    const clientIp = getClientIp(request);
+    const securityError = requireAdminSecurity(request);
 
-    if (!checkRateLimit(clientIp)) {
-      return jsonResponse(
-        {
-          error:
-            "Too many logo uploads. Please wait before uploading another logo.",
-        },
-        429
-      );
-    }
-
-    if (!isAuthorizedAdminRequest(request)) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    if (securityError) {
+      return securityError;
     }
 
     const contentType = request.headers.get("content-type") || "";
