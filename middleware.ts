@@ -2,6 +2,33 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
 
+function addSecurityHeaders(response: NextResponse) {
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("X-DNS-Prefetch-Control", "off");
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+  );
+
+  response.headers.set(
+    "Content-Security-Policy",
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  );
+
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    );
+  }
+
+  return response;
+}
+
 function hasActiveAdminSessionCookie(request: NextRequest) {
   const session = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
 
@@ -25,17 +52,23 @@ function hasActiveAdminSessionCookie(request: NextRequest) {
 }
 
 export function middleware(request: NextRequest) {
-  if (hasActiveAdminSessionCookie(request)) {
-    return NextResponse.next();
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin-login")) {
+    if (!hasActiveAdminSessionCookie(request)) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin-login";
+      loginUrl.searchParams.set("from", pathname);
+
+      return addSecurityHeaders(NextResponse.redirect(loginUrl));
+    }
   }
 
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.pathname = "/admin-login";
-  loginUrl.searchParams.set("from", request.nextUrl.pathname);
-
-  return NextResponse.redirect(loginUrl);
+  return addSecurityHeaders(NextResponse.next());
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$).*)",
+  ],
 };
