@@ -642,3 +642,28 @@ h1, h2, h3 {
     0 0 16px rgba(34,211,238,0.9);
 }
 
+
+/* AI Command Center panel */
+.ai-command-panel {
+  border: 1px solid rgba(34,211,238,0.24);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(2,6,23,0.86),
+      rgba(15,23,42,0.72)
+    );
+
+  box-shadow:
+    0 0 50px rgba(34,211,238,0.12),
+    inset 0 0 35px rgba(59,130,246,0.06);
+
+  backdrop-filter: blur(22px);
+}
+
+.ai-live-badge {
+  border: 1px solid rgba(34,211,238,0.35);
+  background: rgba(34,211,238,0.12);
+  color: #a5f3fc;
+  box-shadow: 0 0 22px rgba(34,211,238,0.18);
+}
+

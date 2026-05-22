@@ -370,6 +370,29 @@ export default function Home() {
               AI Operating System for work, creativity, and automation.
             </h1>
 
+<div className="ai-command-panel mt-8 rounded-3xl p-6 text-left">
+  <div className="mb-4 flex items-center justify-between gap-4">
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">
+        AI Command Center
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black text-white">
+        Neural discovery mode active
+      </h2>
+    </div>
+
+    <span className="ai-live-badge rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest">
+      Live
+    </span>
+  </div>
+
+  <p className="text-sm leading-6 text-slate-300">
+    AiFinder is evolving into an AI operating system for discovering, comparing, and organizing the best AI tools.
+  </p>
+</div>
+
+
             <p className={`mt-5 max-w-3xl text-base leading-8 sm:text-lg ${mutedText}`}>
               AiFinder helps you find useful AI tools faster. Browse tools for
               chatbots, image AI, video AI, voice AI, writing, coding, business,
