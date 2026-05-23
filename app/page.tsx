@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIStatusChips } from "../components/home/AIStatusChips";
+import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
 import {
   categories,
@@ -32,9 +35,10 @@ const popularSearches = [
 
 const guidedSuggestions = [
   "Find me AI tools for video editing",
-  "I need an AI for business automation",
-  "Show tools for writing and content creation",
-  "Compare AI chatbots",
+  "I need AI for business automation",
+  "Show writing and content creation tools",
+  "Compare the best AI chatbots",
+  "Find AI coding assistants",
 ];
 
 const seoCategoryCopy = [
@@ -517,23 +521,10 @@ export default function Home() {
               }}
             />
 
-            <div className="mt-4 rounded-3xl border border-cyan-400/20 bg-slate-950/45 p-4 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur-xl">
-              <p className="ai-nav-link text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                AI Guided Suggestions
-              </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {guidedSuggestions.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => applySearch(item)}
-                    className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-left text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/20"
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AIGuidedSuggestions
+              suggestions={guidedSuggestions}
+              onSelect={applySearch}
+            />
 
             <div className="mt-4 flex flex-wrap gap-2">
               {popularSearches.map((item) => (
@@ -1053,55 +1044,19 @@ function ToolList({
   cardBg: string;
 }) {
   return (
-    <div className={`mt-5 overflow-hidden rounded-3xl border ${cardBg} ai-hover`}>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {tools.map((tool, index) => (
-        <motion.div
+        <ToolCard
           key={tool.name}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.03 }}
-          className="relative"
-        >
-          <button
-            onClick={() => onToggleFavorite(tool)}
-            className="absolute right-4 top-4 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
-          >
-            {favoriteSlugs.includes(toolSlug(tool.name)) ? "★" : "☆"}
-          </button>
-
-          <button
-            onClick={() => onToggleCompare(toolSlug(tool.name))}
-            className="absolute right-4 top-14 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
-          >
-            {compareSlugs.includes(toolSlug(tool.name))
-              ? "✓ Compare"
-              : "+ Compare"}
-          </button>
-
-          <Link
-            href={`/tool/${toolSlug(tool.name)}`}
-            className="flex gap-4 border-b border-white/10 p-4 pr-28 last:border-b-0 hover:bg-white/10"
-          >
-            <div className="text-slate-500">{index + 1}.</div>
-
-            <ToolLogo tool={tool} />
-
-            <div>
-              <h3 className="font-bold">{tool.name}</h3>
-
-              <p className="ai-nav-link text-sm text-cyan-300">{tool.category}</p>
-
-              <p className="mt-1 text-sm text-yellow-300">
-                ⭐ {getToolRating(tool.name)} (
-                {getReviewCount(tool.name).toLocaleString()} reviews)
-              </p>
-
-              <p className="mt-2 text-sm text-slate-400">
-                {tool.description}
-              </p>
-            </div>
-          </Link>
-        </motion.div>
+          tool={tool}
+          index={index}
+          favoriteSlugs={favoriteSlugs}
+          onToggleFavorite={onToggleFavorite}
+          compareSlugs={compareSlugs}
+          onToggleCompare={onToggleCompare}
+          badge="AI Match"
+          cardBg={cardBg}
+        />
       ))}
     </div>
   );
@@ -1126,8 +1081,26 @@ function ToolCard({
   badge?: string;
   cardBg: string;
 }) {
-  const isFavorite = favoriteSlugs.includes(toolSlug(tool.name));
-  const isCompared = compareSlugs.includes(toolSlug(tool.name));
+  const router = useRouter();
+  const explicitSlug =
+    typeof (tool as Tool & { slug?: string | null }).slug === "string"
+      ? (tool as Tool & { slug?: string | null }).slug?.trim()
+      : "";
+  const slug = explicitSlug || toolSlug(tool.name);
+  const isFavorite = favoriteSlugs.includes(slug);
+  const isCompared = compareSlugs.includes(slug);
+  const toolHref = `/tool/${slug}`;
+
+  const handleCardClick = () => {
+    if (!slug) {
+      console.warn("[AiFinder ToolCard] Missing slug; navigation skipped", {
+        toolName: tool.name,
+      });
+      return;
+    }
+
+    router.push(toolHref);
+  };
 
   return (
     <motion.div
@@ -1142,14 +1115,17 @@ function ToolCard({
       className="relative h-full"
     >
       <article
-        className={`relative h-full rounded-3xl border p-5 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
+        role="link"
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleCardClick();
+          }
+        }}
+        className={`relative isolate h-full cursor-pointer rounded-3xl border p-5 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
       >
-        <Link
-          href={`/tool/${toolSlug(tool.name)}`}
-          aria-label={`View ${tool.name}`}
-          className="absolute inset-0 z-10 rounded-3xl"
-        />
-
         <div className="pointer-events-none relative z-20 mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {badge && (
@@ -1159,17 +1135,37 @@ function ToolCard({
             )}
           </div>
 
-          <div className="pointer-events-auto ml-auto flex items-center gap-2">
+          <div className="pointer-events-auto relative z-40 ml-auto flex shrink-0 items-center gap-2">
             <button
-              onClick={() => onToggleFavorite(tool)}
+              type="button"
+              aria-label={
+                isFavorite
+                  ? `Remove ${tool.name} from favorites`
+                  : `Save ${tool.name}`
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onToggleFavorite(tool);
+              }}
               className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
             >
               {isFavorite ? "★" : "☆"}
             </button>
 
             <button
-              onClick={() => onToggleCompare(toolSlug(tool.name))}
-              className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
+              type="button"
+              aria-label={
+                isCompared
+                  ? `Remove ${tool.name} from comparison`
+                  : `Compare ${tool.name}`
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onToggleCompare(slug);
+              }}
+              className="whitespace-nowrap rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
             >
               {isCompared ? "✓ Compare" : "+ Compare"}
             </button>
@@ -1206,6 +1202,8 @@ function CompareBar({
 }) {
   return (
     <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2">
+      <CompareAssistant tools={compareTools} />
+
       <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl ${cardBg} ai-hover`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
