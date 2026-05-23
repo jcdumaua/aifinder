@@ -1320,3 +1320,15 @@ button[type="submit"]:hover {
   color: #94a3b8;
 }
 
+
+/* Safe upgrade — AI system signature */
+.ai-system-signature {
+  border-top: 1px solid rgba(34,211,238,0.16);
+  color: #64748b;
+  text-shadow: 0 0 18px rgba(34,211,238,0.10);
+}
+
+.ai-system-signature span {
+  color: #67e8f9;
+}
+
