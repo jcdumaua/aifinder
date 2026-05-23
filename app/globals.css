@@ -1246,3 +1246,30 @@ button[type="submit"]:hover {
     0 0 90px rgba(168,85,247,0.20);
 }
 
+
+/* Safe upgrade — AI homepage spacing polish */
+.ai-layout-polish {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.ai-section-spacing {
+  margin-top: 2rem;
+}
+
+.ai-hero-breathing {
+  padding-top: 4rem;
+  padding-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+  .ai-hero-breathing {
+    padding-top: 2.5rem;
+    padding-bottom: 2rem;
+  }
+}
+

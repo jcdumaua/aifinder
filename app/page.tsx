@@ -1232,7 +1232,7 @@ function Footer({
 }) {
   return (
     <footer className="mt-20 border-t border-white/10 py-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+      <div className="ai-layout-polish mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h3 className="text-2xl font-black">AiFinder</h3>
 
