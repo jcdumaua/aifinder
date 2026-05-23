@@ -289,7 +289,7 @@ export default function Home() {
           animate="show"
           variants={fadeUp}
           transition={{ duration: 0.5 }}
-          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between ${cardBg}`}
+          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between ${cardBg} ai-hover`}
         >
           <Link href="/" className="text-lg font-black">
             AiFinder
@@ -338,7 +338,7 @@ export default function Home() {
           animate="show"
           variants={fadeUp}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-xl sm:p-10 ${cardBg}`}
+          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-xl sm:p-10 ${cardBg} ai-hover`}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
           <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
@@ -370,6 +370,72 @@ export default function Home() {
               AI Operating System for work, creativity, and automation.
             </h1>
 
+<div className="ai-activity-feed ai-hover mt-8 rounded-3xl p-6 text-left">
+  <div className="mb-4 flex items-center justify-between">
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">
+        Live AI Activity
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black text-white">
+        Discovery system online
+      </h2>
+    </div>
+
+    <span className="ai-live-badge rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest">
+      Syncing
+    </span>
+  </div>
+
+  <div>
+    <div className="ai-activity-row">
+      <span className="ai-activity-dot"></span>
+      <p className="ai-activity-text">New AI tools indexed into discovery layer</p>
+      <span className="ai-activity-time">Now</span>
+    </div>
+
+    <div className="ai-activity-row">
+      <span className="ai-activity-dot"></span>
+      <p className="ai-activity-text">Trending categories recalibrated by user intent</p>
+      <span className="ai-activity-time">Live</span>
+    </div>
+
+    <div className="ai-activity-row">
+      <span className="ai-activity-dot"></span>
+      <p className="ai-activity-text">Comparison engine prepared for tool matching</p>
+      <span className="ai-activity-time">Ready</span>
+    </div>
+  </div>
+</div>
+
+
+<div className="ai-dashboard-grid mt-8">
+  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
+    <p className="ai-dashboard-label">Discovery Engine</p>
+    <p className="ai-dashboard-value mt-2">Active</p>
+    <p className="mt-2 text-sm text-slate-400">
+      Scanning AI tools, categories, and use cases.
+    </p>
+  </div>
+
+  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
+    <p className="ai-dashboard-label">Tool Intelligence</p>
+    <p className="ai-dashboard-value mt-2">Online</p>
+    <p className="mt-2 text-sm text-slate-400">
+      Organizing tools by purpose, category, and relevance.
+    </p>
+  </div>
+
+  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
+    <p className="ai-dashboard-label">AI OS Layer</p>
+    <p className="ai-dashboard-value mt-2">Evolving</p>
+    <p className="mt-2 text-sm text-slate-400">
+      Building a futuristic discovery experience.
+    </p>
+  </div>
+</div>
+
+
 <div className="ai-command-panel mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between gap-4">
     <div>
@@ -387,7 +453,7 @@ export default function Home() {
     </span>
   </div>
 
-  <p className="text-sm leading-6 text-slate-300">
+  <p className="ai-nav-link text-sm leading-6 text-slate-300">
     AiFinder is evolving into an AI operating system for discovering, comparing, and organizing the best AI tools.
   </p>
 </div>
@@ -428,8 +494,8 @@ export default function Home() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRecentSearch(search);
               }}
-              placeholder="Ask AI Finder anything..."
-              className={`mt-8 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg}`}
+              placeholder="Ask AiFinder to discover the perfect AI tool..."
+              className={`mt-8 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
             />
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -447,7 +513,7 @@ export default function Home() {
             {recentSearches.length > 0 && (
               <div className="mt-4 rounded-3xl ai-panel border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold text-cyan-300">
+                  <p className="ai-nav-link text-sm font-bold text-cyan-300">
                     Recent searches
                   </p>
 
@@ -619,7 +685,7 @@ export default function Home() {
                   >
                     <Link
                       href={`/category/${slugify(category)}`}
-                      className={`block h-full rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+                      className={`block h-full rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg} ai-hover`}
                     >
                       <div className="text-3xl">{getIcon(category)}</div>
 
@@ -671,7 +737,7 @@ export default function Home() {
                 cardBg={cardBg}
               />
             ) : (
-              <div className={`mt-5 rounded-3xl border p-8 ${cardBg}`}>
+              <div className={`mt-5 rounded-3xl border p-8 ${cardBg} ai-hover`}>
                 <p className={mutedText}>
                   No tools found. Try searching for “chatbot”, “video”,
                   “coding”, or “automation”.
@@ -742,7 +808,7 @@ function Section({
       <h2 className="text-3xl font-black">{title}</h2>
 
       {tools.length === 0 ? (
-        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg}`}>
+        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg} ai-hover`}>
           {emptyText}
         </div>
       ) : (
@@ -804,7 +870,7 @@ function SeoCategorySection({
           <Link
             key={item.title}
             href={item.href}
-            className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+            className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg} ai-hover`}
           >
             <h3 className="text-xl font-black">{item.title}</h3>
             <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
@@ -870,7 +936,7 @@ function HowItWorksSection({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
-          <div key={step.title} className={`rounded-3xl border p-5 ${cardBg}`}>
+          <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-hover`}>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400 font-black text-slate-950">
               {index + 1}
             </div>
@@ -921,7 +987,7 @@ function FaqSection({
 
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         {faqItems.map((item) => (
-          <div key={item.question} className={`rounded-3xl border p-5 ${cardBg}`}>
+          <div key={item.question} className={`rounded-3xl border p-5 ${cardBg} ai-hover`}>
             <h3 className="text-lg font-black">{item.question}</h3>
 
             <p className={`mt-3 text-sm leading-7 ${softText}`}>
@@ -950,7 +1016,7 @@ function ToolList({
   cardBg: string;
 }) {
   return (
-    <div className={`mt-5 overflow-hidden rounded-3xl border ${cardBg}`}>
+    <div className={`mt-5 overflow-hidden rounded-3xl border ${cardBg} ai-hover`}>
       {tools.map((tool, index) => (
         <motion.div
           key={tool.name}
@@ -986,7 +1052,7 @@ function ToolList({
             <div>
               <h3 className="font-bold">{tool.name}</h3>
 
-              <p className="text-sm text-cyan-300">{tool.category}</p>
+              <p className="ai-nav-link text-sm text-cyan-300">{tool.category}</p>
 
               <p className="mt-1 text-sm text-yellow-300">
                 ⭐ {getToolRating(tool.name)} (
@@ -1054,7 +1120,7 @@ function ToolCard({
 
       <Link
         href={`/tool/${toolSlug(tool.name)}`}
-        className={`block h-full rounded-3xl border p-5 pr-14 transition hover:bg-white/[0.08] ${cardBg}`}
+        className={`block h-full rounded-3xl border p-5 pr-14 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
       >
         {badge && (
           <span className="mb-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
@@ -1090,10 +1156,10 @@ function CompareBar({
 }) {
   return (
     <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2">
-      <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl ${cardBg}`}>
+      <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl ${cardBg} ai-hover`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-cyan-300">
+            <p className="ai-nav-link text-sm font-bold text-cyan-300">
               Compare Tools ({compareTools.length}/3)
             </p>
 
@@ -1157,7 +1223,7 @@ function Footer({
 
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
           <div>
-            <p className="text-sm font-bold text-cyan-300">Explore</p>
+            <p className="ai-nav-link text-sm font-bold text-cyan-300">Explore</p>
 
             <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
               <a href="#categories" className="hover:text-cyan-300">
@@ -1175,7 +1241,7 @@ function Footer({
           </div>
 
           <div>
-            <p className="text-sm font-bold text-cyan-300">Platform</p>
+            <p className="ai-nav-link text-sm font-bold text-cyan-300">Platform</p>
 
             <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
               <Link href="/submit" className="hover:text-cyan-300">
@@ -1193,7 +1259,7 @@ function Footer({
           </div>
 
           <div>
-            <p className="text-sm font-bold text-cyan-300">Stats</p>
+            <p className="ai-nav-link text-sm font-bold text-cyan-300">Stats</p>
 
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <p>{toolsCount}+ AI tools</p>
