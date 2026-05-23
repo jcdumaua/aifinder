@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { AIStatusChips } from "../components/home/AIStatusChips";
+import { SearchBar } from "../components/home/SearchBar";
 import {
   categories,
   getIcon,
@@ -499,15 +500,14 @@ export default function Home() {
               <StatCard label="Compare" value="Up to 3" />
             </div>
 
-            <input
-              value={search}
+            <SearchBar
+              search={search}
+              inputBg={inputBg}
               onChange={(e) => setSearch(e.target.value)}
               onBlur={() => saveRecentSearch(search)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") saveRecentSearch(search);
               }}
-              placeholder="Ask AiFinder to discover the perfect AI tool..."
-              className={`mt-8 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
             />
 
             <div className="mt-4 flex flex-wrap gap-2">
