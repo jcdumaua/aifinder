@@ -1114,45 +1114,58 @@ function ToolCard({
         delay: index * 0.05,
       }}
       whileHover={{ y: -8, scale: 1.02 }}
-      className="relative"
+      className="relative h-full"
     >
-      <button
-        onClick={() => onToggleFavorite(tool)}
-        className="absolute right-4 top-4 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
+      <article
+        className={`relative h-full rounded-3xl border p-5 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
       >
-        {isFavorite ? "★" : "☆"}
-      </button>
+        <Link
+          href={`/tool/${toolSlug(tool.name)}`}
+          aria-label={`View ${tool.name}`}
+          className="absolute inset-0 z-10 rounded-3xl"
+        />
 
-      <button
-        onClick={() => onToggleCompare(toolSlug(tool.name))}
-        className="absolute right-4 top-14 z-10 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
-      >
-        {isCompared ? "✓ Compare" : "+ Compare"}
-      </button>
+        <div className="pointer-events-none relative z-20 mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            {badge && (
+              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
+                {badge}
+              </span>
+            )}
+          </div>
 
-      <Link
-        href={`/tool/${toolSlug(tool.name)}`}
-        className={`block h-full rounded-3xl border p-5 pr-14 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
-      >
-        {badge && (
-          <span className="mb-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
-            {badge}
-          </span>
-        )}
+          <div className="pointer-events-auto ml-auto flex items-center gap-2">
+            <button
+              onClick={() => onToggleFavorite(tool)}
+              className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
+            >
+              {isFavorite ? "★" : "☆"}
+            </button>
 
-        <ToolLogo tool={tool} />
+            <button
+              onClick={() => onToggleCompare(toolSlug(tool.name))}
+              className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
+            >
+              {isCompared ? "✓ Compare" : "+ Compare"}
+            </button>
+          </div>
+        </div>
 
-        <h3 className="mt-4 font-bold">{tool.name}</h3>
+        <div className="pointer-events-none relative z-20">
+          <ToolLogo tool={tool} />
 
-        <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
+          <h3 className="mt-4 font-bold">{tool.name}</h3>
 
-        <p className="mt-1 text-sm text-yellow-300">
-          ⭐ {getToolRating(tool.name)} (
-          {getReviewCount(tool.name).toLocaleString()} reviews)
-        </p>
+          <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
 
-        <p className="mt-2 text-sm text-slate-400">{tool.description}</p>
-      </Link>
+          <p className="mt-1 text-sm text-yellow-300">
+            ⭐ {getToolRating(tool.name)} (
+            {getReviewCount(tool.name).toLocaleString()} reviews)
+          </p>
+
+          <p className="mt-2 text-sm text-slate-400">{tool.description}</p>
+        </div>
+      </article>
     </motion.div>
   );
 }
