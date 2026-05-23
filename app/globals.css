@@ -1041,3 +1041,31 @@ h1, h2, h3 {
   outline: 1px solid rgba(255,255,255,0.03);
 }
 
+
+/* Safe upgrade — AI holographic buttons */
+button,
+a[href] {
+  position: relative;
+}
+
+button:hover,
+a[href]:hover {
+  transform: translateY(-1px);
+}
+
+.ai-button-glow,
+button[type="submit"] {
+  border-radius: 9999px;
+
+  box-shadow:
+    0 0 24px rgba(34,211,238,0.22),
+    0 0 70px rgba(168,85,247,0.12);
+}
+
+.ai-button-glow:hover,
+button[type="submit"]:hover {
+  box-shadow:
+    0 0 36px rgba(34,211,238,0.38),
+    0 0 110px rgba(168,85,247,0.22);
+}
+
