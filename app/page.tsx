@@ -370,7 +370,7 @@ export default function Home() {
               AI Operating System for work, creativity, and automation.
             </h1>
 
-<div className="ai-assistant-panel ai-hover mt-8 rounded-3xl p-6 text-left">
+<div className="ai-assistant-panel ai-radar ai-hover mt-8 rounded-3xl p-6 text-left">
   <div className="mb-5 flex items-center gap-4">
     <div className="ai-assistant-orb"></div>
 
@@ -463,7 +463,7 @@ export default function Home() {
 </div>
 
 
-<div className="ai-command-panel mt-8 rounded-3xl p-6 text-left">
+<div className="ai-command-panel ai-radar mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between gap-4">
     <div>
       <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">

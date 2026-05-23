@@ -1069,3 +1069,41 @@ button[type="submit"]:hover {
     0 0 110px rgba(168,85,247,0.22);
 }
 
+
+/* Safe upgrade — AI tool radar effect */
+.ai-radar {
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-radar::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(34,211,238,0.16),
+      transparent 30%
+    );
+
+  animation: aiRadarSpin 9s linear infinite;
+
+  opacity: 0.35;
+
+  pointer-events: none;
+}
+
+@keyframes aiRadarSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-radar > * {
+  position: relative;
+  z-index: 1;
+}
+
