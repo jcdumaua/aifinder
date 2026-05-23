@@ -400,11 +400,11 @@ export default function Home() {
 <div className="ai-activity-feed ai-hover mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between">
     <div>
-      <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">
+      <p className="ai-section-kicker">
         Live AI Activity
       </p>
 
-      <h2 className="mt-2 text-2xl font-black text-white">
+      <h2 className="ai-section-title mt-2 text-2xl font-black">
         Discovery system online
       </h2>
     </div>
@@ -466,11 +466,11 @@ export default function Home() {
 <div className="ai-command-panel ai-radar mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between gap-4">
     <div>
-      <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">
+      <p className="ai-section-kicker">
         AI Command Center
       </p>
 
-      <h2 className="mt-2 text-2xl font-black text-white">
+      <h2 className="ai-section-title mt-2 text-2xl font-black">
         Neural discovery mode active
       </h2>
     </div>

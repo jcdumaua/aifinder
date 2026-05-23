@@ -1107,3 +1107,41 @@ button[type="submit"]:hover {
   z-index: 1;
 }
 
+
+/* Safe upgrade — AI neural section headers */
+.ai-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  color: #67e8f9;
+
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+
+  text-shadow: 0 0 18px rgba(34,211,238,0.35);
+}
+
+.ai-section-kicker::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+
+  border-radius: 9999px;
+
+  background: #22d3ee;
+
+  box-shadow:
+    0 0 16px rgba(34,211,238,0.9),
+    0 0 36px rgba(168,85,247,0.35);
+}
+
+.ai-section-title {
+  color: white;
+  text-shadow:
+    0 0 28px rgba(34,211,238,0.18),
+    0 0 60px rgba(168,85,247,0.12);
+}
+
