@@ -25,8 +25,8 @@ export function SearchBar({
       onChange={onChange}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
-      placeholder="Ask AiFinder to discover the perfect AI tool..."
-      className={`mt-8 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
+      placeholder="Find AI tools for video editing..."
+      className={`mt-5 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
     />
   );
 }

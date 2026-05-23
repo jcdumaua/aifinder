@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
-import { AIStatusChips } from "../components/home/AIStatusChips";
+import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
 import {
@@ -25,20 +25,12 @@ import { supabase } from "../lib/supabase";
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
 
-const popularSearches = [
-  "ChatGPT",
-  "Video AI",
-  "Coding",
-  "Automation",
-  "Writing",
-];
-
 const guidedSuggestions = [
-  "Find me AI tools for video editing",
-  "I need AI for business automation",
-  "Show writing and content creation tools",
-  "Compare the best AI chatbots",
-  "Find AI coding assistants",
+  { label: "✨ Video", searchValue: "video" },
+  { label: "⚡ Automation", searchValue: "automation" },
+  { label: "🧠 Coding", searchValue: "coding" },
+  { label: "✍️ Writing", searchValue: "writing" },
+  { label: "📊 Business", searchValue: "business" },
 ];
 
 const seoCategoryCopy = [
@@ -358,158 +350,17 @@ export default function Home() {
 
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-              AI Tools Directory • Search • Compare • Bookmark
+              AI Search Hero
             </p>
 
-            <AIStatusChips />
-
-<h1 className="mt-3 max-w-5xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
-              AI Operating System for work, creativity, and automation.
+            <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl md:text-6xl">
+              Ask AiFinder to match you with the right AI tools.
             </h1>
 
-<div className="ai-assistant-panel ai-radar ai-hover mt-8 rounded-3xl p-6 text-left">
-  <div className="mb-5 flex items-center gap-4">
-    <div className="ai-assistant-orb"></div>
-
-    <div>
-      <p className="text-xs font-bold uppercase tracking-[0.35em] text-purple-300">
-        AI Assistant Layer
-      </p>
-
-      <h2 className="mt-1 text-2xl font-black text-white">
-        Ask AiFinder to guide your discovery
-      </h2>
-    </div>
-  </div>
-
-  <div className="space-y-3">
-    <div className="ai-assistant-bubble rounded-2xl p-4 text-sm">
-      “Tell me what you want to build, and I’ll help you find the best AI tools.”
-    </div>
-
-    <div className="ai-assistant-bubble rounded-2xl p-4 text-sm">
-      Try: “Find me AI tools for video editing, content creation, or business automation.”
-    </div>
-  </div>
-</div>
-
-
-<div className="ai-activity-feed ai-hover ai-magnetic mt-8 rounded-3xl p-6 text-left">
-  <div className="mb-4 flex items-center justify-between">
-    <div>
-      <p className="ai-section-kicker">
-        Live AI Activity
-      </p>
-
-      <h2 className="ai-section-title mt-2 text-2xl font-black">
-        Discovery system online
-      </h2>
-    </div>
-
-    <span className="ai-live-badge rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest">
-      Syncing
-    </span>
-  </div>
-
-  <div>
-    <div className="ai-activity-row">
-      <span className="ai-activity-dot"></span>
-      <p className="ai-activity-text">New AI tools indexed into discovery layer</p>
-      <span className="ai-activity-time">Now</span>
-    </div>
-
-    <div className="ai-activity-row">
-      <span className="ai-activity-dot"></span>
-      <p className="ai-activity-text">Trending categories recalibrated by user intent</p>
-      <span className="ai-activity-time">Live</span>
-    </div>
-
-    <div className="ai-activity-row">
-      <span className="ai-activity-dot"></span>
-      <p className="ai-activity-text">Comparison engine prepared for tool matching</p>
-      <span className="ai-activity-time">Ready</span>
-    </div>
-  </div>
-</div>
-
-
-<div className="ai-dashboard-grid mt-8">
-  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
-    <p className="ai-dashboard-label">Discovery Engine</p>
-    <p className="ai-dashboard-value mt-2">Active</p>
-    <p className="mt-2 text-sm text-slate-400">
-      Scanning AI tools, categories, and use cases.
-    </p>
-  </div>
-
-  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
-    <p className="ai-dashboard-label">Tool Intelligence</p>
-    <p className="ai-dashboard-value mt-2">Online</p>
-    <p className="mt-2 text-sm text-slate-400">
-      Organizing tools by purpose, category, and relevance.
-    </p>
-  </div>
-
-  <div className="ai-dashboard-card ai-hover rounded-3xl p-5">
-    <p className="ai-dashboard-label">AI OS Layer</p>
-    <p className="ai-dashboard-value mt-2">Evolving</p>
-    <p className="mt-2 text-sm text-slate-400">
-      Building a futuristic discovery experience.
-    </p>
-  </div>
-</div>
-
-
-<div className="ai-command-panel ai-radar mt-8 rounded-3xl p-6 text-left">
-  <div className="mb-4 flex items-center justify-between gap-4">
-    <div>
-      <p className="ai-section-kicker">
-        AI Command Center
-      </p>
-
-      <h2 className="ai-section-title mt-2 text-2xl font-black">
-        Neural discovery mode active
-      </h2>
-    </div>
-
-    <span className="ai-live-badge rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest">
-      Live
-    </span>
-  </div>
-
-  <p className="ai-nav-link text-sm leading-6 text-slate-300">
-    AiFinder is evolving into an AI operating system for discovering, comparing, and organizing the best AI tools.
-  </p>
-</div>
-
-
-            <p className={`mt-5 max-w-3xl text-base leading-8 sm:text-lg ${mutedText}`}>
-              AiFinder helps you find useful AI tools faster. Browse tools for
-              chatbots, image AI, video AI, voice AI, writing, coding, business,
-              productivity, education, marketing, SEO, design, and AI agents.
+            <p className={`mt-4 max-w-2xl text-sm leading-7 sm:text-base ${mutedText}`}>
+              Describe what you need. AiFinder helps you search, filter, compare,
+              and bookmark AI tools by use case.
             </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="#categories"
-                className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
-              >
-                Browse Categories
-              </a>
-
-              <Link
-                href="/submit"
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold hover:bg-white/10"
-              >
-                Submit an AI Tool
-              </Link>
-            </div>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <StatCard label="AI tools" value={`${tools.length}+`} />
-              <StatCard label="Categories" value={`${categories.length}`} />
-              <StatCard label="Compare" value="Up to 3" />
-            </div>
 
             <SearchBar
               search={search}
@@ -525,18 +376,6 @@ export default function Home() {
               suggestions={guidedSuggestions}
               onSelect={applySearch}
             />
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {popularSearches.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => applySearch(item)}
-                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200 hover:bg-cyan-400/20"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
 
             {recentSearches.length > 0 && (
               <div className="mt-4 rounded-3xl ai-panel border border-white/10 bg-white/5 p-4">
@@ -567,11 +406,11 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 <option value="All">All Categories</option>
 
@@ -585,7 +424,7 @@ export default function Home() {
               <select
                 value={selectedPricing}
                 onChange={(e) => setSelectedPricing(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {pricingOptions.map((price) => (
                   <option key={price} value={price}>
@@ -597,7 +436,7 @@ export default function Home() {
               <select
                 value={selectedPlatform}
                 onChange={(e) => setSelectedPlatform(e.target.value)}
-                className={`rounded-2xl border px-4 py-3 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {platformOptions.map((platform) => (
                   <option key={platform} value={platform}>
@@ -733,6 +572,8 @@ export default function Home() {
               </div>
             </motion.section>
 
+            <AIOnboardingSteps />
+
             <SeoCategorySection cardBg={cardBg} mutedText={mutedText} />
             <HowItWorksSection cardBg={cardBg} mutedText={mutedText} />
             <FaqSection cardBg={cardBg} mutedText={mutedText} softText={softText} />
@@ -786,17 +627,6 @@ export default function Home() {
         <Footer toolsCount={tools.length} mutedText={mutedText} />
       </section>
     </main>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
-    </div>
   );
 }
 
