@@ -30,6 +30,13 @@ const popularSearches = [
   "Writing",
 ];
 
+const guidedSuggestions = [
+  "Find me AI tools for video editing",
+  "I need an AI for business automation",
+  "Show tools for writing and content creation",
+  "Compare AI chatbots",
+];
+
 const seoCategoryCopy = [
   {
     title: "Chatbots",
@@ -509,6 +516,24 @@ export default function Home() {
                 if (e.key === "Enter") saveRecentSearch(search);
               }}
             />
+
+            <div className="mt-4 rounded-3xl border border-cyan-400/20 bg-slate-950/45 p-4 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur-xl">
+              <p className="ai-nav-link text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                AI Guided Suggestions
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {guidedSuggestions.map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => applySearch(item)}
+                    className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-left text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/20"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {popularSearches.map((item) => (
