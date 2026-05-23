@@ -397,7 +397,7 @@ export default function Home() {
 </div>
 
 
-<div className="ai-activity-feed ai-hover mt-8 rounded-3xl p-6 text-left">
+<div className="ai-activity-feed ai-hover ai-magnetic mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between">
     <div>
       <p className="ai-section-kicker">
