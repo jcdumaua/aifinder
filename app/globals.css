@@ -890,3 +890,128 @@ h1, h2, h3 {
   color: #cbd5e1;
 }
 
+
+/* AI animated stats look */
+.ai-stat-number {
+  background: linear-gradient(90deg, #ffffff, #67e8f9, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+
+  text-shadow: 0 0 30px rgba(34,211,238,0.22);
+}
+
+.ai-stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 10% 0 10%;
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34,211,238,0.7),
+    transparent
+  );
+
+  box-shadow: 0 0 24px rgba(34,211,238,0.5);
+}
+
+
+/* Floating AI sidebar */
+.ai-floating-sidebar {
+  position: fixed;
+  top: 50%;
+  right: 1.25rem;
+  z-index: 40;
+
+  transform: translateY(-50%);
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  border: 1px solid rgba(34,211,238,0.22);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(2,6,23,0.82),
+      rgba(15,23,42,0.72)
+    );
+
+  padding: 0.75rem;
+
+  border-radius: 9999px;
+
+  box-shadow:
+    0 0 42px rgba(34,211,238,0.12),
+    0 0 90px rgba(168,85,247,0.08);
+
+  backdrop-filter: blur(22px);
+}
+
+.ai-floating-dot {
+  width: 0.8rem;
+  height: 0.8rem;
+
+  border-radius: 9999px;
+
+  background: rgba(148,163,184,0.8);
+
+  transition: all 0.25s ease;
+}
+
+.ai-floating-dot:hover {
+  background: #22d3ee;
+
+  box-shadow:
+    0 0 18px rgba(34,211,238,0.9),
+    0 0 40px rgba(168,85,247,0.35);
+
+  transform: scale(1.25);
+}
+
+@media (max-width: 900px) {
+  .ai-floating-sidebar {
+    display: none;
+  }
+}
+
+
+/* Safe upgrade — deeper AI card depth */
+.ai-hover,
+.ai-dashboard-card,
+.ai-command-panel,
+.ai-assistant-panel,
+.ai-activity-feed {
+  position: relative;
+}
+
+.ai-hover::before,
+.ai-dashboard-card::before,
+.ai-command-panel::before,
+.ai-assistant-panel::before,
+.ai-activity-feed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255,255,255,0.08),
+      transparent 35%,
+      rgba(34,211,238,0.08)
+    );
+
+  opacity: 0.45;
+}
+
