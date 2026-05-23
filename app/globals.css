@@ -1015,3 +1015,29 @@ h1, h2, h3 {
   opacity: 0.45;
 }
 
+
+/* Safe upgrade — AI glow divider lines */
+.ai-divider {
+  height: 1px;
+  width: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(34,211,238,0.65),
+      rgba(168,85,247,0.45),
+      transparent
+    );
+
+  box-shadow:
+    0 0 22px rgba(34,211,238,0.35);
+}
+
+.ai-dashboard-card,
+.ai-command-panel,
+.ai-assistant-panel,
+.ai-activity-feed {
+  outline: 1px solid rgba(255,255,255,0.03);
+}
+
