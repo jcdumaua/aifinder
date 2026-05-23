@@ -1189,3 +1189,60 @@ button[type="submit"]:hover {
   pointer-events: none;
 }
 
+
+/* Safe upgrade — futuristic category polish */
+.ai-category-pill {
+  border: 1px solid rgba(34,211,238,0.22);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(2,6,23,0.78),
+      rgba(8,47,73,0.38),
+      rgba(15,23,42,0.76)
+    );
+
+  color: #cbd5e1;
+
+  box-shadow:
+    0 0 24px rgba(34,211,238,0.10),
+    inset 0 0 22px rgba(59,130,246,0.04);
+
+  backdrop-filter: blur(18px);
+
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    color 0.25s ease;
+}
+
+.ai-category-pill:hover {
+  color: #ffffff;
+
+  transform: translateY(-3px);
+
+  border-color: rgba(103,232,249,0.48);
+
+  box-shadow:
+    0 0 32px rgba(34,211,238,0.22),
+    0 0 80px rgba(168,85,247,0.12);
+}
+
+.ai-category-pill-active {
+  color: #020617 !important;
+
+  border-color: rgba(103,232,249,0.85) !important;
+
+  background:
+    linear-gradient(
+      135deg,
+      #67e8f9,
+      #38bdf8,
+      #a78bfa
+    ) !important;
+
+  box-shadow:
+    0 0 34px rgba(34,211,238,0.38),
+    0 0 90px rgba(168,85,247,0.20);
+}
+
