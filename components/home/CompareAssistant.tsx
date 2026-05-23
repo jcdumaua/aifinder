@@ -39,13 +39,13 @@ export function CompareAssistant({ tools }: CompareAssistantProps) {
   if (tools.length === 0) return null;
 
   return (
-    <section className="mb-3 rounded-3xl border border-cyan-400/20 bg-slate-950/70 p-4 shadow-[0_0_34px_rgba(34,211,238,0.16)] backdrop-blur-xl">
+    <section className="mb-3 max-h-[42vh] overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950/70 p-4 shadow-[0_0_34px_rgba(34,211,238,0.16)] backdrop-blur-xl">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
           AI Compare Assistant
         </p>
         <p className="text-xs text-slate-400">
-          Early guidance based on selected tool metadata
+          Here is my quick read on your selected tools
         </p>
       </div>
 
