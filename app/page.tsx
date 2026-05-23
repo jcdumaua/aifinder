@@ -21,6 +21,11 @@ import {
 import { useTheme } from "./theme-provider";
 import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
+import {
+  getBestMatchLabel,
+  getSearchMatchExplanation,
+  rankToolsForQuery,
+} from "../lib/search-relevance";
 
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
@@ -32,386 +37,6 @@ const guidedSuggestions = [
   { label: "✍️ Writing", searchValue: "writing" },
   { label: "📊 Business", searchValue: "business" },
 ];
-
-const intentStopWords = new Set([
-  "a",
-  "an",
-  "and",
-  "can",
-  "for",
-  "get",
-  "help",
-  "how",
-  "i",
-  "in",
-  "me",
-  "my",
-  "need",
-  "please",
-  "that",
-  "the",
-  "to",
-  "want",
-  "with",
-]);
-
-const intentGroups = [
-  {
-    intent: "Writing",
-    triggers: [
-      "write",
-      "blog",
-      "essay",
-      "resume",
-      "cover letter",
-      "caption",
-      "script",
-      "story",
-      "email",
-      "grammar",
-      "rewrite",
-      "summarize",
-      "content",
-      "copywriting",
-    ],
-    categories: ["Writing", "Productivity"],
-    terms: [
-      "writing",
-      "documents",
-      "content",
-      "copywriting",
-      "summaries",
-      "resume",
-      "email",
-      "grammar",
-    ],
-  },
-  {
-    intent: "Business",
-    triggers: [
-      "business",
-      "startup",
-      "sales",
-      "customers",
-      "invoice",
-      "reports",
-      "plan",
-      "strategy",
-      "operations",
-      "workflow",
-      "productivity",
-      "small business",
-      "money online",
-    ],
-    categories: ["Productivity", "Automation", "Website Builders"],
-    terms: [
-      "business",
-      "workflow",
-      "analytics",
-      "automation",
-      "productivity",
-      "reports",
-      "sales",
-      "planning",
-    ],
-  },
-  {
-    intent: "Marketing",
-    triggers: [
-      "marketing",
-      "ads",
-      "social media",
-      "instagram",
-      "tiktok",
-      "youtube",
-      "brand",
-      "campaign",
-      "growth",
-      "audience",
-      "leads",
-      "newsletter",
-      "grow",
-    ],
-    categories: ["Writing", "Image AI", "Video AI", "Productivity"],
-    terms: [
-      "marketing",
-      "ads",
-      "social",
-      "content",
-      "campaigns",
-      "brand",
-      "newsletter",
-      "seo",
-    ],
-  },
-  {
-    intent: "Design and image",
-    triggers: [
-      "logo",
-      "logos",
-      "poster",
-      "image",
-      "photo",
-      "art",
-      "design",
-      "graphics",
-      "thumbnail",
-      "branding",
-      "mockup",
-      "picture",
-    ],
-    categories: ["Image AI", "Website Builders"],
-    terms: [
-      "image",
-      "logo",
-      "design",
-      "art",
-      "visual",
-      "creative",
-      "thumbnail",
-      "branding",
-    ],
-  },
-  {
-    intent: "Video",
-    triggers: [
-      "video",
-      "edit video",
-      "edit videos",
-      "reels",
-      "tiktok",
-      "youtube shorts",
-      "animation",
-      "clips",
-      "subtitles",
-      "content creator",
-    ],
-    categories: ["Video AI", "Writing"],
-    terms: ["video", "captions", "content", "social", "editing", "animation"],
-  },
-  {
-    intent: "Coding",
-    triggers: [
-      "code",
-      "coding",
-      "app",
-      "website",
-      "developer",
-      "bug",
-      "programming",
-      "build software",
-      "automation script",
-      "build an app",
-    ],
-    categories: ["Coding", "Website Builders", "Automation"],
-    terms: ["coding", "developer", "app", "website", "debugging", "software"],
-  },
-  {
-    intent: "Education",
-    triggers: [
-      "school",
-      "study",
-      "homework",
-      "tutor",
-      "learn",
-      "notes",
-      "exam",
-      "quiz",
-      "student",
-      "research paper",
-      "class",
-    ],
-    categories: ["Research", "Writing", "Productivity"],
-    terms: ["education", "study", "essay", "research", "summaries", "notes"],
-  },
-  {
-    intent: "Research",
-    triggers: [
-      "research",
-      "sources",
-      "summarize articles",
-      "compare information",
-      "fact finding",
-      "web search",
-      "answer questions",
-      "find information",
-    ],
-    categories: ["Research", "Chatbots", "Productivity"],
-    terms: ["research", "sources", "summaries", "answers", "search", "analysis"],
-  },
-  {
-    intent: "Voice and audio",
-    triggers: [
-      "voice",
-      "podcast",
-      "speech",
-      "audio",
-      "music",
-      "narration",
-      "voiceover",
-      "text to speech",
-    ],
-    categories: ["Voice AI", "Music AI"],
-    terms: ["voice", "audio", "speech", "podcast", "voiceover", "music"],
-  },
-  {
-    intent: "Chatbots",
-    triggers: [
-      "chatbot",
-      "assistant",
-      "customer support",
-      "answer customers",
-      "live chat",
-      "help desk",
-      "support",
-    ],
-    categories: ["Chatbots", "Productivity"],
-    terms: ["chatbot", "assistant", "support", "customer", "answers"],
-  },
-  {
-    intent: "Productivity",
-    triggers: [
-      "save time",
-      "organize",
-      "tasks",
-      "notes",
-      "calendar",
-      "meetings",
-      "email",
-      "automate work",
-      "manage tasks",
-    ],
-    categories: ["Productivity", "Automation"],
-    terms: ["productivity", "tasks", "notes", "workflow", "automation", "email"],
-  },
-  {
-    intent: "AI agents and automation",
-    triggers: [
-      "agent",
-      "automate",
-      "automation",
-      "workflow",
-      "repetitive tasks",
-      "connect apps",
-      "business automation",
-      "automatic",
-    ],
-    categories: ["Automation", "Productivity"],
-    terms: ["agents", "automation", "workflow", "tasks", "connect", "business"],
-  },
-  {
-    intent: "SEO",
-    triggers: [
-      "seo",
-      "ranking",
-      "keywords",
-      "google search",
-      "website traffic",
-      "blog ranking",
-    ],
-    categories: ["Writing", "Website Builders", "Productivity"],
-    terms: ["seo", "keywords", "search", "website", "traffic", "blog"],
-  },
-  {
-    intent: "Finance and work",
-    triggers: [
-      "budget",
-      "spreadsheet",
-      "data",
-      "analysis",
-      "reports",
-      "business numbers",
-      "productivity",
-    ],
-    categories: ["Productivity", "Automation", "Research"],
-    terms: ["data", "analysis", "reports", "business", "analytics", "workflow"],
-  },
-  {
-    intent: "Personal",
-    triggers: [
-      "resume",
-      "job",
-      "career",
-      "interview",
-      "personal assistant",
-      "planning",
-      "travel",
-      "fitness",
-      "meal plan",
-    ],
-    categories: ["Writing", "Productivity", "Chatbots"],
-    terms: ["resume", "assistant", "planning", "productivity", "writing"],
-  },
-  {
-    intent: "Presentations",
-    triggers: ["presentation", "presentations", "slides", "deck"],
-    categories: ["Productivity", "Writing"],
-    terms: ["presentation", "slides", "documents", "content", "writing"],
-  },
-];
-
-function normalizeSearchText(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function getSearchTermsFromIntent(query: string) {
-  const normalizedQuery = normalizeSearchText(query);
-  const categories = new Set<string>();
-  const terms = new Set<string>();
-  const tokens = normalizedQuery
-    .split(" ")
-    .filter((token) => token.length > 2 && !intentStopWords.has(token));
-
-  intentGroups.forEach((group) => {
-    const matchesTrigger = group.triggers.some((trigger) =>
-      normalizedQuery.includes(normalizeSearchText(trigger))
-    );
-
-    if (!matchesTrigger) return;
-
-    group.categories.forEach((category) => categories.add(category));
-    group.terms.forEach((term) => terms.add(term));
-  });
-
-  tokens.forEach((token) => terms.add(token));
-
-  return { normalizedQuery, categories, terms };
-}
-
-function getToolSearchText(tool: Tool) {
-  const useCases = Array.isArray(tool.useCases) ? tool.useCases : [];
-
-  return normalizeSearchText(
-    `${tool.name} ${tool.category} ${tool.description} ${tool.bestFor || ""} ${useCases.join(
-      " "
-    )}`
-  );
-}
-
-function scoreToolIntent(
-  tool: Tool,
-  toolSearchText: string,
-  searchIntent: ReturnType<typeof getSearchTermsFromIntent>
-) {
-  if (!searchIntent.normalizedQuery) return 1;
-
-  let score = toolSearchText.includes(searchIntent.normalizedQuery) ? 8 : 0;
-
-  if (searchIntent.categories.has(tool.category)) {
-    score += 5;
-  }
-
-  searchIntent.terms.forEach((term) => {
-    const normalizedTerm = normalizeSearchText(term);
-    if (!normalizedTerm) return;
-
-    if (toolSearchText.includes(normalizedTerm)) {
-      score += normalizedTerm.includes(" ") ? 2 : 1;
-    }
-  });
-
-  return score;
-}
 
 const seoCategoryCopy = [
   {
@@ -598,30 +223,27 @@ export default function Home() {
   );
 
   const filteredTools = useMemo(() => {
-    const searchIntent = getSearchTermsFromIntent(search);
+    return rankToolsForQuery(tools, search)
+      .filter(({ tool, score }) => {
+        const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
+        // Empty search keeps the original directory behavior. Specific searches
+        // hide very weak matches and then rank by the generic intent score.
+        const matchesSearch = !search.trim() || score > 0;
+        const matchesCategory =
+          selectedCategory === "All" || tool.category === selectedCategory;
+        const matchesPricing =
+          selectedPricing === "All" || tool.pricing === selectedPricing;
+        const matchesPlatform =
+          selectedPlatform === "All" || platforms.includes(selectedPlatform);
 
-    return tools.filter((tool) => {
-      const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
-      const searchText = getToolSearchText(tool);
-      const exactMatch = searchText.includes(searchIntent.normalizedQuery);
-      const intentScore = scoreToolIntent(tool, searchText, searchIntent);
-
-      const matchesSearch =
-        !searchIntent.normalizedQuery || exactMatch || intentScore >= 2;
-      const matchesCategory =
-        selectedCategory === "All" || tool.category === selectedCategory;
-      const matchesPricing =
-        selectedPricing === "All" || tool.pricing === selectedPricing;
-      const matchesPlatform =
-        selectedPlatform === "All" || platforms.includes(selectedPlatform);
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesPricing &&
-        matchesPlatform
-      );
-    });
+        return (
+          matchesSearch &&
+          matchesCategory &&
+          matchesPricing &&
+          matchesPlatform
+        );
+      })
+      .map(({ tool }) => tool);
   }, [tools, search, selectedCategory, selectedPricing, selectedPlatform]);
 
   const featuredTools = tools.filter((tool) => tool.featured).slice(0, 8);
@@ -979,6 +601,7 @@ export default function Home() {
             {filteredTools.length > 0 ? (
               <ToolList
                 tools={filteredTools}
+                search={search}
                 favoriteSlugs={favoriteSlugs}
                 onToggleFavorite={toggleFavorite}
                 compareSlugs={compareSlugs}
@@ -1240,6 +863,7 @@ function FaqSection({
 
 function ToolList({
   tools,
+  search,
   favoriteSlugs,
   onToggleFavorite,
   compareSlugs,
@@ -1247,6 +871,7 @@ function ToolList({
   cardBg,
 }: {
   tools: Tool[];
+  search: string;
   favoriteSlugs: string[];
   onToggleFavorite: (tool: Tool) => void;
   compareSlugs: string[];
@@ -1264,7 +889,8 @@ function ToolList({
           onToggleFavorite={onToggleFavorite}
           compareSlugs={compareSlugs}
           onToggleCompare={onToggleCompare}
-          badge="AI Match"
+          badge={getBestMatchLabel(tool, search)}
+          matchExplanation={getSearchMatchExplanation(tool, search)}
           cardBg={cardBg}
         />
       ))}
@@ -1280,6 +906,7 @@ function ToolCard({
   compareSlugs,
   onToggleCompare,
   badge,
+  matchExplanation,
   cardBg,
 }: {
   tool: Tool;
@@ -1289,6 +916,7 @@ function ToolCard({
   compareSlugs: string[];
   onToggleCompare: (slug: string) => void;
   badge?: string;
+  matchExplanation?: string;
   cardBg: string;
 }) {
   const router = useRouter();
@@ -1395,6 +1023,12 @@ function ToolCard({
           </p>
 
           <p className="mt-2 text-sm text-slate-400">{tool.description}</p>
+
+          {matchExplanation && (
+            <p className="mt-3 rounded-2xl border border-cyan-400/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">
+              {matchExplanation}
+            </p>
+          )}
         </div>
       </article>
     </motion.div>

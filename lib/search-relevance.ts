@@ -1,0 +1,470 @@
+import type { Tool } from "../app/data/tools";
+
+type IntentGroup = {
+  intent: string;
+  triggers: string[];
+  categories: string[];
+  terms: string[];
+  excludedCategories?: string[];
+  strict?: boolean;
+};
+
+export type SearchIntent = {
+  categories: Set<string>;
+  excludedCategories: Set<string>;
+  intents: Set<string>;
+  normalizedQuery: string;
+  strict: boolean;
+  terms: Set<string>;
+};
+
+export type RankedTool = {
+  score: number;
+  tool: Tool;
+};
+
+const minimumSearchScore = 28;
+const videoQueryTerms = [
+  "video",
+  "editing",
+  "reels",
+  "tiktok",
+  "youtube",
+  "creator",
+  "animation",
+  "clips",
+  "subtitles",
+];
+
+const stopWords = new Set([
+  "a",
+  "ai",
+  "an",
+  "and",
+  "best",
+  "can",
+  "create",
+  "find",
+  "for",
+  "get",
+  "help",
+  "how",
+  "i",
+  "in",
+  "make",
+  "me",
+  "my",
+  "need",
+  "please",
+  "that",
+  "the",
+  "to",
+  "tool",
+  "tools",
+  "using",
+  "want",
+  "with",
+]);
+
+const intentGroups: IntentGroup[] = [
+  {
+    intent: "career-writing",
+    strict: true,
+    triggers: [
+      "resume",
+      "cv",
+      "cover letter",
+      "job application",
+      "career",
+      "interview",
+    ],
+    categories: ["Writing", "Productivity"],
+    excludedCategories: [
+      "Video AI",
+      "Image AI",
+      "Coding",
+      "Voice AI",
+      "Music AI",
+      "Research",
+    ],
+    terms: [
+      "resume",
+      "cv",
+      "cover letter",
+      "job",
+      "career",
+      "interview",
+      "writing",
+      "copywriting",
+      "document",
+      "documents",
+      "email",
+    ],
+  },
+  {
+    intent: "writing",
+    triggers: [
+      "write",
+      "writing",
+      "blog",
+      "essay",
+      "caption",
+      "script",
+      "story",
+      "email",
+      "grammar",
+      "rewrite",
+      "summarize",
+      "content",
+      "copywriting",
+    ],
+    categories: ["Writing", "Productivity"],
+    terms: ["writing", "documents", "content", "copywriting", "summaries"],
+  },
+  {
+    intent: "business",
+    triggers: [
+      "business",
+      "startup",
+      "sales",
+      "customers",
+      "invoice",
+      "reports",
+      "plan",
+      "strategy",
+      "operations",
+      "workflow",
+      "productivity",
+      "small business",
+    ],
+    categories: ["Productivity", "Automation", "Website Builders"],
+    terms: ["business", "workflow", "analytics", "automation", "reports"],
+  },
+  {
+    intent: "marketing",
+    triggers: [
+      "marketing",
+      "ads",
+      "social media",
+      "instagram",
+      "tiktok",
+      "youtube",
+      "brand",
+      "campaign",
+      "growth",
+      "audience",
+      "leads",
+      "newsletter",
+      "content creation",
+    ],
+    categories: ["Writing", "Image AI", "Video AI", "Productivity"],
+    terms: ["marketing", "ads", "social", "content", "campaigns", "brand"],
+  },
+  {
+    intent: "design-image",
+    triggers: [
+      "logo",
+      "image",
+      "poster",
+      "photo",
+      "art",
+      "design",
+      "graphics",
+      "thumbnail",
+      "branding",
+      "mockup",
+      "picture",
+    ],
+    categories: ["Image AI", "Website Builders"],
+    terms: ["image", "logo", "design", "art", "visual", "creative"],
+  },
+  {
+    intent: "video",
+    triggers: [
+      "video",
+      "video editing",
+      "edit video",
+      "tiktok",
+      "youtube",
+      "youtube shorts",
+      "reels",
+      "animation",
+      "clips",
+      "subtitles",
+      "creator",
+    ],
+    categories: ["Video AI", "Writing"],
+    terms: ["video", "captions", "content", "social", "editing", "animation"],
+  },
+  {
+    intent: "coding",
+    triggers: [
+      "code",
+      "coding",
+      "app",
+      "website",
+      "developer",
+      "bug",
+      "programming",
+      "software",
+      "build an app",
+      "build software",
+    ],
+    categories: ["Coding", "Website Builders", "Automation"],
+    terms: ["coding", "developer", "app", "website", "debugging", "software"],
+  },
+  {
+    intent: "education",
+    triggers: ["school", "study", "homework", "tutor", "learn", "notes", "exam", "quiz", "student", "essay"],
+    categories: ["Research", "Writing", "Productivity"],
+    terms: ["education", "study", "essay", "research", "summaries", "notes"],
+  },
+  {
+    intent: "research",
+    triggers: ["research", "sources", "web search", "answer questions", "fact finding", "compare information"],
+    categories: ["Research", "Chatbots", "Productivity"],
+    terms: ["research", "sources", "summaries", "answers", "search", "analysis"],
+  },
+  {
+    intent: "voice-audio",
+    triggers: ["voice", "audio", "podcast", "speech", "voiceover", "text to speech", "music", "narration"],
+    categories: ["Voice AI", "Music AI"],
+    terms: ["voice", "audio", "speech", "podcast", "voiceover", "music"],
+  },
+  {
+    intent: "chatbot-support",
+    triggers: ["chatbot", "assistant", "customer support", "answer customers", "live chat", "help desk", "support"],
+    categories: ["Chatbots", "Productivity"],
+    terms: ["chatbot", "assistant", "support", "customer", "answers"],
+  },
+  {
+    intent: "productivity",
+    triggers: ["save time", "organize", "tasks", "notes", "calendar", "meetings", "email", "manage tasks"],
+    categories: ["Productivity", "Automation"],
+    terms: ["productivity", "tasks", "notes", "workflow", "automation", "email"],
+  },
+  {
+    intent: "automation-agents",
+    triggers: ["agent", "automate", "automation", "workflow", "repetitive tasks", "connect apps", "business automation"],
+    categories: ["Automation", "Productivity"],
+    terms: ["agents", "automation", "workflow", "tasks", "connect", "business"],
+  },
+  {
+    intent: "seo",
+    triggers: ["seo", "ranking", "keywords", "google traffic", "google search", "website traffic"],
+    categories: ["Writing", "Website Builders", "Productivity"],
+    terms: ["seo", "keywords", "search", "website", "traffic", "blog"],
+  },
+];
+
+export function normalizeSearchText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export function normalizeIntentTerms(query: string): SearchIntent {
+  const normalizedQuery = normalizeSearchText(query);
+  const categories = new Set<string>();
+  const excludedCategories = new Set<string>();
+  const intents = new Set<string>();
+  const terms = new Set<string>();
+  const tokens = normalizedQuery
+    .split(" ")
+    .filter((token) => token.length > 2 && !stopWords.has(token));
+  let strict = false;
+
+  intentGroups.forEach((group) => {
+    const matchesTrigger = group.triggers.some((trigger) =>
+      normalizedQuery.includes(normalizeSearchText(trigger))
+    );
+
+    if (!matchesTrigger) return;
+
+    intents.add(group.intent);
+    if (group.strict) strict = true;
+    group.categories.forEach((category) => categories.add(category));
+    group.excludedCategories?.forEach((category) => excludedCategories.add(category));
+    group.terms.forEach((term) => terms.add(term));
+  });
+
+  tokens.forEach((token) => terms.add(token));
+
+  return { categories, excludedCategories, intents, normalizedQuery, strict, terms };
+}
+
+export function getToolSearchProfile(tool: Tool) {
+  const useCases = Array.isArray(tool.useCases) ? tool.useCases : [];
+  const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
+  const name = normalizeSearchText(tool.name);
+  const category = normalizeSearchText(tool.category);
+  const description = normalizeSearchText(tool.description);
+  const bestFor = normalizeSearchText(tool.bestFor || "");
+  const useCaseText = normalizeSearchText(useCases.join(" "));
+  const pricing = normalizeSearchText(tool.pricing);
+  const platformText = normalizeSearchText(platforms.join(" "));
+  const allText = normalizeSearchText(
+    `${tool.name} ${tool.category} ${tool.description} ${tool.pricing} ${tool.bestFor || ""} ${platforms.join(" ")} ${useCases.join(" ")}`
+  );
+  const inferredTerms = new Set<string>();
+
+  intentGroups.forEach((group) => {
+    const categoryMatch = group.categories.includes(tool.category);
+    const metadataMatch = group.triggers.some((trigger) =>
+      `${description} ${bestFor} ${useCaseText}`.includes(normalizeSearchText(trigger))
+    );
+
+    if (categoryMatch || metadataMatch) {
+      group.terms.forEach((term) => inferredTerms.add(term));
+    }
+  });
+
+  return {
+    allText,
+    bestFor,
+    category,
+    description,
+    inferredTerms,
+    name,
+    platformText,
+    pricing,
+    useCaseText,
+  };
+}
+
+function hasStrictIntentEvidence(profile: ReturnType<typeof getToolSearchProfile>, intent: SearchIntent) {
+  const explicitTerms = Array.from(intent.terms).map(normalizeSearchText);
+  return explicitTerms.some(
+    (term) =>
+      profile.name.includes(term) ||
+      profile.category.includes(term) ||
+      profile.description.includes(term) ||
+      profile.bestFor.includes(term) ||
+      profile.useCaseText.includes(term)
+  );
+}
+
+function intentHasAnyTerm(intent: SearchIntent, terms: string[]) {
+  return terms.some((term) => intent.terms.has(term));
+}
+
+export function scoreToolForQuery(tool: Tool, query: string) {
+  const intent = normalizeIntentTerms(query);
+  if (!intent.normalizedQuery) return 1;
+
+  const profile = getToolSearchProfile(tool);
+
+  if (intent.strict && intent.excludedCategories.has(tool.category) && !hasStrictIntentEvidence(profile, intent)) {
+    return 0;
+  }
+
+  const hasDetectedIntent = intent.categories.size > 0;
+  const categoryMatchesDetectedIntent = intent.categories.has(tool.category);
+  const isVideoAllowed =
+    intent.intents.has("video") ||
+    intent.intents.has("marketing") ||
+    intentHasAnyTerm(intent, videoQueryTerms);
+
+  if (hasDetectedIntent && tool.category === "Video AI" && !isVideoAllowed) {
+    return 0;
+  }
+
+  let score = 0;
+
+  // Relevance weights: exact name/category matches dominate, strong intent
+  // category matches come next, then descriptive/use-case evidence.
+  if (profile.name === intent.normalizedQuery) score += 120;
+  if (profile.name.includes(intent.normalizedQuery)) score += 70;
+  if (profile.category === intent.normalizedQuery) score += 90;
+  if (profile.category.includes(intent.normalizedQuery)) score += 45;
+  if (profile.allText.includes(intent.normalizedQuery)) score += 30;
+
+  if (intent.categories.has(tool.category)) score += intent.strict ? 45 : 35;
+
+  intent.terms.forEach((term) => {
+    const normalizedTerm = normalizeSearchText(term);
+    if (!normalizedTerm) return;
+
+    if (profile.name.includes(normalizedTerm)) score += 24;
+    if (profile.category.includes(normalizedTerm)) score += 20;
+    if (profile.useCaseText.includes(normalizedTerm)) score += 14;
+    if (profile.bestFor.includes(normalizedTerm)) score += 12;
+    if (profile.description.includes(normalizedTerm)) score += 9;
+    if (profile.inferredTerms.has(normalizedTerm)) score += 5;
+    if (profile.pricing.includes(normalizedTerm)) score += 1;
+    if (profile.platformText.includes(normalizedTerm)) score += 1;
+  });
+
+  if (intent.excludedCategories.has(tool.category) && !hasStrictIntentEvidence(profile, intent)) {
+    score -= 40;
+  }
+
+  // If the query clearly maps to one or more intent categories, unrelated
+  // categories must prove themselves through direct metadata evidence.
+  if (hasDetectedIntent && !categoryMatchesDetectedIntent) {
+    score -= hasStrictIntentEvidence(profile, intent) ? 20 : 45;
+  }
+
+  return Math.max(0, score);
+}
+
+export function rankToolsForQuery(tools: Tool[], query: string): RankedTool[] {
+  const intent = normalizeIntentTerms(query);
+
+  return tools
+    .map((tool, index) => ({
+      index,
+      score: scoreToolForQuery(tool, query),
+      tool,
+    }))
+    .filter(({ score }) => !intent.normalizedQuery || score >= minimumSearchScore)
+    .sort((a, b) => {
+      if (!intent.normalizedQuery) return a.index - b.index;
+      return b.score - a.score || a.index - b.index;
+    })
+    .map(({ score, tool }) => ({ score, tool }));
+}
+
+export function getBestMatchLabel(tool: Tool, query: string) {
+  const intent = normalizeIntentTerms(query);
+  if (!intent.normalizedQuery) return undefined;
+
+  const score = scoreToolForQuery(tool, query);
+  if (score < minimumSearchScore) return undefined;
+
+  if (score >= 60) return "Best match";
+  if (intent.intents.has("writing") || intent.intents.has("career-writing")) return "Great for writing";
+  if (intent.intents.has("business")) return "Good for business";
+  if (intent.intents.has("video")) return "Recommended for video";
+  if (intent.intents.has("automation-agents")) return "Helpful for automation";
+  if (intent.intents.has("coding")) return "Popular for coding";
+  if (intent.intents.has("design-image")) return "Great for design";
+  if (intent.intents.has("marketing")) return "Good for marketing";
+  if (intent.intents.has("voice-audio")) return "Good for audio";
+  if (intent.intents.has("research") || intent.intents.has("education")) return "Useful for research";
+
+  return "Best match";
+}
+
+export function getSearchMatchExplanation(tool: Tool, query: string) {
+  const intent = normalizeIntentTerms(query);
+  if (!intent.normalizedQuery) return undefined;
+
+  const score = scoreToolForQuery(tool, query);
+  if (score < minimumSearchScore) return undefined;
+
+  if (intent.intents.has("career-writing")) return "Matched career writing intent";
+  if (intent.intents.has("writing")) return "Matched writing intent";
+  if (intent.intents.has("business")) return "Good for business workflows";
+  if (intent.intents.has("video")) return "Recommended for video creation";
+  if (intent.intents.has("coding")) return "Matched coding assistant";
+  if (intent.intents.has("automation-agents")) return "Useful for automation";
+  if (intent.intents.has("productivity")) return "Useful for productivity";
+  if (intent.intents.has("design-image")) return "Matched design intent";
+  if (intent.intents.has("marketing")) return "Good for marketing tasks";
+  if (intent.intents.has("chatbot-support")) return "Helpful for support workflows";
+  if (intent.intents.has("voice-audio")) return "Matched audio intent";
+  if (intent.intents.has("seo")) return "Matched SEO intent";
+  if (intent.intents.has("education")) return "Useful for study tasks";
+  if (intent.intents.has("research")) return "Useful for research";
+
+  return "Matched your search intent";
+}
