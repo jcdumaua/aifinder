@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { AIStatusChips } from "../components/home/AIStatusChips";
 import {
   categories,
   getIcon,
@@ -348,23 +349,7 @@ export default function Home() {
               AI Tools Directory • Search • Compare • Bookmark
             </p>
 
-            
-<div className="mb-6 flex flex-wrap justify-center gap-3">
-  <span className="ai-chip">
-    <span className="ai-chip-dot"></span>
-    Neural Search
-  </span>
-
-  <span className="ai-chip">
-    <span className="ai-chip-dot"></span>
-    AI Discovery
-  </span>
-
-  <span className="ai-chip">
-    <span className="ai-chip-dot"></span>
-    Live Rankings
-  </span>
-</div>
+            <AIStatusChips />
 
 <h1 className="mt-3 max-w-5xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-6xl md:text-7xl">
               AI Operating System for work, creativity, and automation.
