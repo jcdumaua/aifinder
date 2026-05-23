@@ -276,7 +276,7 @@ export default function Home() {
 
   const inputBg = "bg-slate-950/70 border-cyan-400/30 text-white placeholder:text-cyan-200/50 shadow-[0_0_35px_rgba(34,211,238,0.18)] backdrop-blur-xl focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/20";
 
-  const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
+  const mutedText = isLightMode ? "text-slate-600" : "ai-empty-state text-slate-400";
   const softText = isLightMode ? "text-slate-700" : "text-slate-300";
 
   return (
@@ -618,7 +618,7 @@ export default function Home() {
         </motion.div>
 
         {isLoadingTools && (
-          <div className={`mt-8 rounded-3xl border p-6 ${cardBg} transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-[0_0_60px_rgba(34,211,238,0.25)]`}>
+          <div className={`mt-8 ai-result-card rounded-3xl border p-6 ${cardBg} transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-[0_0_60px_rgba(34,211,238,0.25)]`}>
             <p className={`ai-subtitle ${mutedText}`}>Loading AI tools...</p>
           </div>
         )}
@@ -835,7 +835,7 @@ function Section({
       <h2 className="text-3xl font-black">{title}</h2>
 
       {tools.length === 0 ? (
-        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg} ai-hover`}>
+        <div className={`mt-5 ai-result-card rounded-3xl border p-6 ${mutedText} ${cardBg} ai-hover`}>
           {emptyText}
         </div>
       ) : (
