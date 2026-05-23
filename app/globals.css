@@ -851,3 +851,42 @@ h1, h2, h3 {
   text-transform: uppercase;
 }
 
+
+/* AI Assistant side panel */
+.ai-assistant-panel {
+  border: 1px solid rgba(168,85,247,0.26);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(2,6,23,0.9),
+      rgba(30,27,75,0.62),
+      rgba(15,23,42,0.82)
+    );
+
+  box-shadow:
+    0 0 48px rgba(168,85,247,0.16),
+    0 0 90px rgba(34,211,238,0.08),
+    inset 0 0 35px rgba(168,85,247,0.06);
+
+  backdrop-filter: blur(24px);
+}
+
+.ai-assistant-orb {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+
+  background:
+    radial-gradient(circle at 30% 30%, #ffffff, #67e8f9 28%, #8b5cf6 70%);
+
+  box-shadow:
+    0 0 28px rgba(34,211,238,0.45),
+    0 0 70px rgba(168,85,247,0.35);
+}
+
+.ai-assistant-bubble {
+  border: 1px solid rgba(34,211,238,0.18);
+  background: rgba(15,23,42,0.72);
+  color: #cbd5e1;
+}
+

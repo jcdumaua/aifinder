@@ -370,6 +370,33 @@ export default function Home() {
               AI Operating System for work, creativity, and automation.
             </h1>
 
+<div className="ai-assistant-panel ai-hover mt-8 rounded-3xl p-6 text-left">
+  <div className="mb-5 flex items-center gap-4">
+    <div className="ai-assistant-orb"></div>
+
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.35em] text-purple-300">
+        AI Assistant Layer
+      </p>
+
+      <h2 className="mt-1 text-2xl font-black text-white">
+        Ask AiFinder to guide your discovery
+      </h2>
+    </div>
+  </div>
+
+  <div className="space-y-3">
+    <div className="ai-assistant-bubble rounded-2xl p-4 text-sm">
+      “Tell me what you want to build, and I’ll help you find the best AI tools.”
+    </div>
+
+    <div className="ai-assistant-bubble rounded-2xl p-4 text-sm">
+      Try: “Find me AI tools for video editing, content creation, or business automation.”
+    </div>
+  </div>
+</div>
+
+
 <div className="ai-activity-feed ai-hover mt-8 rounded-3xl p-6 text-left">
   <div className="mb-4 flex items-center justify-between">
     <div>
