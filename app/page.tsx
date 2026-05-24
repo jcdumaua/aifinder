@@ -38,6 +38,8 @@ const guidedSuggestions = [
   { label: "📊 Business", searchValue: "business" },
 ];
 
+const emptySearchSuggestions = ["video", "writing", "business", "coding", "automation"];
+
 const seoCategoryCopy = [
   {
     title: "Chatbots",
@@ -124,12 +126,14 @@ export default function Home() {
 
   const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
   const [isLoadingTools, setIsLoadingTools] = useState(true);
+  const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedPricing, setSelectedPricing] = useState("All");
   const [selectedPlatform, setSelectedPlatform] = useState("All");
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const tools = databaseTools;
 
@@ -176,6 +180,16 @@ export default function Home() {
     if (savedSearches) setRecentSearches(JSON.parse(savedSearches));
   }, []);
 
+  useEffect(() => {
+    const hasSearchState =
+      Boolean(search.trim()) ||
+      selectedCategory !== "All" ||
+      selectedPricing !== "All" ||
+      selectedPlatform !== "All";
+
+    setIsSearchModalOpen(hasSearchState);
+  }, [search, selectedCategory, selectedPricing, selectedPlatform]);
+
   const saveFavorites = (newFavorites: string[]) => {
     setFavoriteSlugs(newFavorites);
     localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
@@ -209,9 +223,18 @@ export default function Home() {
     );
   };
 
+  const submitSearch = (value: string) => {
+    const cleanValue = value.trim();
+    setSearch(cleanValue);
+    if (cleanValue) {
+      saveRecentSearch(cleanValue);
+      setIsSearchModalOpen(true);
+    }
+  };
+
   const applySearch = (value: string) => {
-    setSearch(value);
-    saveRecentSearch(value);
+    setSearchDraft(value);
+    submitSearch(value);
   };
 
   const favoriteTools = tools.filter((tool) =>
@@ -259,6 +282,7 @@ export default function Home() {
 
   const resetFilters = () => {
     setSearch("");
+    setSearchDraft("");
     setSelectedCategory("All");
     setSelectedPricing("All");
     setSelectedPlatform("All");
@@ -365,12 +389,12 @@ export default function Home() {
             </p>
 
             <SearchBar
-              search={search}
+              search={searchDraft}
               inputBg={inputBg}
-              onChange={(e) => setSearch(e.target.value)}
-              onBlur={() => saveRecentSearch(search)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveRecentSearch(search);
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitSearch(searchDraft);
               }}
             />
 
@@ -398,7 +422,7 @@ export default function Home() {
                   {recentSearches.map((item) => (
                     <button
                       key={item}
-                      onClick={() => setSearch(item)}
+                      onClick={() => applySearch(item)}
                       className="rounded-full border border-white/10 px-3 py-1 text-xs hover:bg-white/10"
                     >
                       {item}
@@ -582,41 +606,20 @@ export default function Home() {
           </>
         )}
 
-        {hasActiveFilters && (
-          <motion.section
-            initial="hidden"
-            animate="show"
-            variants={fadeUp}
-            transition={{ duration: 0.5 }}
-            className="mt-12"
-          >
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
-              Search Results
-            </p>
-
-            <h2 className="mt-2 text-3xl font-black">
-              {filteredTools.length} tools found
-            </h2>
-
-            {filteredTools.length > 0 ? (
-              <ToolList
-                tools={filteredTools}
-                search={search}
-                favoriteSlugs={favoriteSlugs}
-                onToggleFavorite={toggleFavorite}
-                compareSlugs={compareSlugs}
-                onToggleCompare={toggleCompare}
-                cardBg={cardBg}
-              />
-            ) : (
-              <div className={`mt-5 rounded-3xl border p-8 ${cardBg} ai-hover`}>
-                <p className={mutedText}>
-                  No tools found. Try searching for “chatbot”, “video”,
-                  “coding”, or “automation”.
-                </p>
-              </div>
-            )}
-          </motion.section>
+        {hasActiveFilters && isSearchModalOpen && (
+          <SearchResultsModal
+            filteredTools={filteredTools}
+            search={search}
+            favoriteSlugs={favoriteSlugs}
+            onToggleFavorite={toggleFavorite}
+            compareSlugs={compareSlugs}
+            onToggleCompare={toggleCompare}
+            emptySuggestions={emptySearchSuggestions}
+            onSelectSuggestion={applySearch}
+            onClose={() => setIsSearchModalOpen(false)}
+            cardBg={cardBg}
+            mutedText={mutedText}
+          />
         )}
 
         {compareSlugs.length > 0 && (
@@ -690,6 +693,130 @@ function Section({
         </div>
       )}
     </motion.section>
+  );
+}
+
+function SearchResultsModal({
+  filteredTools,
+  search,
+  favoriteSlugs,
+  onToggleFavorite,
+  compareSlugs,
+  onToggleCompare,
+  emptySuggestions,
+  onSelectSuggestion,
+  onClose,
+  cardBg,
+  mutedText,
+}: {
+  filteredTools: Tool[];
+  search: string;
+  favoriteSlugs: string[];
+  onToggleFavorite: (tool: Tool) => void;
+  compareSlugs: string[];
+  onToggleCompare: (slug: string) => void;
+  emptySuggestions: string[];
+  onSelectSuggestion: (value: string) => void;
+  onClose: () => void;
+  cardBg: string;
+  mutedText: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-md sm:py-10">
+      <motion.section
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.25 }}
+        className={`w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+              AI Search Results
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+              {filteredTools.length} tools found
+            </h2>
+
+            {search.trim() && (
+              <p className={`mt-2 text-sm ${mutedText}`}>Query: {search}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="self-start rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-cyan-100 hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="mt-5 max-h-[72vh] overflow-y-auto pr-1">
+          {filteredTools.length > 0 ? (
+            <ToolList
+              tools={filteredTools}
+              search={search}
+              favoriteSlugs={favoriteSlugs}
+              onToggleFavorite={onToggleFavorite}
+              compareSlugs={compareSlugs}
+              onToggleCompare={onToggleCompare}
+              cardBg={cardBg}
+            />
+          ) : (
+            <AIEmptySearchState
+              suggestions={emptySuggestions}
+              onSelect={onSelectSuggestion}
+              cardBg={cardBg}
+              mutedText={mutedText}
+            />
+          )}
+        </div>
+      </motion.section>
+    </div>
+  );
+}
+
+function AIEmptySearchState({
+  suggestions,
+  onSelect,
+  cardBg,
+  mutedText,
+}: {
+  suggestions: string[];
+  onSelect: (value: string) => void;
+  cardBg: string;
+  mutedText: string;
+}) {
+  return (
+    <div className={`mt-5 rounded-3xl border p-6 ${cardBg} ai-hover`}>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+        AI Search Assistant
+      </p>
+
+      <h3 className="mt-3 text-2xl font-black">
+        AiFinder couldn't find a strong match yet.
+      </h3>
+
+      <p className={`mt-3 max-w-2xl text-sm leading-7 ${mutedText}`}>
+        Try a broader phrase like video, writing, business, coding, or
+        automation. You can also submit a tool if something is missing.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion}
+            type="button"
+            onClick={() => onSelect(suggestion)}
+            className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/20"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

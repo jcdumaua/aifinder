@@ -1,32 +1,36 @@
 import type {
   ChangeEventHandler,
-  FocusEventHandler,
-  KeyboardEventHandler,
+  FormEventHandler,
 } from "react";
 
 type SearchBarProps = {
   search: string;
   inputBg: string;
   onChange: ChangeEventHandler<HTMLInputElement>;
-  onBlur: FocusEventHandler<HTMLInputElement>;
-  onKeyDown: KeyboardEventHandler<HTMLInputElement>;
+  onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
 export function SearchBar({
   search,
   inputBg,
   onChange,
-  onBlur,
-  onKeyDown,
+  onSubmit,
 }: SearchBarProps) {
   return (
-    <input
-      value={search}
-      onChange={onChange}
-      onBlur={onBlur}
-      onKeyDown={onKeyDown}
-      placeholder="Find AI tools for video editing..."
-      className={`mt-5 w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
-    />
+    <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-2 sm:flex-row">
+      <input
+        value={search}
+        onChange={onChange}
+        placeholder="Find AI tools for video editing..."
+        className={`w-full rounded-2xl border px-5 py-4 shadow-xl outline-none focus:border-cyan-400 ${inputBg} ai-command-search`}
+      />
+
+      <button
+        type="submit"
+        className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_0_30px_rgba(34,211,238,0.24)] transition hover:bg-cyan-300 sm:px-6"
+      >
+        Search
+      </button>
+    </form>
   );
 }
