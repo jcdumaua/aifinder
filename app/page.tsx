@@ -22,10 +22,11 @@ import { useTheme } from "./theme-provider";
 import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
 import {
-  getBestMatchLabel,
   getConversationalSearchResponse,
   getSearchMatchExplanation,
+  getSearchConfidenceLabel,
   rankToolsForQuery,
+  type RankedTool,
 } from "../lib/search-relevance";
 
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
@@ -275,7 +276,7 @@ export default function Home() {
     compareSlugs.includes(toolSlug(tool.name))
   );
 
-  const filteredTools = useMemo(() => {
+  const rankedFilteredTools = useMemo(() => {
     return rankToolsForQuery(tools, search)
       .filter(({ tool, score }) => {
         const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
@@ -296,8 +297,10 @@ export default function Home() {
           matchesPlatform
         );
       })
-      .map(({ tool }) => tool);
+      .map(({ tool, score }) => ({ tool, score }));
   }, [tools, search, selectedCategory, selectedPricing, selectedPlatform]);
+
+  const filteredTools = rankedFilteredTools.map(({ tool }) => tool);
 
   const featuredTools = tools.filter((tool) => tool.featured).slice(0, 8);
   const trendingTools = featuredTools.length
@@ -643,6 +646,7 @@ export default function Home() {
         {hasActiveFilters && isSearchModalOpen && !isSearchThinking && (
           <SearchResultsModal
             filteredTools={filteredTools}
+            rankedTools={rankedFilteredTools}
             search={search}
             favoriteSlugs={favoriteSlugs}
             onToggleFavorite={toggleFavorite}
@@ -732,6 +736,7 @@ function Section({
 
 function SearchResultsModal({
   filteredTools,
+  rankedTools,
   search,
   favoriteSlugs,
   onToggleFavorite,
@@ -744,6 +749,7 @@ function SearchResultsModal({
   mutedText,
 }: {
   filteredTools: Tool[];
+  rankedTools: RankedTool[];
   search: string;
   favoriteSlugs: string[];
   onToggleFavorite: (tool: Tool) => void;
@@ -803,7 +809,7 @@ function SearchResultsModal({
         <div className="mt-5 max-h-[72vh] overflow-y-auto pr-1">
           {filteredTools.length > 0 ? (
             <ToolList
-              tools={filteredTools}
+              rankedTools={rankedTools}
               search={search}
               favoriteSlugs={favoriteSlugs}
               onToggleFavorite={onToggleFavorite}
@@ -1132,7 +1138,7 @@ function FaqSection({
 }
 
 function ToolList({
-  tools,
+  rankedTools,
   search,
   favoriteSlugs,
   onToggleFavorite,
@@ -1140,7 +1146,7 @@ function ToolList({
   onToggleCompare,
   cardBg,
 }: {
-  tools: Tool[];
+  rankedTools: RankedTool[];
   search: string;
   favoriteSlugs: string[];
   onToggleFavorite: (tool: Tool) => void;
@@ -1150,7 +1156,7 @@ function ToolList({
 }) {
   return (
     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {tools.map((tool, index) => (
+      {rankedTools.map(({ tool, score }, index) => (
         <ToolCard
           key={tool.name}
           tool={tool}
@@ -1159,7 +1165,7 @@ function ToolList({
           onToggleFavorite={onToggleFavorite}
           compareSlugs={compareSlugs}
           onToggleCompare={onToggleCompare}
-          badge={getBestMatchLabel(tool, search)}
+          badge={getSearchConfidenceLabel(score)}
           matchExplanation={getSearchMatchExplanation(tool, search)}
           cardBg={cardBg}
         />
@@ -1198,6 +1204,12 @@ function ToolCard({
   const isFavorite = favoriteSlugs.includes(slug);
   const isCompared = compareSlugs.includes(slug);
   const toolHref = `/tool/${slug}`;
+  const badgeTone =
+    badge === "Strong match"
+      ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200"
+      : badge === "Good match"
+        ? "border-violet-400/25 bg-violet-400/10 text-violet-200"
+        : "border-slate-500/30 bg-slate-500/10 text-slate-200";
 
   const handleCardClick = () => {
     if (!slug) {
@@ -1237,7 +1249,7 @@ function ToolCard({
         <div className="pointer-events-none relative z-20 mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {badge && (
-              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
+              <span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold ${badgeTone}`}>
                 {badge}
               </span>
             )}

@@ -469,6 +469,12 @@ export function getSearchMatchExplanation(tool: Tool, query: string) {
   return "Matched your search intent";
 }
 
+export function getSearchConfidenceLabel(score: number) {
+  if (score >= 70) return "Strong match";
+  if (score >= 40) return "Good match";
+  return "Related match";
+}
+
 export function getConversationalSearchResponse(query: string, resultCount: number) {
   const intent = normalizeIntentTerms(query);
   if (!intent.normalizedQuery) return undefined;
