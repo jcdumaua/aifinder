@@ -468,3 +468,58 @@ export function getSearchMatchExplanation(tool: Tool, query: string) {
 
   return "Matched your search intent";
 }
+
+export function getConversationalSearchResponse(query: string, resultCount: number) {
+  const intent = normalizeIntentTerms(query);
+  if (!intent.normalizedQuery) return undefined;
+
+  if (resultCount === 0) {
+    return "I could not find a strong match yet, but you can try a broader AI task or category.";
+  }
+
+  if (intent.intents.has("career-writing")) {
+    return "Here are AI tools that can help with resumes, cover letters, and career documents.";
+  }
+
+  if (intent.intents.has("writing")) {
+    return "Here are AI tools that can help with writing and document creation.";
+  }
+
+  if (intent.intents.has("business") || intent.intents.has("automation-agents")) {
+    return "I found tools focused on business automation and productivity.";
+  }
+
+  if (intent.intents.has("video") || intent.intents.has("marketing")) {
+    return "These tools are useful for video creation, marketing, and content workflows.";
+  }
+
+  if (intent.intents.has("coding")) {
+    return "Here are coding-focused AI assistants and developer tools.";
+  }
+
+  if (intent.intents.has("design-image")) {
+    return "I found visual AI tools for design, images, branding, and creative work.";
+  }
+
+  if (intent.intents.has("chatbot-support")) {
+    return "These tools can help with chatbots, assistants, and customer support workflows.";
+  }
+
+  if (intent.intents.has("voice-audio")) {
+    return "Here are AI tools for voice, audio, podcasting, and narration tasks.";
+  }
+
+  if (intent.intents.has("seo")) {
+    return "I found tools that can help with SEO, keywords, and website growth.";
+  }
+
+  if (intent.intents.has("education") || intent.intents.has("research")) {
+    return "These tools can help with learning, research, summaries, and answers.";
+  }
+
+  if (intent.intents.has("productivity")) {
+    return "I found productivity-focused tools to help organize work and save time.";
+  }
+
+  return "I matched your request with the most relevant AI tools I could find.";
+}

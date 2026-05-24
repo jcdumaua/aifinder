@@ -23,6 +23,7 @@ import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
 import {
   getBestMatchLabel,
+  getConversationalSearchResponse,
   getSearchMatchExplanation,
   rankToolsForQuery,
 } from "../lib/search-relevance";
@@ -754,6 +755,8 @@ function SearchResultsModal({
   cardBg: string;
   mutedText: string;
 }) {
+  const aiSearchResponse = getConversationalSearchResponse(search, filteredTools.length);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-md sm:py-10">
       <motion.section
@@ -785,6 +788,17 @@ function SearchResultsModal({
             Close
           </button>
         </div>
+
+        {aiSearchResponse && (
+          <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.06)]">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
+              AiFinder Response
+            </p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-100">
+              {aiSearchResponse}
+            </p>
+          </div>
+        )}
 
         <div className="mt-5 max-h-[72vh] overflow-y-auto pr-1">
           {filteredTools.length > 0 ? (
