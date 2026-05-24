@@ -17,3 +17,7 @@
 - Do not modify unrelated files.
 - Do not change dependencies, configuration, authentication, database access, or deployment behavior unless requested.
 - When uncertain, choose the least invasive implementation that preserves current behavior.
+
+## Security Audit Rule
+
+- Document all future security upgrades in `security/security-audit-log.md`.

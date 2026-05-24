@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 html {
   scroll-behavior: smooth;
@@ -140,7 +144,6 @@ body {
   text-shadow: 0 0 35px rgba(34, 211, 238, 0.25);
 }
 
-
 /* Neural AI animated background */
 @keyframes aiPulse {
   0% {
@@ -178,7 +181,6 @@ body {
   position: relative;
   z-index: 1;
 }
-
 
 /* Holographic AI cards */
 .ai-holo-card {
@@ -233,8 +235,6 @@ body {
   z-index: 1;
 }
 
-
-
 /* Dark cinematic AI mode */
 body {
   background:
@@ -272,7 +272,6 @@ body {
     0 0 120px rgba(168,85,247,0.12);
 }
 
-
 /* Strong AI OS text contrast */
 .ai-label {
   color: #67e8f9 !important;
@@ -287,7 +286,6 @@ body {
 .ai-muted {
   color: #94a3b8 !important;
 }
-
 
 /* AI OS button glow */
 button,
@@ -311,7 +309,6 @@ a:hover {
     0 0 35px rgba(34,211,238,0.4),
     0 0 100px rgba(168,85,247,0.2);
 }
-
 
 /* AI scanning animation */
 @keyframes aiScan {
@@ -360,7 +357,6 @@ a:hover {
   pointer-events: none;
 }
 
-
 /* AI OS typography polish */
 h1, h2, h3 {
   letter-spacing: -0.04em;
@@ -378,7 +374,6 @@ h1, h2, h3 {
   color: #cbd5e1 !important;
   text-shadow: 0 0 22px rgba(34,211,238,0.08);
 }
-
 
 /* Mouse reactive AI glow */
 .ai-cursor-glow {
@@ -405,7 +400,6 @@ h1, h2, h3 {
     top 0.12s linear;
 }
 
-
 /* AI OS status chips */
 .ai-chip {
   display: inline-flex;
@@ -431,7 +425,6 @@ h1, h2, h3 {
   box-shadow: 0 0 18px rgba(34,211,238,0.8);
 }
 
-
 /* AI chip pulse */
 @keyframes aiChipPulse {
   0%, 100% {
@@ -446,7 +439,6 @@ h1, h2, h3 {
 .ai-chip {
   animation: aiChipPulse 3.5s ease-in-out infinite;
 }
-
 
 /* AI OS page entrance */
 @keyframes aiFadeUp {
@@ -466,7 +458,6 @@ h1, h2, h3 {
 .ai-enter {
   animation: aiFadeUp 0.8s ease-out both;
 }
-
 
 /* AI OS loading shimmer */
 @keyframes aiShimmer {
@@ -494,7 +485,6 @@ h1, h2, h3 {
   animation: aiShimmer 4s linear infinite;
 }
 
-
 /* AI OS grid overlay */
 .ai-grid::after {
   content: "";
@@ -511,7 +501,6 @@ h1, h2, h3 {
 
   mask-image: radial-gradient(circle at center, black, transparent 90%);
 }
-
 
 /* AI command search pulse */
 @keyframes aiCommandPulse {
@@ -531,7 +520,6 @@ h1, h2, h3 {
 .ai-command {
   animation: aiCommandPulse 4s ease-in-out infinite;
 }
-
 
 /* AI floating particles */
 @keyframes aiFloat {
@@ -570,7 +558,6 @@ h1, h2, h3 {
   animation: aiFloat 6s ease-in-out infinite;
 }
 
-
 /* AI neural connection layer */
 .ai-neural-lines {
   position: fixed;
@@ -596,7 +583,6 @@ h1, h2, h3 {
     background-position: 180px 180px, -180px 180px;
   }
 }
-
 
 /* AI status chips */
 .ai-chip {
@@ -642,7 +628,6 @@ h1, h2, h3 {
     0 0 16px rgba(34,211,238,0.9);
 }
 
-
 /* AI Command Center panel */
 .ai-command-panel {
   border: 1px solid rgba(34,211,238,0.24);
@@ -667,7 +652,6 @@ h1, h2, h3 {
   box-shadow: 0 0 22px rgba(34,211,238,0.18);
 }
 
-
 /* Futuristic AI hover effects */
 .ai-hover {
   transition:
@@ -686,7 +670,6 @@ h1, h2, h3 {
     0 0 55px rgba(34,211,238,0.18),
     0 0 120px rgba(168,85,247,0.10);
 }
-
 
 /* AI Operating System navbar */
 .ai-navbar {
@@ -713,7 +696,6 @@ h1, h2, h3 {
   color: #67e8f9;
   text-shadow: 0 0 18px rgba(34,211,238,0.4);
 }
-
 
 /* AI Command Search Bar V2 */
 .ai-command-search {
@@ -747,7 +729,6 @@ h1, h2, h3 {
     0 0 55px rgba(34,211,238,0.32),
     0 0 140px rgba(168,85,247,0.18) !important;
 }
-
 
 /* AI Dashboard modules */
 .ai-dashboard-grid {
@@ -791,7 +772,6 @@ h1, h2, h3 {
   font-size: 1.6rem;
   font-weight: 900;
 }
-
 
 /* Live AI Activity Feed */
 .ai-activity-feed {
@@ -851,7 +831,6 @@ h1, h2, h3 {
   text-transform: uppercase;
 }
 
-
 /* AI Assistant side panel */
 .ai-assistant-panel {
   border: 1px solid rgba(168,85,247,0.26);
@@ -890,7 +869,6 @@ h1, h2, h3 {
   color: #cbd5e1;
 }
 
-
 /* AI animated stats look */
 .ai-stat-number {
   background: linear-gradient(90deg, #ffffff, #67e8f9, #a78bfa);
@@ -921,7 +899,6 @@ h1, h2, h3 {
 
   box-shadow: 0 0 24px rgba(34,211,238,0.5);
 }
-
 
 /* Floating AI sidebar */
 .ai-floating-sidebar {
@@ -983,7 +960,6 @@ h1, h2, h3 {
   }
 }
 
-
 /* Safe upgrade — deeper AI card depth */
 .ai-hover,
 .ai-dashboard-card,
@@ -1015,7 +991,6 @@ h1, h2, h3 {
   opacity: 0.45;
 }
 
-
 /* Safe upgrade — AI glow divider lines */
 .ai-divider {
   height: 1px;
@@ -1040,7 +1015,6 @@ h1, h2, h3 {
 .ai-activity-feed {
   outline: 1px solid rgba(255,255,255,0.03);
 }
-
 
 /* Safe upgrade — AI holographic buttons */
 button,
@@ -1068,7 +1042,6 @@ button[type="submit"]:hover {
     0 0 36px rgba(34,211,238,0.38),
     0 0 110px rgba(168,85,247,0.22);
 }
-
 
 /* Safe upgrade — AI tool radar effect */
 .ai-radar {
@@ -1107,7 +1080,6 @@ button[type="submit"]:hover {
   z-index: 1;
 }
 
-
 /* Safe upgrade — AI neural section headers */
 .ai-section-kicker {
   display: inline-flex;
@@ -1144,7 +1116,6 @@ button[type="submit"]:hover {
     0 0 28px rgba(34,211,238,0.18),
     0 0 60px rgba(168,85,247,0.12);
 }
-
 
 /* Safe upgrade — AI magnetic card glow */
 .ai-magnetic {
@@ -1188,7 +1159,6 @@ button[type="submit"]:hover {
 
   pointer-events: none;
 }
-
 
 /* Safe upgrade — futuristic category polish */
 .ai-category-pill {
@@ -1246,7 +1216,6 @@ button[type="submit"]:hover {
     0 0 90px rgba(168,85,247,0.20);
 }
 
-
 /* Safe upgrade — AI homepage spacing polish */
 .ai-layout-polish {
   max-width: 1180px;
@@ -1272,7 +1241,6 @@ button[type="submit"]:hover {
     padding-bottom: 2rem;
   }
 }
-
 
 /* Safe upgrade — AI search result polish */
 .ai-result-card {
@@ -1320,7 +1288,6 @@ button[type="submit"]:hover {
   color: #94a3b8;
 }
 
-
 /* Safe upgrade — AI system signature */
 .ai-system-signature {
   border-top: 1px solid rgba(34,211,238,0.16);
@@ -1331,7 +1298,6 @@ button[type="submit"]:hover {
 .ai-system-signature span {
   color: #67e8f9;
 }
-
 
 /* Safe upgrade — AI search thinking animation */
 .ai-thinking-panel {
@@ -1510,5 +1476,129 @@ button[type="submit"]:hover {
   100% {
     opacity: 0;
     transform: translateX(42px);
+  }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
