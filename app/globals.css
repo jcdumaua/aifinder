@@ -1332,3 +1332,183 @@ button[type="submit"]:hover {
   color: #67e8f9;
 }
 
+
+/* Safe upgrade — AI search thinking animation */
+.ai-thinking-panel {
+  width: min(100%, 360px);
+  box-shadow:
+    0 0 40px rgba(34,211,238,0.18),
+    0 0 90px rgba(168,85,247,0.12),
+    inset 0 0 28px rgba(59,130,246,0.08);
+}
+
+.ai-brain-loader {
+  position: relative;
+  height: 132px;
+  width: 160px;
+  overflow: hidden;
+}
+
+.ai-head-svg {
+  display: block;
+  height: 132px;
+  width: 160px;
+  overflow: visible;
+  filter:
+    drop-shadow(0 0 22px rgba(34,211,238,0.28))
+    drop-shadow(0 0 34px rgba(168,85,247,0.18));
+}
+
+.ai-head-silhouette {
+  animation: aiHeadBreathe 1.35s ease-in-out infinite alternate;
+}
+
+.ai-head-profile {
+  opacity: 0.78;
+}
+
+.ai-brain-hemispheres {
+  transform-origin: 79px 64px;
+  animation: aiBrainPulse 0.95s ease-in-out infinite alternate;
+}
+
+.ai-brain-half {
+  stroke: rgba(255,255,255,0.18);
+  stroke-width: 1;
+}
+
+.ai-brain-half-left {
+  transform-origin: 76px 64px;
+}
+
+.ai-brain-half-right {
+  transform-origin: 82px 64px;
+}
+
+.ai-neural-lines path {
+  fill: none;
+  stroke: rgba(165,243,252,0.72);
+  stroke-linecap: round;
+  stroke-width: 1.45;
+  animation: aiLineGlow 0.9s ease-in-out infinite alternate;
+}
+
+.ai-neural-lines path:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.ai-neural-lines path:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.ai-neural-dots circle {
+  fill: #67e8f9;
+  stroke: rgba(248,250,252,0.45);
+  stroke-width: 0.8;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: aiNodePulse 0.82s ease-in-out infinite alternate;
+}
+
+.ai-neural-dots circle:nth-child(2),
+.ai-neural-dots circle:nth-child(4) {
+  fill: #d8b4fe;
+  animation-delay: 0.18s;
+}
+
+.ai-neural-dots circle:nth-child(3),
+.ai-neural-dots circle:nth-child(5) {
+  animation-delay: 0.34s;
+}
+
+.ai-brain-core-text {
+  animation: aiCorePulse 0.9s ease-in-out infinite alternate;
+  fill: #f8fafc;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+  paint-order: stroke;
+  stroke: rgba(2,6,23,0.9);
+  stroke-width: 3px;
+}
+
+.ai-brain-scan {
+  fill: url(#aiHeadStroke);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: aiScanSweep 0.9s ease-in-out infinite;
+}
+
+@keyframes aiHeadBreathe {
+  from {
+    opacity: 0.74;
+    transform: translateY(1px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes aiBrainPulse {
+  from {
+    transform: scale(0.975);
+    opacity: 0.74;
+  }
+
+  to {
+    transform: scale(1.025);
+    opacity: 1;
+  }
+}
+
+@keyframes aiNodePulse {
+  from {
+    transform: scale(0.82);
+    opacity: 0.68;
+  }
+
+  to {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+@keyframes aiCorePulse {
+  from {
+    opacity: 0.72;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes aiLineGlow {
+  from {
+    opacity: 0.38;
+    stroke: rgba(34,211,238,0.42);
+  }
+
+  to {
+    opacity: 1;
+    stroke: rgba(216,180,254,0.82);
+  }
+}
+
+@keyframes aiScanSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-42px);
+  }
+
+  35% {
+    opacity: 0.16;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(42px);
+  }
+}

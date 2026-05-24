@@ -39,6 +39,11 @@ const guidedSuggestions = [
 ];
 
 const emptySearchSuggestions = ["video", "writing", "business", "coding", "automation"];
+const thinkingMessages = [
+  "AiFinder is thinking...",
+  "Analyzing your intent...",
+  "Matching the best AI tools...",
+];
 
 const seoCategoryCopy = [
   {
@@ -134,6 +139,8 @@ export default function Home() {
   const [selectedPlatform, setSelectedPlatform] = useState("All");
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isSearchThinking, setIsSearchThinking] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState(0);
 
   const tools = databaseTools;
 
@@ -190,6 +197,27 @@ export default function Home() {
     setIsSearchModalOpen(hasSearchState);
   }, [search, selectedCategory, selectedPricing, selectedPlatform]);
 
+  useEffect(() => {
+    if (!isSearchThinking) return;
+
+    setThinkingStep(0);
+
+    const stepTimer = window.setInterval(() => {
+      setThinkingStep((step) => Math.min(step + 1, thinkingMessages.length - 1));
+    }, 320);
+
+    const doneTimer = window.setTimeout(() => {
+      window.clearInterval(stepTimer);
+      setIsSearchThinking(false);
+      setIsSearchModalOpen(true);
+    }, 900);
+
+    return () => {
+      window.clearInterval(stepTimer);
+      window.clearTimeout(doneTimer);
+    };
+  }, [isSearchThinking]);
+
   const saveFavorites = (newFavorites: string[]) => {
     setFavoriteSlugs(newFavorites);
     localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
@@ -228,7 +256,8 @@ export default function Home() {
     setSearch(cleanValue);
     if (cleanValue) {
       saveRecentSearch(cleanValue);
-      setIsSearchModalOpen(true);
+      setIsSearchModalOpen(false);
+      setIsSearchThinking(true);
     }
   };
 
@@ -606,7 +635,11 @@ export default function Home() {
           </>
         )}
 
-        {hasActiveFilters && isSearchModalOpen && (
+        {isSearchThinking && (
+          <SearchThinkingOverlay message={thinkingMessages[thinkingStep]} />
+        )}
+
+        {hasActiveFilters && isSearchModalOpen && !isSearchThinking && (
           <SearchResultsModal
             filteredTools={filteredTools}
             search={search}
@@ -774,6 +807,102 @@ function SearchResultsModal({
           )}
         </div>
       </motion.section>
+    </div>
+  );
+}
+
+function SearchThinkingOverlay({ message }: { message: string }) {
+  return (
+    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-md">
+      <div className="ai-thinking-panel rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-6 text-center shadow-2xl">
+        <div className="ai-brain-loader mx-auto">
+          <svg
+            className="ai-head-svg"
+            viewBox="0 0 160 132"
+            role="img"
+            aria-label="AiFinder thinking"
+          >
+            <defs>
+              <linearGradient id="aiHeadStroke" x1="20" x2="140" y1="18" y2="120">
+                <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.82" />
+                <stop offset="55%" stopColor="#a855f7" stopOpacity="0.52" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.34" />
+              </linearGradient>
+              <radialGradient id="aiBrainLeft" cx="50%" cy="50%" r="65%">
+                <stop offset="0%" stopColor="#cffafe" stopOpacity="0.95" />
+                <stop offset="44%" stopColor="#22d3ee" stopOpacity="0.48" />
+                <stop offset="100%" stopColor="#0f172a" stopOpacity="0.1" />
+              </radialGradient>
+              <radialGradient id="aiBrainRight" cx="50%" cy="50%" r="65%">
+                <stop offset="0%" stopColor="#f5d0fe" stopOpacity="0.92" />
+                <stop offset="48%" stopColor="#a855f7" stopOpacity="0.48" />
+                <stop offset="100%" stopColor="#0f172a" stopOpacity="0.1" />
+              </radialGradient>
+              <filter id="aiGlow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3.4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <path
+              className="ai-head-silhouette"
+              d="M76 12c-28 0-50 21-50 49 0 15 6 27 15 36l-2 17h28c8 4 17 6 27 6h26c5 0 9-4 9-9V92l9-4c3-1 4-5 2-8l-10-18c-1-28-24-50-54-50Z"
+              fill="rgba(15,23,42,0.36)"
+              stroke="url(#aiHeadStroke)"
+              strokeWidth="2"
+            />
+            <path
+              className="ai-head-profile"
+              d="M54 39c-7 7-11 15-11 25 0 16 11 30 28 36"
+              fill="none"
+              stroke="rgba(103,232,249,0.34)"
+              strokeLinecap="round"
+              strokeWidth="1.4"
+            />
+
+            <g className="ai-brain-hemispheres" filter="url(#aiGlow)">
+              <path
+                className="ai-brain-half ai-brain-half-left"
+                d="M72 38c-13-5-28 5-28 20 0 6 3 11 7 15-1 8 5 15 14 15h11V43c-1-2-2-4-4-5Z"
+                fill="url(#aiBrainLeft)"
+              />
+              <path
+                className="ai-brain-half ai-brain-half-right"
+                d="M85 38c13-5 28 5 28 20 0 6-3 11-7 15 1 8-5 15-14 15H81V43c1-2 2-4 4-5Z"
+                fill="url(#aiBrainRight)"
+              />
+            </g>
+
+            <g className="ai-neural-lines">
+              <path d="M57 57L78 66L101 55" />
+              <path d="M59 76L78 66L99 78" />
+              <path d="M78 50V84" />
+            </g>
+
+            <g className="ai-neural-dots">
+              <circle cx="57" cy="57" r="4" />
+              <circle cx="101" cy="55" r="4" />
+              <circle cx="59" cy="76" r="4" />
+              <circle cx="99" cy="78" r="4" />
+              <circle cx="78" cy="50" r="3.5" />
+              <circle cx="78" cy="84" r="3.5" />
+            </g>
+
+            <text className="ai-brain-core-text" x="79" y="71" textAnchor="middle">
+              AI
+            </text>
+            <rect className="ai-brain-scan" x="35" y="34" width="88" height="58" rx="26" />
+          </svg>
+        </div>
+
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+          AI Search Engine
+        </p>
+        <p className="mt-2 text-sm font-semibold text-slate-200">{message}</p>
+      </div>
     </div>
   );
 }
