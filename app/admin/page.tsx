@@ -443,6 +443,7 @@ export default function AdminPage() {
   }
 
   function showSuccess(message: string, title = "Success") {
+    // Future Sonner use in admin flows: toast.success(title, { description: message }).
     setPopup({
       type: "success",
       title,
@@ -451,6 +452,7 @@ export default function AdminPage() {
   }
 
   function showError(message: string, title = "Action Failed") {
+    // Future Sonner use in admin flows: toast.error(title, { description: message }).
     setPopup({
       type: "error",
       title,
@@ -673,6 +675,7 @@ export default function AdminPage() {
       }
 
       setUrl(result.logoUrl);
+      // Future Sonner use in upload flows: toast.success("Logo Uploaded", { description: "Logo uploaded successfully." }).
       showSuccess("Logo uploaded successfully.", "Logo Uploaded");
       fetchAuditLogs();
     } catch {

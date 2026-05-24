@@ -4,6 +4,7 @@ import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { GlobalToaster } from "@/components/ui/global-toaster";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -119,6 +120,7 @@ export default function RootLayout({
 
             {children}
           </CompareProvider>
+          <GlobalToaster />
         </ThemeProvider>
       </body>
     </html>

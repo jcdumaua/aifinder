@@ -125,6 +125,7 @@ export default function SubmitToolPage() {
   const [popup, setPopup] = useState<PopupMessage | null>(null);
 
   function showSuccess(message: string) {
+    // Future Sonner use in submit-tool flows: toast.success("Submission Received", { description: message }).
     setPopup({
       type: "success",
       title: "Submission Received",
@@ -133,6 +134,7 @@ export default function SubmitToolPage() {
   }
 
   function showError(message: string) {
+    // Future Sonner use in submit-tool flows: toast.error("Submission Error", { description: message }).
     setPopup({
       type: "error",
       title: "Submission Error",
@@ -173,6 +175,7 @@ export default function SubmitToolPage() {
 
       setLogoUrl(safeLogoUrl);
 
+      // Future Sonner use in upload flows: toast.success("Logo Uploaded", { description: "Your logo was uploaded successfully." }).
       setPopup({
         type: "success",
         title: "Logo Uploaded",
