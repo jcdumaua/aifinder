@@ -18,8 +18,8 @@ const onboardingSteps = [
 
 export function AIOnboardingSteps() {
   return (
-    <section className="mt-4 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+    <section className="mt-4 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_70%,#ecfeff_100%)] [.theme-light_&]:shadow-[0_14px_32px_rgba(15,23,42,0.08)] [.theme-light_&]:backdrop-blur-none">
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
         How AiFinder helps you
       </p>
 
@@ -27,13 +27,13 @@ export function AIOnboardingSteps() {
         {onboardingSteps.map((step) => (
           <div
             key={step.label}
-            className="rounded-2xl border border-cyan-400/15 bg-slate-950/35 p-3"
+            className="rounded-2xl border border-cyan-400/15 bg-slate-950/35 p-3 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/85 [.theme-light_&]:shadow-sm"
           >
-            <p className="text-xs font-black text-cyan-300">{step.label}</p>
-            <h3 className="mt-2 text-sm font-black text-white">
+            <p className="text-xs font-black text-cyan-300 [.theme-light_&]:text-cyan-800">{step.label}</p>
+            <h3 className="mt-2 text-sm font-black text-white [.theme-light_&]:text-slate-950">
               {step.title}
             </h3>
-            <p className="mt-1 text-xs leading-5 text-slate-400">
+            <p className="mt-1 text-xs leading-5 text-slate-400 [.theme-light_&]:text-slate-700">
               {step.text}
             </p>
           </div>

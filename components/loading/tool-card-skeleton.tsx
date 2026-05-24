@@ -15,10 +15,10 @@ export function ToolCardSkeleton() {
   return (
     <article
       aria-hidden="true"
-      className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-2xl"
+      className="ai-product-surface rounded-[2rem] border p-5"
     >
       <div className="flex items-start gap-4">
-        <Skeleton className="h-14 w-14 rounded-2xl bg-white/15" />
+        <Skeleton className="h-14 w-14 rounded-2xl bg-slate-200 [.theme-dark_&]:bg-white/15" />
 
         <div className="min-w-0 flex-1 space-y-3">
           <Skeleton className="h-5 w-3/5" />

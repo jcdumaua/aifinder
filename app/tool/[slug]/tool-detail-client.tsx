@@ -1,6 +1,9 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLayoutEffect, useState } from "react";
 import { slugify } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 import { useTheme } from "../../theme-provider";
@@ -36,71 +39,97 @@ export default function ToolDetailClient({
 }: ToolDetailClientProps) {
   const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare } = useCompare();
+  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
+  const [isLeaving, setIsLeaving] = useState(false);
 
   const isCompared = compareSlugs.includes(tool.slug);
 
-  const pageBg = isLightMode
-    ? "bg-slate-100 text-slate-950"
-    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
+  const pageBg = "ai-product-page";
 
-  const cardBg = isLightMode
-    ? "bg-white border-slate-200"
-    : "bg-white/[0.04] border-white/10";
+  const cardBg = "ai-product-surface";
 
-  const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
-  const softText = isLightMode ? "text-slate-700" : "text-slate-300";
-  const chipBg = isLightMode
-    ? "border-slate-200 bg-slate-100"
-    : "border-white/10 bg-white/5";
+  const mutedText = "ai-product-muted";
+  const softText = "ai-product-body";
+  const chipBg = "ai-product-chip";
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  function navigateHomeWithExit() {
+    if (isLeaving) return;
+
+    if (shouldReduceMotion) {
+      router.push("/");
+      return;
+    }
+
+    setIsLeaving(true);
+    window.setTimeout(() => {
+      router.push("/");
+    }, 180);
+  }
 
   return (
-    <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
+    <motion.main
+      animate={isLeaving ? { opacity: 0, x: 48 } : { opacity: 1, x: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{ willChange: isLeaving ? "opacity, transform" : undefined }}
+      className={`min-h-screen transition-colors duration-300 ${pageBg}`}
+    >
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         <nav className="flex flex-wrap gap-3">
-          <Link
-            href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+          <button
+            type="button"
+            onClick={navigateHomeWithExit}
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             ← Back
-          </Link>
+          </button>
 
-          <Link
-            href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+          <button
+            type="button"
+            onClick={navigateHomeWithExit}
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             🏠 Home
-          </Link>
+          </button>
 
           <Link
             href={`/category/${slugify(tool.category)}`}
-            className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-300 hover:bg-cyan-400/20"
+            className="ai-product-chip rounded-full px-4 py-2 text-sm font-bold"
           >
             {tool.category}
           </Link>
 
           <button
             onClick={toggleTheme}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             {isLightMode ? "🌙 Dark" : "☀️ Light"}
           </button>
         </nav>
 
         <article className={`mt-8 overflow-hidden rounded-[2rem] border shadow-2xl ${cardBg}`}>
-          <header className="relative border-b border-white/10 p-6 sm:p-10">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+          <header className="relative border-b border-white/10 p-6 sm:p-10 [.theme-light_&]:border-slate-200">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 [.theme-light_&]:from-cyan-50/80 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/80" />
+            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl [.theme-light_&]:bg-cyan-200/25" />
 
             <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                <ToolLogo tool={tool} large />
+                <ToolLogo
+                  tool={tool}
+                  large
+                  animateOnEntry={!shouldReduceMotion}
+                />
 
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+                  <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
                     {tool.category} AI Tool
                   </p>
 
-                  <h1 className="mt-2 text-4xl font-black tracking-tight sm:text-6xl">
+                  <h1 className="ai-product-heading mt-2 text-4xl font-black tracking-tight sm:text-6xl">
                     {tool.name}
                   </h1>
 
@@ -109,11 +138,11 @@ export default function ToolDetailClient({
                   </p>
 
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <span className="inline-flex items-center rounded-full border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300">
+                    <span className="inline-flex items-center rounded-full border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-300 [.theme-light_&]:border-amber-200 [.theme-light_&]:bg-amber-50 [.theme-light_&]:text-amber-700">
                       ⭐ {tool.rating} / 5 · {tool.reviewCount.toLocaleString()} reviews
                     </span>
 
-                    <span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-300">
+                    <span className="ai-product-chip inline-flex items-center rounded-full px-4 py-2 text-sm font-bold">
                       {tool.pricing}
                     </span>
                   </div>
@@ -125,14 +154,14 @@ export default function ToolDetailClient({
                   href={tool.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full bg-cyan-400 px-5 py-3 text-center text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                  className="ai-product-button-primary px-5 py-3 text-center text-sm"
                 >
                   Visit Website
                 </a>
 
                 <button
                   onClick={() => toggleCompare(tool.slug)}
-                  className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold hover:bg-white/10"
+                  className="ai-product-button-secondary px-5 py-3 text-sm"
                 >
                   {isCompared ? "✓ In Compare" : "+ Compare"}
                 </button>
@@ -142,7 +171,7 @@ export default function ToolDetailClient({
                     href={tool.ios}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-white/10 px-5 py-3 text-center text-sm hover:bg-white/10"
+                    className="ai-product-button-secondary px-5 py-3 text-center text-sm"
                   >
                     🍎 iOS
                   </a>
@@ -153,7 +182,7 @@ export default function ToolDetailClient({
                     href={tool.android}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-white/10 px-5 py-3 text-center text-sm hover:bg-white/10"
+                    className="ai-product-button-secondary px-5 py-3 text-center text-sm"
                   >
                     🤖 Android
                   </a>
@@ -173,8 +202,8 @@ export default function ToolDetailClient({
             <InfoCard title="Best For" value={tool.bestFor} cardBg={cardBg} />
           </section>
 
-          <section className="border-t border-white/10 p-6 sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          <section className="border-t border-white/10 p-6 sm:p-10 [.theme-light_&]:border-slate-200">
+            <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
               Platforms
             </p>
 
@@ -190,8 +219,8 @@ export default function ToolDetailClient({
             </div>
           </section>
 
-          <section className="border-t border-white/10 p-6 sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          <section className="border-t border-white/10 p-6 sm:p-10 [.theme-light_&]:border-slate-200">
+            <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
               Common Use Cases
             </p>
 
@@ -199,7 +228,7 @@ export default function ToolDetailClient({
               {tool.useCases.map((useCase) => (
                 <span
                   key={useCase}
-                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200"
+                  className="ai-product-chip rounded-full px-4 py-2 text-sm"
                 >
                   {useCase}
                 </span>
@@ -207,8 +236,8 @@ export default function ToolDetailClient({
             </div>
           </section>
 
-          <section className="border-t border-white/10 p-6 sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          <section className="border-t border-white/10 p-6 sm:p-10 [.theme-light_&]:border-slate-200">
+            <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
               About {tool.name}
             </p>
 
@@ -228,8 +257,8 @@ export default function ToolDetailClient({
             </div>
           </section>
 
-          <section className="border-t border-white/10 p-6 sm:p-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          <section className="border-t border-white/10 p-6 sm:p-10 [.theme-light_&]:border-slate-200">
+            <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
               Quick FAQ
             </p>
 
@@ -267,11 +296,11 @@ export default function ToolDetailClient({
 
         {similarTools.length > 0 && (
           <section className="mt-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+            <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
               Similar Tools
             </p>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="ai-product-heading mt-2 text-3xl font-black">
               More {tool.category} tools
             </h2>
 
@@ -285,13 +314,13 @@ export default function ToolDetailClient({
                 <Link
                   key={similarTool.slug}
                   href={`/tool/${similarTool.slug}`}
-                  className={`group rounded-3xl border p-5 transition hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+                  className={`group rounded-3xl border p-5 ${cardBg} ai-product-hover`}
                 >
                   <ToolLogo tool={similarTool} />
 
-                  <h3 className="mt-4 font-bold">{similarTool.name}</h3>
+                  <h3 className="ai-product-heading mt-4 font-bold">{similarTool.name}</h3>
 
-                  <p className="mt-2 text-sm text-cyan-300">
+                  <p className="ai-product-eyebrow mt-2 text-sm font-semibold">
                     {similarTool.category}
                   </p>
 
@@ -303,7 +332,7 @@ export default function ToolDetailClient({
                     {similarTool.description}
                   </p>
 
-                  <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
+                  <span className="ai-product-eyebrow mt-5 inline-block text-sm font-bold">
                     View Tool →
                   </span>
                 </Link>
@@ -313,11 +342,11 @@ export default function ToolDetailClient({
         )}
 
         <section className={`mt-10 rounded-[2rem] border p-6 sm:p-8 ${cardBg}`}>
-          <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+          <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
             Discover More
           </p>
 
-          <h2 className="mt-2 text-3xl font-black">
+          <h2 className="ai-product-heading mt-2 text-3xl font-black">
             Browse more AI tools on AiFinder
           </h2>
 
@@ -330,21 +359,21 @@ export default function ToolDetailClient({
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/"
-              className="rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              className="ai-product-button-primary px-5 py-3 text-sm"
             >
               Browse All Tools
             </Link>
 
             <Link
               href="/submit"
-              className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold hover:bg-white/10"
+              className="ai-product-button-secondary px-5 py-3 text-sm"
             >
               Submit a Tool
             </Link>
           </div>
         </section>
       </section>
-    </main>
+    </motion.main>
   );
 }
 
@@ -358,12 +387,12 @@ function InfoCard({
   cardBg: string;
 }) {
   return (
-    <div className={`rounded-3xl border p-5 ${cardBg}`}>
-      <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+    <div className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
+      <p className="ai-product-eyebrow text-xs font-bold uppercase tracking-widest">
         {title}
       </p>
 
-      <p className="mt-3 line-clamp-3 text-xl font-black">{value}</p>
+      <p className="ai-product-heading mt-3 line-clamp-3 text-xl font-black">{value}</p>
     </div>
   );
 }
@@ -380,8 +409,8 @@ function FaqCard({
   softText: string;
 }) {
   return (
-    <div className={`rounded-3xl border p-5 ${cardBg}`}>
-      <h3 className="font-black">{question}</h3>
+    <div className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
+      <h3 className="ai-product-heading font-black">{question}</h3>
 
       <p className={`mt-3 text-sm leading-7 ${softText}`}>{answer}</p>
     </div>
@@ -391,13 +420,18 @@ function FaqCard({
 function ToolLogo({
   tool,
   large = false,
+  animateOnEntry = false,
 }: {
   tool: ToolPageData;
   large?: boolean;
+  animateOnEntry?: boolean;
 }) {
   return (
-    <div
-      className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${
+    <motion.div
+      initial={animateOnEntry ? { opacity: 0, scale: 0.85 } : false}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className={`flex shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.12)] ${
         large ? "h-24 w-24 rounded-[2rem]" : "h-14 w-14 rounded-2xl"
       }`}
     >
@@ -406,6 +440,6 @@ function ToolLogo({
         alt={`${tool.name} logo`}
         className={large ? "h-14 w-14 object-contain" : "h-9 w-9 object-contain"}
       />
-    </div>
+    </motion.div>
   );
 }

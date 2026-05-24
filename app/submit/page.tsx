@@ -275,9 +275,12 @@ export default function SubmitToolPage() {
   }
 
   const isSuccessPopup = popup?.type === "success";
+  const inputClass =
+    "ai-product-input rounded-2xl p-4 outline-none transition-[border-color,box-shadow]";
+  const optionClass = "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black px-6 py-16 text-white">
+    <main className="ai-product-page relative min-h-screen px-6 py-16">
       {popup && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
@@ -324,20 +327,20 @@ export default function SubmitToolPage() {
       )}
 
       <section className="mx-auto max-w-3xl">
-        <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
+        <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
           Submit AI Tool
         </p>
 
-        <h1 className="mt-3 text-4xl font-black md:text-5xl">
+        <h1 className="ai-product-heading mt-3 text-4xl font-black md:text-5xl">
           Submit your AI tool to AiFinder
         </h1>
 
-        <p className="mt-4 text-slate-400">
+        <p className="ai-product-muted mt-4">
           Send your tool for review. Approved tools will appear publicly on
           AiFinder.
         </p>
 
-        <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
+        <div className="ai-product-surface mt-10 rounded-[2rem] border p-6">
           <input
             className="hidden"
             tabIndex={-1}
@@ -348,7 +351,7 @@ export default function SubmitToolPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              className={inputClass}
               placeholder="Tool name *"
               value={name}
               maxLength={80}
@@ -356,16 +359,16 @@ export default function SubmitToolPage() {
             />
 
             <select
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
+              className={inputClass}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <option className="bg-slate-950" value="">
+              <option className={optionClass} value="">
                 Select category *
               </option>
 
               {CATEGORIES.map((item) => (
-                <option className="bg-slate-950" key={item} value={item}>
+                <option className={optionClass} key={item} value={item}>
                   {item}
                 </option>
               ))}
@@ -373,7 +376,7 @@ export default function SubmitToolPage() {
 
             <input
               type="url"
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              className={inputClass}
               placeholder="Website URL * https://example.com"
               value={website}
               maxLength={500}
@@ -381,16 +384,16 @@ export default function SubmitToolPage() {
             />
 
             <select
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none focus:border-cyan-400"
+              className={inputClass}
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
             >
-              <option className="bg-slate-950" value="">
+              <option className={optionClass} value="">
                 Select pricing
               </option>
 
               {PRICING_OPTIONS.map((item) => (
-                <option className="bg-slate-950" key={item} value={item}>
+                <option className={optionClass} key={item} value={item}>
                   {item}
                 </option>
               ))}
@@ -400,14 +403,14 @@ export default function SubmitToolPage() {
               <div className="grid grid-cols-[1fr_76px] gap-3">
                 <input
                   type="url"
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+                  className={inputClass}
                   placeholder="Logo image URL"
                   value={logoUrl}
                   maxLength={500}
                   onChange={(e) => setLogoUrl(e.target.value)}
                 />
 
-                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-slate-400 hover:bg-white/10">
+                <label className="ai-product-button-secondary flex cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500">
                   {isUploadingLogo ? (
                     <span className="text-xl">…</span>
                   ) : (
@@ -444,13 +447,13 @@ export default function SubmitToolPage() {
                 </label>
               </div>
 
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="ai-product-muted mt-2 text-xs">
                 Add a logo URL or click the upload icon to upload a logo.
               </p>
             </div>
 
             <input
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              className={inputClass}
               placeholder="Your name"
               value={submitterName}
               maxLength={80}
@@ -459,7 +462,7 @@ export default function SubmitToolPage() {
 
             <input
               type="email"
-              className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+              className={inputClass}
               placeholder="Your email"
               value={submitterEmail}
               maxLength={120}
@@ -468,7 +471,7 @@ export default function SubmitToolPage() {
           </div>
 
           {logoUrl && (
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="ai-product-surface-soft mt-4 flex items-center gap-3 rounded-2xl border p-3">
               <img
                 src={logoUrl}
                 alt="Uploaded logo preview"
@@ -478,12 +481,12 @@ export default function SubmitToolPage() {
                 }}
               />
 
-              <p className="break-all text-xs text-slate-400">{logoUrl}</p>
+              <p className="ai-product-muted break-all text-xs">{logoUrl}</p>
             </div>
           )}
 
           <textarea
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
+            className={`${inputClass} mt-4 w-full`}
             placeholder="Short description *"
             value={description}
             maxLength={500}
@@ -491,7 +494,7 @@ export default function SubmitToolPage() {
             rows={5}
           />
 
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="ai-product-muted mt-3 text-xs">
             For security, only HTTPS websites are accepted. Direct download
             links and unsafe file types are blocked.
           </p>
@@ -499,7 +502,7 @@ export default function SubmitToolPage() {
           <button
             onClick={submitTool}
             disabled={isSubmitting || isUploadingLogo}
-            className="mt-6 rounded-full bg-cyan-400 px-7 py-4 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="ai-product-button-primary mt-6 px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Submitting..." : "Submit for Review"}
           </button>

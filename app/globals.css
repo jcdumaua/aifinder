@@ -730,6 +730,307 @@ h1, h2, h3 {
     0 0 140px rgba(168,85,247,0.18) !important;
 }
 
+.theme-light .ai-command-search {
+  border-color: rgba(148, 163, 184, 0.65) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+.theme-light .ai-command-search::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+.theme-light .ai-command-search:focus {
+  border-color: rgba(14, 116, 144, 0.38) !important;
+  box-shadow:
+    0 0 0 3px rgba(8, 145, 178, 0.12),
+    0 12px 28px rgba(15, 23, 42, 0.10) !important;
+}
+
+.theme-light .ai-hover:hover {
+  transform: translateY(-3px);
+  border-color: rgba(14, 116, 144, 0.18) !important;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.10) !important;
+}
+
+.theme-light .ai-result-card {
+  border-color: rgba(203, 213, 225, 0.9);
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+  backdrop-filter: none;
+}
+
+/* Upgrade 36 — Premium AI Product UI system */
+.ai-product-page {
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 30%),
+    radial-gradient(circle at 85% 12%, rgba(59, 130, 246, 0.08), transparent 28%),
+    linear-gradient(180deg, #f8fafc 0%, #ffffff 48%, #f1f5f9 100%);
+  color: #0f172a;
+}
+
+.theme-dark .ai-product-page {
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.10), transparent 30%),
+    radial-gradient(circle at 85% 12%, rgba(124, 58, 237, 0.12), transparent 28%),
+    linear-gradient(180deg, #020617 0%, #0f172a 55%, #020617 100%);
+  color: #ffffff;
+}
+
+.ai-product-surface {
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  color: #0f172a;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.theme-dark .ai-product-surface {
+  border-color: rgba(34, 211, 238, 0.20);
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(2, 6, 23, 0.88));
+  color: #ffffff;
+  box-shadow: 0 0 45px rgba(34, 211, 238, 0.12);
+  backdrop-filter: blur(22px);
+}
+
+.ai-product-surface-soft {
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f8fafc 72%, #ecfeff 100%);
+  color: #0f172a;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+}
+
+.theme-dark .ai-product-surface-soft {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+}
+
+.ai-product-hover {
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    background-color 0.24s ease;
+}
+
+.ai-product-hover:hover {
+  border-color: rgba(14, 116, 144, 0.22);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.11);
+}
+
+.theme-dark .ai-product-hover:hover {
+  border-color: rgba(103, 232, 249, 0.36);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.26);
+}
+
+.ai-product-eyebrow {
+  color: #155e75;
+}
+
+.theme-dark .ai-product-eyebrow {
+  color: #67e8f9;
+}
+
+.ai-product-heading {
+  color: #0f172a;
+}
+
+.theme-dark .ai-product-heading {
+  color: #ffffff;
+}
+
+.ai-product-body {
+  color: #334155;
+}
+
+.theme-dark .ai-product-body {
+  color: #cbd5e1;
+}
+
+.ai-product-muted {
+  color: #475569;
+}
+
+.theme-dark .ai-product-muted {
+  color: #94a3b8;
+}
+
+.ai-product-chip {
+  border: 1px solid rgba(14, 116, 144, 0.18);
+  background: rgba(236, 254, 255, 0.86);
+  color: #334155;
+}
+
+.theme-dark .ai-product-chip {
+  border-color: rgba(34, 211, 238, 0.22);
+  background: rgba(34, 211, 238, 0.10);
+  color: #bae6fd;
+}
+
+.ai-product-input {
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.ai-product-input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.ai-product-input:focus {
+  border-color: rgba(14, 116, 144, 0.38);
+  box-shadow:
+    0 0 0 3px rgba(8, 145, 178, 0.12),
+    0 12px 28px rgba(15, 23, 42, 0.10);
+}
+
+.theme-dark .ai-product-input {
+  border-color: rgba(34, 211, 238, 0.30);
+  background: rgba(2, 6, 23, 0.70);
+  color: #ffffff;
+  box-shadow: 0 0 35px rgba(34, 211, 238, 0.14);
+}
+
+.theme-dark .ai-product-input::placeholder {
+  color: rgba(186, 230, 253, 0.58);
+}
+
+.theme-dark .ai-product-input:focus {
+  border-color: rgba(103, 232, 249, 0.72);
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.14),
+    0 0 38px rgba(34, 211, 238, 0.20);
+}
+
+.ai-product-button-primary,
+.ai-product-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 800;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ai-product-button-primary {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.ai-product-button-primary:hover {
+  background: #1e293b;
+}
+
+.theme-dark .ai-product-button-primary {
+  background: #22d3ee;
+  color: #020617;
+  box-shadow: 0 0 28px rgba(34, 211, 238, 0.20);
+}
+
+.theme-dark .ai-product-button-primary:hover {
+  background: #67e8f9;
+}
+
+.ai-product-button-secondary {
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.88);
+  color: #334155;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.ai-product-button-secondary:hover {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.9);
+}
+
+.theme-dark .ai-product-button-secondary {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(2, 6, 23, 0.35);
+  color: #e2e8f0;
+}
+
+.theme-dark .ai-product-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(103, 232, 249, 0.28);
+}
+
+.tool-details-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(14, 116, 144, 0.34) rgba(226, 232, 240, 0.26);
+}
+
+.tool-details-modal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tool-details-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.22);
+  border-radius: 999px;
+}
+
+.tool-details-modal-scroll::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 145, 178, 0.42),
+      rgba(71, 85, 105, 0.30)
+    );
+  border: 2px solid rgba(248, 250, 252, 0.70);
+  border-radius: 999px;
+}
+
+.tool-details-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 145, 178, 0.56),
+      rgba(71, 85, 105, 0.42)
+    );
+}
+
+.theme-dark .tool-details-modal-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.40) rgba(15, 23, 42, 0.28);
+}
+
+.theme-dark .tool-details-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.theme-dark .tool-details-modal-scroll::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(148, 163, 184, 0.42),
+      rgba(34, 211, 238, 0.24)
+    );
+  border-color: rgba(15, 23, 42, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.14);
+}
+
+.theme-dark .tool-details-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(203, 213, 225, 0.52),
+      rgba(34, 211, 238, 0.34)
+    );
+}
+
 /* AI Dashboard modules */
 .ai-dashboard-grid {
   display: grid;

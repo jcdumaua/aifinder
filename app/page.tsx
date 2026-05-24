@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowUpRight, Check, Plus, Sparkles, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
+import { Button } from "@/components/ui/button";
 import {
   categories,
   getIcon,
@@ -103,11 +105,6 @@ const faqItems = [
   },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0 },
-};
-
 function normalizeCategory(category: string | null | undefined) {
   if (category === "Chat") return "Chatbots";
   if (category === "Image") return "Image AI";
@@ -129,6 +126,7 @@ function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {
 
 export default function Home() {
   const { isLightMode, toggleTheme } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
 
   const [databaseTools, setDatabaseTools] = useState<Tool[]>([]);
@@ -332,87 +330,77 @@ export default function Home() {
     selectedPricing !== "All" ||
     selectedPlatform !== "All";
 
-  const pageBg = isLightMode
-    ? "bg-slate-100 text-slate-950"
-    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
+  const pageBg = "ai-product-page";
 
-  const cardBg = "bg-slate-950/65 border-cyan-400/20 shadow-[0_0_45px_rgba(34,211,238,0.12)] backdrop-blur-xl";
+  const cardBg = "ai-product-surface";
 
-  const inputBg = "bg-slate-950/70 border-cyan-400/30 text-white placeholder:text-cyan-200/50 shadow-[0_0_35px_rgba(34,211,238,0.18)] backdrop-blur-xl focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/20";
+  const inputBg = "ai-product-input";
 
-  const mutedText = isLightMode ? "text-slate-600" : "ai-empty-state text-slate-400";
-  const softText = isLightMode ? "text-slate-700" : "text-slate-300";
+  const mutedText = "ai-product-muted";
+  const softText = "ai-product-body";
 
   return (
     <main
       className={`min-h-screen overflow-hidden transition-colors duration-300 ${pageBg}`}
     >
       <section className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
-        <motion.nav
-          initial="hidden"
-          animate="show"
-          variants={fadeUp}
-          transition={{ duration: 0.5 }}
-          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between ${cardBg} ai-hover`}
+        <nav
+          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${cardBg} ai-product-hover`}
         >
-          <Link href="/" className="text-lg font-black">
+          <Link href="/" className="text-lg font-black text-white [.theme-light_&]:text-slate-950">
             AiFinder
           </Link>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={toggleTheme}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
             >
               {isLightMode ? "🌙 Dark" : "☀️ Light"}
             </button>
 
             <a
               href="#categories"
-              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-200"
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-slate-200 [.theme-light_&]:bg-slate-950 [.theme-light_&]:text-white [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-800"
             >
               Explore
             </a>
 
             <a
               href="#how-it-works"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
             >
               How it works
             </a>
 
             <a
               href="#favorites"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
             >
               ⭐ Bookmarks
             </a>
 
             <Link
               href="/submit"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
             >
               Submit Tool
             </Link>
           </div>
-        </motion.nav>
+        </nav>
 
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={fadeUp}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl backdrop-blur-xl sm:p-10 ${cardBg} ai-hover`}
+        <div
+          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg} ai-product-hover`}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 [.theme-light_&]:from-cyan-50/80 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/80" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl [.theme-light_&]:bg-cyan-200/25" />
 
           <div className="relative z-10">
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
               AI Search Hero
             </p>
 
-            <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl md:text-6xl">
+            <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl md:text-6xl [.theme-light_&]:from-slate-950 [.theme-light_&]:via-cyan-900 [.theme-light_&]:to-slate-700">
               Ask AiFinder to match you with the right AI tools.
             </h1>
 
@@ -437,15 +425,15 @@ export default function Home() {
             />
 
             {recentSearches.length > 0 && (
-              <div className="mt-4 rounded-3xl ai-panel border border-white/10 bg-white/5 p-4">
+              <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="ai-nav-link text-sm font-bold text-cyan-300">
+                  <p className="ai-nav-link text-sm font-bold text-cyan-300 [.theme-light_&]:text-cyan-800">
                     Recent searches
                   </p>
 
                   <button
                     onClick={clearRecentSearches}
-                    className="text-xs text-slate-400 hover:text-cyan-300"
+                    className="text-xs font-semibold text-slate-400 transition hover:text-cyan-300 [.theme-light_&]:text-slate-600 [.theme-light_&]:hover:text-cyan-800"
                   >
                     Clear
                   </button>
@@ -456,7 +444,7 @@ export default function Home() {
                     <button
                       key={item}
                       onClick={() => applySearch(item)}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs hover:bg-white/10"
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50 [.theme-light_&]:text-slate-700 [.theme-light_&]:hover:bg-white"
                     >
                       {item}
                     </button>
@@ -469,7 +457,7 @@ export default function Home() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 <option value="All">All Categories</option>
 
@@ -483,7 +471,7 @@ export default function Home() {
               <select
                 value={selectedPricing}
                 onChange={(e) => setSelectedPricing(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {pricingOptions.map((price) => (
                   <option key={price} value={price}>
@@ -495,7 +483,7 @@ export default function Home() {
               <select
                 value={selectedPlatform}
                 onChange={(e) => setSelectedPlatform(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
               >
                 {platformOptions.map((platform) => (
                   <option key={platform} value={platform}>
@@ -508,16 +496,16 @@ export default function Home() {
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="mt-4 rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+                className="mt-4 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
               >
                 Clear filters
               </button>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {isLoadingTools && (
-          <div className={`mt-8 ai-result-card rounded-3xl border p-6 ${cardBg} transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/60 hover:shadow-[0_0_60px_rgba(34,211,238,0.25)]`}>
+          <div className={`mt-8 rounded-3xl border p-6 ${cardBg} ai-product-hover`}>
             <p className={`ai-subtitle ${mutedText}`}>Loading AI tools...</p>
           </div>
         )}
@@ -572,21 +560,16 @@ export default function Home() {
               mutedText={mutedText}
             />
 
-            <motion.section
+            <section
               id="categories"
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              transition={{ duration: 0.5 }}
               className="mt-12"
             >
               <div className="max-w-3xl">
-                <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+                <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
                   Browse by Category
                 </p>
 
-                <h2 className="mt-2 text-3xl font-black">
+                <h2 className="mt-2 text-3xl font-black text-white [.theme-light_&]:text-slate-950">
                   Explore AI tools by what you need to do
                 </h2>
 
@@ -597,25 +580,20 @@ export default function Home() {
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {categories.map((category, index) => (
+                {categories.map((category) => (
                   <motion.div
                     key={category}
-                    initial={{ opacity: 0, y: 18 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{
-                      duration: 0.4,
-                      delay: index * 0.04,
-                    }}
-                    whileHover={{ y: -8, scale: 1.02 }}
+                    whileHover={
+                      shouldReduceMotion ? undefined : { scale: 1.005 }
+                    }
                   >
                     <Link
                       href={`/category/${slugify(category)}`}
-                      className={`block h-full rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg} ai-hover`}
+                      className={`block h-full rounded-3xl border p-5 ${cardBg} ai-product-hover`}
                     >
                       <div className="text-3xl">{getIcon(category)}</div>
 
-                      <h3 className="mt-4 text-lg font-bold">{category}</h3>
+                      <h3 className="mt-4 text-lg font-bold text-white [.theme-light_&]:text-slate-950">{category}</h3>
 
                       <p className={`mt-2 text-sm ${mutedText}`}>
                         {
@@ -629,7 +607,7 @@ export default function Home() {
                   </motion.div>
                 ))}
               </div>
-            </motion.section>
+            </section>
 
             <AIOnboardingSteps />
 
@@ -698,28 +676,22 @@ function Section({
   mutedText: string;
 }) {
   return (
-    <motion.section
+    <section
       id={title.includes("Saved") ? "favorites" : undefined}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true }}
-      variants={fadeUp}
-      transition={{ duration: 0.5 }}
       className="mt-12"
     >
-      <h2 className="text-3xl font-black">{title}</h2>
+      <h2 className="text-3xl font-black text-white [.theme-light_&]:text-slate-950">{title}</h2>
 
       {tools.length === 0 ? (
-        <div className={`mt-5 ai-result-card rounded-3xl border p-6 ${mutedText} ${cardBg} ai-hover`}>
+        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg} ai-product-hover`}>
           {emptyText}
         </div>
       ) : (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool, index) => (
+          {tools.map((tool) => (
             <ToolCard
               key={tool.name}
               tool={tool}
-              index={index}
               favoriteSlugs={favoriteSlugs}
               onToggleFavorite={onToggleFavorite}
               compareSlugs={compareSlugs}
@@ -730,7 +702,7 @@ function Section({
           ))}
         </div>
       )}
-    </motion.section>
+    </section>
   );
 }
 
@@ -766,8 +738,8 @@ function SearchResultsModal({
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-md sm:py-10">
       <motion.section
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.25 }}
         className={`w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
       >
@@ -939,13 +911,13 @@ function AIEmptySearchState({
   mutedText: string;
 }) {
   return (
-    <div className={`mt-5 rounded-3xl border p-6 ${cardBg} ai-hover`}>
+    <div className={`mt-5 rounded-3xl border p-6 ${cardBg} ai-product-hover`}>
       <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
         AI Search Assistant
       </p>
 
       <h3 className="mt-3 text-2xl font-black">
-        AiFinder couldn't find a strong match yet.
+        AiFinder couldn&apos;t find a strong match yet.
       </h3>
 
       <p className={`mt-3 max-w-2xl text-sm leading-7 ${mutedText}`}>
@@ -977,12 +949,7 @@ function SeoCategorySection({
   mutedText: string;
 }) {
   return (
-    <motion.section
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true }}
-      variants={fadeUp}
-      transition={{ duration: 0.5 }}
+    <section
       className="mt-16"
     >
       <div className="max-w-3xl">
@@ -1007,7 +974,7 @@ function SeoCategorySection({
           <Link
             key={item.title}
             href={item.href}
-            className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg} ai-hover`}
+            className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}
           >
             <h3 className="text-xl font-black">{item.title}</h3>
             <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
@@ -1016,7 +983,7 @@ function SeoCategorySection({
           </Link>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }
 
@@ -1047,21 +1014,16 @@ function HowItWorksSection({
   ];
 
   return (
-    <motion.section
+    <section
       id="how-it-works"
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true }}
-      variants={fadeUp}
-      transition={{ duration: 0.5 }}
       className="mt-16"
     >
       <div className="max-w-3xl">
-        <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+        <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
           How it works
         </p>
 
-        <h2 className="mt-2 text-3xl font-black">
+        <h2 className="mt-2 text-3xl font-black text-white [.theme-light_&]:text-slate-950">
           A faster way to choose AI tools
         </h2>
 
@@ -1073,12 +1035,12 @@ function HowItWorksSection({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
-          <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-hover`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400 font-black text-slate-950">
+          <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400 font-black text-slate-950 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-900 [.theme-light_&]:ring-1 [.theme-light_&]:ring-cyan-200">
               {index + 1}
             </div>
 
-            <h3 className="mt-4 text-lg font-black">{step.title}</h3>
+            <h3 className="mt-4 text-lg font-black text-white [.theme-light_&]:text-slate-950">{step.title}</h3>
 
             <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
               {step.text}
@@ -1086,7 +1048,7 @@ function HowItWorksSection({
           </div>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }
 
@@ -1100,12 +1062,7 @@ function FaqSection({
   softText: string;
 }) {
   return (
-    <motion.section
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true }}
-      variants={fadeUp}
-      transition={{ duration: 0.5 }}
+    <section
       className="mt-16"
     >
       <div className="max-w-3xl">
@@ -1124,7 +1081,7 @@ function FaqSection({
 
       <div className="mt-6 grid gap-3 md:grid-cols-2">
         {faqItems.map((item) => (
-          <div key={item.question} className={`rounded-3xl border p-5 ${cardBg} ai-hover`}>
+          <div key={item.question} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
             <h3 className="text-lg font-black">{item.question}</h3>
 
             <p className={`mt-3 text-sm leading-7 ${softText}`}>
@@ -1133,7 +1090,7 @@ function FaqSection({
           </div>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }
 
@@ -1156,11 +1113,10 @@ function ToolList({
 }) {
   return (
     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {rankedTools.map(({ tool, score }, index) => (
+      {rankedTools.map(({ tool, score }) => (
         <ToolCard
           key={tool.name}
           tool={tool}
-          index={index}
           favoriteSlugs={favoriteSlugs}
           onToggleFavorite={onToggleFavorite}
           compareSlugs={compareSlugs}
@@ -1176,7 +1132,6 @@ function ToolList({
 
 function ToolCard({
   tool,
-  index,
   favoriteSlugs,
   onToggleFavorite,
   compareSlugs,
@@ -1186,7 +1141,6 @@ function ToolCard({
   cardBg,
 }: {
   tool: Tool;
-  index: number;
   favoriteSlugs: string[];
   onToggleFavorite: (tool: Tool) => void;
   compareSlugs: string[];
@@ -1195,7 +1149,7 @@ function ToolCard({
   matchExplanation?: string;
   cardBg: string;
 }) {
-  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const explicitSlug =
     typeof (tool as Tool & { slug?: string | null }).slug === "string"
       ? (tool as Tool & { slug?: string | null }).slug?.trim()
@@ -1203,7 +1157,7 @@ function ToolCard({
   const slug = explicitSlug || toolSlug(tool.name);
   const isFavorite = favoriteSlugs.includes(slug);
   const isCompared = compareSlugs.includes(slug);
-  const toolHref = `/tool/${slug}`;
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const badgeTone =
     badge === "Strong match"
       ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200"
@@ -1219,22 +1173,12 @@ function ToolCard({
       return;
     }
 
-    router.push(toolHref);
+    setIsModalOpen(true);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{
-        duration: 0.4,
-        delay: index * 0.05,
-      }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className="relative h-full"
-    >
-      <article
+    <div className="relative h-full">
+      <motion.article
         role="link"
         tabIndex={0}
         onClick={handleCardClick}
@@ -1244,20 +1188,33 @@ function ToolCard({
             handleCardClick();
           }
         }}
-        className={`relative isolate h-full cursor-pointer rounded-3xl border p-5 transition hover:bg-white/[0.08] ${cardBg} ai-hover`}
+        animate={
+          isModalOpen && !shouldReduceMotion
+            ? { opacity: 0.45, scale: 0.985 }
+            : { opacity: 1, scale: 1 }
+        }
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className={`group relative isolate flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 transition-[box-shadow,border-color] duration-300 hover:border-cyan-200/25 hover:bg-white/[0.045] hover:shadow-[0_18px_45px_rgba(15,23,42,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_62%,#ecfeff_100%)] [.theme-light_&]:shadow-[0_12px_30px_rgba(15,23,42,0.08)] [.theme-light_&]:backdrop-blur-none [.theme-light_&]:hover:border-cyan-900/20 [.theme-light_&]:hover:bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_70%,#f0fdfa_100%)] [.theme-light_&]:hover:shadow-[0_16px_38px_rgba(15,23,42,0.12)] sm:p-5 ${cardBg}`}
       >
-        <div className="pointer-events-none relative z-20 mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            {badge && (
-              <span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold ${badgeTone}`}>
-                {badge}
-              </span>
-            )}
-          </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/[0.045] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:hidden" />
+
+        <div className="pointer-events-none relative z-20 mb-5 flex items-start justify-between gap-3">
+          {badge ? (
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone} [.theme-light_&]:border-cyan-700/20 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800`}>
+              <Sparkles className="h-3 w-3" aria-hidden="true" />
+              {badge}
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-200 [.theme-light_&]:border-cyan-700/20 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800">
+              {tool.category}
+            </span>
+          )}
 
           <div className="pointer-events-auto relative z-40 ml-auto flex shrink-0 items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={
                 isFavorite
                   ? `Remove ${tool.name} from favorites`
@@ -1268,13 +1225,20 @@ function ToolCard({
                 event.stopPropagation();
                 onToggleFavorite(tool);
               }}
-              className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm hover:bg-white/10"
+              className={`rounded-full border border-white/10 bg-black/30 transition hover:border-yellow-300/40 hover:bg-yellow-300/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/85 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/70 [.theme-light_&]:hover:bg-amber-50 ${
+                isFavorite ? "text-yellow-300" : "text-slate-300"
+              }`}
             >
-              {isFavorite ? "★" : "☆"}
-            </button>
+              <Star
+                className={isFavorite ? "fill-current" : ""}
+                aria-hidden="true"
+              />
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               aria-label={
                 isCompared
                   ? `Remove ${tool.name} from comparison`
@@ -1285,35 +1249,89 @@ function ToolCard({
                 event.stopPropagation();
                 onToggleCompare(slug);
               }}
-              className="whitespace-nowrap rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs hover:bg-white/10"
+              className={`rounded-full border border-white/10 bg-black/30 px-3 text-xs font-bold transition hover:border-cyan-300/40 hover:bg-cyan-300/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/85 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50 ${
+                isCompared ? "text-cyan-200" : "text-slate-200"
+              }`}
             >
-              {isCompared ? "✓ Compare" : "+ Compare"}
-            </button>
+              {isCompared ? (
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Compare
+            </Button>
           </div>
         </div>
 
-        <div className="pointer-events-none relative z-20">
-          <ToolLogo tool={tool} />
+        <div className="pointer-events-none relative z-20 flex flex-1 flex-col">
+          <div className="flex items-start gap-4">
+            <ToolLogo tool={tool} isOpening={isModalOpen && !shouldReduceMotion} />
 
-          <h3 className="mt-4 font-bold">{tool.name}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="line-clamp-2 text-lg font-black leading-tight text-white [.theme-light_&]:text-slate-950">
+                {tool.name}
+              </h3>
 
-          <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
+              <p className="mt-2 inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700">
+                {tool.category}
+              </p>
+            </div>
+          </div>
 
-          <p className="mt-1 text-sm text-yellow-300">
-            ⭐ {getToolRating(tool.name)} (
-            {getReviewCount(tool.name).toLocaleString()} reviews)
+          <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-yellow-200 [.theme-light_&]:text-amber-600">
+            <Star className="h-4 w-4 fill-current" aria-hidden="true" />
+            {getToolRating(tool.name)}
+            <span className="text-slate-400 [.theme-light_&]:text-slate-600">
+              ({getReviewCount(tool.name).toLocaleString()} reviews)
+            </span>
           </p>
 
-          <p className="mt-2 text-sm text-slate-400">{tool.description}</p>
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300 [.theme-light_&]:text-slate-700">
+            {tool.description}
+          </p>
 
           {matchExplanation && (
-            <p className="mt-3 rounded-2xl border border-cyan-400/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">
+            <p className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold leading-5 text-cyan-100 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-cyan-50/80 [.theme-light_&]:text-cyan-800">
               {matchExplanation}
             </p>
           )}
+
+          <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500 [.theme-light_&]:text-slate-600">
+              Details
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition group-hover:bg-cyan-100 [.theme-light_&]:bg-slate-950 [.theme-light_&]:text-white [.theme-light_&]:shadow-[0_8px_18px_rgba(15,23,42,0.16)] [.theme-light_&]:group-hover:bg-slate-800">
+              View
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+          </div>
         </div>
-      </article>
-    </motion.div>
+      </motion.article>
+
+      <ToolDetailsModal
+        tool={{
+          name: tool.name,
+          slug,
+          category: tool.category,
+          description: tool.description,
+          website: tool.website,
+          logoUrl: getLogoUrl(tool.website),
+          pricing: tool.pricing,
+          platforms: tool.platforms,
+          rating: getToolRating(tool.name),
+          reviewCount: getReviewCount(tool.name),
+          bestFor: tool.bestFor,
+          useCases: tool.useCases,
+        }}
+        isOpen={isModalOpen}
+        isCompared={isCompared}
+        isFavorite={isFavorite}
+        onClose={() => setIsModalOpen(false)}
+        onToggleCompare={() => onToggleCompare(slug)}
+        onToggleFavorite={() => onToggleFavorite(tool)}
+      />
+    </div>
   );
 }
 
@@ -1330,7 +1348,7 @@ function CompareBar({
     <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2">
       <CompareAssistant tools={compareTools} />
 
-      <div className={`rounded-3xl border p-4 shadow-2xl backdrop-blur-xl ${cardBg} ai-hover`}>
+      <div className={`rounded-3xl border p-4 shadow-2xl ${cardBg} ai-product-hover`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="ai-nav-link text-sm font-bold text-cyan-300">
@@ -1447,14 +1465,34 @@ function Footer({
   );
 }
 
-function ToolLogo({ tool }: { tool: Tool }) {
+function ToolLogo({
+  tool,
+  isOpening = false,
+}: {
+  tool: Tool;
+  isOpening?: boolean;
+}) {
+  const [hasLogoError, setHasLogoError] = useState(false);
+  const iconFallback = getIcon(tool.category);
+
   return (
-    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
-      <img
-        src={getLogoUrl(tool.website)}
-        alt={`${tool.name} logo`}
-        className="h-8 w-8"
-      />
-    </div>
+    <motion.div
+      animate={isOpening ? { scale: 1.16 } : { scale: 1 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+      className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.22)]"
+    >
+      {hasLogoError ? (
+        <span className="text-2xl" aria-hidden="true">
+          {iconFallback}
+        </span>
+      ) : (
+        <img
+          src={getLogoUrl(tool.website)}
+          alt={`${tool.name} logo`}
+          className="h-9 w-9 object-contain"
+          onError={() => setHasLogoError(true)}
+        />
+      )}
+    </motion.div>
   );
 }

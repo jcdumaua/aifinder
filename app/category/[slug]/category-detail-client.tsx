@@ -1,7 +1,9 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 import { useTheme } from "../../theme-provider";
@@ -315,11 +317,11 @@ export default function CategoryDetailClient({
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {relatedCategories.map((relatedCategory) => (
-                <Link
-                  key={relatedCategory.slug}
-                  href={`/category/${relatedCategory.slug}`}
-                  className={`rounded-3xl border p-5 transition hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
-                >
+	                <Link
+	                  key={relatedCategory.slug}
+	                  href={`/category/${relatedCategory.slug}`}
+	                  className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
+	                >
                   <div className="text-3xl">{getIcon(relatedCategory.name)}</div>
 
                   <h3 className="mt-4 text-lg font-black">
@@ -378,16 +380,56 @@ function ToolGrid({
   softText: string;
   badge?: string;
 }) {
+  const shouldReduceMotion = useReducedMotion();
+  const [selectedTool, setSelectedTool] = useState<CategoryPageTool | null>(null);
+  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem("aifinder-favorites");
+    if (savedFavorites) {
+      setFavoriteSlugs(JSON.parse(savedFavorites));
+    }
+  }, []);
+
+  function toggleFavorite(slug: string) {
+    const newFavorites = favoriteSlugs.includes(slug)
+      ? favoriteSlugs.filter((item) => item !== slug)
+      : [...favoriteSlugs, slug];
+
+    setFavoriteSlugs(newFavorites);
+    localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
+  }
+
+  function openTool(tool: CategoryPageTool) {
+    setSelectedTool(tool);
+  }
+
   return (
     <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {tools.map((tool) => {
         const isCompared = compareSlugs.includes(tool.slug);
+        const isOpening = selectedTool?.slug === tool.slug && !shouldReduceMotion;
 
         return (
-          <article
-            key={tool.slug}
-            className={`group relative rounded-3xl border p-5 transition hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
-          >
+          <div key={tool.slug} className="relative">
+            <motion.article
+              role="link"
+              tabIndex={0}
+              onClick={() => openTool(tool)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openTool(tool);
+                }
+              }}
+              animate={
+                isOpening
+                  ? { opacity: 0.45, scale: 0.985 }
+                  : { opacity: 1, scale: 1 }
+              }
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className={`group relative cursor-pointer rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg}`}
+            >
             {badge && (
               <span className="mb-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
                 {badge}
@@ -398,14 +440,18 @@ function ToolGrid({
               <ToolLogo tool={tool} />
 
               <button
-                onClick={() => onToggleCompare(tool.slug)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onToggleCompare(tool.slug);
+                }}
                 className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs hover:bg-white/10"
               >
                 {isCompared ? "✓ Compare" : "+ Compare"}
               </button>
             </div>
 
-            <Link href={`/tool/${tool.slug}`} className="mt-4 block">
+            <div className="mt-4 block">
               <h3 className="text-lg font-black">{tool.name}</h3>
 
               <p className="mt-2 text-sm text-cyan-300">{tool.pricing}</p>
@@ -432,10 +478,48 @@ function ToolGrid({
               <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
                 View Tool →
               </span>
-            </Link>
-          </article>
+            </div>
+            </motion.article>
+          </div>
         );
       })}
+
+      <ToolDetailsModal
+        tool={
+          selectedTool
+            ? {
+                name: selectedTool.name,
+                slug: selectedTool.slug,
+                category: selectedTool.category,
+                description: selectedTool.description,
+                website: selectedTool.website,
+                logoUrl: selectedTool.logoUrl,
+                pricing: selectedTool.pricing,
+                platforms: selectedTool.platforms,
+                rating: selectedTool.rating,
+                reviewCount: selectedTool.reviewCount,
+                bestFor: selectedTool.bestFor,
+                useCases: selectedTool.useCases,
+              }
+            : null
+        }
+        isOpen={selectedTool !== null}
+        isCompared={selectedTool ? compareSlugs.includes(selectedTool.slug) : false}
+        isFavorite={
+          selectedTool ? favoriteSlugs.includes(selectedTool.slug) : false
+        }
+        onClose={() => setSelectedTool(null)}
+        onToggleCompare={() => {
+          if (selectedTool) {
+            onToggleCompare(selectedTool.slug);
+          }
+        }}
+        onToggleFavorite={() => {
+          if (selectedTool) {
+            toggleFavorite(selectedTool.slug);
+          }
+        }}
+      />
     </div>
   );
 }

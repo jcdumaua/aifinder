@@ -23,18 +23,18 @@ export function EmptyState({
   return (
     <section
       className={cn(
-        "rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-10 text-center shadow-2xl",
+        "ai-product-surface rounded-[2rem] border px-6 py-10 text-center",
         className
       )}
     >
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+      <div className="ai-product-chip mx-auto flex h-12 w-12 items-center justify-center rounded-2xl">
         <Icon className="h-6 w-6" aria-hidden="true" />
       </div>
 
-      <h2 className="mt-5 text-xl font-black text-white">{title}</h2>
+      <h2 className="ai-product-heading mt-5 text-xl font-black">{title}</h2>
 
       {description && (
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-400">
+        <p className="ai-product-muted mx-auto mt-3 max-w-md text-sm leading-6">
           {description}
         </p>
       )}

@@ -21,7 +21,7 @@ export function DashboardStatsSkeleton({
         <div
           key={index}
           aria-hidden="true"
-          className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-2xl"
+          className="ai-product-surface rounded-[2rem] border p-5"
         >
           <Skeleton className="h-3 w-24 rounded-full" />
           <Skeleton className="mt-5 h-10 w-20" />

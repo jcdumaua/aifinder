@@ -26,13 +26,13 @@ export function TableListSkeleton({
     <div
       aria-hidden="true"
       className={cn(
-        "overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]",
+        "ai-product-surface overflow-hidden rounded-[2rem] border",
         className
       )}
     >
       {showHeader && (
         <div
-          className="grid gap-4 border-b border-white/10 p-4"
+          className="grid gap-4 border-b border-white/10 p-4 [.theme-light_&]:border-slate-200"
           style={{ gridTemplateColumns: `repeat(${safeColumns}, minmax(0, 1fr))` }}
         >
           {Array.from({ length: safeColumns }).map((_, index) => (
