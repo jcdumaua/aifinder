@@ -1001,6 +1001,46 @@ h1, h2, h3 {
   border-color: rgba(103, 232, 249, 0.24);
 }
 
+.ai-modal-close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border-radius: 9999px;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.76);
+  border-color: rgba(203, 213, 225, 0.72);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
+  backdrop-filter: blur(16px);
+}
+
+.ai-modal-close-button:hover {
+  background: rgba(248, 250, 252, 0.92);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.theme-dark .ai-modal-close-button {
+  background: rgba(2, 6, 23, 0.56);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #e2e8f0;
+}
+
+.theme-dark .ai-modal-close-button:hover {
+  background: rgba(15, 23, 42, 0.78);
+}
+
+@media (min-width: 640px) {
+  .ai-modal-close-button {
+    top: 1.25rem;
+    right: 1.25rem;
+  }
+}
+
 .ai-product-section {
   margin-top: clamp(2.5rem, 6vw, 4rem);
 }

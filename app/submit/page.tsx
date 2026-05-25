@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const CATEGORIES = [
   "Chatbots",
@@ -111,6 +114,9 @@ function validateOptionalLogoUrl(value: string) {
 }
 
 export default function SubmitToolPage() {
+  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
+
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [website, setWebsite] = useState("");
@@ -123,6 +129,20 @@ export default function SubmitToolPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [popup, setPopup] = useState<PopupMessage | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
 
   function showSuccess(message: string) {
     // Future Sonner use in submit-tool flows: toast.success("Submission Received", { description: message }).
@@ -274,24 +294,62 @@ export default function SubmitToolPage() {
     }
   }
 
+  function closeSubmitPage() {
+    const navigateAway = () => {
+      if (window.history.length > 1) {
+        router.back();
+        return;
+      }
+
+      router.push("/");
+    };
+
+    if (shouldReduceMotion) {
+      navigateAway();
+      return;
+    }
+
+    setIsClosing(true);
+    window.setTimeout(navigateAway, 180);
+  }
+
   const isSuccessPopup = popup?.type === "success";
   const inputClass =
-    "ai-product-input rounded-2xl p-4 outline-none transition-[border-color,box-shadow]";
+    "ai-product-input w-full rounded-2xl px-4 py-3.5 text-sm outline-none sm:px-5 sm:py-4 sm:text-base";
+  const labelClass =
+    "ai-product-heading text-sm font-black";
+  const helperClass =
+    "ai-product-muted mt-2 text-xs leading-5";
   const optionClass = "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
 
   return (
-    <main className="ai-product-page relative min-h-screen px-6 py-16">
+    <main className="ai-product-page relative min-h-screen overflow-hidden px-4 py-8 sm:px-6 sm:py-12">
+      <div className="pointer-events-none absolute -left-32 top-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
+      <div className="pointer-events-none absolute -right-36 top-44 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl [.theme-light_&]:bg-sky-200/24" />
+      <div className="pointer-events-none relative z-0 mx-auto max-w-5xl opacity-70 blur-[0.2px]">
+        <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
+          AiFinder
+        </p>
+        <h1 className="ai-product-section-title mt-3 max-w-3xl text-4xl md:text-6xl">
+          Submit an AI tool for review
+        </h1>
+        <p className="ai-product-body mt-4 max-w-2xl text-sm leading-7 sm:text-base">
+          Share practical AI products with the directory. The submit form opens
+          as a focused review panel.
+        </p>
+      </div>
+
       {popup && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+          className="ai-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center px-4"
           role="dialog"
           aria-modal="true"
         >
           <div
-            className={`w-full max-w-md rounded-[2rem] border p-7 text-center shadow-2xl ${
+            className={`tool-details-modal-panel w-full max-w-md rounded-[2rem] border p-7 text-center ${
               isSuccessPopup
-                ? "border-green-400/30 bg-slate-950"
-                : "border-red-400/30 bg-slate-950"
+                ? "border-emerald-400/25"
+                : "border-red-400/25"
             }`}
           >
             <div
@@ -304,20 +362,20 @@ export default function SubmitToolPage() {
               {isSuccessPopup ? "✓" : "!"}
             </div>
 
-            <h2 className="mt-5 text-2xl font-black text-white">
+            <h2 className="ai-product-heading mt-5 text-2xl font-black">
               {popup.title}
             </h2>
 
-            <p className="mt-3 text-sm leading-6 text-slate-300">
+            <p className="ai-product-body mt-3 text-sm leading-6">
               {popup.message}
             </p>
 
             <button
               onClick={() => setPopup(null)}
-              className={`mt-6 rounded-full px-7 py-3 text-sm font-bold text-slate-950 ${
+              className={`mt-6 rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
                 isSuccessPopup
-                  ? "bg-green-400 hover:bg-green-300"
-                  : "bg-red-400 hover:bg-red-300"
+                  ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
+                  : "bg-red-300 text-slate-950 hover:bg-red-200"
               }`}
             >
               OK
@@ -326,188 +384,323 @@ export default function SubmitToolPage() {
         </div>
       )}
 
-      <section className="mx-auto max-w-3xl">
-        <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
-          Submit AI Tool
-        </p>
-
-        <h1 className="ai-product-heading mt-3 text-4xl font-black md:text-5xl">
-          Submit your AI tool to AiFinder
-        </h1>
-
-        <p className="ai-product-muted mt-4">
-          Send your tool for review. Approved tools will appear publicly on
-          AiFinder.
-        </p>
-
-        <div className="ai-product-surface mt-10 rounded-[2rem] border p-6">
-          <input
-            className="hidden"
-            tabIndex={-1}
-            autoComplete="off"
-            value={companyWebsite}
-            onChange={(e) => setCompanyWebsite(e.target.value)}
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <input
-              className={inputClass}
-              placeholder="Tool name *"
-              value={name}
-              maxLength={80}
-              onChange={(e) => setName(e.target.value)}
-            />
-
-            <select
-              className={inputClass}
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option className={optionClass} value="">
-                Select category *
-              </option>
-
-              {CATEGORIES.map((item) => (
-                <option className={optionClass} key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="url"
-              className={inputClass}
-              placeholder="Website URL * https://example.com"
-              value={website}
-              maxLength={500}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
-
-            <select
-              className={inputClass}
-              value={pricing}
-              onChange={(e) => setPricing(e.target.value)}
-            >
-              <option className={optionClass} value="">
-                Select pricing
-              </option>
-
-              {PRICING_OPTIONS.map((item) => (
-                <option className={optionClass} key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <div className="sm:col-span-2">
-              <div className="grid grid-cols-[1fr_76px] gap-3">
-                <input
-                  type="url"
-                  className={inputClass}
-                  placeholder="Logo image URL"
-                  value={logoUrl}
-                  maxLength={500}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                />
-
-                <label className="ai-product-button-secondary flex cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500">
-                  {isUploadingLogo ? (
-                    <span className="text-xl">…</span>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
-                      />
-                    </svg>
-                  )}
-
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-
-                      if (file) {
-                        await uploadLogoFile(file);
-                      }
-
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-
-              <p className="ai-product-muted mt-2 text-xs">
-                Add a logo URL or click the upload icon to upload a logo.
-              </p>
-            </div>
-
-            <input
-              className={inputClass}
-              placeholder="Your name"
-              value={submitterName}
-              maxLength={80}
-              onChange={(e) => setSubmitterName(e.target.value)}
-            />
-
-            <input
-              type="email"
-              className={inputClass}
-              placeholder="Your email"
-              value={submitterEmail}
-              maxLength={120}
-              onChange={(e) => setSubmitterEmail(e.target.value)}
-            />
-          </div>
-
-          {logoUrl && (
-            <div className="ai-product-surface-soft mt-4 flex items-center gap-3 rounded-2xl border p-3">
-              <img
-                src={logoUrl}
-                alt="Uploaded logo preview"
-                className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2"
-                onError={(event) => {
-                  event.currentTarget.style.display = "none";
-                }}
-              />
-
-              <p className="ai-product-muted break-all text-xs">{logoUrl}</p>
-            </div>
-          )}
-
-          <textarea
-            className={`${inputClass} mt-4 w-full`}
-            placeholder="Short description *"
-            value={description}
-            maxLength={500}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={5}
-          />
-
-          <p className="ai-product-muted mt-3 text-xs">
-            For security, only HTTPS websites are accepted. Direct download
-            links and unsafe file types are blocked.
-          </p>
-
-          <button
-            onClick={submitTool}
-            disabled={isSubmitting || isUploadingLogo}
-            className="ai-product-button-primary mt-6 px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+      <AnimatePresence>
+        {!isClosing && (
+          <motion.div
+            className="ai-modal-backdrop fixed inset-0 z-10 flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
           >
-            {isSubmitting ? "Submitting..." : "Submit for Review"}
-          </button>
-        </div>
-      </section>
+            <motion.section
+              aria-label="Submit AI tool"
+              aria-modal="true"
+              role="dialog"
+              className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:rounded-[2rem]"
+              initial={
+                shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
+              }
+              animate={{ opacity: 1, scale: 1 }}
+              exit={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, x: 42, scale: 0.98 }
+              }
+              transition={{
+                duration: shouldReduceMotion ? 0 : 0.22,
+                ease: "easeOut",
+              }}
+            >
+              <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
+
+              <button
+                type="button"
+                aria-label="Close submit tool page"
+                onClick={closeSubmitPage}
+                className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+
+              <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] overflow-y-auto overscroll-contain px-5 py-6 sm:max-h-[90vh] sm:px-8 sm:py-8">
+                <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20">
+                  <div>
+                    <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
+                      Submit AI Tool
+                    </p>
+
+                    <h1 className="ai-product-section-title mt-3 max-w-3xl text-3xl sm:text-4xl md:text-5xl">
+                      Submit your AI tool to AiFinder
+                    </h1>
+
+                    <p className="ai-product-body mt-4 max-w-2xl text-sm leading-7 sm:text-base">
+                      Send your tool for review. Approved tools will appear
+                      publicly on AiFinder.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <input
+                    className="hidden"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={companyWebsite}
+                    onChange={(e) => setCompanyWebsite(e.target.value)}
+                  />
+
+                  <div className="border-b border-white/10 pb-5 [.theme-light_&]:border-slate-200">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                      Tool details
+                    </p>
+                    <p className="ai-product-muted mt-2 text-sm leading-6">
+                      Share the public details people need to understand and
+                      evaluate the tool.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label className={labelClass} htmlFor="tool-name">
+                        Tool name{" "}
+                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                          *
+                        </span>
+                      </label>
+                      <input
+                        id="tool-name"
+                        className={`${inputClass} mt-2`}
+                        placeholder="e.g. CanvasMind"
+                        value={name}
+                        maxLength={80}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass} htmlFor="tool-category">
+                        Category{" "}
+                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                          *
+                        </span>
+                      </label>
+                      <select
+                        id="tool-category"
+                        className={`${inputClass} mt-2`}
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                      >
+                        <option className={optionClass} value="">
+                          Select category
+                        </option>
+
+                        {CATEGORIES.map((item) => (
+                          <option className={optionClass} key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={labelClass} htmlFor="tool-website">
+                        Website URL{" "}
+                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                          *
+                        </span>
+                      </label>
+                      <input
+                        id="tool-website"
+                        type="url"
+                        className={`${inputClass} mt-2`}
+                        placeholder="https://example.com"
+                        value={website}
+                        maxLength={500}
+                        onChange={(e) => setWebsite(e.target.value)}
+                      />
+                      <p className={helperClass}>
+                        Use the official HTTPS homepage.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className={labelClass} htmlFor="tool-pricing">
+                        Pricing
+                      </label>
+                      <select
+                        id="tool-pricing"
+                        className={`${inputClass} mt-2`}
+                        value={pricing}
+                        onChange={(e) => setPricing(e.target.value)}
+                      >
+                        <option className={optionClass} value="">
+                          Select pricing
+                        </option>
+
+                        {PRICING_OPTIONS.map((item) => (
+                          <option className={optionClass} key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className={labelClass} htmlFor="tool-logo">
+                        Logo
+                      </label>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_76px]">
+                        <input
+                          id="tool-logo"
+                          type="url"
+                          className={inputClass}
+                          placeholder="https://example.com/logo.png"
+                          value={logoUrl}
+                          maxLength={500}
+                          onChange={(e) => setLogoUrl(e.target.value)}
+                        />
+
+                        <label className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 [.theme-dark_&]:text-slate-300">
+                          {isUploadingLogo ? (
+                            <span className="text-xl">…</span>
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-6 w-6"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
+                              />
+                            </svg>
+                          )}
+
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={async (event) => {
+                              const file = event.target.files?.[0];
+
+                              if (file) {
+                                await uploadLogoFile(file);
+                              }
+
+                              event.target.value = "";
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <p className="ai-product-muted mt-2 text-xs">
+                        Add a logo URL or click the upload icon to upload a
+                        logo.
+                      </p>
+                    </div>
+
+                    {logoUrl && (
+                      <div className="ai-product-surface-soft flex items-center gap-3 rounded-2xl border p-3 sm:col-span-2">
+                        <img
+                          src={logoUrl}
+                          alt="Uploaded logo preview"
+                          className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2 [.theme-light_&]:border-slate-200"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+
+                        <p className="ai-product-muted break-all text-xs">
+                          {logoUrl}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="sm:col-span-2">
+                      <label className={labelClass} htmlFor="tool-description">
+                        Short description{" "}
+                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                          *
+                        </span>
+                      </label>
+                      <textarea
+                        id="tool-description"
+                        className={`${inputClass} mt-2 min-h-36 resize-y`}
+                        placeholder="Describe what the tool does, who it helps, and the core use case."
+                        value={description}
+                        maxLength={500}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={5}
+                      />
+                      <p className={helperClass}>
+                        Keep it concise. Maximum 500 characters.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                      Submitter details
+                    </p>
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className={labelClass} htmlFor="submitter-name">
+                          Your name
+                        </label>
+                        <input
+                          id="submitter-name"
+                          className={`${inputClass} mt-2`}
+                          placeholder="Optional"
+                          value={submitterName}
+                          maxLength={80}
+                          onChange={(e) => setSubmitterName(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={labelClass} htmlFor="submitter-email">
+                          Your email
+                        </label>
+                        <input
+                          id="submitter-email"
+                          type="email"
+                          className={`${inputClass} mt-2`}
+                          placeholder="Optional"
+                          value={submitterEmail}
+                          maxLength={120}
+                          onChange={(e) => setSubmitterEmail(e.target.value)}
+                        />
+                        <p className={helperClass}>
+                          Used only if we need to follow up about the
+                          submission.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="ai-product-muted mt-6 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-xs leading-5 [.theme-light_&]:bg-cyan-50/70">
+                    For security, only HTTPS websites are accepted. Direct
+                    download links and unsafe file types are blocked.
+                  </p>
+
+                  <button
+                    onClick={submitTool}
+                    disabled={isSubmitting || isUploadingLogo}
+                    className="ai-product-button-primary mt-6 w-full px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                  >
+                    {isSubmitting ? "Submitting..." : "Submit for Review"}
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

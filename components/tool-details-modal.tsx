@@ -108,11 +108,20 @@ export function ToolDetailsModal({
           >
             <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
 
+            <button
+              type="button"
+              aria-label={`Close ${tool.name} details`}
+              onClick={onClose}
+              className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+
             <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] overflow-y-auto overscroll-contain scroll-smooth sm:max-h-[90vh]">
-              <header className="relative overflow-visible border-b border-white/10 px-5 pb-5 pt-6 [.theme-light_&]:border-slate-200 sm:px-8 sm:pb-7 sm:pt-8">
+              <header className="relative overflow-visible border-b border-white/10 px-5 pb-5 pr-16 pt-6 [.theme-light_&]:border-slate-200 sm:px-8 sm:pb-7 sm:pr-20 sm:pt-8">
                 <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
 
-                <div className="relative flex items-start justify-between gap-4">
+                <div className="relative flex items-start">
                   <motion.div
                     initial={
                       shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
@@ -130,15 +139,6 @@ export function ToolDetailsModal({
                       className="h-10 w-10 object-contain sm:h-14 sm:w-14"
                     />
                   </motion.div>
-
-                  <button
-                    type="button"
-                    aria-label={`Close ${tool.name} details`}
-                    onClick={onClose}
-                    className="ai-product-button-secondary h-10 w-10 shrink-0 p-0 text-slate-100 [.theme-light_&]:text-slate-700"
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
                 </div>
 
                 <div className="relative mt-5 max-w-3xl sm:mt-6">
