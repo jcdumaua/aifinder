@@ -20,6 +20,8 @@ export type CategoryPageTool = {
   featured: boolean;
   bestFor: string;
   useCases: string[];
+  ios: string | null;
+  android: string | null;
   rating: number;
   reviewCount: number;
   createdAt: string | null;
@@ -83,20 +85,11 @@ export default function CategoryDetailClient({
   const hasActiveFilters =
     search || selectedPricing !== "All" || selectedPlatform !== "All";
 
-  const pageBg = isLightMode
-    ? "bg-slate-100 text-slate-950"
-    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
-
-  const cardBg = isLightMode
-    ? "bg-white border-slate-200"
-    : "bg-white/[0.04] border-white/10";
-
-  const inputBg = isLightMode
-    ? "bg-white border-slate-300 text-slate-950"
-    : "bg-black/20 border-white/10 text-white";
-
-  const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
-  const softText = isLightMode ? "text-slate-700" : "text-slate-300";
+  const pageBg = "ai-product-page";
+  const cardBg = "ai-product-surface";
+  const inputBg = "ai-product-input";
+  const mutedText = "ai-product-muted";
+  const softText = "ai-product-body";
 
   function resetFilters() {
     setSearch("");
@@ -110,29 +103,29 @@ export default function CategoryDetailClient({
         <nav className="flex flex-wrap gap-3">
           <Link
             href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             ← Back Home
           </Link>
 
           <Link
             href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             All Tools
           </Link>
 
           <button
             onClick={toggleTheme}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             {isLightMode ? "🌙 Dark" : "☀️ Light"}
           </button>
         </nav>
 
         <header className={`relative mt-8 overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg}`}>
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent [.theme-light_&]:from-cyan-50/70 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/70" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl [.theme-light_&]:bg-cyan-200/20" />
 
           <div className="relative z-10">
             <div className="text-5xl">{getIcon(category)}</div>
@@ -141,7 +134,7 @@ export default function CategoryDetailClient({
               AI Tools Category
             </p>
 
-            <h1 className="mt-3 max-w-5xl text-4xl font-black tracking-tight sm:text-6xl md:text-7xl">
+            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl md:text-7xl">
               {category} AI Tools
             </h1>
 
@@ -160,7 +153,7 @@ export default function CategoryDetailClient({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={`Search ${category} tools...`}
-                className={`rounded-2xl border px-5 py-4 outline-none focus:border-cyan-400 ${inputBg}`}
+                className={`rounded-2xl border px-5 py-4 outline-none ${inputBg}`}
               />
 
               <select
@@ -190,7 +183,7 @@ export default function CategoryDetailClient({
               <button
                 onClick={resetFilters}
                 disabled={!hasActiveFilters}
-                className="rounded-2xl border border-white/10 px-5 py-4 text-sm font-bold hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="ai-product-button-secondary rounded-2xl px-5 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear
               </button>
@@ -199,12 +192,12 @@ export default function CategoryDetailClient({
         </header>
 
         {featuredTools.length > 0 && !hasActiveFilters && (
-          <section className="mt-12">
+          <section className="ai-product-section">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               Featured
             </p>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="ai-product-section-title mt-2 text-3xl">
               Featured {category} tools
             </h2>
 
@@ -220,12 +213,12 @@ export default function CategoryDetailClient({
         )}
 
         {!hasActiveFilters && topRatedTools.length > 0 && (
-          <section className="mt-12">
+          <section className="ai-product-section">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               Top Rated
             </p>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="ai-product-section-title mt-2 text-3xl">
               Top rated {category} tools
             </h2>
 
@@ -240,14 +233,14 @@ export default function CategoryDetailClient({
           </section>
         )}
 
-        <section className="mt-12">
+        <section className="ai-product-section">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
                 Directory
               </p>
 
-              <h2 className="mt-2 text-3xl font-black">
+              <h2 className="ai-product-section-title mt-2 text-3xl">
                 {filteredTools.length} {category} tools
               </h2>
             </div>
@@ -277,12 +270,12 @@ export default function CategoryDetailClient({
           )}
         </section>
 
-        <section className={`mt-14 rounded-[2rem] border p-6 sm:p-8 ${cardBg}`}>
+        <section className={`ai-product-section rounded-[2rem] border p-6 sm:p-8 ${cardBg}`}>
           <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
             About this category
           </p>
 
-          <h2 className="mt-2 text-3xl font-black">
+          <h2 className="ai-product-section-title mt-2 text-3xl">
             What are {category} AI tools?
           </h2>
 
@@ -306,25 +299,25 @@ export default function CategoryDetailClient({
         </section>
 
         {relatedCategories.length > 0 && (
-          <section className="mt-14">
+          <section className="ai-product-section">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               Related Categories
             </p>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="ai-product-section-title mt-2 text-3xl">
               Explore more AI tool categories
             </h2>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {relatedCategories.map((relatedCategory) => (
-	                <Link
-	                  key={relatedCategory.slug}
-	                  href={`/category/${relatedCategory.slug}`}
-	                  className={`rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}
-	                >
+                <Link
+                  key={relatedCategory.slug}
+                  href={`/category/${relatedCategory.slug}`}
+                  className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}
+                >
                   <div className="text-3xl">{getIcon(relatedCategory.name)}</div>
 
-                  <h3 className="mt-4 text-lg font-black">
+                  <h3 className="ai-product-heading mt-4 text-lg font-black">
                     {relatedCategory.name}
                   </h3>
 
@@ -355,12 +348,12 @@ export default function CategoryDetailClient({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="ai-product-surface-soft rounded-2xl border p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
         {label}
       </p>
 
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="ai-product-heading mt-2 text-3xl font-black">{value}</p>
     </div>
   );
 }
@@ -428,57 +421,57 @@ function ToolGrid({
                   : { opacity: 1, scale: 1 }
               }
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className={`group relative cursor-pointer rounded-3xl border p-5 transition hover:border-cyan-400/40 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg}`}
+              className={`group relative cursor-pointer rounded-3xl border p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
             >
-            {badge && (
-              <span className="mb-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200">
-                {badge}
-              </span>
-            )}
+              {badge && (
+                <span className="ai-product-chip mb-3 inline-block rounded-full px-3 py-1 text-xs font-bold">
+                  {badge}
+                </span>
+              )}
 
-            <div className="flex items-start justify-between gap-3">
-              <ToolLogo tool={tool} />
+              <div className="flex items-start justify-between gap-3">
+                <ToolLogo tool={tool} />
 
-              <button
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onToggleCompare(tool.slug);
-                }}
-                className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs hover:bg-white/10"
-              >
-                {isCompared ? "✓ Compare" : "+ Compare"}
-              </button>
-            </div>
-
-            <div className="mt-4 block">
-              <h3 className="text-lg font-black">{tool.name}</h3>
-
-              <p className="mt-2 text-sm text-cyan-300">{tool.pricing}</p>
-
-              <p className="mt-1 text-sm text-yellow-300">
-                ⭐ {tool.rating} ({tool.reviewCount.toLocaleString()} reviews)
-              </p>
-
-              <p className={`mt-3 line-clamp-4 text-sm leading-6 ${softText}`}>
-                {tool.description}
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {tool.platforms.slice(0, 3).map((platform) => (
-                  <span
-                    key={platform}
-                    className="rounded-full border border-white/10 px-3 py-1 text-xs"
-                  >
-                    {platform}
-                  </span>
-                ))}
+                <button
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onToggleCompare(tool.slug);
+                  }}
+                  className="ai-product-button-secondary min-h-0 px-3 py-1 text-xs"
+                >
+                  {isCompared ? "✓ Compare" : "+ Compare"}
+                </button>
               </div>
 
-              <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
-                View Tool →
-              </span>
-            </div>
+              <div className="mt-4 block">
+                <h3 className="ai-product-heading text-lg font-black">{tool.name}</h3>
+
+                <p className="mt-2 text-sm text-cyan-300">{tool.pricing}</p>
+
+                <p className="mt-1 text-sm text-yellow-300">
+                  ⭐ {tool.rating} ({tool.reviewCount.toLocaleString()} reviews)
+                </p>
+
+                <p className={`mt-3 line-clamp-4 text-sm leading-6 ${softText}`}>
+                  {tool.description}
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {tool.platforms.slice(0, 3).map((platform) => (
+                    <span
+                      key={platform}
+                      className="ai-product-chip rounded-full px-3 py-1 text-xs"
+                    >
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+
+                <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
+                  View Tool →
+                </span>
+              </div>
             </motion.article>
           </div>
         );
@@ -500,6 +493,8 @@ function ToolGrid({
                 reviewCount: selectedTool.reviewCount,
                 bestFor: selectedTool.bestFor,
                 useCases: selectedTool.useCases,
+                ios: selectedTool.ios,
+                android: selectedTool.android,
               }
             : null
         }
@@ -546,7 +541,7 @@ function CompareBar({
               {compareTools.map((tool) => (
                 <span
                   key={tool.slug}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs"
+                  className="ai-product-chip rounded-full px-3 py-1 text-xs"
                 >
                   {tool.name}
                 </span>
@@ -557,14 +552,14 @@ function CompareBar({
           <div className="flex gap-2">
             <button
               onClick={clearCompare}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               Clear
             </button>
 
             <Link
               href="/compare"
-              className="rounded-full bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              className="ai-product-button-primary px-4 py-2 text-sm"
             >
               Compare Now
             </Link>

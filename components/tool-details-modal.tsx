@@ -18,6 +18,8 @@ export type ToolDetailsModalData = {
   reviewCount?: number | null;
   bestFor?: string | null;
   useCases?: string[] | null;
+  ios?: string | null;
+  android?: string | null;
 };
 
 type ToolDetailsModalProps = {
@@ -45,7 +47,11 @@ export function ToolDetailsModal({
     if (!isOpen) return;
 
     const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalOverscrollBehavior = document.body.style.overscrollBehavior;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "contain";
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -56,6 +62,8 @@ export function ToolDetailsModal({
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.overscrollBehavior = originalOverscrollBehavior;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -70,7 +78,7 @@ export function ToolDetailsModal({
     <AnimatePresence>
       {isOpen && tool && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-md [.theme-light_&]:bg-slate-950/30"
+          className="ai-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center px-3 py-4 sm:px-4 sm:py-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -82,7 +90,7 @@ export function ToolDetailsModal({
             aria-modal="true"
             role="dialog"
             aria-label={`${tool.name} details`}
-            className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/95 text-white shadow-[0_30px_100px_rgba(0,0,0,0.36)] outline-none [.theme-light_&]:border-cyan-900/15 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 [.theme-light_&]:shadow-[0_26px_90px_rgba(15,23,42,0.22)]"
+            className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:rounded-[2rem]"
             initial={
               shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
             }
@@ -92,88 +100,94 @@ export function ToolDetailsModal({
                 ? { opacity: 0 }
                 : { opacity: 0, x: 42, scale: 0.98 }
             }
-            transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: "easeOut" }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.22,
+              ease: "easeOut",
+            }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-br from-cyan-500/12 via-blue-500/5 to-purple-500/10 [.theme-light_&]:from-cyan-50 [.theme-light_&]:via-white [.theme-light_&]:to-slate-50" />
+            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
 
-            <div className="tool-details-modal-scroll relative z-10 max-h-[90vh] overflow-y-auto scroll-smooth">
-              <header className="relative overflow-hidden border-b border-white/10 p-5 [.theme-light_&]:border-slate-200 sm:p-8">
-                <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/15 blur-3xl [.theme-light_&]:bg-cyan-200/45" />
+            <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] overflow-y-auto overscroll-contain scroll-smooth sm:max-h-[90vh]">
+              <header className="relative overflow-visible border-b border-white/10 px-5 pb-5 pt-6 [.theme-light_&]:border-slate-200 sm:px-8 sm:pb-7 sm:pt-8">
+                <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
 
                 <div className="relative flex items-start justify-between gap-4">
-                <motion.div
-                  initial={
-                    shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
-                  }
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{
-                    duration: shouldReduceMotion ? 0 : 0.26,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.18)] sm:h-24 sm:w-24"
-                >
-                  <img
-                    src={tool.logoUrl}
-                    alt={`${tool.name} logo`}
-                    className="h-12 w-12 object-contain sm:h-14 sm:w-14"
-                  />
-                </motion.div>
-
-                <button
-                  type="button"
-                  aria-label={`Close ${tool.name} details`}
-                  onClick={onClose}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-slate-100 transition hover:bg-white/15 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-
-              <div className="relative mt-5 max-w-3xl">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                  {tool.category}
-                </p>
-
-                <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-                  {tool.name}
-                </h2>
-
-                <p className="mt-4 text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
-                  {tool.description}
-                </p>
-              </div>
-
-              <div className="relative mt-5 flex flex-wrap gap-2">
-                {tool.pricing && (
-                  <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-bold text-cyan-100 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800">
-                    {tool.pricing}
-                  </span>
-                )}
-
-                {hasRating && (
-                  <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 [.theme-light_&]:border-amber-200 [.theme-light_&]:bg-amber-50 [.theme-light_&]:text-amber-700">
-                    {tool.rating} / 5
-                    {hasReviewCount
-                      ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
-                      : ""}
-                  </span>
-                )}
-
-                {platforms.map((platform) => (
-                  <span
-                    key={platform}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700"
+                  <motion.div
+                    initial={
+                      shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
+                    }
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                      duration: shouldReduceMotion ? 0 : 0.26,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.16)] sm:h-24 sm:w-24 sm:rounded-[1.5rem] sm:p-4"
                   >
-                    {platform}
-                  </span>
-                ))}
-              </div>
+                    <img
+                      src={tool.logoUrl}
+                      alt={`${tool.name} logo`}
+                      className="h-10 w-10 object-contain sm:h-14 sm:w-14"
+                    />
+                  </motion.div>
+
+                  <button
+                    type="button"
+                    aria-label={`Close ${tool.name} details`}
+                    onClick={onClose}
+                    className="ai-product-button-secondary h-10 w-10 shrink-0 p-0 text-slate-100 [.theme-light_&]:text-slate-700"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div className="relative mt-5 max-w-3xl sm:mt-6">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                    {tool.category}
+                  </p>
+
+                  <h2 className="ai-product-section-title mt-2 text-3xl sm:text-4xl">
+                    {tool.name}
+                  </h2>
+
+                  <p className="mt-4 text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
+                    {tool.description}
+                  </p>
+                </div>
+
+                <div className="relative mt-5 flex flex-wrap gap-2.5">
+                  {tool.pricing && (
+                    <span className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-bold">
+                      {tool.pricing}
+                    </span>
+                  )}
+
+                  {hasRating && (
+                    <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
+                      {tool.rating} / 5
+                      {hasReviewCount
+                        ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
+                        : ""}
+                    </span>
+                  )}
+
+                  {platforms.map((platform) => (
+                    <span
+                      key={platform}
+                      className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {platform}
+                    </span>
+                  ))}
+                </div>
               </header>
 
-              <div className="p-5 sm:p-8">
+              <div className="px-5 py-6 sm:px-8 sm:py-8">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <DetailPanel label="Pricing" value={tool.pricing || "Not listed"} />
+                  <DetailPanel
+                    label="Pricing"
+                    value={tool.pricing || "Not listed"}
+                  />
                   <DetailPanel
                     label="Rating"
                     value={
@@ -192,17 +206,41 @@ export function ToolDetailsModal({
                   />
                 </div>
 
+                <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                  <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                    About {tool.name}
+                  </h3>
+
+                  <div className="mt-4 max-w-3xl space-y-4 text-sm leading-7 text-slate-300 [.theme-light_&]:text-slate-700">
+                    <p>
+                      {tool.name} is listed on AiFinder as a{" "}
+                      {tool.category.toLowerCase()} tool for people comparing
+                      practical AI software by pricing, platform, ratings, and
+                      common use cases.
+                    </p>
+
+                    <p>{tool.description}</p>
+
+                    <p>
+                      This tool is especially relevant for{" "}
+                      {tool.bestFor || tool.category}. You can save it, compare
+                      it with other AI tools, open its official website, or
+                      continue to the full details page.
+                    </p>
+                  </div>
+                </section>
+
                 {platforms.length > 0 && (
-                  <section className="mt-6 rounded-3xl border border-white/10 bg-white/[0.04] p-5 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50">
+                  <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
                     <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Platforms
                     </h3>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2.5">
                       {platforms.map((platform) => (
                         <span
                           key={platform}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700"
+                          className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-semibold"
                         >
                           {platform}
                         </span>
@@ -212,16 +250,16 @@ export function ToolDetailsModal({
                 )}
 
                 {useCases.length > 0 && (
-                  <section className="mt-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50">
+                  <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
                     <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Features & Use Cases
                     </h3>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2.5">
                       {useCases.map((useCase) => (
                         <span
                           key={useCase}
-                          className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-bold text-cyan-100 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800"
+                          className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-bold"
                         >
                           {useCase}
                         </span>
@@ -230,56 +268,90 @@ export function ToolDetailsModal({
                   </section>
                 )}
 
-                <section className="mt-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50">
+                <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
                   <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                    Full Description
+                    Availability
                   </h3>
 
-                  <p className="mt-4 text-sm leading-7 text-slate-300 [.theme-light_&]:text-slate-700">
-                    {tool.description}
-                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <DetailPanel label="Website" value="Official site" />
+                    <DetailPanel
+                      label="iOS"
+                      value={tool.ios ? "Available" : "Not listed"}
+                    />
+                    <DetailPanel
+                      label="Android"
+                      value={tool.android ? "Available" : "Not listed"}
+                    />
+                  </div>
                 </section>
 
-              <div className="mt-7 grid gap-3 sm:grid-cols-4">
-                <a
-                  href={tool.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_14px_32px_rgba(15,23,42,0.2)] transition hover:bg-cyan-100 [.theme-light_&]:bg-slate-950 [.theme-light_&]:text-white [.theme-light_&]:hover:bg-slate-800 sm:col-span-1"
-                >
-                  Visit Website
-                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                </a>
+                <div className="mt-8 grid gap-3 sm:grid-cols-4">
+                  <a
+                    href={tool.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ai-product-button-primary gap-2 px-5 py-3 text-sm sm:col-span-1"
+                  >
+                    Visit Website
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </a>
 
-                <button
-                  type="button"
-                  onClick={onToggleCompare}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/15 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
-                >
-                  <GitCompare className="h-4 w-4" aria-hidden="true" />
-                  {isCompared ? "In Compare" : "Compare"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={onToggleCompare}
+                    className="ai-product-button-secondary gap-2 px-5 py-3 text-sm"
+                  >
+                    <GitCompare className="h-4 w-4" aria-hidden="true" />
+                    {isCompared ? "In Compare" : "Compare"}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={onToggleFavorite}
-                  disabled={!onToggleFavorite}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
-                >
-                  <Star
-                    className={isFavorite ? "h-4 w-4 fill-current text-amber-300 [.theme-light_&]:text-amber-500" : "h-4 w-4"}
-                    aria-hidden="true"
-                  />
-                  {isFavorite ? "Saved" : "Save"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={onToggleFavorite}
+                    disabled={!onToggleFavorite}
+                    className="ai-product-button-secondary gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Star
+                      className={
+                        isFavorite
+                          ? "h-4 w-4 fill-current text-amber-300 [.theme-light_&]:text-amber-500"
+                          : "h-4 w-4"
+                      }
+                      aria-hidden="true"
+                    />
+                    {isFavorite ? "Saved" : "Save"}
+                  </button>
 
-                <Link
-                  href={`/tool/${tool.slug}`}
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
-                >
-                  Full Details
-                </Link>
-              </div>
+                  {tool.ios && (
+                    <a
+                      href={tool.ios}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ai-product-button-secondary px-5 py-3 text-sm"
+                    >
+                      iOS App
+                    </a>
+                  )}
+
+                  {tool.android && (
+                    <a
+                      href={tool.android}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ai-product-button-secondary px-5 py-3 text-sm"
+                    >
+                      Android App
+                    </a>
+                  )}
+
+                  <Link
+                    href={`/tool/${tool.slug}`}
+                    className="ai-product-button-secondary px-5 py-3 text-sm"
+                  >
+                    Full Details
+                  </Link>
+                </div>
               </div>
             </div>
           </motion.section>
@@ -297,12 +369,12 @@ function DetailPanel({
   value: string;
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50">
+    <section className="ai-product-surface-soft rounded-2xl border p-4 sm:p-5">
       <h3 className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
         {label}
       </h3>
 
-      <p className="mt-3 text-base font-black leading-6 text-white [.theme-light_&]:text-slate-950">
+      <p className="ai-product-heading mt-3 text-base font-black leading-6">
         {value}
       </p>
     </section>

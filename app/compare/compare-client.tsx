@@ -65,20 +65,11 @@ export default function CompareClient({ tools }: CompareClientProps) {
       .slice(0, 12);
   }, [tools, compareSlugs, search]);
 
-  const pageBg = isLightMode
-    ? "bg-slate-100 text-slate-950"
-    : "bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white";
-
-  const cardBg = isLightMode
-    ? "bg-white border-slate-200"
-    : "bg-white/[0.04] border-white/10";
-
-  const inputBg = isLightMode
-    ? "bg-white border-slate-300 text-slate-950 placeholder:text-slate-400"
-    : "bg-black/20 border-white/10 text-white placeholder:text-slate-500";
-
-  const mutedText = isLightMode ? "text-slate-600" : "text-slate-400";
-  const softText = isLightMode ? "text-slate-700" : "text-slate-300";
+  const pageBg = "ai-product-page";
+  const cardBg = "ai-product-surface";
+  const inputBg = "ai-product-input";
+  const mutedText = "ai-product-muted";
+  const softText = "ai-product-body";
 
   return (
     <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
@@ -86,36 +77,36 @@ export default function CompareClient({ tools }: CompareClientProps) {
         <nav className="flex flex-wrap gap-3">
           <Link
             href="/"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             ← Back Home
           </Link>
 
           <Link
             href="/submit"
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             Submit Tool
           </Link>
 
           <button
             onClick={toggleTheme}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+            className="ai-product-button-secondary px-4 py-2 text-sm"
           >
             {isLightMode ? "🌙 Dark" : "☀️ Light"}
           </button>
         </nav>
 
         <header className={`relative mt-8 overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg}`}>
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent [.theme-light_&]:from-cyan-50/70 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/70" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl [.theme-light_&]:bg-cyan-200/20" />
 
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               AI Tool Comparison
             </p>
 
-            <h1 className="mt-3 max-w-5xl text-4xl font-black tracking-tight sm:text-6xl md:text-7xl">
+            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl md:text-7xl">
               Compare AI tools side-by-side.
             </h1>
 
@@ -140,7 +131,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
                 Selected Tools
               </p>
 
-              <h2 className="mt-2 text-3xl font-black">
+              <h2 className="ai-product-section-title mt-2 text-3xl">
                 Your comparison board
               </h2>
             </div>
@@ -148,7 +139,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
             {selectedTools.length > 0 && (
               <button
                 onClick={clearCompare}
-                className="rounded-full border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 hover:bg-red-400/20"
+                className="rounded-full border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 transition-colors duration-200 hover:bg-red-400/15 [.theme-light_&]:text-red-700"
               >
                 Clear Compare
               </button>
@@ -180,14 +171,14 @@ export default function CompareClient({ tools }: CompareClientProps) {
           )}
         </section>
 
-        <section className="mt-14">
+        <section className="ai-product-section">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
                 Add More
               </p>
 
-              <h2 className="mt-2 text-3xl font-black">
+              <h2 className="ai-product-section-title mt-2 text-3xl">
                 Add tools to compare
               </h2>
 
@@ -200,7 +191,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search tools to compare..."
-              className={`w-full rounded-2xl border px-5 py-4 outline-none focus:border-cyan-400 sm:max-w-sm ${inputBg}`}
+              className={`w-full rounded-2xl border px-5 py-4 outline-none sm:max-w-sm ${inputBg}`}
             />
           </div>
 
@@ -257,12 +248,12 @@ export default function CompareClient({ tools }: CompareClientProps) {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+    <div className="ai-product-surface-soft rounded-2xl border p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
         {label}
       </p>
 
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="ai-product-heading mt-2 text-3xl font-black">{value}</p>
     </div>
   );
 }
@@ -276,11 +267,11 @@ function EmptyCompareCard({
 }) {
   return (
     <div className={`mt-5 rounded-[2rem] border p-8 text-center ${cardBg}`}>
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-cyan-400 text-3xl">
+      <div className="ai-product-chip mx-auto flex h-16 w-16 items-center justify-center rounded-3xl text-3xl">
         ⚖️
       </div>
 
-      <h3 className="mt-5 text-2xl font-black">
+      <h3 className="ai-product-heading mt-5 text-2xl font-black">
         No tools selected yet
       </h3>
 
@@ -291,7 +282,7 @@ function EmptyCompareCard({
 
       <Link
         href="/"
-        className="mt-6 inline-flex rounded-full bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+        className="ai-product-button-primary mt-6 px-5 py-3 text-sm"
       >
         Browse All Tools
       </Link>
@@ -317,13 +308,13 @@ function SelectedToolCard({
 
         <button
           onClick={onRemove}
-          className="rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs font-bold text-red-200 hover:bg-red-400/20"
+          className="rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs font-bold text-red-200 transition-colors duration-200 hover:bg-red-400/15 [.theme-light_&]:text-red-700"
         >
           Remove
         </button>
       </div>
 
-      <h3 className="mt-4 text-xl font-black">{tool.name}</h3>
+      <h3 className="ai-product-heading mt-4 text-xl font-black">{tool.name}</h3>
 
       <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
 
@@ -338,7 +329,7 @@ function SelectedToolCard({
       <div className="mt-5 flex flex-wrap gap-2">
         <Link
           href={`/tool/${tool.slug}`}
-          className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+          className="ai-product-button-secondary px-4 py-2 text-sm"
         >
           Details
         </Link>
@@ -347,7 +338,7 @@ function SelectedToolCard({
           href={tool.website}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-full bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+          className="ai-product-button-primary px-4 py-2 text-sm"
         >
           Visit
         </a>
@@ -370,7 +361,7 @@ function ComparisonTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-left">
           <thead>
-            <tr className="border-b border-white/10 bg-black/20">
+            <tr className="border-b border-white/10 bg-slate-950/15 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50/80">
               <th className="w-48 px-5 py-4 text-sm font-black text-cyan-300">
                 Detail
               </th>
@@ -450,7 +441,7 @@ function CompareRow({
   softText: string;
 }) {
   return (
-    <tr className="border-b border-white/10 last:border-b-0">
+    <tr className="border-b border-white/10 last:border-b-0 [.theme-light_&]:border-slate-200">
       <td className="px-5 py-4 text-sm font-black text-cyan-300">
         {label}
       </td>
@@ -478,10 +469,10 @@ function AddToolCard({
   softText: string;
 }) {
   return (
-    <article className={`rounded-3xl border p-5 transition hover:-translate-y-2 hover:border-cyan-400/40 hover:bg-white/[0.08] ${cardBg}`}>
+    <article className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
       <ToolLogo tool={tool} />
 
-      <h3 className="mt-4 text-lg font-black">{tool.name}</h3>
+      <h3 className="ai-product-heading mt-4 text-lg font-black">{tool.name}</h3>
 
       <p className="mt-2 text-sm text-cyan-300">{tool.category}</p>
 
@@ -497,14 +488,14 @@ function AddToolCard({
         <button
           onClick={onAdd}
           disabled={disabled}
-          className="rounded-full bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+          className="ai-product-button-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
         >
           {disabled ? "Max 3" : "+ Compare"}
         </button>
 
         <Link
           href={`/tool/${tool.slug}`}
-          className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+          className="ai-product-button-secondary px-4 py-2 text-sm"
         >
           Details
         </Link>

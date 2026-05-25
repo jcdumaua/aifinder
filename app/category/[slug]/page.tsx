@@ -148,6 +148,8 @@ function buildToolData(row: ToolRow): CategoryPageTool | null {
     featured: Boolean(row.featured),
     bestFor: cleanText(row.best_for) || description,
     useCases: toArray(row.use_cases, [category, `${category} tools`]),
+    ios: cleanText(row.ios) || null,
+    android: cleanText(row.android) || null,
     rating: getToolRating(name),
     reviewCount: getReviewCount(name),
     createdAt: row.created_at || null,

@@ -23,7 +23,7 @@ export function EmptyState({
   return (
     <section
       className={cn(
-        "ai-product-surface rounded-[2rem] border px-6 py-10 text-center",
+        "ai-product-surface rounded-[2rem] border px-6 py-9 text-center sm:py-10",
         className
       )}
     >

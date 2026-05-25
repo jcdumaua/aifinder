@@ -345,44 +345,44 @@ export default function Home() {
     >
       <section className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
         <nav
-          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${cardBg} ai-product-hover`}
+          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${cardBg}`}
         >
-          <Link href="/" className="text-lg font-black text-white [.theme-light_&]:text-slate-950">
+          <Link href="/" className="ai-product-heading text-lg font-black">
             AiFinder
           </Link>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={toggleTheme}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               {isLightMode ? "🌙 Dark" : "☀️ Light"}
             </button>
 
             <a
               href="#categories"
-              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-slate-200 [.theme-light_&]:bg-slate-950 [.theme-light_&]:text-white [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-800"
+              className="ai-product-button-primary px-4 py-2 text-sm"
             >
               Explore
             </a>
 
             <a
               href="#how-it-works"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               How it works
             </a>
 
             <a
               href="#favorites"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               ⭐ Bookmarks
             </a>
 
             <Link
               href="/submit"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               Submit Tool
             </Link>
@@ -390,10 +390,10 @@ export default function Home() {
         </nav>
 
         <div
-          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg} ai-product-hover`}
+          className={`relative overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg}`}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 [.theme-light_&]:from-cyan-50/80 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/80" />
-          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl [.theme-light_&]:bg-cyan-200/25" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-transparent [.theme-light_&]:from-cyan-50/70 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/70" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl [.theme-light_&]:bg-cyan-200/20" />
 
           <div className="relative z-10">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
@@ -404,7 +404,7 @@ export default function Home() {
               Ask AiFinder to match you with the right AI tools.
             </h1>
 
-            <p className={`mt-4 max-w-2xl text-sm leading-7 sm:text-base ${mutedText}`}>
+            <p className={`mt-4 max-w-2xl text-sm leading-7 sm:text-base ${softText}`}>
               Describe what you need. AiFinder helps you search, filter, compare,
               and bookmark AI tools by use case.
             </p>
@@ -425,7 +425,7 @@ export default function Home() {
             />
 
             {recentSearches.length > 0 && (
-              <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <div className="ai-product-surface-soft mt-5 rounded-3xl border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="ai-nav-link text-sm font-bold text-cyan-300 [.theme-light_&]:text-cyan-800">
                     Recent searches
@@ -433,18 +433,18 @@ export default function Home() {
 
                   <button
                     onClick={clearRecentSearches}
-                    className="text-xs font-semibold text-slate-400 transition hover:text-cyan-300 [.theme-light_&]:text-slate-600 [.theme-light_&]:hover:text-cyan-800"
+                    className="text-xs font-semibold text-slate-400 transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:text-slate-600 [.theme-light_&]:hover:text-cyan-800"
                   >
                     Clear
                   </button>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2.5">
                   {recentSearches.map((item) => (
                     <button
                       key={item}
                       onClick={() => applySearch(item)}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50 [.theme-light_&]:text-slate-700 [.theme-light_&]:hover:bg-white"
+                      className="ai-product-chip rounded-full px-3 py-1 text-xs font-semibold"
                     >
                       {item}
                     </button>
@@ -453,11 +453,11 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
               >
                 <option value="All">All Categories</option>
 
@@ -471,7 +471,7 @@ export default function Home() {
               <select
                 value={selectedPricing}
                 onChange={(e) => setSelectedPricing(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
               >
                 {pricingOptions.map((price) => (
                   <option key={price} value={price}>
@@ -483,7 +483,7 @@ export default function Home() {
               <select
                 value={selectedPlatform}
                 onChange={(e) => setSelectedPlatform(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg} transition-all duration-300 focus:scale-[1.01]`}
+                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
               >
                 {platformOptions.map((platform) => (
                   <option key={platform} value={platform}>
@@ -496,7 +496,7 @@ export default function Home() {
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="mt-4 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:bg-slate-50"
+                className="ai-product-button-secondary mt-4 px-4 py-2 text-sm"
               >
                 Clear filters
               </button>
@@ -505,7 +505,7 @@ export default function Home() {
         </div>
 
         {isLoadingTools && (
-          <div className={`mt-8 rounded-3xl border p-6 ${cardBg} ai-product-hover`}>
+          <div className={`mt-8 rounded-3xl border p-6 ${cardBg}`}>
             <p className={`ai-subtitle ${mutedText}`}>Loading AI tools...</p>
           </div>
         )}
@@ -678,16 +678,16 @@ function Section({
   return (
     <section
       id={title.includes("Saved") ? "favorites" : undefined}
-      className="mt-12"
+      className="ai-product-section"
     >
-      <h2 className="text-3xl font-black text-white [.theme-light_&]:text-slate-950">{title}</h2>
+      <h2 className="ai-product-section-title text-3xl">{title}</h2>
 
       {tools.length === 0 ? (
-        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg} ai-product-hover`}>
+        <div className={`mt-5 rounded-3xl border p-6 ${mutedText} ${cardBg}`}>
           {emptyText}
         </div>
       ) : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {tools.map((tool) => (
             <ToolCard
               key={tool.name}
@@ -736,11 +736,11 @@ function SearchResultsModal({
   const aiSearchResponse = getConversationalSearchResponse(search, filteredTools.length);
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-md sm:py-10">
+    <div className="ai-modal-backdrop fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto px-4 py-6 sm:py-10">
       <motion.section
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
         className={`w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -761,24 +761,24 @@ function SearchResultsModal({
           <button
             type="button"
             onClick={onClose}
-            className="self-start rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm font-bold text-cyan-100 hover:bg-white/10"
+            className="ai-product-button-secondary self-start px-4 py-2 text-sm"
           >
             Close
           </button>
         </div>
 
         {aiSearchResponse && (
-          <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.06)]">
+          <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.05)] [.theme-light_&]:bg-cyan-50/70">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
               AiFinder Response
             </p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-slate-100">
+            <p className="ai-product-body mt-1 text-sm font-semibold leading-6">
               {aiSearchResponse}
             </p>
           </div>
         )}
 
-        <div className="mt-5 max-h-[72vh] overflow-y-auto pr-1">
+        <div className="tool-details-modal-scroll mt-5 max-h-[72vh] overflow-y-auto overscroll-contain pr-1">
           {filteredTools.length > 0 ? (
             <ToolList
               rankedTools={rankedTools}
@@ -805,7 +805,7 @@ function SearchResultsModal({
 
 function SearchThinkingOverlay({ message }: { message: string }) {
   return (
-    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-md">
+    <div className="ai-modal-backdrop fixed inset-0 z-[85] flex items-center justify-center px-4">
       <div className="ai-thinking-panel rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-6 text-center shadow-2xl">
         <div className="ai-brain-loader mx-auto">
           <svg
@@ -911,7 +911,7 @@ function AIEmptySearchState({
   mutedText: string;
 }) {
   return (
-    <div className={`mt-5 rounded-3xl border p-6 ${cardBg} ai-product-hover`}>
+    <div className={`mt-5 rounded-3xl border p-6 ${cardBg}`}>
       <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
         AI Search Assistant
       </p>
@@ -931,7 +931,7 @@ function AIEmptySearchState({
             key={suggestion}
             type="button"
             onClick={() => onSelect(suggestion)}
-            className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/20"
+            className="ai-product-chip rounded-full px-3 py-2 text-xs font-bold"
           >
             {suggestion}
           </button>
@@ -950,14 +950,14 @@ function SeoCategorySection({
 }) {
   return (
     <section
-      className="mt-16"
+      className="ai-product-section"
     >
       <div className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
           AI Tools Directory
         </p>
 
-        <h2 className="mt-2 text-3xl font-black">
+        <h2 className="ai-product-section-title mt-2 text-3xl">
           Find AI tools for every workflow
         </h2>
 
@@ -969,14 +969,14 @@ function SeoCategorySection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {seoCategoryCopy.map((item) => (
           <Link
             key={item.title}
             href={item.href}
             className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}
           >
-            <h3 className="text-xl font-black">{item.title}</h3>
+            <h3 className="ai-product-heading text-xl font-black">{item.title}</h3>
             <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
               {item.text}
             </p>
@@ -1016,14 +1016,14 @@ function HowItWorksSection({
   return (
     <section
       id="how-it-works"
-      className="mt-16"
+      className="ai-product-section"
     >
       <div className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
           How it works
         </p>
 
-        <h2 className="mt-2 text-3xl font-black text-white [.theme-light_&]:text-slate-950">
+        <h2 className="ai-product-section-title mt-2 text-3xl">
           A faster way to choose AI tools
         </h2>
 
@@ -1033,14 +1033,14 @@ function HowItWorksSection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
           <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-400 font-black text-slate-950 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-900 [.theme-light_&]:ring-1 [.theme-light_&]:ring-cyan-200">
+            <div className="ai-product-chip flex h-10 w-10 items-center justify-center rounded-2xl font-black">
               {index + 1}
             </div>
 
-            <h3 className="mt-4 text-lg font-black text-white [.theme-light_&]:text-slate-950">{step.title}</h3>
+            <h3 className="ai-product-heading mt-4 text-lg font-black">{step.title}</h3>
 
             <p className={`mt-3 text-sm leading-7 ${mutedText}`}>
               {step.text}
@@ -1063,14 +1063,14 @@ function FaqSection({
 }) {
   return (
     <section
-      className="mt-16"
+      className="ai-product-section"
     >
       <div className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
           FAQ
         </p>
 
-        <h2 className="mt-2 text-3xl font-black">
+        <h2 className="ai-product-section-title mt-2 text-3xl">
           Questions about AiFinder
         </h2>
 
@@ -1079,10 +1079,10 @@ function FaqSection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
         {faqItems.map((item) => (
           <div key={item.question} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
-            <h3 className="text-lg font-black">{item.question}</h3>
+            <h3 className="ai-product-heading text-lg font-black">{item.question}</h3>
 
             <p className={`mt-3 text-sm leading-7 ${softText}`}>
               {item.answer}
@@ -1160,10 +1160,10 @@ function ToolCard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const badgeTone =
     badge === "Strong match"
-      ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200"
+      ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200 [.theme-light_&]:text-cyan-800"
       : badge === "Good match"
-        ? "border-violet-400/25 bg-violet-400/10 text-violet-200"
-        : "border-slate-500/30 bg-slate-500/10 text-slate-200";
+        ? "border-sky-400/25 bg-sky-400/10 text-sky-200 [.theme-light_&]:text-sky-800"
+        : "border-slate-500/30 bg-slate-500/10 text-slate-200 [.theme-light_&]:text-slate-700";
 
   const handleCardClick = () => {
     if (!slug) {
@@ -1194,18 +1194,18 @@ function ToolCard({
             : { opacity: 1, scale: 1 }
         }
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className={`group relative isolate flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 transition-[box-shadow,border-color] duration-300 hover:border-cyan-200/25 hover:bg-white/[0.045] hover:shadow-[0_18px_45px_rgba(15,23,42,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_62%,#ecfeff_100%)] [.theme-light_&]:shadow-[0_12px_30px_rgba(15,23,42,0.08)] [.theme-light_&]:backdrop-blur-none [.theme-light_&]:hover:border-cyan-900/20 [.theme-light_&]:hover:bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_70%,#f0fdfa_100%)] [.theme-light_&]:hover:shadow-[0_16px_38px_rgba(15,23,42,0.12)] sm:p-5 ${cardBg}`}
+        className={`group relative isolate flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:p-5 ${cardBg} ai-product-hover`}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/[0.045] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:hidden" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
 
         <div className="pointer-events-none relative z-20 mb-5 flex items-start justify-between gap-3">
           {badge ? (
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone} [.theme-light_&]:border-cyan-700/20 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}>
               <Sparkles className="h-3 w-3" aria-hidden="true" />
               {badge}
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-200 [.theme-light_&]:border-cyan-700/20 [.theme-light_&]:bg-cyan-50 [.theme-light_&]:text-cyan-800">
+            <span className="ai-product-chip inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
               {tool.category}
             </span>
           )}
@@ -1225,7 +1225,7 @@ function ToolCard({
                 event.stopPropagation();
                 onToggleFavorite(tool);
               }}
-              className={`rounded-full border border-white/10 bg-black/30 transition hover:border-yellow-300/40 hover:bg-yellow-300/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/85 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/70 [.theme-light_&]:hover:bg-amber-50 ${
+              className={`rounded-full border border-white/10 bg-black/20 transition-colors duration-200 hover:border-yellow-300/35 hover:bg-yellow-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/60 [.theme-light_&]:hover:bg-amber-50/80 ${
                 isFavorite ? "text-yellow-300" : "text-slate-300"
               }`}
             >
@@ -1249,7 +1249,7 @@ function ToolCard({
                 event.stopPropagation();
                 onToggleCompare(slug);
               }}
-              className={`rounded-full border border-white/10 bg-black/30 px-3 text-xs font-bold transition hover:border-cyan-300/40 hover:bg-cyan-300/10 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/85 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50 ${
+              className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
                 isCompared ? "text-cyan-200" : "text-slate-200"
               }`}
             >
@@ -1268,11 +1268,11 @@ function ToolCard({
             <ToolLogo tool={tool} isOpening={isModalOpen && !shouldReduceMotion} />
 
             <div className="min-w-0 flex-1">
-              <h3 className="line-clamp-2 text-lg font-black leading-tight text-white [.theme-light_&]:text-slate-950">
+              <h3 className="ai-product-heading line-clamp-2 text-lg font-black leading-tight">
                 {tool.name}
               </h3>
 
-              <p className="mt-2 inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700">
+              <p className="ai-product-chip mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold">
                 {tool.category}
               </p>
             </div>
@@ -1301,7 +1301,7 @@ function ToolCard({
               Details
             </span>
 
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 shadow-[0_8px_20px_rgba(15,23,42,0.18)] transition group-hover:bg-cyan-100 [.theme-light_&]:bg-slate-950 [.theme-light_&]:text-white [.theme-light_&]:shadow-[0_8px_18px_rgba(15,23,42,0.16)] [.theme-light_&]:group-hover:bg-slate-800">
+            <span className="ai-product-button-primary inline-flex min-h-0 items-center gap-1.5 px-3 py-2 text-xs">
               View
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
@@ -1316,13 +1316,15 @@ function ToolCard({
           category: tool.category,
           description: tool.description,
           website: tool.website,
-          logoUrl: getLogoUrl(tool.website),
+          logoUrl: tool.logoUrl || getLogoUrl(tool.website),
           pricing: tool.pricing,
           platforms: tool.platforms,
           rating: getToolRating(tool.name),
           reviewCount: getReviewCount(tool.name),
           bestFor: tool.bestFor,
           useCases: tool.useCases,
+          ios: tool.ios,
+          android: tool.android,
         }}
         isOpen={isModalOpen}
         isCompared={isCompared}
@@ -1348,7 +1350,7 @@ function CompareBar({
     <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2">
       <CompareAssistant tools={compareTools} />
 
-      <div className={`rounded-3xl border p-4 shadow-2xl ${cardBg} ai-product-hover`}>
+      <div className={`rounded-3xl border p-4 shadow-2xl ${cardBg}`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="ai-nav-link text-sm font-bold text-cyan-300">
@@ -1359,7 +1361,7 @@ function CompareBar({
               {compareTools.map((tool) => (
                 <span
                   key={tool.name}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs"
+                  className="ai-product-chip rounded-full px-3 py-1 text-xs"
                 >
                   {tool.name}
                 </span>
@@ -1370,14 +1372,14 @@ function CompareBar({
           <div className="flex gap-2">
             <button
               onClick={clearCompare}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
+              className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               Clear
             </button>
 
             <Link
               href="/compare"
-              className="rounded-full bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+              className="ai-product-button-primary px-4 py-2 text-sm"
             >
               Compare Now
             </Link>
@@ -1408,7 +1410,7 @@ function Footer({
             generation, business, marketing, SEO, design, and AI agents.
           </p>
 
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="ai-product-muted mt-4 text-xs">
             © 2026 AiFinder. All rights reserved.
           </p>
         </div>
@@ -1417,16 +1419,16 @@ function Footer({
           <div>
             <p className="ai-nav-link text-sm font-bold text-cyan-300">Explore</p>
 
-            <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-              <a href="#categories" className="hover:text-cyan-300">
+            <div className="ai-product-muted mt-4 flex flex-col gap-3 text-sm">
+              <a href="#categories" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 Categories
               </a>
 
-              <a href="#favorites" className="hover:text-cyan-300">
+              <a href="#favorites" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 Bookmarks
               </a>
 
-              <Link href="/compare" className="hover:text-cyan-300">
+              <Link href="/compare" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 Compare
               </Link>
             </div>
@@ -1435,16 +1437,16 @@ function Footer({
           <div>
             <p className="ai-nav-link text-sm font-bold text-cyan-300">Platform</p>
 
-            <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-              <Link href="/submit" className="hover:text-cyan-300">
+            <div className="ai-product-muted mt-4 flex flex-col gap-3 text-sm">
+              <Link href="/submit" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 Submit Tool
               </Link>
 
-              <a href="#how-it-works" className="hover:text-cyan-300">
+              <a href="#how-it-works" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 How it works
               </a>
 
-              <a href="#categories" className="hover:text-cyan-300">
+              <a href="#categories" className="transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:hover:text-cyan-800">
                 AI categories
               </a>
             </div>
@@ -1453,7 +1455,7 @@ function Footer({
           <div>
             <p className="ai-nav-link text-sm font-bold text-cyan-300">Stats</p>
 
-            <div className="mt-4 space-y-3 text-sm text-slate-400">
+            <div className="ai-product-muted mt-4 space-y-3 text-sm">
               <p>{toolsCount}+ AI tools</p>
               <p>{categories.length} categories</p>
               <p>Compare up to 3 tools</p>

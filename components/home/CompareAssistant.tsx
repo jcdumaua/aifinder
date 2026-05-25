@@ -39,12 +39,12 @@ export function CompareAssistant({ tools }: CompareAssistantProps) {
   if (tools.length === 0) return null;
 
   return (
-    <section className="mb-3 max-h-[42vh] overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950/70 p-4 shadow-[0_0_34px_rgba(34,211,238,0.16)] backdrop-blur-xl">
+    <section className="ai-product-surface tool-details-modal-scroll mb-3 max-h-[42vh] overflow-y-auto rounded-3xl border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
           AI Compare Assistant
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="ai-product-muted text-xs">
           Here is my quick read on your selected tools
         </p>
       </div>
@@ -53,10 +53,10 @@ export function CompareAssistant({ tools }: CompareAssistantProps) {
         {tools.map((tool, index) => (
           <div
             key={tool.name}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"
+            className="ai-product-surface-soft rounded-2xl border p-3"
           >
-            <p className="text-sm font-bold text-white">{tool.name}</p>
-            <p className="mt-1 text-sm text-cyan-200">
+            <p className="ai-product-heading text-sm font-bold">{tool.name}</p>
+            <p className="mt-1 text-sm font-semibold text-cyan-200 [.theme-light_&]:text-cyan-800">
               {getRecommendation(tool, index)}
             </p>
           </div>
