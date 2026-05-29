@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, Plus, Sparkles, Star } from "lucide-react";
+import { ArrowUpRight, Check, Plus, Sparkles, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
@@ -738,12 +738,24 @@ function SearchResultsModal({
   return (
     <div className="ai-modal-backdrop fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto px-4 py-6 sm:py-10">
       <motion.section
+        aria-label="AI search results"
+        aria-modal="true"
+        role="dialog"
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className={`w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
+        className={`relative w-full max-w-6xl rounded-3xl border p-4 pr-14 shadow-2xl sm:p-6 sm:pr-16 ${cardBg}`}
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <button
+          type="button"
+          aria-label="Close search results"
+          onClick={onClose}
+          className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <div>
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               AI Search Results
@@ -757,14 +769,6 @@ function SearchResultsModal({
               <p className={`mt-2 text-sm ${mutedText}`}>Query: {search}</p>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="ai-product-button-secondary self-start px-4 py-2 text-sm"
-          >
-            Close
-          </button>
         </div>
 
         {aiSearchResponse && (

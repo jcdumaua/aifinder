@@ -310,7 +310,7 @@ export default function SubmitToolPage() {
     }
 
     setIsClosing(true);
-    window.setTimeout(navigateAway, 180);
+    window.setTimeout(navigateAway, 240);
   }
 
   const isSuccessPopup = popup?.type === "success";
@@ -397,7 +397,7 @@ export default function SubmitToolPage() {
               aria-label="Submit AI tool"
               aria-modal="true"
               role="dialog"
-              className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:rounded-[2rem]"
+              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem]"
               initial={
                 shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
               }
@@ -423,7 +423,7 @@ export default function SubmitToolPage() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
 
-              <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] overflow-y-auto overscroll-contain px-5 py-6 sm:max-h-[90vh] sm:px-8 sm:py-8">
+              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 py-6 sm:max-h-[90dvh] sm:px-8 sm:py-8">
                 <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20">
                   <div>
                     <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -427,7 +428,7 @@ function SlideOverPanel({
       aria-modal="true"
     >
       <div className="flex h-dvh w-full max-w-[520px] flex-col border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-4 sm:p-5">
+        <div className="relative border-b border-slate-200 p-4 pr-16 sm:p-5 sm:pr-20">
           <div>
             <p
               className={`text-xs font-bold uppercase tracking-widest ${accentClass}`}
@@ -445,11 +446,12 @@ function SlideOverPanel({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close panel"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            className="ai-product-button-secondary ai-modal-close-button"
           >
-            Close
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 

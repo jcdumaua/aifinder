@@ -1017,6 +1017,7 @@ h1, h2, h3 {
   border-color: rgba(203, 213, 225, 0.72);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
   backdrop-filter: blur(16px);
+  isolation: isolate;
 }
 
 .ai-modal-close-button:hover {
