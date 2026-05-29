@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { X } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -315,12 +315,15 @@ export default function SubmitToolPage() {
 
   const isSuccessPopup = popup?.type === "success";
   const inputClass =
-    "ai-product-input w-full rounded-2xl px-4 py-3.5 text-sm outline-none sm:px-5 sm:py-4 sm:text-base";
+    "ai-product-input w-full rounded-2xl px-4 py-3.5 text-sm leading-6 outline-none sm:px-5 sm:py-4 sm:text-base";
   const labelClass =
-    "ai-product-heading text-sm font-black";
+    "ai-product-heading text-sm font-black leading-5";
   const helperClass =
     "ai-product-muted mt-2 text-xs leading-5";
-  const optionClass = "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
+  const optionClass =
+    "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
+  const sectionClass =
+    "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5";
 
   return (
     <main className="ai-product-page relative min-h-screen overflow-hidden px-4 py-8 sm:px-6 sm:py-12">
@@ -441,7 +444,7 @@ export default function SubmitToolPage() {
                   </div>
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-6 space-y-5">
                   <input
                     className="hidden"
                     tabIndex={-1}
@@ -450,7 +453,7 @@ export default function SubmitToolPage() {
                     onChange={(e) => setCompanyWebsite(e.target.value)}
                   />
 
-                  <div className="border-b border-white/10 pb-5 [.theme-light_&]:border-slate-200">
+                  <section className={sectionClass}>
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Tool details
                     </p>
@@ -458,192 +461,193 @@ export default function SubmitToolPage() {
                       Share the public details people need to understand and
                       evaluate the tool.
                     </p>
-                  </div>
 
-                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                    <div>
-                      <label className={labelClass} htmlFor="tool-name">
-                        Tool name{" "}
-                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
-                          *
-                        </span>
-                      </label>
-                      <input
-                        id="tool-name"
-                        className={`${inputClass} mt-2`}
-                        placeholder="e.g. CanvasMind"
-                        value={name}
-                        maxLength={80}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <label className={labelClass} htmlFor="tool-category">
-                        Category{" "}
-                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
-                          *
-                        </span>
-                      </label>
-                      <select
-                        id="tool-category"
-                        className={`${inputClass} mt-2`}
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                      >
-                        <option className={optionClass} value="">
-                          Select category
-                        </option>
-
-                        {CATEGORIES.map((item) => (
-                          <option className={optionClass} key={item} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className={labelClass} htmlFor="tool-website">
-                        Website URL{" "}
-                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
-                          *
-                        </span>
-                      </label>
-                      <input
-                        id="tool-website"
-                        type="url"
-                        className={`${inputClass} mt-2`}
-                        placeholder="https://example.com"
-                        value={website}
-                        maxLength={500}
-                        onChange={(e) => setWebsite(e.target.value)}
-                      />
-                      <p className={helperClass}>
-                        Use the official HTTPS homepage.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className={labelClass} htmlFor="tool-pricing">
-                        Pricing
-                      </label>
-                      <select
-                        id="tool-pricing"
-                        className={`${inputClass} mt-2`}
-                        value={pricing}
-                        onChange={(e) => setPricing(e.target.value)}
-                      >
-                        <option className={optionClass} value="">
-                          Select pricing
-                        </option>
-
-                        {PRICING_OPTIONS.map((item) => (
-                          <option className={optionClass} key={item} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className={labelClass} htmlFor="tool-logo">
-                        Logo
-                      </label>
-                      <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_76px]">
-                        <input
-                          id="tool-logo"
-                          type="url"
-                          className={inputClass}
-                          placeholder="https://example.com/logo.png"
-                          value={logoUrl}
-                          maxLength={500}
-                          onChange={(e) => setLogoUrl(e.target.value)}
-                        />
-
-                        <label className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 [.theme-dark_&]:text-slate-300">
-                          {isUploadingLogo ? (
-                            <span className="text-xl">…</span>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-6 w-6"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
-                              />
-                            </svg>
-                          )}
-
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            className="hidden"
-                            onChange={async (event) => {
-                              const file = event.target.files?.[0];
-
-                              if (file) {
-                                await uploadLogoFile(file);
-                              }
-
-                              event.target.value = "";
-                            }}
-                          />
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <label className={labelClass} htmlFor="tool-name">
+                          Tool name{" "}
+                          <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                            *
+                          </span>
                         </label>
+                        <input
+                          id="tool-name"
+                          className={`${inputClass} mt-2`}
+                          placeholder="e.g. CanvasMind"
+                          value={name}
+                          maxLength={80}
+                          onChange={(e) => setName(e.target.value)}
+                        />
                       </div>
 
-                      <p className="ai-product-muted mt-2 text-xs">
-                        Add a logo URL or click the upload icon to upload a
-                        logo.
-                      </p>
-                    </div>
+                      <div>
+                        <label className={labelClass} htmlFor="tool-category">
+                          Category{" "}
+                          <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                            *
+                          </span>
+                        </label>
+                        <select
+                          id="tool-category"
+                          className={`${inputClass} mt-2`}
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                        >
+                          <option className={optionClass} value="">
+                            Select category
+                          </option>
 
-                    {logoUrl && (
-                      <div className="ai-product-surface-soft flex items-center gap-3 rounded-2xl border p-3 sm:col-span-2">
-                        <img
-                          src={logoUrl}
-                          alt="Uploaded logo preview"
-                          className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2 [.theme-light_&]:border-slate-200"
-                          onError={(event) => {
-                            event.currentTarget.style.display = "none";
-                          }}
+                          {CATEGORIES.map((item) => (
+                            <option
+                              className={optionClass}
+                              key={item}
+                              value={item}
+                            >
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={labelClass} htmlFor="tool-website">
+                          Website URL{" "}
+                          <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                            *
+                          </span>
+                        </label>
+                        <input
+                          id="tool-website"
+                          type="url"
+                          className={`${inputClass} mt-2`}
+                          placeholder="https://example.com"
+                          value={website}
+                          maxLength={500}
+                          onChange={(e) => setWebsite(e.target.value)}
                         />
-
-                        <p className="ai-product-muted break-all text-xs">
-                          {logoUrl}
+                        <p className={helperClass}>
+                          Use the official HTTPS homepage.
                         </p>
                       </div>
-                    )}
 
-                    <div className="sm:col-span-2">
-                      <label className={labelClass} htmlFor="tool-description">
-                        Short description{" "}
-                        <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
-                          *
-                        </span>
-                      </label>
-                      <textarea
-                        id="tool-description"
-                        className={`${inputClass} mt-2 min-h-36 resize-y`}
-                        placeholder="Describe what the tool does, who it helps, and the core use case."
-                        value={description}
-                        maxLength={500}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={5}
-                      />
-                      <p className={helperClass}>
-                        Keep it concise. Maximum 500 characters.
-                      </p>
+                      <div>
+                        <label className={labelClass} htmlFor="tool-pricing">
+                          Pricing
+                        </label>
+                        <select
+                          id="tool-pricing"
+                          className={`${inputClass} mt-2`}
+                          value={pricing}
+                          onChange={(e) => setPricing(e.target.value)}
+                        >
+                          <option className={optionClass} value="">
+                            Select pricing
+                          </option>
+
+                          {PRICING_OPTIONS.map((item) => (
+                            <option
+                              className={optionClass}
+                              key={item}
+                              value={item}
+                            >
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className={labelClass} htmlFor="tool-logo">
+                          Logo
+                        </label>
+                        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem]">
+                          <input
+                            id="tool-logo"
+                            type="url"
+                            className={inputClass}
+                            placeholder="https://example.com/logo.png"
+                            value={logoUrl}
+                            maxLength={500}
+                            onChange={(e) => setLogoUrl(e.target.value)}
+                          />
+
+                          <label className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 [.theme-dark_&]:text-slate-300">
+                            {isUploadingLogo ? (
+                              <span className="text-xl">…</span>
+                            ) : (
+                              <UploadCloud
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
+                            )}
+
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              className="hidden"
+                              onChange={async (event) => {
+                                const file = event.target.files?.[0];
+
+                                if (file) {
+                                  await uploadLogoFile(file);
+                                }
+
+                                event.target.value = "";
+                              }}
+                            />
+                          </label>
+                        </div>
+
+                        <p className="ai-product-muted mt-2 text-xs">
+                          Add a logo URL or click the upload icon to upload a
+                          logo.
+                        </p>
+                      </div>
+
+                      {logoUrl && (
+                        <div className="ai-product-surface-soft flex items-center gap-3 rounded-2xl border p-3 sm:col-span-2">
+                          <img
+                            src={logoUrl}
+                            alt="Uploaded logo preview"
+                            className="h-14 w-14 rounded-2xl border border-white/10 bg-white object-contain p-2 [.theme-light_&]:border-slate-200"
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+
+                          <p className="ai-product-muted break-all text-xs">
+                            {logoUrl}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="sm:col-span-2">
+                        <label
+                          className={labelClass}
+                          htmlFor="tool-description"
+                        >
+                          Short description{" "}
+                          <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
+                            *
+                          </span>
+                        </label>
+                        <textarea
+                          id="tool-description"
+                          className={`${inputClass} mt-2 min-h-36 resize-y`}
+                          placeholder="Describe what the tool does, who it helps, and the core use case."
+                          value={description}
+                          maxLength={500}
+                          onChange={(e) => setDescription(e.target.value)}
+                          rows={5}
+                        />
+                        <p className={helperClass}>
+                          Keep it concise. Maximum 500 characters.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="mt-8 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                  <section className={sectionClass}>
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Submitter details
                     </p>
@@ -681,20 +685,22 @@ export default function SubmitToolPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <p className="ai-product-muted mt-6 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-xs leading-5 [.theme-light_&]:bg-cyan-50/70">
+                  <p className="ai-product-muted rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-xs leading-5 [.theme-light_&]:bg-cyan-50/70">
                     For security, only HTTPS websites are accepted. Direct
                     download links and unsafe file types are blocked.
                   </p>
 
-                  <button
-                    onClick={submitTool}
-                    disabled={isSubmitting || isUploadingLogo}
-                    className="ai-product-button-primary mt-6 w-full px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  >
-                    {isSubmitting ? "Submitting..." : "Submit for Review"}
-                  </button>
+                  <div className="sticky bottom-0 -mx-5 border-t border-white/10 bg-slate-950/[0.82] px-5 py-4 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.86] sm:-mx-8 sm:px-8">
+                    <button
+                      onClick={submitTool}
+                      disabled={isSubmitting || isUploadingLogo}
+                      className="ai-product-button-primary w-full px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    >
+                      {isSubmitting ? "Submitting..." : "Submit for Review"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.section>

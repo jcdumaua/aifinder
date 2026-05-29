@@ -309,7 +309,7 @@ export default function ToolDetailClient({
               choosing the right one.
             </p>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {similarTools.map((similarTool) => (
                 <Link
                   key={similarTool.slug}

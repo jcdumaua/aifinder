@@ -579,7 +579,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {categories.map((category) => (
                   <motion.div
                     key={category}
@@ -687,7 +687,7 @@ function Section({
           {emptyText}
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {tools.map((tool) => (
             <ToolCard
               key={tool.name}
@@ -744,7 +744,7 @@ function SearchResultsModal({
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className={`relative w-full max-w-6xl rounded-3xl border p-4 pr-14 shadow-2xl sm:p-6 sm:pr-16 ${cardBg}`}
+        className={`relative w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
       >
         <button
           type="button"
@@ -755,7 +755,7 @@ function SearchResultsModal({
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <div>
+        <div className="pr-12 sm:pr-14">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
               AI Search Results
@@ -782,7 +782,7 @@ function SearchResultsModal({
           </div>
         )}
 
-        <div className="tool-details-modal-scroll mt-5 max-h-[72vh] overflow-y-auto overscroll-contain pr-1">
+        <div className="tool-details-modal-scroll mt-5 max-h-[72vh] overflow-y-auto overscroll-contain sm:pr-1">
           {filteredTools.length > 0 ? (
             <ToolList
               rankedTools={rankedTools}
@@ -1037,7 +1037,7 @@ function HowItWorksSection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
           <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
             <div className="ai-product-chip flex h-10 w-10 items-center justify-center rounded-2xl font-black">
@@ -1116,7 +1116,7 @@ function ToolList({
   cardBg: string;
 }) {
   return (
-    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {rankedTools.map(({ tool, score }) => (
         <ToolCard
           key={tool.name}

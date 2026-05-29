@@ -308,7 +308,7 @@ export default function CategoryDetailClient({
               Explore more AI tool categories
             </h2>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {relatedCategories.map((relatedCategory) => (
                 <Link
                   key={relatedCategory.slug}
@@ -398,7 +398,7 @@ function ToolGrid({
   }
 
   return (
-    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {tools.map((tool) => {
         const isCompared = compareSlugs.includes(tool.slug);
         const isOpening = selectedTool?.slug === tool.slug && !shouldReduceMotion;
