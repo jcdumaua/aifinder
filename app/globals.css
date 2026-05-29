@@ -1089,6 +1089,49 @@ h1, h2, h3 {
     inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
+.tool-details-premium-panel {
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.985), rgba(3, 7, 18, 0.965) 62%, rgba(8, 47, 73, 0.70));
+  box-shadow:
+    0 34px 120px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(103, 232, 249, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.theme-light .tool-details-premium-panel {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.97) 64%, rgba(236, 254, 255, 0.84));
+  box-shadow:
+    0 30px 96px rgba(15, 23, 42, 0.22),
+    0 0 0 1px rgba(14, 116, 144, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.tool-details-premium-hero {
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(59, 130, 246, 0.035) 46%, rgba(2, 6, 23, 0.14)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 78%);
+}
+
+.theme-light .tool-details-premium-hero {
+  background:
+    linear-gradient(135deg, rgba(236, 254, 255, 0.88), rgba(255, 255, 255, 0.72) 48%, rgba(248, 250, 252, 0.94)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), transparent 82%);
+}
+
+.tool-details-logo-shell {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+}
+
+.theme-dark .tool-details-logo-shell {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(226, 232, 240, 0.94));
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.34),
+    0 0 34px rgba(34, 211, 238, 0.08);
+}
+
 .tool-details-modal-scroll {
   color-scheme: light dark;
   scrollbar-gutter: stable;
