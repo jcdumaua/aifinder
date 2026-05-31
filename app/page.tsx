@@ -10,6 +10,7 @@ import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
 import { Button } from "@/components/ui/button";
+import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
   categories,
   getIcon,
@@ -341,17 +342,17 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen overflow-hidden transition-colors duration-300 ${pageBg}`}
+      className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}
     >
-      <section className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+      <section className="relative mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 xl:max-w-7xl">
         <nav
-          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${cardBg}`}
+          className={`relative z-10 mb-6 flex flex-col gap-4 rounded-3xl border px-5 py-4 xl:flex-row xl:items-center xl:justify-between ${cardBg}`}
         >
           <Link href="/" className="ai-product-heading text-lg font-black">
             AiFinder
           </Link>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
             <button
               onClick={toggleTheme}
               className="ai-product-button-secondary px-4 py-2 text-sm"
@@ -400,7 +401,7 @@ export default function Home() {
               AI Search Hero
             </p>
 
-            <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl md:text-6xl [.theme-light_&]:from-slate-950 [.theme-light_&]:via-cyan-900 [.theme-light_&]:to-slate-700">
+            <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl xl:text-6xl [.theme-light_&]:from-slate-950 [.theme-light_&]:via-cyan-900 [.theme-light_&]:to-slate-700">
               Ask AiFinder to match you with the right AI tools.
             </h1>
 
@@ -453,7 +454,7 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+            <div className="mt-5 grid gap-2.5 md:grid-cols-3">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -579,7 +580,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {categories.map((category) => (
                   <motion.div
                     key={category}
@@ -687,7 +688,7 @@ function Section({
           {emptyText}
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {tools.map((tool) => (
             <ToolCard
               key={tool.name}
@@ -734,9 +735,10 @@ function SearchResultsModal({
   mutedText: string;
 }) {
   const aiSearchResponse = getConversationalSearchResponse(search, filteredTools.length);
+  useOverlayScrollLock(true);
 
   return (
-    <div className="ai-modal-backdrop fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto px-4 py-6 sm:py-10">
+    <div className="ai-modal-backdrop fixed inset-0 z-[80] flex items-center justify-center overflow-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
       <motion.section
         aria-label="AI search results"
         aria-modal="true"
@@ -744,7 +746,7 @@ function SearchResultsModal({
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className={`relative w-full max-w-6xl rounded-3xl border p-4 shadow-2xl sm:p-6 ${cardBg}`}
+        className={`relative flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border p-4 shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100vw-1.5rem)] sm:p-5 lg:p-6 2xl:max-w-7xl ${cardBg}`}
       >
         <button
           type="button"
@@ -755,34 +757,34 @@ function SearchResultsModal({
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <div className="pr-12 sm:pr-14">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">
+        <div className="min-w-0 pr-12 sm:pr-14">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
               AI Search Results
             </p>
 
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+            <h2 className="ai-product-section-title mt-2 text-2xl font-black sm:text-3xl">
               {filteredTools.length} tools found
             </h2>
 
             {search.trim() && (
-              <p className={`mt-2 text-sm ${mutedText}`}>Query: {search}</p>
+              <p className={`mt-2 break-words text-sm ${mutedText}`}>Query: {search}</p>
             )}
           </div>
         </div>
 
         {aiSearchResponse && (
-          <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.05)] [.theme-light_&]:bg-cyan-50/70">
+          <div className="mt-5 min-w-0 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.05)] [.theme-light_&]:bg-cyan-50/70">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
               AiFinder Response
             </p>
-            <p className="ai-product-body mt-1 text-sm font-semibold leading-6">
+            <p className="ai-product-body mt-1 break-words text-sm font-semibold leading-6">
               {aiSearchResponse}
             </p>
           </div>
         )}
 
-        <div className="tool-details-modal-scroll mt-5 max-h-[72vh] overflow-y-auto overscroll-contain sm:pr-1">
+        <div className="tool-details-modal-scroll min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pt-5 sm:pr-2">
           {filteredTools.length > 0 ? (
             <ToolList
               rankedTools={rankedTools}
@@ -808,6 +810,8 @@ function SearchResultsModal({
 }
 
 function SearchThinkingOverlay({ message }: { message: string }) {
+  useOverlayScrollLock(true);
+
   return (
     <div className="ai-modal-backdrop fixed inset-0 z-[85] flex items-center justify-center px-4">
       <div className="ai-thinking-panel rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-6 text-center shadow-2xl">
@@ -973,7 +977,7 @@ function SeoCategorySection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {seoCategoryCopy.map((item) => (
           <Link
             key={item.title}
@@ -1037,7 +1041,7 @@ function HowItWorksSection({
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {steps.map((step, index) => (
           <div key={step.title} className={`rounded-3xl border p-5 ${cardBg} ai-product-hover`}>
             <div className="ai-product-chip flex h-10 w-10 items-center justify-center rounded-2xl font-black">
@@ -1116,7 +1120,7 @@ function ToolList({
   cardBg: string;
 }) {
   return (
-    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {rankedTools.map(({ tool, score }) => (
         <ToolCard
           key={tool.name}
@@ -1181,7 +1185,7 @@ function ToolCard({
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full min-w-0">
       <motion.article
         role="link"
         tabIndex={0}
@@ -1198,23 +1202,23 @@ function ToolCard({
             : { opacity: 1, scale: 1 }
         }
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className={`group relative isolate flex h-full cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:p-5 ${cardBg} ai-product-hover`}
+        className={`group relative isolate flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:p-5 ${cardBg} ai-product-hover`}
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
 
-        <div className="pointer-events-none relative z-20 mb-5 flex items-start justify-between gap-3">
+        <div className="pointer-events-none relative z-20 mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
           {badge ? (
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}>
+            <span className={`inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}>
               <Sparkles className="h-3 w-3" aria-hidden="true" />
-              {badge}
+              <span className="min-w-0 truncate">{badge}</span>
             </span>
           ) : (
-            <span className="ai-product-chip inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
-              {tool.category}
+            <span className="ai-product-chip inline-flex min-w-0 max-w-full items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
+              <span className="min-w-0 truncate">{tool.category}</span>
             </span>
           )}
 
-          <div className="pointer-events-auto relative z-40 ml-auto flex shrink-0 items-center gap-2">
+          <div className="pointer-events-auto relative z-40 ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
@@ -1253,7 +1257,7 @@ function ToolCard({
                 event.stopPropagation();
                 onToggleCompare(slug);
               }}
-              className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
+              className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold whitespace-normal transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
                 isCompared ? "text-cyan-200" : "text-slate-200"
               }`}
             >
@@ -1282,10 +1286,10 @@ function ToolCard({
             </div>
           </div>
 
-          <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-yellow-200 [.theme-light_&]:text-amber-600">
+          <p className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold text-yellow-200 [.theme-light_&]:text-amber-600">
             <Star className="h-4 w-4 fill-current" aria-hidden="true" />
             {getToolRating(tool.name)}
-            <span className="text-slate-400 [.theme-light_&]:text-slate-600">
+            <span className="break-words text-slate-400 [.theme-light_&]:text-slate-600">
               ({getReviewCount(tool.name).toLocaleString()} reviews)
             </span>
           </p>
@@ -1300,12 +1304,12 @@ function ToolCard({
             </p>
           )}
 
-          <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+          <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 pt-5">
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500 [.theme-light_&]:text-slate-600">
               Details
             </span>
 
-            <span className="ai-product-button-primary inline-flex min-h-0 items-center gap-1.5 px-3 py-2 text-xs">
+            <span className="ai-product-button-primary inline-flex min-h-0 min-w-0 items-center gap-1.5 whitespace-normal px-3 py-2 text-xs">
               View
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
@@ -1403,7 +1407,7 @@ function Footer({
 }) {
   return (
     <footer className="mt-20 border-t border-white/10 py-10">
-      <div className="ai-layout-polish mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+      <div className="ai-layout-polish mx-auto flex max-w-6xl flex-col gap-8 xl:max-w-7xl xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h3 className="text-2xl font-black">AiFinder</h3>
 

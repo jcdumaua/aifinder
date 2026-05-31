@@ -72,8 +72,8 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const softText = "ai-product-body";
 
   return (
-    <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+    <main className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
           <Link
             href="/"
@@ -106,7 +106,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
               AI Tool Comparison
             </p>
 
-            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl md:text-7xl">
+            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl xl:text-7xl">
               Compare AI tools side-by-side.
             </h1>
 
@@ -150,7 +150,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
             <EmptyCompareCard cardBg={cardBg} mutedText={mutedText} />
           ) : (
             <>
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {selectedTools.map((tool) => (
                   <SelectedToolCard
                     key={tool.slug}
@@ -202,7 +202,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
               </p>
             </div>
           ) : (
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {suggestedTools.map((tool) => (
                 <AddToolCard
                   key={tool.slug}
@@ -358,16 +358,16 @@ function ComparisonTable({
 }) {
   return (
     <div className={`mt-6 overflow-hidden rounded-[2rem] border ${cardBg}`}>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+      <div className="max-w-full overflow-hidden">
+        <table className="w-full table-fixed border-collapse text-left">
           <thead>
             <tr className="border-b border-white/10 bg-slate-950/15 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-slate-50/80">
-              <th className="w-48 px-5 py-4 text-sm font-black text-cyan-300">
+              <th className="w-[28%] px-3 py-4 text-sm font-black text-cyan-300 sm:px-5 xl:w-48">
                 Detail
               </th>
 
               {selectedTools.map((tool) => (
-                <th key={tool.slug} className="px-5 py-4 text-sm font-black">
+                <th key={tool.slug} className="break-words px-3 py-4 text-sm font-black sm:px-5">
                   {tool.name}
                 </th>
               ))}
@@ -442,12 +442,12 @@ function CompareRow({
 }) {
   return (
     <tr className="border-b border-white/10 last:border-b-0 [.theme-light_&]:border-slate-200">
-      <td className="px-5 py-4 text-sm font-black text-cyan-300">
+      <td className="break-words px-3 py-4 text-sm font-black text-cyan-300 sm:px-5">
         {label}
       </td>
 
       {values.map((value, index) => (
-        <td key={`${label}-${index}`} className={`px-5 py-4 text-sm leading-6 ${softText}`}>
+        <td key={`${label}-${index}`} className={`break-words px-3 py-4 text-sm leading-6 sm:px-5 ${softText}`}>
           {value}
         </td>
       ))}

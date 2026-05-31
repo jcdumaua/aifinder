@@ -76,9 +76,9 @@ export default function ToolDetailClient({
       animate={isLeaving ? { opacity: 0, x: 48 } : { opacity: 1, x: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
       style={{ willChange: isLeaving ? "opacity, transform" : undefined }}
-      className={`min-h-screen transition-colors duration-300 ${pageBg}`}
+      className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}
     >
-      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
           <button
             type="button"
@@ -116,7 +116,7 @@ export default function ToolDetailClient({
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 [.theme-light_&]:from-cyan-50/80 [.theme-light_&]:via-transparent [.theme-light_&]:to-slate-50/80" />
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl [.theme-light_&]:bg-cyan-200/25" />
 
-            <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative z-10 flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                 <ToolLogo
                   tool={tool}
@@ -191,7 +191,7 @@ export default function ToolDetailClient({
             </div>
           </header>
 
-          <section className="grid gap-4 p-6 sm:p-10 lg:grid-cols-4">
+          <section className="grid gap-4 p-6 sm:p-10 md:grid-cols-2 xl:grid-cols-4">
             <InfoCard title="Pricing" value={tool.pricing} cardBg={cardBg} />
             <InfoCard title="Rating" value={`${tool.rating} / 5`} cardBg={cardBg} />
             <InfoCard
@@ -309,7 +309,7 @@ export default function ToolDetailClient({
               choosing the right one.
             </p>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {similarTools.map((similarTool) => (
                 <Link
                   key={similarTool.slug}

@@ -98,8 +98,8 @@ export default function CategoryDetailClient({
   }
 
   return (
-    <main className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+    <main className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
+      <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
           <Link
             href="/"
@@ -134,7 +134,7 @@ export default function CategoryDetailClient({
               AI Tools Category
             </p>
 
-            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl md:text-7xl">
+            <h1 className="ai-product-section-title mt-3 max-w-5xl text-4xl sm:text-6xl xl:text-7xl">
               {category} AI Tools
             </h1>
 
@@ -148,7 +148,7 @@ export default function CategoryDetailClient({
               <StatCard label="Compare tools" value="Up to 3" />
             </div>
 
-            <div className="mt-8 grid gap-3 lg:grid-cols-[1fr_180px_180px_auto]">
+            <div className="mt-8 grid gap-3 md:grid-cols-3 xl:grid-cols-[1fr_180px_180px_auto]">
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -308,7 +308,7 @@ export default function CategoryDetailClient({
               Explore more AI tool categories
             </h2>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {relatedCategories.map((relatedCategory) => (
                 <Link
                   key={relatedCategory.slug}
@@ -398,7 +398,7 @@ function ToolGrid({
   }
 
   return (
-    <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {tools.map((tool) => {
         const isCompared = compareSlugs.includes(tool.slug);
         const isOpening = selectedTool?.slug === tool.slug && !shouldReduceMotion;

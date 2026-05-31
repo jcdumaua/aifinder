@@ -3,7 +3,8 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 
 const CATEGORIES = [
   "Chatbots",
@@ -131,18 +132,7 @@ export default function SubmitToolPage() {
   const [popup, setPopup] = useState<PopupMessage | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, []);
+  useOverlayScrollLock(true);
 
   function showSuccess(message: string) {
     // Future Sonner use in submit-tool flows: toast.success("Submission Received", { description: message }).
@@ -326,14 +316,14 @@ export default function SubmitToolPage() {
     "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5";
 
   return (
-    <main className="ai-product-page relative min-h-screen overflow-hidden px-4 py-8 sm:px-6 sm:py-12">
+    <main className="ai-product-page relative min-h-screen overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12">
       <div className="pointer-events-none absolute -left-32 top-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
       <div className="pointer-events-none absolute -right-36 top-44 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl [.theme-light_&]:bg-sky-200/24" />
       <div className="pointer-events-none relative z-0 mx-auto max-w-5xl opacity-70 blur-[0.2px]">
         <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
           AiFinder
         </p>
-        <h1 className="ai-product-section-title mt-3 max-w-3xl text-4xl md:text-6xl">
+        <h1 className="ai-product-section-title mt-3 max-w-3xl text-4xl md:text-5xl xl:text-6xl">
           Submit an AI tool for review
         </h1>
         <p className="ai-product-body mt-4 max-w-2xl text-sm leading-7 sm:text-base">
@@ -349,12 +339,21 @@ export default function SubmitToolPage() {
           aria-modal="true"
         >
           <div
-            className={`tool-details-modal-panel w-full max-w-md rounded-[2rem] border p-7 text-center ${
+            className={`tool-details-modal-panel relative w-full max-w-md rounded-[2rem] border p-7 text-center ${
               isSuccessPopup
                 ? "border-emerald-400/25"
                 : "border-red-400/25"
             }`}
           >
+            <button
+              type="button"
+              aria-label="Close message"
+              onClick={() => setPopup(null)}
+              className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+
             <div
               className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
                 isSuccessPopup
@@ -374,6 +373,7 @@ export default function SubmitToolPage() {
             </p>
 
             <button
+              type="button"
               onClick={() => setPopup(null)}
               className={`mt-6 rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
                 isSuccessPopup
@@ -400,7 +400,7 @@ export default function SubmitToolPage() {
               aria-label="Submit AI tool"
               aria-modal="true"
               role="dialog"
-              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem]"
+              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] xl:max-w-4xl"
               initial={
                 shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
               }
@@ -433,7 +433,7 @@ export default function SubmitToolPage() {
                       Submit AI Tool
                     </p>
 
-                    <h1 className="ai-product-section-title mt-3 max-w-3xl text-3xl sm:text-4xl md:text-5xl">
+                    <h1 className="ai-product-section-title mt-3 max-w-3xl text-3xl sm:text-4xl xl:text-5xl">
                       Submit your AI tool to AiFinder
                     </h1>
 
@@ -444,7 +444,13 @@ export default function SubmitToolPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 space-y-5">
+                <form
+                  className="mt-6 space-y-5"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void submitTool();
+                  }}
+                >
                   <input
                     className="hidden"
                     tabIndex={-1}
@@ -692,16 +698,24 @@ export default function SubmitToolPage() {
                     download links and unsafe file types are blocked.
                   </p>
 
-                  <div className="sticky bottom-0 -mx-5 border-t border-white/10 bg-slate-950/[0.82] px-5 py-4 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.86] sm:-mx-8 sm:px-8">
+                  <div className="sticky bottom-0 -mx-5 grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 border-t border-white/10 bg-slate-950/[0.86] px-5 py-4 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.9] sm:-mx-8 sm:flex sm:items-center sm:justify-between sm:px-8">
                     <button
-                      onClick={submitTool}
+                      type="button"
+                      onClick={closeSubmitPage}
+                      className="ai-product-button-secondary px-4 py-3 text-sm"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
                       disabled={isSubmitting || isUploadingLogo}
-                      className="ai-product-button-primary w-full px-7 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      className="ai-product-button-primary px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:py-4"
                     >
                       {isSubmitting ? "Submitting..." : "Submit for Review"}
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
             </motion.section>
           </motion.div>

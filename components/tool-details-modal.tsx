@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ExternalLink, GitCompare, Star, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
+import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 
 export type ToolDetailsModalData = {
   name: string;
@@ -43,15 +44,10 @@ export function ToolDetailsModal({
 }: ToolDetailsModalProps) {
   const shouldReduceMotion = useReducedMotion();
 
+  useOverlayScrollLock(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    const originalHtmlOverflow = document.documentElement.style.overflow;
-    const originalOverscrollBehavior = document.body.style.overscrollBehavior;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "contain";
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -61,9 +57,6 @@ export function ToolDetailsModal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.documentElement.style.overflow = originalHtmlOverflow;
-      document.body.style.overscrollBehavior = originalOverscrollBehavior;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -78,7 +71,7 @@ export function ToolDetailsModal({
     <AnimatePresence>
       {isOpen && tool && (
         <motion.div
-          className="ai-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center px-3 py-4 sm:px-4 sm:py-6"
+          className="ai-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center overflow-hidden px-3 py-4 sm:px-4 sm:py-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -90,7 +83,7 @@ export function ToolDetailsModal({
             aria-modal="true"
             role="dialog"
             aria-label={`${tool.name} details`}
-            className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:rounded-[2rem]"
+            className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem] md:max-w-3xl xl:max-w-4xl"
             initial={
               shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
             }
@@ -117,8 +110,8 @@ export function ToolDetailsModal({
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] overflow-y-auto overscroll-contain scroll-smooth sm:max-h-[90vh]">
-              <header className="relative overflow-visible border-b border-white/10 px-5 pb-5 pr-16 pt-6 [.theme-light_&]:border-slate-200 sm:px-8 sm:pb-7 sm:pr-20 sm:pt-8">
+            <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] max-w-full overflow-x-hidden overflow-y-auto overscroll-contain sm:max-h-[90vh]">
+              <header className="relative max-w-full overflow-hidden border-b border-white/10 px-4 pb-5 pr-14 pt-6 [.theme-light_&]:border-slate-200 sm:px-6 sm:pb-7 sm:pr-16 sm:pt-8 md:px-8 xl:pr-20">
                 <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
 
                 <div className="relative flex items-start">
@@ -141,29 +134,29 @@ export function ToolDetailsModal({
                   </motion.div>
                 </div>
 
-                <div className="relative mt-5 max-w-3xl sm:mt-6">
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                <div className="relative mt-5 min-w-0 max-w-full sm:mt-6">
+                  <p className="break-words text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                     {tool.category}
                   </p>
 
-                  <h2 className="ai-product-section-title mt-2 text-3xl sm:text-4xl">
+                  <h2 className="ai-product-section-title mt-2 break-words text-3xl xl:text-4xl">
                     {tool.name}
                   </h2>
 
-                  <p className="mt-4 text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
+                  <p className="mt-4 break-words text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
                     {tool.description}
                   </p>
                 </div>
 
-                <div className="relative mt-5 flex flex-wrap gap-2.5">
+                <div className="relative mt-5 flex min-w-0 max-w-full flex-wrap gap-2.5">
                   {tool.pricing && (
-                    <span className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-bold">
+                    <span className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal">
                       {tool.pricing}
                     </span>
                   )}
 
                   {hasRating && (
-                    <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
+                    <span className="max-w-full break-words rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 whitespace-normal [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
                       {tool.rating} / 5
                       {hasReviewCount
                         ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
@@ -174,7 +167,7 @@ export function ToolDetailsModal({
                   {platforms.map((platform) => (
                     <span
                       key={platform}
-                      className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-semibold"
+                      className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
                     >
                       {platform}
                     </span>
@@ -182,8 +175,8 @@ export function ToolDetailsModal({
                 </div>
               </header>
 
-              <div className="px-5 py-6 sm:px-8 sm:py-8">
-                <div className="grid gap-4 md:grid-cols-3">
+              <div className="min-w-0 max-w-full px-4 py-6 sm:px-6 sm:py-8 md:px-8">
+                <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <DetailPanel
                     label="Pricing"
                     value={tool.pricing || "Not listed"}
@@ -211,7 +204,7 @@ export function ToolDetailsModal({
                     About {tool.name}
                   </h3>
 
-                  <div className="mt-4 max-w-3xl space-y-4 text-sm leading-7 text-slate-300 [.theme-light_&]:text-slate-700">
+                  <div className="mt-4 max-w-full space-y-4 break-words text-sm leading-7 text-slate-300 [.theme-light_&]:text-slate-700">
                     <p>
                       {tool.name} is listed on AiFinder as a{" "}
                       {tool.category.toLowerCase()} tool for people comparing
@@ -236,11 +229,11 @@ export function ToolDetailsModal({
                       Platforms
                     </h3>
 
-                    <div className="mt-4 flex flex-wrap gap-2.5">
+                    <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2.5">
                       {platforms.map((platform) => (
                         <span
                           key={platform}
-                          className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-semibold"
+                          className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
                         >
                           {platform}
                         </span>
@@ -255,11 +248,11 @@ export function ToolDetailsModal({
                       Features & Use Cases
                     </h3>
 
-                    <div className="mt-4 flex flex-wrap gap-2.5">
+                    <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2.5">
                       {useCases.map((useCase) => (
                         <span
                           key={useCase}
-                          className="ai-product-chip rounded-full px-3 py-1.5 text-xs font-bold"
+                          className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal"
                         >
                           {useCase}
                         </span>
@@ -273,7 +266,7 @@ export function ToolDetailsModal({
                     Availability
                   </h3>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <DetailPanel label="Website" value="Official site" />
                     <DetailPanel
                       label="iOS"
@@ -286,12 +279,12 @@ export function ToolDetailsModal({
                   </div>
                 </section>
 
-                <div className="mt-8 grid gap-3 sm:grid-cols-4">
+                <div className="mt-8 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <a
                     href={tool.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ai-product-button-primary gap-2 px-5 py-3 text-sm sm:col-span-1"
+                    className="ai-product-button-primary min-w-0 gap-2 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                   >
                     Visit Website
                     <ExternalLink className="h-4 w-4" aria-hidden="true" />
@@ -300,7 +293,7 @@ export function ToolDetailsModal({
                   <button
                     type="button"
                     onClick={onToggleCompare}
-                    className="ai-product-button-secondary gap-2 px-5 py-3 text-sm"
+                    className="ai-product-button-secondary min-w-0 gap-2 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                   >
                     <GitCompare className="h-4 w-4" aria-hidden="true" />
                     {isCompared ? "In Compare" : "Compare"}
@@ -310,7 +303,7 @@ export function ToolDetailsModal({
                     type="button"
                     onClick={onToggleFavorite}
                     disabled={!onToggleFavorite}
-                    className="ai-product-button-secondary gap-2 px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="ai-product-button-secondary min-w-0 gap-2 whitespace-normal px-4 py-3 text-center text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
                   >
                     <Star
                       className={
@@ -328,7 +321,7 @@ export function ToolDetailsModal({
                       href={tool.ios}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ai-product-button-secondary px-5 py-3 text-sm"
+                      className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                     >
                       iOS App
                     </a>
@@ -339,7 +332,7 @@ export function ToolDetailsModal({
                       href={tool.android}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ai-product-button-secondary px-5 py-3 text-sm"
+                      className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                     >
                       Android App
                     </a>
@@ -347,7 +340,10 @@ export function ToolDetailsModal({
 
                   <Link
                     href={`/tool/${tool.slug}`}
-                    className="ai-product-button-secondary px-5 py-3 text-sm"
+                    onClick={() => {
+                      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                    }}
+                    className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                   >
                     Full Details
                   </Link>
@@ -369,12 +365,12 @@ function DetailPanel({
   value: string;
 }) {
   return (
-    <section className="ai-product-surface-soft rounded-2xl border p-4 sm:p-5">
+    <section className="ai-product-surface-soft min-w-0 rounded-2xl border p-4 sm:p-5">
       <h3 className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
         {label}
       </h3>
 
-      <p className="ai-product-heading mt-3 text-base font-black leading-6">
+      <p className="ai-product-heading mt-3 break-words text-base font-black leading-6">
         {value}
       </p>
     </section>

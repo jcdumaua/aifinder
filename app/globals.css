@@ -5,11 +5,15 @@
 @custom-variant dark (&:is(.dark *));
 
 html {
+  max-width: 100%;
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;

@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
 import {
   discoveredToolStatusLabels,
   placeholderDiscoveredTools,
@@ -1619,18 +1620,21 @@ export default function AdminDashboardClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked]);
 
-  useEffect(() => {
-    const hasActiveSlideOver =
-      isAdminReviewModalOpen ||
-      isAddToolModalOpen ||
-      isLiveDatabaseModalOpen ||
-      isAuditLogModalOpen ||
-      Boolean(editingTool) ||
-      Boolean(editingSubmission) ||
-      Boolean(selectedNotification) ||
-      Boolean(selectedDiscoveredTool);
+  const hasActiveAdminOverlay =
+    isAdminReviewModalOpen ||
+    isAddToolModalOpen ||
+    isLiveDatabaseModalOpen ||
+    isAuditLogModalOpen ||
+    Boolean(editingTool) ||
+    Boolean(editingSubmission) ||
+    Boolean(selectedNotification) ||
+    Boolean(selectedDiscoveredTool) ||
+    Boolean(confirmDialog);
 
-    if (!hasActiveSlideOver) return;
+  useOverlayScrollLock(hasActiveAdminOverlay);
+
+  useEffect(() => {
+    if (!hasActiveAdminOverlay) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -1669,6 +1673,7 @@ export default function AdminDashboardClient({
     editingSubmission,
     selectedNotification,
     selectedDiscoveredTool,
+    hasActiveAdminOverlay,
   ]);
 
   async function addTool() {
@@ -1848,12 +1853,21 @@ export default function AdminDashboardClient({
       aria-modal="true"
     >
       <div
-        className={`w-full max-w-md rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
+        className={`relative w-full max-w-md rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
           isSuccessPopup
             ? "border-emerald-200 bg-white"
             : "border-red-200 bg-white"
         }`}
       >
+        <button
+          type="button"
+          onClick={() => setPopup(null)}
+          aria-label="Close message"
+          className="ai-product-button-secondary ai-modal-close-button"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+
         <div
           className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
             isSuccessPopup
@@ -1892,7 +1906,17 @@ export default function AdminDashboardClient({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
+      <div className="relative w-full max-w-md rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
+        <button
+          type="button"
+          onClick={() => setConfirmDialog(null)}
+          disabled={isConfirming}
+          aria-label="Close confirmation"
+          className="ai-product-button-secondary ai-modal-close-button disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+
         <div
           className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
             confirmDialog.confirmTone === "green"
@@ -1983,7 +2007,7 @@ export default function AdminDashboardClient({
               </p>
             ) : (
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="hidden grid-cols-[170px_1fr_1fr_120px] gap-4 border-b border-slate-200 bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 md:grid">
+                <div className="hidden grid-cols-[170px_1fr_1fr_120px] gap-4 border-b border-slate-200 bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-600">
                   <span>Time</span>
                   <span>Action</span>
                   <span>Target</span>
@@ -1994,7 +2018,7 @@ export default function AdminDashboardClient({
                   {auditLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="grid min-w-0 gap-2 px-4 py-4 text-sm sm:px-5 md:grid-cols-[170px_1fr_1fr_120px] md:gap-4"
+                      className="grid min-w-0 gap-2 px-4 py-4 text-sm sm:px-5"
                     >
                       <p className="text-slate-600">
                         {formatAuditDate(log.created_at)}
@@ -2044,7 +2068,7 @@ export default function AdminDashboardClient({
               </p>
             ) : (
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="hidden grid-cols-[1fr_100px_100px_210px] gap-4 border-b border-slate-200 bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 md:grid">
+                <div className="hidden grid-cols-[1fr_100px_100px_210px] gap-4 border-b border-slate-200 bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-600">
                   <span>Archive</span>
                   <span>Logs</span>
                   <span>Size</span>
@@ -2055,7 +2079,7 @@ export default function AdminDashboardClient({
                   {auditArchives.map((archive) => (
                     <div
                       key={archive.id}
-                      className="grid min-w-0 gap-3 px-4 py-4 text-sm sm:px-5 md:grid-cols-[1fr_100px_100px_210px] md:items-center md:gap-4"
+                      className="grid min-w-0 gap-3 px-4 py-4 text-sm sm:px-5"
                     >
                       <div>
                         <p className="break-all font-bold text-slate-950">
@@ -2480,7 +2504,7 @@ export default function AdminDashboardClient({
               </button>
             </div>
 
-            <div className="mt-6 grid gap-3 lg:grid-cols-3">
+            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <input
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                 placeholder="Search live tools..."
@@ -2786,7 +2810,7 @@ export default function AdminDashboardClient({
       {notificationPanel}
       {discoveryReviewPanel}
 
-      <details className="mx-auto mb-4 max-w-7xl rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/80 lg:hidden">
+      <details className="mx-auto mb-4 max-w-6xl rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/80 xl:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-1 py-1">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 text-sm font-black text-cyan-700">
@@ -2822,8 +2846,8 @@ export default function AdminDashboardClient({
         </button>
       </details>
 
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/80 lg:sticky lg:top-6 lg:block lg:h-[calc(100dvh-3rem)]">
+      <div className="mx-auto grid max-w-6xl gap-4 xl:max-w-7xl xl:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/80 xl:sticky xl:top-6 xl:block xl:h-[calc(100dvh-3rem)]">
           <div className="flex items-center gap-3 border-b border-slate-200 px-2 pb-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 text-sm font-black text-cyan-700">
               AI
@@ -2882,7 +2906,7 @@ export default function AdminDashboardClient({
 
           {view === "dashboard" && (
           <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
                   Global Admin Search
@@ -2892,7 +2916,7 @@ export default function AdminDashboardClient({
                 </h2>
               </div>
 
-              <div className="w-full lg:max-w-md">
+              <div className="w-full xl:max-w-md">
                 <input
                   value={globalAdminSearch}
                   onChange={(event) => setGlobalAdminSearch(event.target.value)}
@@ -3165,7 +3189,7 @@ export default function AdminDashboardClient({
           )}
 
           {view === "analytics" && (
-            <div className="mb-4 grid gap-4 lg:grid-cols-3">
+            <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {[
                 ["Growth Overview", "+12%", "Placeholder monthly directory growth."],
                 ["Submission Analytics", `${stats.pendingSubmissions}`, "Current pending review volume."],
@@ -3238,7 +3262,7 @@ export default function AdminDashboardClient({
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="hidden grid-cols-[1.1fr_1fr_120px_90px_82px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 lg:grid">
+                <div className="hidden grid-cols-[1.1fr_1fr_120px_90px_82px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 xl:grid">
                   <span>Candidate</span>
                   <span>Source</span>
                   <span>Status</span>
@@ -3249,7 +3273,7 @@ export default function AdminDashboardClient({
                   {placeholderDiscoveredTools.map((tool) => (
                     <div
                       key={tool.id}
-                      className="grid gap-3 px-4 py-4 text-sm lg:grid-cols-[1.1fr_1fr_120px_90px_82px] lg:items-center"
+                      className="grid gap-3 px-4 py-4 text-sm xl:grid-cols-[1.1fr_1fr_120px_90px_82px] xl:items-center"
                     >
                       <div className="min-w-0">
                         <p className="font-black text-slate-950">
@@ -3289,7 +3313,7 @@ export default function AdminDashboardClient({
           )}
 
           {view === "security" && (
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-black text-slate-950">Security Status</p>
               <p className="mt-2 text-xs leading-6 text-slate-600">
