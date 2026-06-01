@@ -97,8 +97,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#020617",
-  colorScheme: "dark",
+  themeColor: "#f8fafc",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -108,7 +108,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className="bg-slate-950 text-white antialiased">
+      <body className="bg-slate-50 text-slate-950 antialiased">
         <ThemeProvider>
           <CompareProvider>
             <script

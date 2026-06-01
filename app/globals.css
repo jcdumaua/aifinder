@@ -7,7 +7,7 @@
 html {
   max-width: 100%;
   overflow-x: clip;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 body {
@@ -27,13 +27,13 @@ body {
 .theme-dark {
   background: linear-gradient(to bottom, #020617, #0f172a, #000000);
   color: white;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .theme-light {
   background: linear-gradient(to bottom, #f8fafc, #e2e8f0, #ffffff);
   color: #020617;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .theme-light input,
@@ -1069,6 +1069,27 @@ h1, h2, h3 {
 }
 
 .theme-light .ai-modal-backdrop {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(14, 116, 144, 0.10), transparent 34%),
+    rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.theme-light.ai-modal-backdrop {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(14, 116, 144, 0.10), transparent 34%),
+    rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.tool-details-modal-backdrop-layer {
+  background:
+    radial-gradient(circle at 50% 10%, rgba(14, 165, 233, 0.10), transparent 32%),
+    rgba(2, 6, 23, 0.64);
+  backdrop-filter: blur(20px) saturate(1.08);
+}
+
+.theme-light .tool-details-modal-backdrop-layer {
   background:
     radial-gradient(circle at 50% 8%, rgba(14, 116, 144, 0.10), transparent 34%),
     rgba(15, 23, 42, 0.34);

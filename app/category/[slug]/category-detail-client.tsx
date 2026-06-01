@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
-import { useTheme } from "../../theme-provider";
 
 export type CategoryPageTool = {
   name: string;
@@ -53,7 +52,6 @@ export default function CategoryDetailClient({
   featuredTools,
   relatedCategories,
 }: CategoryDetailClientProps) {
-  const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
 
   const [search, setSearch] = useState("");
@@ -98,7 +96,7 @@ export default function CategoryDetailClient({
   }
 
   return (
-    <main className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
+    <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
           <Link
@@ -115,12 +113,6 @@ export default function CategoryDetailClient({
             All Tools
           </Link>
 
-          <button
-            onClick={toggleTheme}
-            className="ai-product-button-secondary px-4 py-2 text-sm"
-          >
-            {isLightMode ? "🌙 Dark" : "☀️ Light"}
-          </button>
         </nav>
 
         <header className={`relative mt-8 overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg}`}>
@@ -149,14 +141,14 @@ export default function CategoryDetailClient({
             </div>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3 xl:grid-cols-[1fr_180px_180px_auto]">
-              <input
+              <input suppressHydrationWarning
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={`Search ${category} tools...`}
                 className={`rounded-2xl border px-5 py-4 outline-none ${inputBg}`}
               />
 
-              <select
+              <select suppressHydrationWarning
                 value={selectedPricing}
                 onChange={(event) => setSelectedPricing(event.target.value)}
                 className={`rounded-2xl border px-4 py-4 text-sm outline-none ${inputBg}`}
@@ -168,7 +160,7 @@ export default function CategoryDetailClient({
                 ))}
               </select>
 
-              <select
+              <select suppressHydrationWarning
                 value={selectedPlatform}
                 onChange={(event) => setSelectedPlatform(event.target.value)}
                 className={`rounded-2xl border px-4 py-4 text-sm outline-none ${inputBg}`}

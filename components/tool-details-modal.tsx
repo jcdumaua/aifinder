@@ -1,9 +1,16 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  type MotionStyle,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
 import { ExternalLink, GitCompare, Star, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useTheme } from "@/app/theme-provider";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 
 export type ToolDetailsModalData = {
@@ -43,8 +50,62 @@ export function ToolDetailsModal({
   onToggleFavorite,
 }: ToolDetailsModalProps) {
   const shouldReduceMotion = useReducedMotion();
+  const { isLightMode } = useTheme();
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
+    null,
+  );
+  const [visualViewportHeight, setVisualViewportHeight] = useState<number>(0);
 
   useOverlayScrollLock(isOpen);
+
+  useEffect(() => {
+    setPortalContainer(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let animationFrame = 0;
+
+    function updateVisibleViewportHeight() {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        const visibleHeight =
+          window.visualViewport?.height ?? window.innerHeight;
+
+        setVisualViewportHeight(Math.floor(visibleHeight));
+      });
+    }
+
+    updateVisibleViewportHeight();
+    window.addEventListener("resize", updateVisibleViewportHeight);
+    window.addEventListener("orientationchange", updateVisibleViewportHeight);
+    window.visualViewport?.addEventListener(
+      "resize",
+      updateVisibleViewportHeight,
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      updateVisibleViewportHeight,
+    );
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", updateVisibleViewportHeight);
+      window.removeEventListener(
+        "orientationchange",
+        updateVisibleViewportHeight,
+      );
+      window.visualViewport?.removeEventListener(
+        "resize",
+        updateVisibleViewportHeight,
+      );
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        updateVisibleViewportHeight,
+      );
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -66,12 +127,25 @@ export function ToolDetailsModal({
   const hasRating = tool?.rating !== null && tool?.rating !== undefined;
   const hasReviewCount =
     tool?.reviewCount !== null && tool?.reviewCount !== undefined;
+  const viewportHeightStyle =
+    visualViewportHeight > 0
+      ? ({
+          "--aifinder-modal-viewport-height": `${visualViewportHeight}px`,
+        } satisfies CSSProperties & {
+          "--aifinder-modal-viewport-height": string;
+        }) as MotionStyle & {
+          "--aifinder-modal-viewport-height": string;
+        }
+      : undefined;
 
-  return (
+  const modal = (
     <AnimatePresence>
       {isOpen && tool && (
         <motion.div
-          className="ai-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center overflow-hidden px-3 py-4 sm:px-4 sm:py-6"
+          className={`fixed inset-0 z-[100] flex w-screen items-center justify-center overflow-hidden px-3 py-4 sm:px-4 sm:py-6 ${
+            isLightMode ? "theme-light" : "theme-dark"
+          }`}
+          style={viewportHeightStyle}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -79,19 +153,19 @@ export function ToolDetailsModal({
           onClick={onClose}
           role="presentation"
         >
+          <div className="tool-details-modal-backdrop-layer pointer-events-none fixed inset-x-0 -inset-y-[100lvh] w-screen" />
+
           <motion.section
             aria-modal="true"
             role="dialog"
             aria-label={`${tool.name} details`}
-            className="tool-details-modal-panel relative max-h-[86vh] w-full max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90vh] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem] md:max-w-3xl xl:max-w-4xl"
-            initial={
-              shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
-            }
+            className="tool-details-modal-panel relative flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem] md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
+            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={
               shouldReduceMotion
                 ? { opacity: 0 }
-                : { opacity: 0, x: 42, scale: 0.98 }
+                : { opacity: 0, scale: 0.98 }
             }
             transition={{
               duration: shouldReduceMotion ? 0 : 0.22,
@@ -110,71 +184,71 @@ export function ToolDetailsModal({
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <div className="tool-details-modal-scroll relative z-10 max-h-[86vh] max-w-full overflow-x-hidden overflow-y-auto overscroll-contain sm:max-h-[90vh]">
-              <header className="relative max-w-full overflow-hidden border-b border-white/10 px-4 pb-5 pr-14 pt-6 [.theme-light_&]:border-slate-200 sm:px-6 sm:pb-7 sm:pr-16 sm:pt-8 md:px-8 xl:pr-20">
-                <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
+            <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 px-4 pb-5 pr-14 pt-6 [.theme-light_&]:border-slate-200 sm:px-6 sm:pb-7 sm:pr-16 sm:pt-8 md:px-8 xl:pr-20">
+              <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
 
-                <div className="relative flex items-start">
-                  <motion.div
-                    initial={
-                      shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
-                    }
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{
-                      duration: shouldReduceMotion ? 0 : 0.26,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.16)] sm:h-24 sm:w-24 sm:rounded-[1.5rem] sm:p-4"
+              <div className="relative flex items-start">
+                <motion.div
+                  initial={
+                    shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: shouldReduceMotion ? 0 : 0.26,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.16)] sm:h-24 sm:w-24 sm:rounded-[1.5rem] sm:p-4"
+                >
+                  <img
+                    src={tool.logoUrl}
+                    alt={`${tool.name} logo`}
+                    className="h-10 w-10 object-contain sm:h-14 sm:w-14"
+                  />
+                </motion.div>
+              </div>
+
+              <div className="relative mt-5 min-w-0 max-w-full sm:mt-6">
+                <p className="break-words text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                  {tool.category}
+                </p>
+
+                <h2 className="ai-product-section-title mt-2 break-words text-3xl xl:text-4xl">
+                  {tool.name}
+                </h2>
+
+                <p className="mt-4 break-words text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
+                  {tool.description}
+                </p>
+              </div>
+
+              <div className="relative mt-5 flex min-w-0 max-w-full flex-wrap gap-2.5">
+                {tool.pricing && (
+                  <span className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal">
+                    {tool.pricing}
+                  </span>
+                )}
+
+                {hasRating && (
+                  <span className="max-w-full break-words rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 whitespace-normal [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
+                    {tool.rating} / 5
+                    {hasReviewCount
+                      ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
+                      : ""}
+                  </span>
+                )}
+
+                {platforms.map((platform) => (
+                  <span
+                    key={platform}
+                    className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
                   >
-                    <img
-                      src={tool.logoUrl}
-                      alt={`${tool.name} logo`}
-                      className="h-10 w-10 object-contain sm:h-14 sm:w-14"
-                    />
-                  </motion.div>
-                </div>
+                    {platform}
+                  </span>
+                ))}
+              </div>
+            </header>
 
-                <div className="relative mt-5 min-w-0 max-w-full sm:mt-6">
-                  <p className="break-words text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                    {tool.category}
-                  </p>
-
-                  <h2 className="ai-product-section-title mt-2 break-words text-3xl xl:text-4xl">
-                    {tool.name}
-                  </h2>
-
-                  <p className="mt-4 break-words text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
-                    {tool.description}
-                  </p>
-                </div>
-
-                <div className="relative mt-5 flex min-w-0 max-w-full flex-wrap gap-2.5">
-                  {tool.pricing && (
-                    <span className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal">
-                      {tool.pricing}
-                    </span>
-                  )}
-
-                  {hasRating && (
-                    <span className="max-w-full break-words rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 whitespace-normal [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
-                      {tool.rating} / 5
-                      {hasReviewCount
-                        ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
-                        : ""}
-                    </span>
-                  )}
-
-                  {platforms.map((platform) => (
-                    <span
-                      key={platform}
-                      className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
-                    >
-                      {platform}
-                    </span>
-                  ))}
-                </div>
-              </header>
-
+            <div className="tool-details-modal-scroll relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
               <div className="min-w-0 max-w-full px-4 py-6 sm:px-6 sm:py-8 md:px-8">
                 <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <DetailPanel
@@ -340,9 +414,6 @@ export function ToolDetailsModal({
 
                   <Link
                     href={`/tool/${tool.slug}`}
-                    onClick={() => {
-                      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-                    }}
                     className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
                   >
                     Full Details
@@ -355,6 +426,12 @@ export function ToolDetailsModal({
       )}
     </AnimatePresence>
   );
+
+  if (!portalContainer) {
+    return null;
+  }
+
+  return createPortal(modal, portalContainer);
 }
 
 function DetailPanel({

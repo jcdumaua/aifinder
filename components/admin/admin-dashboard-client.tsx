@@ -424,7 +424,7 @@ function SlideOverPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[9997] flex justify-end bg-slate-500/25 backdrop-blur-sm"
+      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9997] flex justify-end bg-slate-500/25 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
     >
@@ -456,7 +456,10 @@ function SlideOverPanel({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5"
+          data-overlay-scroll-container="true"
+        >
           {children}
         </div>
       </div>
@@ -1629,7 +1632,8 @@ export default function AdminDashboardClient({
     Boolean(editingSubmission) ||
     Boolean(selectedNotification) ||
     Boolean(selectedDiscoveredTool) ||
-    Boolean(confirmDialog);
+    Boolean(confirmDialog) ||
+    Boolean(popup);
 
   useOverlayScrollLock(hasActiveAdminOverlay);
 
@@ -1848,7 +1852,7 @@ export default function AdminDashboardClient({
 
   const messagePopup = popup && (
     <div
-      className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
+      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9999] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
       role="dialog"
       aria-modal="true"
     >
@@ -1902,7 +1906,7 @@ export default function AdminDashboardClient({
 
   const confirmationPopup = confirmDialog && (
     <div
-      className="fixed inset-0 z-[9998] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
+      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9998] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
       role="dialog"
       aria-modal="true"
     >
@@ -2141,7 +2145,7 @@ export default function AdminDashboardClient({
           <h2 className="text-lg font-bold">Add New Tool</h2>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input
+            <input suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
               placeholder="Tool Name"
               value={name}
@@ -2149,7 +2153,7 @@ export default function AdminDashboardClient({
               onChange={(e) => setName(e.target.value)}
             />
 
-            <select
+            <select suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -2165,7 +2169,7 @@ export default function AdminDashboardClient({
               ))}
             </select>
 
-            <input
+            <input suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
               placeholder="Website URL"
               value={website}
@@ -2173,7 +2177,7 @@ export default function AdminDashboardClient({
               onChange={(e) => setWebsite(e.target.value)}
             />
 
-            <select
+            <select suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
               value={pricing}
               onChange={(e) => setPricing(e.target.value)}
@@ -2191,7 +2195,7 @@ export default function AdminDashboardClient({
 
             <div className="sm:col-span-2">
               <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
-                <input
+                <input suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                   placeholder="Logo Image URL"
                   value={logoUrl}
@@ -2206,7 +2210,7 @@ export default function AdminDashboardClient({
                     <UploadIcon />
                   )}
 
-                  <input
+                  <input suppressHydrationWarning
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="hidden"
@@ -2244,7 +2248,7 @@ export default function AdminDashboardClient({
             </div>
           )}
 
-          <textarea
+          <textarea suppressHydrationWarning
             className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
             placeholder="Description"
             value={description}
@@ -2309,14 +2313,14 @@ export default function AdminDashboardClient({
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <input
+            <input suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-amber-500 focus:bg-white"
               placeholder="Search pending submissions..."
               value={submissionSearch}
               onChange={(e) => setSubmissionSearch(e.target.value)}
             />
 
-            <select
+            <select suppressHydrationWarning
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
               value={submissionCategoryFilter}
               onChange={(e) => setSubmissionCategoryFilter(e.target.value)}
@@ -2505,14 +2509,14 @@ export default function AdminDashboardClient({
             </div>
 
             <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <input
+              <input suppressHydrationWarning
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                 placeholder="Search live tools..."
                 value={toolSearch}
                 onChange={(e) => setToolSearch(e.target.value)}
               />
 
-              <select
+              <select suppressHydrationWarning
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                 value={toolCategoryFilter}
                 onChange={(e) => setToolCategoryFilter(e.target.value)}
@@ -2531,7 +2535,7 @@ export default function AdminDashboardClient({
                 ))}
               </select>
 
-              <select
+              <select suppressHydrationWarning
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                 value={toolSort}
                 onChange={(e) => setToolSort(e.target.value)}
@@ -2736,7 +2740,7 @@ export default function AdminDashboardClient({
 
   if (isCheckingSession) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-950">
+      <main className="flex min-h-dvh items-center justify-center bg-slate-50 px-4 text-slate-950">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-8">
           <p className="text-sm font-bold uppercase tracking-widest text-cyan-700">
             AiFinder Admin
@@ -2754,7 +2758,7 @@ export default function AdminDashboardClient({
 
   if (!isUnlocked) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-950">
+      <main className="flex min-h-dvh items-center justify-center bg-slate-50 px-4 text-slate-950">
         {messagePopup}
 
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-8">
@@ -2768,7 +2772,7 @@ export default function AdminDashboardClient({
             Enter the admin password to manage AI tools.
           </p>
 
-          <input
+          <input suppressHydrationWarning
             type="password"
             placeholder="Admin password"
             value={password}
@@ -2800,7 +2804,7 @@ export default function AdminDashboardClient({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-950 sm:p-5">
+    <main className="min-h-dvh overflow-x-hidden bg-slate-50 px-3 py-4 text-slate-950 sm:p-5">
       {confirmationPopup}
       {messagePopup}
       {auditLogsPopup}
@@ -2917,7 +2921,7 @@ export default function AdminDashboardClient({
               </div>
 
               <div className="w-full xl:max-w-md">
-                <input
+                <input suppressHydrationWarning
                   value={globalAdminSearch}
                   onChange={(event) => setGlobalAdminSearch(event.target.value)}
                   placeholder="Search admin workspace..."
@@ -3624,7 +3628,7 @@ export default function AdminDashboardClient({
             onClose={closeSlideOvers}
           >
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <input
+                <input suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-amber-500 focus:bg-white"
                   placeholder="Tool Name"
                   value={submissionEditName}
@@ -3632,7 +3636,7 @@ export default function AdminDashboardClient({
                   onChange={(e) => setSubmissionEditName(e.target.value)}
                 />
 
-                <select
+                <select suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
                   value={submissionEditCategory}
                   onChange={(e) =>
@@ -3650,7 +3654,7 @@ export default function AdminDashboardClient({
                   ))}
                 </select>
 
-                <input
+                <input suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-amber-500 focus:bg-white"
                   placeholder="Website URL"
                   value={submissionEditWebsite}
@@ -3658,7 +3662,7 @@ export default function AdminDashboardClient({
                   onChange={(e) => setSubmissionEditWebsite(e.target.value)}
                 />
 
-                <select
+                <select suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
                   value={submissionEditPricing}
                   onChange={(e) => setSubmissionEditPricing(e.target.value)}
@@ -3676,7 +3680,7 @@ export default function AdminDashboardClient({
 
                 <div className="sm:col-span-2">
                   <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
-                    <input
+                    <input suppressHydrationWarning
                       className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-amber-500 focus:bg-white"
                       placeholder="Logo Image URL"
                       value={submissionEditLogoUrl}
@@ -3693,7 +3697,7 @@ export default function AdminDashboardClient({
                         <UploadIcon />
                       )}
 
-                      <input
+                      <input suppressHydrationWarning
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
                         className="hidden"
@@ -3737,7 +3741,7 @@ export default function AdminDashboardClient({
                 </div>
               )}
 
-              <textarea
+              <textarea suppressHydrationWarning
                 className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-amber-500 focus:bg-white"
                 placeholder="Description"
                 value={submissionEditDescription}
@@ -3775,7 +3779,7 @@ export default function AdminDashboardClient({
             onClose={closeSlideOvers}
           >
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <input
+                <input suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                   placeholder="Tool Name"
                   value={editName}
@@ -3783,7 +3787,7 @@ export default function AdminDashboardClient({
                   onChange={(e) => setEditName(e.target.value)}
                 />
 
-                <select
+                <select suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value)}
@@ -3799,7 +3803,7 @@ export default function AdminDashboardClient({
                   ))}
                 </select>
 
-                <input
+                <input suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                   placeholder="Website URL"
                   value={editWebsite}
@@ -3807,7 +3811,7 @@ export default function AdminDashboardClient({
                   onChange={(e) => setEditWebsite(e.target.value)}
                 />
 
-                <select
+                <select suppressHydrationWarning
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                   value={editPricing}
                   onChange={(e) => setEditPricing(e.target.value)}
@@ -3825,7 +3829,7 @@ export default function AdminDashboardClient({
 
                 <div className="sm:col-span-2">
                   <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
-                    <input
+                    <input suppressHydrationWarning
                       className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                       placeholder="Logo Image URL"
                       value={editLogoUrl}
@@ -3840,7 +3844,7 @@ export default function AdminDashboardClient({
                         <UploadIcon />
                       )}
 
-                      <input
+                      <input suppressHydrationWarning
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
                         className="hidden"
@@ -3876,7 +3880,7 @@ export default function AdminDashboardClient({
                 </div>
               )}
 
-              <textarea
+              <textarea suppressHydrationWarning
                 className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
                 placeholder="Description"
                 value={editDescription}

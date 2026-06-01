@@ -316,7 +316,7 @@ export default function SubmitToolPage() {
     "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5";
 
   return (
-    <main className="ai-product-page relative min-h-screen overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12">
+    <main className="ai-product-page relative min-h-dvh overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12">
       <div className="pointer-events-none absolute -left-32 top-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
       <div className="pointer-events-none absolute -right-36 top-44 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl [.theme-light_&]:bg-sky-200/24" />
       <div className="pointer-events-none relative z-0 mx-auto max-w-5xl opacity-70 blur-[0.2px]">
@@ -334,7 +334,7 @@ export default function SubmitToolPage() {
 
       {popup && (
         <div
-          className="ai-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center px-4"
+          className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9999] flex items-center justify-center px-4"
           role="dialog"
           aria-modal="true"
         >
@@ -390,7 +390,7 @@ export default function SubmitToolPage() {
       <AnimatePresence>
         {!isClosing && (
           <motion.div
-            className="ai-modal-backdrop fixed inset-0 z-10 flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8"
+            className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-10 flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -408,7 +408,7 @@ export default function SubmitToolPage() {
               exit={
                 shouldReduceMotion
                   ? { opacity: 0 }
-                  : { opacity: 0, x: 42, scale: 0.98 }
+                  : { opacity: 0, scale: 0.98 }
               }
               transition={{
                 duration: shouldReduceMotion ? 0 : 0.22,
@@ -451,7 +451,7 @@ export default function SubmitToolPage() {
                     void submitTool();
                   }}
                 >
-                  <input
+                  <input suppressHydrationWarning
                     className="hidden"
                     tabIndex={-1}
                     autoComplete="off"
@@ -476,7 +476,7 @@ export default function SubmitToolPage() {
                             *
                           </span>
                         </label>
-                        <input
+                        <input suppressHydrationWarning
                           id="tool-name"
                           className={`${inputClass} mt-2`}
                           placeholder="e.g. CanvasMind"
@@ -493,7 +493,7 @@ export default function SubmitToolPage() {
                             *
                           </span>
                         </label>
-                        <select
+                        <select suppressHydrationWarning
                           id="tool-category"
                           className={`${inputClass} mt-2`}
                           value={category}
@@ -522,7 +522,7 @@ export default function SubmitToolPage() {
                             *
                           </span>
                         </label>
-                        <input
+                        <input suppressHydrationWarning
                           id="tool-website"
                           type="url"
                           className={`${inputClass} mt-2`}
@@ -540,7 +540,7 @@ export default function SubmitToolPage() {
                         <label className={labelClass} htmlFor="tool-pricing">
                           Pricing
                         </label>
-                        <select
+                        <select suppressHydrationWarning
                           id="tool-pricing"
                           className={`${inputClass} mt-2`}
                           value={pricing}
@@ -567,7 +567,7 @@ export default function SubmitToolPage() {
                           Logo
                         </label>
                         <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem]">
-                          <input
+                          <input suppressHydrationWarning
                             id="tool-logo"
                             type="url"
                             className={inputClass}
@@ -587,7 +587,7 @@ export default function SubmitToolPage() {
                               />
                             )}
 
-                            <input
+                            <input suppressHydrationWarning
                               type="file"
                               accept="image/png,image/jpeg,image/webp"
                               className="hidden"
@@ -637,7 +637,7 @@ export default function SubmitToolPage() {
                             *
                           </span>
                         </label>
-                        <textarea
+                        <textarea suppressHydrationWarning
                           id="tool-description"
                           className={`${inputClass} mt-2 min-h-36 resize-y`}
                           placeholder="Describe what the tool does, who it helps, and the core use case."
@@ -662,7 +662,7 @@ export default function SubmitToolPage() {
                         <label className={labelClass} htmlFor="submitter-name">
                           Your name
                         </label>
-                        <input
+                        <input suppressHydrationWarning
                           id="submitter-name"
                           className={`${inputClass} mt-2`}
                           placeholder="Optional"
@@ -676,7 +676,7 @@ export default function SubmitToolPage() {
                         <label className={labelClass} htmlFor="submitter-email">
                           Your email
                         </label>
-                        <input
+                        <input suppressHydrationWarning
                           id="submitter-email"
                           type="email"
                           className={`${inputClass} mt-2`}

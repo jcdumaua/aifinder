@@ -3,10 +3,9 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import { slugify } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
-import { useTheme } from "../../theme-provider";
 
 export type ToolPageData = {
   name: string;
@@ -37,7 +36,6 @@ export default function ToolDetailClient({
   tool,
   similarTools,
 }: ToolDetailClientProps) {
-  const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare } = useCompare();
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
@@ -52,10 +50,6 @@ export default function ToolDetailClient({
   const mutedText = "ai-product-muted";
   const softText = "ai-product-body";
   const chipBg = "ai-product-chip";
-
-  useLayoutEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
   function navigateHomeWithExit() {
     if (isLeaving) return;
@@ -73,10 +67,10 @@ export default function ToolDetailClient({
 
   return (
     <motion.main
-      animate={isLeaving ? { opacity: 0, x: 48 } : { opacity: 1, x: 0 }}
+      animate={isLeaving ? { opacity: 0 } : { opacity: 1 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      style={{ willChange: isLeaving ? "opacity, transform" : undefined }}
-      className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}
+      style={{ willChange: isLeaving ? "opacity" : undefined }}
+      className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}
     >
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
@@ -103,12 +97,6 @@ export default function ToolDetailClient({
             {tool.category}
           </Link>
 
-          <button
-            onClick={toggleTheme}
-            className="ai-product-button-secondary px-4 py-2 text-sm"
-          >
-            {isLightMode ? "🌙 Dark" : "☀️ Light"}
-          </button>
         </nav>
 
         <article className={`mt-8 overflow-hidden rounded-[2rem] border shadow-2xl ${cardBg}`}>

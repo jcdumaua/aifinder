@@ -39,7 +39,7 @@ export function CompareAssistant({ tools }: CompareAssistantProps) {
   if (tools.length === 0) return null;
 
   return (
-    <section className="ai-product-surface tool-details-modal-scroll mb-3 max-h-[42vh] overflow-y-auto rounded-3xl border p-4">
+    <section className="ai-product-surface tool-details-modal-scroll mb-3 max-h-[42dvh] overflow-y-auto rounded-3xl border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
           AI Compare Assistant

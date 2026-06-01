@@ -21,7 +21,6 @@ import {
   toolSlug,
   Tool,
 } from "./data/tools";
-import { useTheme } from "./theme-provider";
 import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
 import {
@@ -126,7 +125,6 @@ function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {
 }
 
 export default function Home() {
-  const { isLightMode, toggleTheme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
 
@@ -342,7 +340,7 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}
+      className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}
     >
       <section className="relative mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8 xl:max-w-7xl">
         <nav
@@ -353,13 +351,6 @@ export default function Home() {
           </Link>
 
           <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
-            <button
-              onClick={toggleTheme}
-              className="ai-product-button-secondary px-4 py-2 text-sm"
-            >
-              {isLightMode ? "🌙 Dark" : "☀️ Light"}
-            </button>
-
             <a
               href="#categories"
               className="ai-product-button-primary px-4 py-2 text-sm"
@@ -455,7 +446,7 @@ export default function Home() {
             )}
 
             <div className="mt-5 grid gap-2.5 md:grid-cols-3">
-              <select
+              <select suppressHydrationWarning
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
@@ -469,7 +460,7 @@ export default function Home() {
                 ))}
               </select>
 
-              <select
+              <select suppressHydrationWarning
                 value={selectedPricing}
                 onChange={(e) => setSelectedPricing(e.target.value)}
                 className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
@@ -481,7 +472,7 @@ export default function Home() {
                 ))}
               </select>
 
-              <select
+              <select suppressHydrationWarning
                 value={selectedPlatform}
                 onChange={(e) => setSelectedPlatform(e.target.value)}
                 className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
@@ -738,7 +729,7 @@ function SearchResultsModal({
   useOverlayScrollLock(true);
 
   return (
-    <div className="ai-modal-backdrop fixed inset-0 z-[80] flex items-center justify-center overflow-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+    <div className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[80] flex items-center justify-center overflow-y-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
       <motion.section
         aria-label="AI search results"
         aria-modal="true"
@@ -813,8 +804,8 @@ function SearchThinkingOverlay({ message }: { message: string }) {
   useOverlayScrollLock(true);
 
   return (
-    <div className="ai-modal-backdrop fixed inset-0 z-[85] flex items-center justify-center px-4">
-      <div className="ai-thinking-panel rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-6 text-center shadow-2xl">
+    <div className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[85] flex items-center justify-center px-4">
+      <div className="ai-thinking-panel rounded-3xl border border-cyan-900/10 bg-white/95 p-6 text-center shadow-2xl shadow-slate-950/10">
         <div className="ai-brain-loader mx-auto">
           <svg
             className="ai-head-svg"
@@ -898,10 +889,10 @@ function SearchThinkingOverlay({ message }: { message: string }) {
           </svg>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan-800">
           AI Search Engine
         </p>
-        <p className="mt-2 text-sm font-semibold text-slate-200">{message}</p>
+        <p className="mt-2 text-sm font-semibold text-slate-700">{message}</p>
       </div>
     </div>
   );

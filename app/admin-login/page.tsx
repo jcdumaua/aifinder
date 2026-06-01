@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 
 type PopupMessage = {
   type: "success" | "error";
@@ -13,6 +14,8 @@ export default function AdminLoginPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [popup, setPopup] = useState<PopupMessage | null>(null);
+
+  useOverlayScrollLock(Boolean(popup));
 
   function showError(message: string, title = "Admin Access Denied") {
     setPopup({
@@ -100,7 +103,7 @@ export default function AdminLoginPage() {
 
   const messagePopup = popup && (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
+      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9999] flex items-center justify-center bg-black/80 px-6 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
     >
@@ -129,7 +132,7 @@ export default function AdminLoginPage() {
 
   if (isCheckingSession) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+      <main className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl">
           <p className="text-sm font-bold uppercase tracking-widest text-cyan-300">
             AiFinder Admin
@@ -146,7 +149,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
+    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black px-4 text-white">
       {messagePopup}
 
       <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
@@ -160,7 +163,7 @@ export default function AdminLoginPage() {
           Enter the admin password to continue.
         </p>
 
-        <input
+        <input suppressHydrationWarning
           type="password"
           placeholder="Admin password"
           value={password}

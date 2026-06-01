@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useCompare } from "../compare-provider";
-import { useTheme } from "../theme-provider";
 
 export type ComparePageTool = {
   name: string;
@@ -41,7 +40,6 @@ const highlightedRows = [
 ];
 
 export default function CompareClient({ tools }: CompareClientProps) {
-  const { isLightMode, toggleTheme } = useTheme();
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
 
   const [search, setSearch] = useState("");
@@ -72,7 +70,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const softText = "ai-product-body";
 
   return (
-    <main className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
+    <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
           <Link
@@ -89,12 +87,6 @@ export default function CompareClient({ tools }: CompareClientProps) {
             Submit Tool
           </Link>
 
-          <button
-            onClick={toggleTheme}
-            className="ai-product-button-secondary px-4 py-2 text-sm"
-          >
-            {isLightMode ? "🌙 Dark" : "☀️ Light"}
-          </button>
         </nav>
 
         <header className={`relative mt-8 overflow-hidden rounded-[2rem] border p-6 shadow-2xl sm:p-10 ${cardBg}`}>
@@ -187,7 +179,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
               </p>
             </div>
 
-            <input
+            <input suppressHydrationWarning
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search tools to compare..."

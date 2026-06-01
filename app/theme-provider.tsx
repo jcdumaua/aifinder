@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect } from "react";
 
 type ThemeContextType = {
   isLightMode: boolean;
@@ -10,24 +10,22 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isLightMode, setIsLightMode] = useState(false);
+  const isLightMode = true;
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("aifinder-theme");
-    setIsLightMode(savedTheme === "light");
+    localStorage.setItem("aifinder-theme", "light");
   }, []);
 
-  const toggleTheme = () => {
-    const nextTheme = !isLightMode;
-    setIsLightMode(nextTheme);
-    localStorage.setItem("aifinder-theme", nextTheme ? "light" : "dark");
-  };
+  // Dark mode is temporarily disabled while AiFinder UI/layout is stabilized.
+  // Keep this context shape so the dark-mode UI can be restored later without
+  // touching consumers that only need to know the active theme.
+  const toggleTheme = useCallback(() => {
+    localStorage.setItem("aifinder-theme", "light");
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ isLightMode, toggleTheme }}>
-      <div className={isLightMode ? "theme-light" : "theme-dark"}>
-        {children}
-      </div>
+      <div className="theme-light">{children}</div>
     </ThemeContext.Provider>
   );
 }

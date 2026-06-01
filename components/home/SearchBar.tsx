@@ -17,12 +17,20 @@ export function SearchBar({
   onSubmit,
 }: SearchBarProps) {
   return (
-    <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+    <form
+      onSubmit={onSubmit}
+      className="mt-6 flex flex-col gap-2.5 sm:flex-row"
+      suppressHydrationWarning
+    >
       <input
+        type="search"
+        name="ai-tool-search"
         value={search}
         onChange={onChange}
         placeholder="Find AI tools for video editing..."
+        autoComplete="off"
         className={`w-full rounded-2xl border px-5 py-4 font-medium outline-none ${inputBg} ai-command-search`}
+        suppressHydrationWarning
       />
 
       <button
