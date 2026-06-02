@@ -4,23 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { isToolCategory, TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
-
-const CATEGORIES = [
-  "Chatbots",
-  "Image AI",
-  "Video AI",
-  "Voice AI",
-  "Writing",
-  "Coding",
-  "Business",
-  "Productivity",
-  "Education AI",
-  "Marketing AI",
-  "SEO AI",
-  "Design AI",
-  "AI Agents",
-];
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
 
@@ -219,7 +204,7 @@ export default function SubmitToolPage() {
         return;
       }
 
-      if (!CATEGORIES.includes(safeCategory)) {
+      if (!isToolCategory(safeCategory)) {
         showError("Please select a valid category.");
         return;
       }
@@ -503,7 +488,7 @@ export default function SubmitToolPage() {
                             Select category
                           </option>
 
-                          {CATEGORIES.map((item) => (
+                          {TOOL_CATEGORIES.map((item) => (
                             <option
                               className={optionClass}
                               key={item}

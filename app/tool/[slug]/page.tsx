@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
+import { normalizeToolCategory } from "../../../lib/tool-categories";
 import {
   categories,
   getLogoUrl,
@@ -40,12 +41,7 @@ type ToolRow = {
 };
 
 function normalizeCategory(category: string | null | undefined) {
-  if (category === "Chat") return "Chatbots";
-  if (category === "Image") return "Image AI";
-  if (category === "Video") return "Video AI";
-  if (category === "Audio") return "Voice AI";
-
-  return category || "Productivity";
+  return normalizeToolCategory(category);
 }
 
 function normalizePricing(pricing: string | null | undefined) {

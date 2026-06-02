@@ -10,6 +10,7 @@ import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
 import { Button } from "@/components/ui/button";
+import { normalizeToolCategory } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
   categories,
@@ -106,12 +107,7 @@ const faqItems = [
 ];
 
 function normalizeCategory(category: string | null | undefined) {
-  if (category === "Chat") return "Chatbots";
-  if (category === "Image") return "Image AI";
-  if (category === "Video") return "Video AI";
-  if (category === "Audio") return "Voice AI";
-
-  return category || "Productivity";
+  return normalizeToolCategory(category);
 }
 
 function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {

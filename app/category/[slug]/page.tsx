@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
+import { normalizeToolCategory } from "../../../lib/tool-categories";
 import {
   categories,
   getLogoUrl,
@@ -44,16 +45,12 @@ type ToolRow = {
 const categoryDescriptions: Record<string, string> = {
   Chatbots:
     "Discover AI chatbot tools for research, customer support, brainstorming, productivity, and everyday questions.",
-  Research:
-    "Find AI research tools for summarizing information, exploring sources, organizing notes, and learning faster.",
   "Image AI":
     "Explore AI image tools for generating visuals, editing images, designing graphics, and creating marketing assets.",
   "Video AI":
     "Browse AI video tools for editing, captions, avatars, presentations, short-form content, and video production.",
   "Voice AI":
     "Discover voice AI tools for text-to-speech, transcription, audio editing, dubbing, and voice generation.",
-  "Music AI":
-    "Find music AI tools for generating songs, audio ideas, background tracks, and creative sound workflows.",
   Coding:
     "Compare AI coding tools for app building, debugging, documentation, code generation, and developer productivity.",
   Business:
@@ -73,12 +70,7 @@ const categoryDescriptions: Record<string, string> = {
 };
 
 function normalizeCategory(category: string | null | undefined) {
-  if (category === "Chat") return "Chatbots";
-  if (category === "Image") return "Image AI";
-  if (category === "Video") return "Video AI";
-  if (category === "Audio") return "Voice AI";
-
-  return category || "Productivity";
+  return normalizeToolCategory(category);
 }
 
 function normalizePricing(pricing: string | null | undefined) {

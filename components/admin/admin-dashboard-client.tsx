@@ -11,6 +11,7 @@ import {
   placeholderDiscoveredTools,
   type DiscoveredTool,
 } from "../../lib/discovered-tools";
+import { TOOL_CATEGORIES } from "../../lib/tool-categories";
 
 type Tool = {
   id?: number;
@@ -161,22 +162,6 @@ const ADMIN_PAGE_COPY: Record<
       "Prepare general, branding, category, AI, and admin preference controls for future configuration.",
   },
 };
-
-const CATEGORIES = [
-  "Chatbots",
-  "Image AI",
-  "Video AI",
-  "Voice AI",
-  "Writing",
-  "Coding",
-  "Business",
-  "Productivity",
-  "Education AI",
-  "Marketing AI",
-  "SEO AI",
-  "Design AI",
-  "AI Agents",
-];
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
 
@@ -2162,7 +2147,7 @@ export default function AdminDashboardClient({
                 Select category
               </option>
 
-              {CATEGORIES.map((item) => (
+              {TOOL_CATEGORIES.map((item) => (
                 <option className="bg-white" key={item} value={item}>
                   {item}
                 </option>
@@ -3177,7 +3162,7 @@ export default function AdminDashboardClient({
                   </h2>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {(toolCategories.length > 0 ? toolCategories : CATEGORIES).map(
+                  {(toolCategories.length > 0 ? toolCategories : TOOL_CATEGORIES).map(
                     (categoryName) => (
                       <span
                         key={categoryName}
@@ -3647,7 +3632,7 @@ export default function AdminDashboardClient({
                     Select category
                   </option>
 
-                  {CATEGORIES.map((item) => (
+                  {TOOL_CATEGORIES.map((item) => (
                     <option className="bg-white" key={item} value={item}>
                       {item}
                     </option>
@@ -3796,7 +3781,7 @@ export default function AdminDashboardClient({
                     Select category
                   </option>
 
-                  {CATEGORIES.map((item) => (
+                  {TOOL_CATEGORIES.map((item) => (
                     <option className="bg-white" key={item} value={item}>
                       {item}
                     </option>

@@ -1,17 +1,18 @@
 import type { Tool } from "../app/data/tools";
+import type { ToolCategory } from "./tool-categories";
 
 type IntentGroup = {
   intent: string;
   triggers: string[];
-  categories: string[];
+  categories: ToolCategory[];
   terms: string[];
-  excludedCategories?: string[];
+  excludedCategories?: ToolCategory[];
   strict?: boolean;
 };
 
 export type SearchIntent = {
-  categories: Set<string>;
-  excludedCategories: Set<string>;
+  categories: Set<ToolCategory>;
+  excludedCategories: Set<ToolCategory>;
   intents: Set<string>;
   normalizedQuery: string;
   strict: boolean;
@@ -84,8 +85,7 @@ const intentGroups: IntentGroup[] = [
       "Image AI",
       "Coding",
       "Voice AI",
-      "Music AI",
-      "Research",
+      "Education AI",
     ],
     terms: [
       "resume",
@@ -137,7 +137,7 @@ const intentGroups: IntentGroup[] = [
       "productivity",
       "small business",
     ],
-    categories: ["Productivity", "Automation", "Website Builders"],
+    categories: ["Business", "Productivity", "AI Agents"],
     terms: ["business", "workflow", "analytics", "automation", "reports"],
   },
   {
@@ -157,7 +157,13 @@ const intentGroups: IntentGroup[] = [
       "newsletter",
       "content creation",
     ],
-    categories: ["Writing", "Image AI", "Video AI", "Productivity"],
+    categories: [
+      "Marketing AI",
+      "Writing",
+      "Image AI",
+      "Video AI",
+      "Productivity",
+    ],
     terms: ["marketing", "ads", "social", "content", "campaigns", "brand"],
   },
   {
@@ -175,7 +181,7 @@ const intentGroups: IntentGroup[] = [
       "mockup",
       "picture",
     ],
-    categories: ["Image AI", "Website Builders"],
+    categories: ["Image AI", "Design AI"],
     terms: ["image", "logo", "design", "art", "visual", "creative"],
   },
   {
@@ -210,49 +216,108 @@ const intentGroups: IntentGroup[] = [
       "build an app",
       "build software",
     ],
-    categories: ["Coding", "Website Builders", "Automation"],
+    categories: ["Coding", "Design AI", "AI Agents"],
     terms: ["coding", "developer", "app", "website", "debugging", "software"],
   },
   {
     intent: "education",
-    triggers: ["school", "study", "homework", "tutor", "learn", "notes", "exam", "quiz", "student", "essay"],
-    categories: ["Research", "Writing", "Productivity"],
+    triggers: [
+      "school",
+      "study",
+      "homework",
+      "tutor",
+      "learn",
+      "notes",
+      "exam",
+      "quiz",
+      "student",
+      "essay",
+    ],
+    categories: ["Education AI", "Writing", "Productivity"],
     terms: ["education", "study", "essay", "research", "summaries", "notes"],
   },
   {
     intent: "research",
-    triggers: ["research", "sources", "web search", "answer questions", "fact finding", "compare information"],
-    categories: ["Research", "Chatbots", "Productivity"],
+    triggers: [
+      "research",
+      "sources",
+      "web search",
+      "answer questions",
+      "fact finding",
+      "compare information",
+    ],
+    categories: ["Education AI", "Chatbots", "Productivity"],
     terms: ["research", "sources", "summaries", "answers", "search", "analysis"],
   },
   {
     intent: "voice-audio",
-    triggers: ["voice", "audio", "podcast", "speech", "voiceover", "text to speech", "music", "narration"],
-    categories: ["Voice AI", "Music AI"],
+    triggers: [
+      "voice",
+      "audio",
+      "podcast",
+      "speech",
+      "voiceover",
+      "text to speech",
+      "music",
+      "narration",
+    ],
+    categories: ["Voice AI"],
     terms: ["voice", "audio", "speech", "podcast", "voiceover", "music"],
   },
   {
     intent: "chatbot-support",
-    triggers: ["chatbot", "assistant", "customer support", "answer customers", "live chat", "help desk", "support"],
+    triggers: [
+      "chatbot",
+      "assistant",
+      "customer support",
+      "answer customers",
+      "live chat",
+      "help desk",
+      "support",
+    ],
     categories: ["Chatbots", "Productivity"],
     terms: ["chatbot", "assistant", "support", "customer", "answers"],
   },
   {
     intent: "productivity",
-    triggers: ["save time", "organize", "tasks", "notes", "calendar", "meetings", "email", "manage tasks"],
-    categories: ["Productivity", "Automation"],
+    triggers: [
+      "save time",
+      "organize",
+      "tasks",
+      "notes",
+      "calendar",
+      "meetings",
+      "email",
+      "manage tasks",
+    ],
+    categories: ["Productivity", "AI Agents"],
     terms: ["productivity", "tasks", "notes", "workflow", "automation", "email"],
   },
   {
     intent: "automation-agents",
-    triggers: ["agent", "automate", "automation", "workflow", "repetitive tasks", "connect apps", "business automation"],
-    categories: ["Automation", "Productivity"],
+    triggers: [
+      "agent",
+      "automate",
+      "automation",
+      "workflow",
+      "repetitive tasks",
+      "connect apps",
+      "business automation",
+    ],
+    categories: ["AI Agents", "Productivity"],
     terms: ["agents", "automation", "workflow", "tasks", "connect", "business"],
   },
   {
     intent: "seo",
-    triggers: ["seo", "ranking", "keywords", "google traffic", "google search", "website traffic"],
-    categories: ["Writing", "Website Builders", "Productivity"],
+    triggers: [
+      "seo",
+      "ranking",
+      "keywords",
+      "google traffic",
+      "google search",
+      "website traffic",
+    ],
+    categories: ["SEO AI", "Writing", "Marketing AI"],
     terms: ["seo", "keywords", "search", "website", "traffic", "blog"],
   },
 ];
@@ -263,8 +328,8 @@ export function normalizeSearchText(value: string) {
 
 export function normalizeIntentTerms(query: string): SearchIntent {
   const normalizedQuery = normalizeSearchText(query);
-  const categories = new Set<string>();
-  const excludedCategories = new Set<string>();
+  const categories = new Set<ToolCategory>();
+  const excludedCategories = new Set<ToolCategory>();
   const intents = new Set<string>();
   const terms = new Set<string>();
   const tokens = normalizedQuery
@@ -282,13 +347,22 @@ export function normalizeIntentTerms(query: string): SearchIntent {
     intents.add(group.intent);
     if (group.strict) strict = true;
     group.categories.forEach((category) => categories.add(category));
-    group.excludedCategories?.forEach((category) => excludedCategories.add(category));
+    group.excludedCategories?.forEach((category) =>
+      excludedCategories.add(category),
+    );
     group.terms.forEach((term) => terms.add(term));
   });
 
   tokens.forEach((token) => terms.add(token));
 
-  return { categories, excludedCategories, intents, normalizedQuery, strict, terms };
+  return {
+    categories,
+    excludedCategories,
+    intents,
+    normalizedQuery,
+    strict,
+    terms,
+  };
 }
 
 export function getToolSearchProfile(tool: Tool) {
@@ -330,7 +404,10 @@ export function getToolSearchProfile(tool: Tool) {
   };
 }
 
-function hasStrictIntentEvidence(profile: ReturnType<typeof getToolSearchProfile>, intent: SearchIntent) {
+function hasStrictIntentEvidence(
+  profile: ReturnType<typeof getToolSearchProfile>,
+  intent: SearchIntent,
+) {
   const explicitTerms = Array.from(intent.terms).map(normalizeSearchText);
   return explicitTerms.some(
     (term) =>
@@ -352,7 +429,11 @@ export function scoreToolForQuery(tool: Tool, query: string) {
 
   const profile = getToolSearchProfile(tool);
 
-  if (intent.strict && intent.excludedCategories.has(tool.category) && !hasStrictIntentEvidence(profile, intent)) {
+  if (
+    intent.strict &&
+    intent.excludedCategories.has(tool.category) &&
+    !hasStrictIntentEvidence(profile, intent)
+  ) {
     return 0;
   }
 

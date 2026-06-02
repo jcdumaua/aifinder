@@ -1,6 +1,8 @@
+import { TOOL_CATEGORIES, type ToolCategory } from "../../lib/tool-categories";
+
 export type Tool = {
   name: string;
-  category: string;
+  category: ToolCategory;
   description: string;
   website: string;
   logoUrl?: string;
@@ -55,7 +57,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Perplexity",
-    category: "Research",
+    category: "Education AI",
     description: "AI-powered answer engine with web research and cited answers.",
     website: "https://perplexity.ai",
     pricing: "Free + Paid",
@@ -287,7 +289,7 @@ export const tools: Tool[] = [
 
   {
     name: "Suno",
-    category: "Music AI",
+    category: "Voice AI",
     description: "Generate full AI songs with vocals and instrumentals from text prompts.",
     website: "https://suno.com",
     pricing: "Free + Paid",
@@ -300,7 +302,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Udio",
-    category: "Music AI",
+    category: "Voice AI",
     description: "AI music generator for songs, vocals, instrumentals, and creative audio.",
     website: "https://udio.com",
     pricing: "Free + Paid",
@@ -311,7 +313,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Soundraw",
-    category: "Music AI",
+    category: "Voice AI",
     description: "AI music generator for royalty-friendly background music and creator content.",
     website: "https://soundraw.io",
     pricing: "Free + Paid",
@@ -486,7 +488,7 @@ export const tools: Tool[] = [
 
   {
     name: "Zapier AI",
-    category: "Automation",
+    category: "AI Agents",
     description: "AI automation for workflows, app integrations, and business processes.",
     website: "https://zapier.com/ai",
     pricing: "Free + Paid",
@@ -497,7 +499,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Make",
-    category: "Automation",
+    category: "AI Agents",
     description: "Visual workflow automation platform for connecting apps and processes.",
     website: "https://www.make.com",
     pricing: "Free + Paid",
@@ -507,7 +509,7 @@ export const tools: Tool[] = [
   },
   {
     name: "n8n",
-    category: "Automation",
+    category: "AI Agents",
     description: "Workflow automation platform with AI agent support and self-hosting options.",
     website: "https://n8n.io",
     pricing: "Free + Paid",
@@ -517,7 +519,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Lindy",
-    category: "Automation",
+    category: "AI Agents",
     description: "AI agents for automating business tasks, communications, and workflows.",
     website: "https://www.lindy.ai",
     pricing: "Paid",
@@ -527,7 +529,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Gumloop",
-    category: "Automation",
+    category: "AI Agents",
     description: "AI workflow builder for automating business tasks with no-code agents.",
     website: "https://www.gumloop.com",
     pricing: "Free + Paid",
@@ -538,7 +540,7 @@ export const tools: Tool[] = [
 
   {
     name: "Framer AI",
-    category: "Website Builders",
+    category: "Design AI",
     description: "AI-powered website builder for creating polished websites and landing pages.",
     website: "https://www.framer.com/ai",
     pricing: "Free + Paid",
@@ -549,7 +551,7 @@ export const tools: Tool[] = [
   },
   {
     name: "Durable",
-    category: "Website Builders",
+    category: "Design AI",
     description: "AI website builder for small businesses, services, and entrepreneurs.",
     website: "https://durable.co",
     pricing: "Free + Paid",
@@ -559,7 +561,7 @@ export const tools: Tool[] = [
   },
   {
     name: "10Web",
-    category: "Website Builders",
+    category: "Design AI",
     description: "AI website builder and WordPress automation platform.",
     website: "https://10web.io",
     pricing: "Paid",
@@ -569,9 +571,9 @@ export const tools: Tool[] = [
   },
 ];
 
-export const categories = [
-  ...new Set(tools.map((tool) => tool.category)),
-];
+export const categories = TOOL_CATEGORIES.filter((category) =>
+  tools.some((tool) => tool.category === category),
+);
 
 export const slugify = (text: string) =>
   text.toLowerCase().replaceAll(" ", "-");
@@ -590,26 +592,30 @@ export const getIcon = (category: string) => {
   switch (category) {
     case "Chatbots":
       return "🤖";
-    case "Research":
-      return "🔎";
     case "Image AI":
       return "🎨";
     case "Video AI":
       return "🎬";
     case "Voice AI":
       return "🎤";
-    case "Music AI":
-      return "🎵";
     case "Coding":
       return "💻";
     case "Writing":
       return "✍️";
+    case "Business":
+      return "🏢";
     case "Productivity":
       return "📈";
-    case "Automation":
+    case "Education AI":
+      return "🎓";
+    case "Marketing AI":
+      return "📣";
+    case "SEO AI":
+      return "🔎";
+    case "Design AI":
+      return "✨";
+    case "AI Agents":
       return "⚙️";
-    case "Website Builders":
-      return "🌐";
     default:
       return "✨";
   }
