@@ -5,25 +5,10 @@ import {
   verifyAdminCsrfRequest,
 } from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import { isToolCategory } from "../../../../lib/tool-categories";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CATEGORIES = [
-  "Chatbots",
-  "Image AI",
-  "Video AI",
-  "Voice AI",
-  "Writing",
-  "Coding",
-  "Business",
-  "Productivity",
-  "Education AI",
-  "Marketing AI",
-  "SEO AI",
-  "Design AI",
-  "AI Agents",
-];
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
 
@@ -302,7 +287,7 @@ function validateSubmissionEditBody(body: Record<string, unknown>) {
     throw new Error("Please fill all required fields.");
   }
 
-  if (!CATEGORIES.includes(category)) {
+  if (!isToolCategory(category)) {
     throw new Error("Please select a valid category.");
   }
 
@@ -507,7 +492,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!CATEGORIES.includes(category)) {
+    if (!isToolCategory(category)) {
       return jsonResponse(
         { error: "Submission has an invalid category." },
         400
@@ -537,38 +522,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: insertError } = await supabaseAdmin.from("tools").insert([
+    const { error: approvalError } = await supabaseAdmin.rpc(
+      "approve_submitted_tool",
       {
-        name,
-        category,
-        description,
-        website: safeWebsite,
-        pricing: pricing || "Free + Paid",
-        logo_url: safeLogoUrl,
-        platforms: [],
-        featured: false,
-        best_for: "General use",
-        use_cases: [],
-      },
-    ]);
+        submission_id: submissionId,
+      }
+    );
 
-    if (insertError) {
-      console.error("Approve submission insert error:", insertError.message);
-
-      return jsonResponse({ error: "Failed to add approved tool." }, 500);
-    }
-
-    const { error: updateError } = await supabaseAdmin
-      .from("submitted_tools")
-      .update({ status: "approved" })
-      .eq("id", submissionId)
-      .eq("status", "pending");
-
-    if (updateError) {
-      console.error("Approve submission status error:", updateError.message);
+    if (approvalError) {
+      console.error("Approve submission RPC error:", approvalError.message);
 
       return jsonResponse(
-        { error: "Tool was added, but submission status update failed." },
+        { error: "Failed to approve submission." },
         500
       );
     }
