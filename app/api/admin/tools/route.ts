@@ -5,61 +5,24 @@ import {
   verifyAdminCsrfRequest,
 } from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
+import {
+  getNormalizedDomain,
+  TOOL_FIELD_LENGTHS,
+  validateHttpsUrl,
+  validateOptionalLogoUrl,
+  validateTextField,
+  validateToolCategory,
+  validateToolPricing,
+} from "../../../../lib/tool-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CATEGORIES = [
-  "Chatbots",
-  "Image AI",
-  "Video AI",
-  "Voice AI",
-  "Writing",
-  "Coding",
-  "Business",
-  "Productivity",
-  "Education AI",
-  "Marketing AI",
-  "SEO AI",
-  "Design AI",
-  "AI Agents",
-];
-
-const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
-
-const BLOCKED_FILE_EXTENSIONS = [
-  ".exe",
-  ".zip",
-  ".rar",
-  ".7z",
-  ".apk",
-  ".dmg",
-  ".pkg",
-  ".msi",
-  ".bat",
-  ".cmd",
-  ".scr",
-  ".ps1",
-  ".vbs",
-  ".jar",
-  ".iso",
-  ".torrent",
-];
 
 const MAX_BODY_SIZE_BYTES = 20 * 1024; // 20KB
 const ADMIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const ADMIN_RATE_LIMIT_MAX_REQUESTS = 80;
 
 const adminRateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-const MAX_FIELD_LENGTHS = {
-  name: 80,
-  category: 40,
-  website: 500,
-  logoUrl: 500,
-  pricing: 80,
-  description: 500,
-};
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -128,109 +91,6 @@ function requireAdminSecurity(request: Request) {
   return null;
 }
 
-function cleanText(value: unknown, maxLength: number) {
-  if (typeof value !== "string") return "";
-
-  return value
-    .replace(/[\u0000-\u001F\u007F]/g, "")
-    .trim()
-    .slice(0, maxLength);
-}
-
-function hasSuspiciousText(value: string) {
-  const lowerValue = value.toLowerCase();
-
-  const blockedPatterns = [
-    "<script",
-    "</script",
-    "javascript:",
-    "data:text/html",
-    "onerror=",
-    "onload=",
-    "onclick=",
-    "<iframe",
-    "</iframe",
-    "<object",
-    "</object",
-    "<embed",
-    "</embed",
-  ];
-
-  return blockedPatterns.some((pattern) => lowerValue.includes(pattern));
-}
-
-function validateSafeText(value: string, fieldName: string) {
-  if (hasSuspiciousText(value)) {
-    throw new Error(`${fieldName} contains unsafe content.`);
-  }
-
-  return value;
-}
-
-function validateHttpsUrl(value: string, fieldName: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    throw new Error(`${fieldName} is required.`);
-  }
-
-  let url: URL;
-
-  try {
-    url = new URL(trimmedValue);
-  } catch {
-    throw new Error(`${fieldName} must be a valid URL.`);
-  }
-
-  if (url.protocol !== "https:") {
-    throw new Error(`${fieldName} must start with https://`);
-  }
-
-  if (url.username || url.password) {
-    throw new Error(`${fieldName} cannot contain username or password.`);
-  }
-
-  const hostname = url.hostname.toLowerCase();
-
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.startsWith("10.") ||
-    hostname.startsWith("192.168.") ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-  ) {
-    throw new Error(`${fieldName} cannot use local or private addresses.`);
-  }
-
-  let pathname = "";
-
-  try {
-    pathname = decodeURIComponent(url.pathname).toLowerCase();
-  } catch {
-    pathname = url.pathname.toLowerCase();
-  }
-
-  if (BLOCKED_FILE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
-    throw new Error(`${fieldName} cannot link directly to a downloadable file.`);
-  }
-
-  url.hash = "";
-
-  return url.toString();
-}
-
-function validateOptionalLogoUrl(value: string) {
-  if (!value) return null;
-
-  return validateHttpsUrl(value, "Logo URL");
-}
-
-function getNormalizedDomain(value: string) {
-  const url = new URL(value);
-  return url.hostname.toLowerCase().replace(/^www\./, "");
-}
-
 function getValidId(value: unknown, fieldName: string) {
   const id = Number(value);
 
@@ -267,38 +127,25 @@ async function readJsonBody(request: Request) {
 function validateToolBody(body: Record<string, unknown>, requireId = false) {
   const id = requireId ? getValidId(body.id, "Tool ID") : null;
 
-  const name = validateSafeText(
-    cleanText(body.name, MAX_FIELD_LENGTHS.name),
-    "Tool name"
+  const name = validateTextField(
+    body.name,
+    "Tool name",
+    TOOL_FIELD_LENGTHS.name,
+    { required: true }
   );
 
-  const category = cleanText(body.category, MAX_FIELD_LENGTHS.category);
+  const category = validateToolCategory(body.category);
 
-  const description = validateSafeText(
-    cleanText(body.description, MAX_FIELD_LENGTHS.description),
-    "Description"
+  const description = validateTextField(
+    body.description,
+    "Description",
+    TOOL_FIELD_LENGTHS.description,
+    { required: true }
   );
 
-  const website = cleanText(body.website, MAX_FIELD_LENGTHS.website);
-
-  const logoUrl = cleanText(body.logo_url, MAX_FIELD_LENGTHS.logoUrl);
-
-  const pricing = cleanText(body.pricing, MAX_FIELD_LENGTHS.pricing);
-
-  if (!name || !category || !description || !website) {
-    throw new Error("Please fill all required fields.");
-  }
-
-  if (!CATEGORIES.includes(category)) {
-    throw new Error("Please select a valid category.");
-  }
-
-  if (pricing && !PRICING_OPTIONS.includes(pricing)) {
-    throw new Error("Please select a valid pricing option.");
-  }
-
-  const safeWebsite = validateHttpsUrl(website, "Website URL");
-  const safeLogoUrl = validateOptionalLogoUrl(logoUrl);
+  const safeWebsite = validateHttpsUrl(body.website, "Website URL");
+  const safeLogoUrl = validateOptionalLogoUrl(body.logo_url) || null;
+  const pricing = validateToolPricing(body.pricing);
 
   return {
     id,

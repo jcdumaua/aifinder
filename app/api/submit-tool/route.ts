@@ -1,60 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-const CATEGORIES = [
-  "Chatbots",
-  "Image AI",
-  "Video AI",
-  "Voice AI",
-  "Writing",
-  "Coding",
-  "Business",
-  "Productivity",
-  "Education AI",
-  "Marketing AI",
-  "SEO AI",
-  "Design AI",
-  "AI Agents",
-];
-
-const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
-
-const BLOCKED_FILE_EXTENSIONS = [
-  ".exe",
-  ".zip",
-  ".rar",
-  ".7z",
-  ".apk",
-  ".dmg",
-  ".pkg",
-  ".msi",
-  ".bat",
-  ".cmd",
-  ".scr",
-  ".ps1",
-  ".vbs",
-  ".jar",
-  ".iso",
-  ".torrent",
-];
+import {
+  getNormalizedDomain,
+  TOOL_FIELD_LENGTHS,
+  validateHttpsUrl,
+  validateOptionalEmail,
+  validateOptionalLogoUrl,
+  validateTextField,
+  validateToolCategory,
+  validateToolPricing,
+} from "../../../lib/tool-validation";
 
 const MAX_BODY_SIZE_BYTES = 20 * 1024; // 20KB
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const RATE_LIMIT_MAX_SUBMISSIONS = 5; // 5 submissions per hour per IP
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-const MAX_FIELD_LENGTHS = {
-  name: 80,
-  category: 40,
-  website: 500,
-  logoUrl: 500,
-  pricing: 80,
-  description: 500,
-  submitterName: 80,
-  submitterEmail: 120,
-  companyWebsite: 200,
-};
 
 type ExistingToolRow = {
   id: number;
@@ -114,115 +75,6 @@ function checkRateLimit(ip: string) {
   rateLimitMap.set(ip, current);
 
   return true;
-}
-
-function cleanText(value: unknown, maxLength: number) {
-  if (typeof value !== "string") return "";
-
-  return value
-    .replace(/[\u0000-\u001F\u007F]/g, "")
-    .trim()
-    .slice(0, maxLength);
-}
-
-function hasSuspiciousText(value: string) {
-  const lowerValue = value.toLowerCase();
-
-  const blockedPatterns = [
-    "<script",
-    "</script",
-    "javascript:",
-    "data:text/html",
-    "onerror=",
-    "onload=",
-    "onclick=",
-    "<iframe",
-    "</iframe",
-    "<object",
-    "</object",
-    "<embed",
-    "</embed",
-  ];
-
-  return blockedPatterns.some((pattern) => lowerValue.includes(pattern));
-}
-
-function validateSafeText(value: string, fieldName: string) {
-  if (hasSuspiciousText(value)) {
-    throw new Error(`${fieldName} contains unsafe content.`);
-  }
-
-  return value;
-}
-
-function validateHttpsUrl(value: string, fieldName: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    throw new Error(`${fieldName} is required.`);
-  }
-
-  let url: URL;
-
-  try {
-    url = new URL(trimmedValue);
-  } catch {
-    throw new Error(`${fieldName} must be a valid URL.`);
-  }
-
-  if (url.protocol !== "https:") {
-    throw new Error(`${fieldName} must start with https://`);
-  }
-
-  if (url.username || url.password) {
-    throw new Error(`${fieldName} cannot contain username or password.`);
-  }
-
-  const hostname = url.hostname.toLowerCase();
-
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.startsWith("10.") ||
-    hostname.startsWith("192.168.") ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-  ) {
-    throw new Error(`${fieldName} cannot use local or private addresses.`);
-  }
-
-  let pathname = "";
-
-  try {
-    pathname = decodeURIComponent(url.pathname).toLowerCase();
-  } catch {
-    pathname = url.pathname.toLowerCase();
-  }
-
-  if (BLOCKED_FILE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
-    throw new Error(`${fieldName} cannot link directly to a downloadable file.`);
-  }
-
-  url.hash = "";
-
-  return url.toString();
-}
-
-function validateOptionalLogoUrl(value: string) {
-  if (!value) return "";
-
-  return validateHttpsUrl(value, "Logo URL");
-}
-
-function getNormalizedDomain(value: string) {
-  const url = new URL(value);
-  return url.hostname.toLowerCase().replace(/^www\./, "");
-}
-
-function isValidEmail(value: string) {
-  if (!value) return true;
-
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 async function checkDuplicateDomain(
@@ -361,9 +213,11 @@ export async function POST(request: Request) {
       companyWebsite?: unknown;
     };
 
-    const honeypot = cleanText(
+    const honeypot = validateTextField(
       typedBody.companyWebsite,
-      MAX_FIELD_LENGTHS.companyWebsite
+      "Company website",
+      TOOL_FIELD_LENGTHS.companyWebsite,
+      { unsafeCheck: false }
     );
 
     if (honeypot) {
@@ -372,61 +226,32 @@ export async function POST(request: Request) {
       });
     }
 
-    const name = validateSafeText(
-      cleanText(typedBody.name, MAX_FIELD_LENGTHS.name),
-      "Tool name"
+    const name = validateTextField(
+      typedBody.name,
+      "Tool name",
+      TOOL_FIELD_LENGTHS.name,
+      { required: true }
     );
 
-    const category = cleanText(
-      typedBody.category,
-      MAX_FIELD_LENGTHS.category
+    const category = validateToolCategory(typedBody.category);
+
+    const description = validateTextField(
+      typedBody.description,
+      "Description",
+      TOOL_FIELD_LENGTHS.description,
+      { required: true }
     );
 
-    const website = cleanText(typedBody.website, MAX_FIELD_LENGTHS.website);
-
-    const logoUrl = cleanText(typedBody.logoUrl, MAX_FIELD_LENGTHS.logoUrl);
-
-    const pricing = cleanText(typedBody.pricing, MAX_FIELD_LENGTHS.pricing);
-
-    const description = validateSafeText(
-      cleanText(typedBody.description, MAX_FIELD_LENGTHS.description),
-      "Description"
+    const submitterName = validateTextField(
+      typedBody.submitterName,
+      "Submitter name",
+      TOOL_FIELD_LENGTHS.submitterName
     );
 
-    const submitterName = validateSafeText(
-      cleanText(typedBody.submitterName, MAX_FIELD_LENGTHS.submitterName),
-      "Submitter name"
-    );
-
-    const submitterEmail = cleanText(
-      typedBody.submitterEmail,
-      MAX_FIELD_LENGTHS.submitterEmail
-    );
-
-    if (!name || !category || !website || !description) {
-      return jsonResponse({ error: "Please fill in all required fields." }, 400);
-    }
-
-    if (!CATEGORIES.includes(category)) {
-      return jsonResponse({ error: "Please select a valid category." }, 400);
-    }
-
-    if (pricing && !PRICING_OPTIONS.includes(pricing)) {
-      return jsonResponse(
-        { error: "Please select a valid pricing option." },
-        400
-      );
-    }
-
-    if (!isValidEmail(submitterEmail)) {
-      return jsonResponse(
-        { error: "Please enter a valid email address." },
-        400
-      );
-    }
-
-    const safeWebsite = validateHttpsUrl(website, "Website URL");
-    const safeLogoUrl = validateOptionalLogoUrl(logoUrl);
+    const submitterEmail = validateOptionalEmail(typedBody.submitterEmail);
+    const pricing = validateToolPricing(typedBody.pricing);
+    const safeWebsite = validateHttpsUrl(typedBody.website, "Website URL");
+    const safeLogoUrl = validateOptionalLogoUrl(typedBody.logoUrl);
     const normalizedDomain = getNormalizedDomain(safeWebsite);
 
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
