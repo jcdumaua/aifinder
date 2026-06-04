@@ -3,7 +3,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Check, Plus, Sparkles, Star } from "lucide-react";
 import { useState } from "react";
-import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +34,8 @@ type PublicToolCardProps = {
   badge?: string;
   matchExplanation?: string;
   softText?: string;
+  isOpen?: boolean;
+  onOpenTool: (tool: PublicToolCardData) => void;
   onToggleFavorite: (tool: PublicToolCardData) => void;
   onToggleCompare: (tool: PublicToolCardData) => void;
 };
@@ -48,11 +49,12 @@ export function PublicToolCard({
   badge,
   matchExplanation,
   softText = "text-slate-300 [.theme-light_&]:text-slate-700",
+  isOpen = false,
+  onOpenTool,
   onToggleFavorite,
   onToggleCompare,
 }: PublicToolCardProps) {
   const shouldReduceMotion = useReducedMotion();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasLogoError, setHasLogoError] = useState(false);
   const isHomepage = variant === "homepage";
   const badgeTone =
@@ -70,7 +72,7 @@ export function PublicToolCard({
       return;
     }
 
-    setIsModalOpen(true);
+    onOpenTool(tool);
   }
 
   return (
@@ -90,7 +92,7 @@ export function PublicToolCard({
             }
           }}
           animate={
-            isModalOpen && !shouldReduceMotion
+            isOpen && !shouldReduceMotion
               ? { opacity: 0.45, scale: 0.985 }
               : { opacity: 1, scale: 1 }
           }
@@ -184,7 +186,7 @@ export function PublicToolCard({
             <div className="flex items-start gap-4">
               <ToolLogo
                 tool={tool}
-                isOpening={isHomepage && isModalOpen && !shouldReduceMotion}
+                isOpening={isHomepage && isOpen && !shouldReduceMotion}
                 hasLogoError={hasLogoError}
                 onLogoError={() => setHasLogoError(true)}
                 variant={variant}
@@ -257,16 +259,6 @@ export function PublicToolCard({
           </CardContent>
         </motion.article>
       </Card>
-
-      <ToolDetailsModal
-        tool={tool}
-        isOpen={isModalOpen}
-        isCompared={isCompared}
-        isFavorite={isFavorite}
-        onClose={() => setIsModalOpen(false)}
-        onToggleCompare={() => onToggleCompare(tool)}
-        onToggleFavorite={() => onToggleFavorite(tool)}
-      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   PublicToolCard,
   type PublicToolCardData,
 } from "@/components/public/tool-card";
+import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,18 @@ export default function CategoryDetailClient({
   const [search, setSearch] = useState("");
   const [selectedPricing, setSelectedPricing] = useState("All");
   const [selectedPlatform, setSelectedPlatform] = useState("All");
+  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
+  const [selectedTool, setSelectedTool] = useState<PublicToolCardData | null>(
+    null,
+  );
+  const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem("aifinder-favorites");
+    if (savedFavorites) {
+      setFavoriteSlugs(JSON.parse(savedFavorites));
+    }
+  }, []);
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
@@ -124,6 +137,15 @@ export default function CategoryDetailClient({
     setSearch("");
     setSelectedPricing("All");
     setSelectedPlatform("All");
+  }
+
+  function toggleFavorite(slug: string) {
+    const newFavorites = favoriteSlugs.includes(slug)
+      ? favoriteSlugs.filter((item) => item !== slug)
+      : [...favoriteSlugs, slug];
+
+    setFavoriteSlugs(newFavorites);
+    localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
   }
 
   return (
@@ -257,8 +279,16 @@ export default function CategoryDetailClient({
             </h2>
 
             <ToolGrid
+              gridId="featured"
               tools={featuredTools}
+              favoriteSlugs={favoriteSlugs}
               compareSlugs={compareSlugs}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
+              onToggleFavorite={toggleFavorite}
               onToggleCompare={toggleCompare}
               cardBg={cardBg}
               softText={softText}
@@ -278,8 +308,16 @@ export default function CategoryDetailClient({
             </h2>
 
             <ToolGrid
+              gridId="top-rated"
               tools={topRatedTools}
+              favoriteSlugs={favoriteSlugs}
               compareSlugs={compareSlugs}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
+              onToggleFavorite={toggleFavorite}
               onToggleCompare={toggleCompare}
               cardBg={cardBg}
               softText={softText}
@@ -309,8 +347,16 @@ export default function CategoryDetailClient({
 
           {filteredTools.length > 0 ? (
             <ToolGrid
+              gridId="directory"
               tools={filteredTools}
+              favoriteSlugs={favoriteSlugs}
               compareSlugs={compareSlugs}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
+              onToggleFavorite={toggleFavorite}
               onToggleCompare={toggleCompare}
               cardBg={cardBg}
               softText={softText}
@@ -396,6 +442,27 @@ export default function CategoryDetailClient({
             cardBg={cardBg}
           />
         )}
+
+        <ToolDetailsModal
+          tool={selectedTool}
+          isOpen={Boolean(selectedTool)}
+          isCompared={
+            selectedTool ? compareSlugs.includes(selectedTool.slug) : false
+          }
+          isFavorite={
+            selectedTool ? favoriteSlugs.includes(selectedTool.slug) : false
+          }
+          onClose={() => {
+            setSelectedTool(null);
+            setSelectedCardKey(null);
+          }}
+          onToggleCompare={() => {
+            if (selectedTool) toggleCompare(selectedTool.slug);
+          }}
+          onToggleFavorite={() => {
+            if (selectedTool) toggleFavorite(selectedTool.slug);
+          }}
+        />
       </section>
     </main>
   );
@@ -414,51 +481,48 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 function ToolGrid({
+  gridId,
   tools,
+  favoriteSlugs,
   compareSlugs,
+  selectedCardKey,
+  onOpenTool,
+  onToggleFavorite,
   onToggleCompare,
   cardBg,
   softText,
   badge,
 }: {
+  gridId: string;
   tools: CategoryPageTool[];
+  favoriteSlugs: string[];
   compareSlugs: string[];
+  selectedCardKey: string | null;
+  onOpenTool: (tool: PublicToolCardData, cardKey: string) => void;
+  onToggleFavorite: (slug: string) => void;
   onToggleCompare: (slug: string) => void;
   cardBg: string;
   softText: string;
   badge?: string;
 }) {
-  const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
-
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem("aifinder-favorites");
-    if (savedFavorites) {
-      setFavoriteSlugs(JSON.parse(savedFavorites));
-    }
-  }, []);
-
-  function toggleFavorite(slug: string) {
-    const newFavorites = favoriteSlugs.includes(slug)
-      ? favoriteSlugs.filter((item) => item !== slug)
-      : [...favoriteSlugs, slug];
-
-    setFavoriteSlugs(newFavorites);
-    localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
-  }
-
   return (
     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {tools.map((tool) => {
         const publicTool = toPublicToolCardData(tool);
+        const cardKey = `${gridId}:${publicTool.slug}`;
 
         return (
           <PublicToolCard
-            key={tool.slug}
+            key={cardKey}
             tool={publicTool}
             variant="category"
             isFavorite={favoriteSlugs.includes(publicTool.slug)}
             isCompared={compareSlugs.includes(publicTool.slug)}
-            onToggleFavorite={() => toggleFavorite(publicTool.slug)}
+            isOpen={selectedCardKey === cardKey}
+            onOpenTool={(selectedPublicTool) =>
+              onOpenTool(selectedPublicTool, cardKey)
+            }
+            onToggleFavorite={() => onToggleFavorite(publicTool.slug)}
             onToggleCompare={() => onToggleCompare(publicTool.slug)}
             cardBg={cardBg}
             softText={softText}

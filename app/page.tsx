@@ -12,6 +12,7 @@ import {
   PublicToolCard,
   type PublicToolCardData,
 } from "@/components/public/tool-card";
+import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -173,6 +174,10 @@ export default function Home() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSearchThinking, setIsSearchThinking] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
+  const [selectedTool, setSelectedTool] = useState<PublicToolCardData | null>(
+    null,
+  );
+  const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
 
   const tools = databaseTools;
 
@@ -305,6 +310,10 @@ export default function Home() {
   const compareTools = tools.filter((tool) =>
     compareSlugs.includes(toolSlug(tool.name))
   );
+
+  const selectedOriginalTool = selectedTool
+    ? tools.find((tool) => toolSlug(tool.name) === selectedTool.slug)
+    : undefined;
 
   const rankedFilteredTools = useMemo(() => {
     return rankToolsForQuery(tools, search)
@@ -581,6 +590,11 @@ export default function Home() {
               onToggleFavorite={toggleFavorite}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
               emptyText="No bookmarks yet. Click the ☆ on any tool to save it here."
               cardBg={cardBg}
               mutedText={mutedText}
@@ -593,6 +607,11 @@ export default function Home() {
               onToggleFavorite={toggleFavorite}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
               badge="Trending"
               cardBg={cardBg}
               mutedText={mutedText}
@@ -605,6 +624,11 @@ export default function Home() {
               onToggleFavorite={toggleFavorite}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
               badge="Top Rated"
               cardBg={cardBg}
               mutedText={mutedText}
@@ -617,6 +641,11 @@ export default function Home() {
               onToggleFavorite={toggleFavorite}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={(tool, cardKey) => {
+                setSelectedTool(tool);
+                setSelectedCardKey(cardKey);
+              }}
               badge="New"
               cardBg={cardBg}
               mutedText={mutedText}
@@ -692,6 +721,11 @@ export default function Home() {
             onToggleFavorite={toggleFavorite}
             compareSlugs={compareSlugs}
             onToggleCompare={toggleCompare}
+            selectedCardKey={selectedCardKey}
+            onOpenTool={(tool, cardKey) => {
+              setSelectedTool(tool);
+              setSelectedCardKey(cardKey);
+            }}
             emptySuggestions={emptySearchSuggestions}
             onSelectSuggestion={applySearch}
             onClose={() => setIsSearchModalOpen(false)}
@@ -699,6 +733,27 @@ export default function Home() {
             mutedText={mutedText}
           />
         )}
+
+        <ToolDetailsModal
+          tool={selectedTool}
+          isOpen={Boolean(selectedTool)}
+          isCompared={
+            selectedTool ? compareSlugs.includes(selectedTool.slug) : false
+          }
+          isFavorite={
+            selectedTool ? favoriteSlugs.includes(selectedTool.slug) : false
+          }
+          onClose={() => {
+            setSelectedTool(null);
+            setSelectedCardKey(null);
+          }}
+          onToggleCompare={() => {
+            if (selectedTool) toggleCompare(selectedTool.slug);
+          }}
+          onToggleFavorite={() => {
+            if (selectedOriginalTool) toggleFavorite(selectedOriginalTool);
+          }}
+        />
 
         {compareSlugs.length > 0 && (
           <CompareBar
@@ -721,6 +776,8 @@ function Section({
   onToggleFavorite,
   compareSlugs,
   onToggleCompare,
+  selectedCardKey,
+  onOpenTool,
   badge,
   emptyText,
   cardBg,
@@ -732,6 +789,8 @@ function Section({
   onToggleFavorite: (tool: Tool) => void;
   compareSlugs: string[];
   onToggleCompare: (slug: string) => void;
+  selectedCardKey: string | null;
+  onOpenTool: (tool: PublicToolCardData, cardKey: string) => void;
   badge?: string;
   emptyText?: string;
   cardBg: string;
@@ -752,14 +811,19 @@ function Section({
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {tools.map((tool) => {
             const publicTool = toPublicToolCardData(tool);
+            const cardKey = `${title}:${publicTool.slug}`;
 
             return (
               <PublicToolCard
-                key={tool.name}
+                key={cardKey}
                 tool={publicTool}
                 variant="homepage"
                 isFavorite={favoriteSlugs.includes(publicTool.slug)}
                 isCompared={compareSlugs.includes(publicTool.slug)}
+                isOpen={selectedCardKey === cardKey}
+                onOpenTool={(selectedPublicTool) =>
+                  onOpenTool(selectedPublicTool, cardKey)
+                }
                 onToggleFavorite={() => onToggleFavorite(tool)}
                 onToggleCompare={() => onToggleCompare(publicTool.slug)}
                 badge={badge}
@@ -781,6 +845,8 @@ function SearchResultsModal({
   onToggleFavorite,
   compareSlugs,
   onToggleCompare,
+  selectedCardKey,
+  onOpenTool,
   emptySuggestions,
   onSelectSuggestion,
   onClose,
@@ -794,6 +860,8 @@ function SearchResultsModal({
   onToggleFavorite: (tool: Tool) => void;
   compareSlugs: string[];
   onToggleCompare: (slug: string) => void;
+  selectedCardKey: string | null;
+  onOpenTool: (tool: PublicToolCardData, cardKey: string) => void;
   emptySuggestions: string[];
   onSelectSuggestion: (value: string) => void;
   onClose: () => void;
@@ -859,6 +927,8 @@ function SearchResultsModal({
               onToggleFavorite={onToggleFavorite}
               compareSlugs={compareSlugs}
               onToggleCompare={onToggleCompare}
+              selectedCardKey={selectedCardKey}
+              onOpenTool={onOpenTool}
               cardBg={cardBg}
             />
           ) : (
@@ -1175,6 +1245,8 @@ function ToolList({
   onToggleFavorite,
   compareSlugs,
   onToggleCompare,
+  selectedCardKey,
+  onOpenTool,
   cardBg,
 }: {
   rankedTools: RankedTool[];
@@ -1183,20 +1255,27 @@ function ToolList({
   onToggleFavorite: (tool: Tool) => void;
   compareSlugs: string[];
   onToggleCompare: (slug: string) => void;
+  selectedCardKey: string | null;
+  onOpenTool: (tool: PublicToolCardData, cardKey: string) => void;
   cardBg: string;
 }) {
   return (
     <div className="grid max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {rankedTools.map(({ tool, score }) => {
         const publicTool = toPublicToolCardData(tool);
+        const cardKey = `search:${publicTool.slug}`;
 
         return (
           <PublicToolCard
-            key={tool.name}
+            key={cardKey}
             tool={publicTool}
             variant="homepage"
             isFavorite={favoriteSlugs.includes(publicTool.slug)}
             isCompared={compareSlugs.includes(publicTool.slug)}
+            isOpen={selectedCardKey === cardKey}
+            onOpenTool={(selectedPublicTool) =>
+              onOpenTool(selectedPublicTool, cardKey)
+            }
             onToggleFavorite={() => onToggleFavorite(tool)}
             onToggleCompare={() => onToggleCompare(publicTool.slug)}
             badge={getSearchConfidenceLabel(score)}
