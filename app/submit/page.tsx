@@ -428,7 +428,7 @@ export default function SubmitToolPage() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </Button>
 
-              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 py-6 sm:max-h-[90dvh] sm:px-8 sm:py-8">
+              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 pb-32 pt-6 sm:max-h-[90dvh] sm:px-8 sm:pb-24 sm:pt-8">
                 <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20">
                   <div>
                     <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
@@ -447,7 +447,8 @@ export default function SubmitToolPage() {
                 </div>
 
                 <form
-                  className="mt-6 space-y-5"
+                  id="submit-tool-form"
+                  className="mt-6 space-y-5 pb-2"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void submitTool();
@@ -726,31 +727,33 @@ export default function SubmitToolPage() {
                     </div>
                   </section>
 
-                  <p className="ai-product-muted rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-xs leading-5 [.theme-light_&]:bg-cyan-50/70">
+                  <p className="ai-product-muted mb-2 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] px-4 py-3 text-xs leading-5 [.theme-light_&]:bg-cyan-50/70 sm:mb-3">
                     For security, only HTTPS websites are accepted. Direct
                     download links and unsafe file types are blocked.
                   </p>
 
-                  <div className="sticky bottom-0 -mx-5 grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 border-t border-white/10 bg-slate-950/[0.86] px-5 py-4 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.9] sm:-mx-8 sm:flex sm:items-center sm:justify-between sm:px-8">
-                    <Button
-                      type="button"
-                      onClick={closeSubmitPage}
-                      variant="ghost"
-                      className="ai-product-button-secondary h-auto px-4 py-3 text-sm"
-                    >
-                      Cancel
-                    </Button>
-
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting || isUploadingLogo}
-                      variant="ghost"
-                      className="ai-product-button-primary h-auto px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:py-4"
-                    >
-                      {isSubmitting ? "Submitting..." : "Submit for Review"}
-                    </Button>
-                  </div>
                 </form>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-white/10 bg-slate-950/[0.88] px-5 py-2.5 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.92] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3">
+                <Button
+                  type="button"
+                  onClick={closeSubmitPage}
+                  variant="ghost"
+                  className="ai-product-button-secondary h-10 w-full px-4 py-2 text-sm sm:w-auto"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  form="submit-tool-form"
+                  disabled={isSubmitting || isUploadingLogo}
+                  variant="ghost"
+                  className="ai-product-button-primary h-10 w-full px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
+                >
+                  {isSubmitting ? "Submitting..." : "Submit for Review"}
+                </Button>
               </div>
             </motion.section>
           </motion.div>
