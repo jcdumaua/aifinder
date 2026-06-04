@@ -4,10 +4,22 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { isToolCategory, TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
+const SELECT_EMPTY_VALUE = "__empty";
 
 const BLOCKED_FILE_EXTENSIONS = [
   ".exe",
@@ -290,12 +302,12 @@ export default function SubmitToolPage() {
 
   const isSuccessPopup = popup?.type === "success";
   const inputClass =
-    "ai-product-input w-full rounded-2xl px-4 py-3.5 text-sm leading-6 outline-none sm:px-5 sm:py-4 sm:text-base";
+    "ai-product-input h-auto w-full rounded-2xl px-4 py-3.5 text-sm leading-6 outline-none sm:px-5 sm:py-4 sm:text-base";
   const labelClass =
     "ai-product-heading text-sm font-black leading-5";
   const helperClass =
     "ai-product-muted mt-2 text-xs leading-5";
-  const optionClass =
+  const selectContentClass =
     "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
   const sectionClass =
     "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5";
@@ -330,14 +342,16 @@ export default function SubmitToolPage() {
                 : "border-red-400/25"
             }`}
           >
-            <button
+            <Button
               type="button"
               aria-label="Close message"
               onClick={() => setPopup(null)}
+              variant="ghost"
+              size="icon"
               className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
             >
               <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            </Button>
 
             <div
               className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
@@ -357,17 +371,18 @@ export default function SubmitToolPage() {
               {popup.message}
             </p>
 
-            <button
+            <Button
               type="button"
               onClick={() => setPopup(null)}
-              className={`mt-6 rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
+              variant="ghost"
+              className={`mt-6 h-auto rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
                 isSuccessPopup
                   ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
                   : "bg-red-300 text-slate-950 hover:bg-red-200"
               }`}
             >
               OK
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -402,14 +417,16 @@ export default function SubmitToolPage() {
             >
               <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
 
-              <button
+              <Button
                 type="button"
                 aria-label="Close submit tool page"
                 onClick={closeSubmitPage}
+                variant="ghost"
+                size="icon"
                 className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+              </Button>
 
               <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 py-6 sm:max-h-[90dvh] sm:px-8 sm:py-8">
                 <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20">
@@ -436,10 +453,12 @@ export default function SubmitToolPage() {
                     void submitTool();
                   }}
                 >
-                  <input suppressHydrationWarning
+                  <Input
+                    suppressHydrationWarning
                     className="hidden"
                     tabIndex={-1}
                     autoComplete="off"
+                    aria-hidden="true"
                     value={companyWebsite}
                     onChange={(e) => setCompanyWebsite(e.target.value)}
                   />
@@ -455,114 +474,132 @@ export default function SubmitToolPage() {
 
                     <div className="mt-6 grid gap-5 sm:grid-cols-2">
                       <div>
-                        <label className={labelClass} htmlFor="tool-name">
+                        <Label className={labelClass} htmlFor="tool-name">
                           Tool name{" "}
                           <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
                             *
                           </span>
-                        </label>
-                        <input suppressHydrationWarning
+                        </Label>
+                        <Input
+                          suppressHydrationWarning
                           id="tool-name"
                           className={`${inputClass} mt-2`}
                           placeholder="e.g. CanvasMind"
                           value={name}
                           maxLength={80}
+                          aria-required="true"
                           onChange={(e) => setName(e.target.value)}
                         />
                       </div>
 
                       <div>
-                        <label className={labelClass} htmlFor="tool-category">
+                        <Label className={labelClass} htmlFor="tool-category">
                           Category{" "}
                           <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
                             *
                           </span>
-                        </label>
-                        <select suppressHydrationWarning
-                          id="tool-category"
-                          className={`${inputClass} mt-2`}
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
+                        </Label>
+                        <Select
+                          value={category || SELECT_EMPTY_VALUE}
+                          onValueChange={(value) =>
+                            setCategory(value === SELECT_EMPTY_VALUE ? "" : value)
+                          }
                         >
-                          <option className={optionClass} value="">
-                            Select category
-                          </option>
-
-                          {TOOL_CATEGORIES.map((item) => (
-                            <option
-                              className={optionClass}
-                              key={item}
-                              value={item}
-                            >
-                              {item}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger
+                            id="tool-category"
+                            className={`${inputClass} mt-2`}
+                            aria-required="true"
+                          >
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent className={selectContentClass}>
+                            <SelectItem value={SELECT_EMPTY_VALUE}>
+                              Select category
+                            </SelectItem>
+                            {TOOL_CATEGORIES.map((item) => (
+                              <SelectItem key={item} value={item}>
+                                {item}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
-                        <label className={labelClass} htmlFor="tool-website">
+                        <Label className={labelClass} htmlFor="tool-website">
                           Website URL{" "}
                           <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
                             *
                           </span>
-                        </label>
-                        <input suppressHydrationWarning
+                        </Label>
+                        <Input
+                          suppressHydrationWarning
                           id="tool-website"
                           type="url"
                           className={`${inputClass} mt-2`}
                           placeholder="https://example.com"
                           value={website}
                           maxLength={500}
+                          aria-describedby="tool-website-help"
+                          aria-required="true"
                           onChange={(e) => setWebsite(e.target.value)}
                         />
-                        <p className={helperClass}>
+                        <p id="tool-website-help" className={helperClass}>
                           Use the official HTTPS homepage.
                         </p>
                       </div>
 
                       <div>
-                        <label className={labelClass} htmlFor="tool-pricing">
+                        <Label className={labelClass} htmlFor="tool-pricing">
                           Pricing
-                        </label>
-                        <select suppressHydrationWarning
-                          id="tool-pricing"
-                          className={`${inputClass} mt-2`}
-                          value={pricing}
-                          onChange={(e) => setPricing(e.target.value)}
+                        </Label>
+                        <Select
+                          value={pricing || SELECT_EMPTY_VALUE}
+                          onValueChange={(value) =>
+                            setPricing(value === SELECT_EMPTY_VALUE ? "" : value)
+                          }
                         >
-                          <option className={optionClass} value="">
-                            Select pricing
-                          </option>
-
-                          {PRICING_OPTIONS.map((item) => (
-                            <option
-                              className={optionClass}
-                              key={item}
-                              value={item}
-                            >
-                              {item}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger
+                            id="tool-pricing"
+                            className={`${inputClass} mt-2`}
+                          >
+                            <SelectValue placeholder="Select pricing" />
+                          </SelectTrigger>
+                          <SelectContent className={selectContentClass}>
+                            <SelectItem value={SELECT_EMPTY_VALUE}>
+                              Select pricing
+                            </SelectItem>
+                            {PRICING_OPTIONS.map((item) => (
+                              <SelectItem key={item} value={item}>
+                                {item}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="sm:col-span-2">
-                        <label className={labelClass} htmlFor="tool-logo">
+                        <Label className={labelClass} htmlFor="tool-logo">
                           Logo
-                        </label>
+                        </Label>
                         <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem]">
-                          <input suppressHydrationWarning
+                          <Input
+                            suppressHydrationWarning
                             id="tool-logo"
                             type="url"
                             className={inputClass}
                             placeholder="https://example.com/logo.png"
                             value={logoUrl}
                             maxLength={500}
+                            aria-describedby="tool-logo-help"
                             onChange={(e) => setLogoUrl(e.target.value)}
                           />
 
-                          <label className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 [.theme-dark_&]:text-slate-300">
+                          <Label
+                            htmlFor="tool-logo-file"
+                            className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 focus-within:ring-[3px] focus-within:ring-ring/50 [.theme-dark_&]:text-slate-300"
+                            aria-label="Upload logo file"
+                          >
                             {isUploadingLogo ? (
                               <span className="text-xl">…</span>
                             ) : (
@@ -572,10 +609,12 @@ export default function SubmitToolPage() {
                               />
                             )}
 
-                            <input suppressHydrationWarning
+                            <Input
+                              suppressHydrationWarning
+                              id="tool-logo-file"
                               type="file"
                               accept="image/png,image/jpeg,image/webp"
-                              className="hidden"
+                              className="sr-only"
                               onChange={async (event) => {
                                 const file = event.target.files?.[0];
 
@@ -586,10 +625,13 @@ export default function SubmitToolPage() {
                                 event.target.value = "";
                               }}
                             />
-                          </label>
+                          </Label>
                         </div>
 
-                        <p className="ai-product-muted mt-2 text-xs">
+                        <p
+                          id="tool-logo-help"
+                          className="ai-product-muted mt-2 text-xs"
+                        >
                           Add a logo URL or click the upload icon to upload a
                           logo.
                         </p>
@@ -613,7 +655,7 @@ export default function SubmitToolPage() {
                       )}
 
                       <div className="sm:col-span-2">
-                        <label
+                        <Label
                           className={labelClass}
                           htmlFor="tool-description"
                         >
@@ -621,17 +663,20 @@ export default function SubmitToolPage() {
                           <span className="text-cyan-300 [.theme-light_&]:text-cyan-800">
                             *
                           </span>
-                        </label>
-                        <textarea suppressHydrationWarning
+                        </Label>
+                        <Textarea
+                          suppressHydrationWarning
                           id="tool-description"
                           className={`${inputClass} mt-2 min-h-36 resize-y`}
                           placeholder="Describe what the tool does, who it helps, and the core use case."
                           value={description}
                           maxLength={500}
+                          aria-describedby="tool-description-help"
+                          aria-required="true"
                           onChange={(e) => setDescription(e.target.value)}
                           rows={5}
                         />
-                        <p className={helperClass}>
+                        <p id="tool-description-help" className={helperClass}>
                           Keep it concise. Maximum 500 characters.
                         </p>
                       </div>
@@ -644,10 +689,11 @@ export default function SubmitToolPage() {
                     </p>
                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                       <div>
-                        <label className={labelClass} htmlFor="submitter-name">
+                        <Label className={labelClass} htmlFor="submitter-name">
                           Your name
-                        </label>
-                        <input suppressHydrationWarning
+                        </Label>
+                        <Input
+                          suppressHydrationWarning
                           id="submitter-name"
                           className={`${inputClass} mt-2`}
                           placeholder="Optional"
@@ -658,19 +704,21 @@ export default function SubmitToolPage() {
                       </div>
 
                       <div>
-                        <label className={labelClass} htmlFor="submitter-email">
+                        <Label className={labelClass} htmlFor="submitter-email">
                           Your email
-                        </label>
-                        <input suppressHydrationWarning
+                        </Label>
+                        <Input
+                          suppressHydrationWarning
                           id="submitter-email"
                           type="email"
                           className={`${inputClass} mt-2`}
                           placeholder="Optional"
                           value={submitterEmail}
                           maxLength={120}
+                          aria-describedby="submitter-email-help"
                           onChange={(e) => setSubmitterEmail(e.target.value)}
                         />
-                        <p className={helperClass}>
+                        <p id="submitter-email-help" className={helperClass}>
                           Used only if we need to follow up about the
                           submission.
                         </p>
@@ -684,21 +732,23 @@ export default function SubmitToolPage() {
                   </p>
 
                   <div className="sticky bottom-0 -mx-5 grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 border-t border-white/10 bg-slate-950/[0.86] px-5 py-4 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.9] sm:-mx-8 sm:flex sm:items-center sm:justify-between sm:px-8">
-                    <button
+                    <Button
                       type="button"
                       onClick={closeSubmitPage}
-                      className="ai-product-button-secondary px-4 py-3 text-sm"
+                      variant="ghost"
+                      className="ai-product-button-secondary h-auto px-4 py-3 text-sm"
                     >
                       Cancel
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                       type="submit"
                       disabled={isSubmitting || isUploadingLogo}
-                      className="ai-product-button-primary px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:py-4"
+                      variant="ghost"
+                      className="ai-product-button-primary h-auto px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:py-4"
                     >
                       {isSubmitting ? "Submitting..." : "Submit for Review"}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </div>
