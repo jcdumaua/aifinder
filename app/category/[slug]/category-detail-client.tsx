@@ -7,6 +7,15 @@ import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -102,19 +111,21 @@ export default function CategoryDetailClient({
     <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 xl:max-w-7xl">
         <nav className="flex flex-wrap gap-3">
-          <Link
-            href="/"
+          <Button
+            asChild
+            variant="outline"
             className="ai-product-button-secondary px-4 py-2 text-sm"
           >
-            ← Back Home
-          </Link>
+            <Link href="/">Back Home</Link>
+          </Button>
 
-          <Link
-            href="/"
+          <Button
+            asChild
+            variant="outline"
             className="ai-product-button-secondary px-4 py-2 text-sm"
           >
-            All Tools
-          </Link>
+            <Link href="/">All Tools</Link>
+          </Button>
 
         </nav>
 
@@ -144,44 +155,74 @@ export default function CategoryDetailClient({
             </div>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3 xl:grid-cols-[1fr_180px_180px_auto]">
-              <input suppressHydrationWarning
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={`Search ${category} tools...`}
-                className={`rounded-2xl border px-5 py-4 outline-none ${inputBg}`}
-              />
+              <div>
+                <Label htmlFor="category-tool-search" className="sr-only">
+                  Search tools in {category}
+                </Label>
+                <Input
+                  id="category-tool-search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={`Search ${category} tools...`}
+                  aria-label={`Search ${category} tools`}
+                  className={`h-auto rounded-2xl border px-5 py-4 ${inputBg}`}
+                  suppressHydrationWarning
+                />
+              </div>
 
-              <select suppressHydrationWarning
-                value={selectedPricing}
-                onChange={(event) => setSelectedPricing(event.target.value)}
-                className={`rounded-2xl border px-4 py-4 text-sm outline-none ${inputBg}`}
-              >
-                {pricingOptions.map((price) => (
-                  <option key={price} value={price}>
-                    {price === "All" ? "All Pricing" : price}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <Label htmlFor="category-pricing-filter" className="sr-only">
+                  Filter by pricing
+                </Label>
+                <Select value={selectedPricing} onValueChange={setSelectedPricing}>
+                  <SelectTrigger
+                    id="category-pricing-filter"
+                    aria-label="Filter category tools by pricing"
+                    className={`h-auto w-full rounded-2xl border px-4 py-4 text-sm ${inputBg}`}
+                  >
+                    <SelectValue placeholder="All Pricing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pricingOptions.map((price) => (
+                      <SelectItem key={price} value={price}>
+                        {price === "All" ? "All Pricing" : price}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <select suppressHydrationWarning
-                value={selectedPlatform}
-                onChange={(event) => setSelectedPlatform(event.target.value)}
-                className={`rounded-2xl border px-4 py-4 text-sm outline-none ${inputBg}`}
-              >
-                {platformOptions.map((platform) => (
-                  <option key={platform} value={platform}>
-                    {platform === "All" ? "All Platforms" : platform}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <Label htmlFor="category-platform-filter" className="sr-only">
+                  Filter by platform
+                </Label>
+                <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                  <SelectTrigger
+                    id="category-platform-filter"
+                    aria-label="Filter category tools by platform"
+                    className={`h-auto w-full rounded-2xl border px-4 py-4 text-sm ${inputBg}`}
+                  >
+                    <SelectValue placeholder="All Platforms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {platformOptions.map((platform) => (
+                      <SelectItem key={platform} value={platform}>
+                        {platform === "All" ? "All Platforms" : platform}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <button
+              <Button
+                type="button"
+                variant="outline"
                 onClick={resetFilters}
                 disabled={!hasActiveFilters}
                 className="ai-product-button-secondary rounded-2xl px-5 py-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Clear
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -574,19 +615,21 @@ function CompareBar({
           </div>
 
           <div className="flex gap-2">
-            <button
+            <Button
+              type="button"
+              variant="outline"
               onClick={clearCompare}
               className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               Clear
-            </button>
+            </Button>
 
-            <Link
-              href="/compare"
+            <Button
+              asChild
               className="ai-product-button-primary px-4 py-2 text-sm"
             >
-              Compare Now
-            </Link>
+              <Link href="/compare">Compare Now</Link>
+            </Button>
           </div>
         </div>
       </div>

@@ -12,6 +12,14 @@ import { SearchBar } from "../components/home/SearchBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { normalizeToolCategory } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
@@ -349,33 +357,36 @@ export default function Home() {
           </Link>
 
           <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
-            <a
-              href="#categories"
+            <Button
+              asChild
               className="ai-product-button-primary px-4 py-2 text-sm"
             >
-              Explore
-            </a>
+              <a href="#categories">Explore</a>
+            </Button>
 
-            <a
-              href="#how-it-works"
+            <Button
+              asChild
+              variant="outline"
               className="ai-product-button-secondary px-4 py-2 text-sm"
             >
-              How it works
-            </a>
+              <a href="#how-it-works">How it works</a>
+            </Button>
 
-            <a
-              href="#favorites"
+            <Button
+              asChild
+              variant="outline"
               className="ai-product-button-secondary px-4 py-2 text-sm"
             >
-              ⭐ Bookmarks
-            </a>
+              <a href="#favorites">Bookmarks</a>
+            </Button>
 
-            <Link
-              href="/submit"
+            <Button
+              asChild
+              variant="outline"
               className="ai-product-button-secondary px-4 py-2 text-sm"
             >
-              Submit Tool
-            </Link>
+              <Link href="/submit">Submit Tool</Link>
+            </Button>
           </div>
         </nav>
 
@@ -421,12 +432,15 @@ export default function Home() {
                     Recent searches
                   </p>
 
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={clearRecentSearches}
-                    className="text-xs font-semibold text-slate-400 transition-colors duration-200 hover:text-cyan-300 [.theme-light_&]:text-slate-600 [.theme-light_&]:hover:text-cyan-800"
+                    className="h-auto px-2 py-1 text-xs font-semibold text-slate-400 hover:bg-transparent hover:text-cyan-300 [.theme-light_&]:text-slate-600 [.theme-light_&]:hover:text-cyan-800"
                   >
                     Clear
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2.5">
@@ -444,52 +458,83 @@ export default function Home() {
             )}
 
             <div className="mt-5 grid gap-2.5 md:grid-cols-3">
-              <select suppressHydrationWarning
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
-              >
-                <option value="All">All Categories</option>
+              <div>
+                <Label htmlFor="home-category-filter" className="sr-only">
+                  Filter by category
+                </Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger
+                    id="home-category-filter"
+                    aria-label="Filter tools by category"
+                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  >
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <Label htmlFor="home-pricing-filter" className="sr-only">
+                  Filter by pricing
+                </Label>
+                <Select value={selectedPricing} onValueChange={setSelectedPricing}>
+                  <SelectTrigger
+                    id="home-pricing-filter"
+                    aria-label="Filter tools by pricing"
+                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  >
+                    <SelectValue placeholder="All Pricing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pricingOptions.map((price) => (
+                      <SelectItem key={price} value={price}>
+                        {price === "All" ? "All Pricing" : price}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <select suppressHydrationWarning
-                value={selectedPricing}
-                onChange={(e) => setSelectedPricing(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
-              >
-                {pricingOptions.map((price) => (
-                  <option key={price} value={price}>
-                    {price === "All" ? "All Pricing" : price}
-                  </option>
-                ))}
-              </select>
-
-              <select suppressHydrationWarning
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value)}
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold outline-none ${inputBg}`}
-              >
-                {platformOptions.map((platform) => (
-                  <option key={platform} value={platform}>
-                    {platform === "All" ? "All Platforms" : platform}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <Label htmlFor="home-platform-filter" className="sr-only">
+                  Filter by platform
+                </Label>
+                <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                  <SelectTrigger
+                    id="home-platform-filter"
+                    aria-label="Filter tools by platform"
+                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  >
+                    <SelectValue placeholder="All Platforms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {platformOptions.map((platform) => (
+                      <SelectItem key={platform} value={platform}>
+                        {platform === "All" ? "All Platforms" : platform}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {hasActiveFilters && (
-              <button
+              <Button
+                type="button"
+                variant="outline"
                 onClick={resetFilters}
                 className="ai-product-button-secondary mt-4 px-4 py-2 text-sm"
               >
                 Clear filters
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -1380,19 +1425,21 @@ function CompareBar({
           </div>
 
           <div className="flex gap-2">
-            <button
+            <Button
+              type="button"
+              variant="outline"
               onClick={clearCompare}
               className="ai-product-button-secondary px-4 py-2 text-sm"
             >
               Clear
-            </button>
+            </Button>
 
-            <Link
-              href="/compare"
+            <Button
+              asChild
               className="ai-product-button-primary px-4 py-2 text-sm"
             >
-              Compare Now
-            </Link>
+              <Link href="/compare">Compare Now</Link>
+            </Button>
           </div>
         </div>
       </div>
