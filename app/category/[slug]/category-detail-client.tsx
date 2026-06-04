@@ -1,12 +1,12 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ToolDetailsModal } from "@/components/tool-details-modal";
-import { Badge } from "@/components/ui/badge";
+import {
+  PublicToolCard,
+  type PublicToolCardData,
+} from "@/components/public/tool-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -56,6 +56,25 @@ type CategoryDetailClientProps = {
 
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
+
+function toPublicToolCardData(tool: CategoryPageTool): PublicToolCardData {
+  return {
+    name: tool.name,
+    slug: tool.slug,
+    category: tool.category,
+    description: tool.description,
+    website: tool.website,
+    logoUrl: tool.logoUrl,
+    pricing: tool.pricing,
+    platforms: tool.platforms,
+    rating: tool.rating,
+    reviewCount: tool.reviewCount,
+    bestFor: tool.bestFor,
+    useCases: tool.useCases,
+    ios: tool.ios,
+    android: tool.android,
+  };
+}
 
 export default function CategoryDetailClient({
   category,
@@ -409,8 +428,6 @@ function ToolGrid({
   softText: string;
   badge?: string;
 }) {
-  const shouldReduceMotion = useReducedMotion();
-  const [selectedTool, setSelectedTool] = useState<CategoryPageTool | null>(null);
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
 
   useEffect(() => {
@@ -429,157 +446,26 @@ function ToolGrid({
     localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
   }
 
-  function openTool(tool: CategoryPageTool) {
-    setSelectedTool(tool);
-  }
-
   return (
     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {tools.map((tool) => {
-        const isCompared = compareSlugs.includes(tool.slug);
-        const isOpening = selectedTool?.slug === tool.slug && !shouldReduceMotion;
+        const publicTool = toPublicToolCardData(tool);
 
         return (
-          <div key={tool.slug} className="relative h-full min-w-0">
-            <Card
-              asChild
-              className={`group relative h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
-            >
-            <motion.article
-              role="link"
-              tabIndex={0}
-              onClick={() => openTool(tool)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  openTool(tool);
-                }
-              }}
-              animate={
-                isOpening
-                  ? { opacity: 0.45, scale: 0.985 }
-                  : { opacity: 1, scale: 1 }
-              }
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <CardContent className="pointer-events-none flex h-full min-w-0 flex-col p-5">
-                <div className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
-                  {badge && (
-                    <Badge className="ai-product-chip max-w-full px-3 py-1 text-xs font-bold">
-                      <span className="min-w-0 truncate">{badge}</span>
-                    </Badge>
-                  )}
-
-                  <div className="pointer-events-auto ml-auto">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onToggleCompare(tool.slug);
-                      }}
-                      className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm ${
-                        isCompared ? "text-cyan-200" : "text-slate-200"
-                      }`}
-                    >
-                      {isCompared ? "In Compare" : "Compare"}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <ToolLogo tool={tool} />
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="ai-product-heading line-clamp-2 text-lg font-black leading-tight">
-                      {tool.name}
-                    </h3>
-
-                    <Badge className="ai-product-chip mt-2 px-3 py-1 text-xs font-bold">
-                      {tool.pricing}
-                    </Badge>
-                  </div>
-                </div>
-
-                <p className="mt-4 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-yellow-300">
-                  {tool.rating} / 5
-                  <span className="break-words text-slate-400 [.theme-light_&]:text-slate-600">
-                    ({tool.reviewCount.toLocaleString()} reviews)
-                  </span>
-                </p>
-
-                <p className={`mt-3 line-clamp-4 text-sm leading-6 ${softText}`}>
-                  {tool.description}
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {tool.platforms.slice(0, 3).map((platform) => (
-                    <Badge
-                      key={platform}
-                      variant="secondary"
-                      className="ai-product-chip px-3 py-1 text-xs"
-                    >
-                      {platform}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="mt-auto pt-5">
-                  <Button
-                    asChild
-                    size="sm"
-                    className="ai-product-button-primary pointer-events-none min-h-0 px-3 py-2 text-xs"
-                  >
-                    <span>View Tool</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </motion.article>
-            </Card>
-          </div>
+          <PublicToolCard
+            key={tool.slug}
+            tool={publicTool}
+            variant="category"
+            isFavorite={favoriteSlugs.includes(publicTool.slug)}
+            isCompared={compareSlugs.includes(publicTool.slug)}
+            onToggleFavorite={() => toggleFavorite(publicTool.slug)}
+            onToggleCompare={() => onToggleCompare(publicTool.slug)}
+            cardBg={cardBg}
+            softText={softText}
+            badge={badge}
+          />
         );
       })}
-
-      <ToolDetailsModal
-        tool={
-          selectedTool
-            ? {
-                name: selectedTool.name,
-                slug: selectedTool.slug,
-                category: selectedTool.category,
-                description: selectedTool.description,
-                website: selectedTool.website,
-                logoUrl: selectedTool.logoUrl,
-                pricing: selectedTool.pricing,
-                platforms: selectedTool.platforms,
-                rating: selectedTool.rating,
-                reviewCount: selectedTool.reviewCount,
-                bestFor: selectedTool.bestFor,
-                useCases: selectedTool.useCases,
-                ios: selectedTool.ios,
-                android: selectedTool.android,
-              }
-            : null
-        }
-        isOpen={selectedTool !== null}
-        isCompared={selectedTool ? compareSlugs.includes(selectedTool.slug) : false}
-        isFavorite={
-          selectedTool ? favoriteSlugs.includes(selectedTool.slug) : false
-        }
-        onClose={() => setSelectedTool(null)}
-        onToggleCompare={() => {
-          if (selectedTool) {
-            onToggleCompare(selectedTool.slug);
-          }
-        }}
-        onToggleFavorite={() => {
-          if (selectedTool) {
-            toggleFavorite(selectedTool.slug);
-          }
-        }}
-      />
     </div>
   );
 }
@@ -633,18 +519,6 @@ function CompareBar({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ToolLogo({ tool }: { tool: CategoryPageTool }) {
-  return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
-      <img
-        src={tool.logoUrl}
-        alt={`${tool.name} logo`}
-        className="h-9 w-9 object-contain"
-      />
     </div>
   );
 }

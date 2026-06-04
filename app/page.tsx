@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, Plus, Sparkles, Star, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
-import { Badge } from "@/components/ui/badge";
+import {
+  PublicToolCard,
+  type PublicToolCardData,
+} from "@/components/public/tool-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -128,6 +129,32 @@ function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {
   if (pricing === "Freemium") return "Free + Paid";
 
   return "Free + Paid";
+}
+
+function toPublicToolCardData(tool: Tool): PublicToolCardData {
+  const explicitSlug =
+    typeof (tool as Tool & { slug?: string | null }).slug === "string"
+      ? (tool as Tool & { slug?: string | null }).slug?.trim()
+      : "";
+  const slug = explicitSlug || toolSlug(tool.name);
+
+  return {
+    name: tool.name,
+    slug,
+    category: tool.category,
+    description: tool.description,
+    website: tool.website,
+    logoUrl: tool.logoUrl || getLogoUrl(tool.website),
+    pricing: tool.pricing,
+    platforms: tool.platforms,
+    rating: getToolRating(tool.name),
+    reviewCount: getReviewCount(tool.name),
+    bestFor: tool.bestFor,
+    useCases: tool.useCases,
+    ios: tool.ios,
+    android: tool.android,
+    fallbackIcon: getIcon(tool.category),
+  };
 }
 
 export default function Home() {
@@ -723,18 +750,23 @@ function Section({
         </div>
       ) : (
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {tools.map((tool) => (
-            <ToolCard
-              key={tool.name}
-              tool={tool}
-              favoriteSlugs={favoriteSlugs}
-              onToggleFavorite={onToggleFavorite}
-              compareSlugs={compareSlugs}
-              onToggleCompare={onToggleCompare}
-              badge={badge}
-              cardBg={cardBg}
-            />
-          ))}
+          {tools.map((tool) => {
+            const publicTool = toPublicToolCardData(tool);
+
+            return (
+              <PublicToolCard
+                key={tool.name}
+                tool={publicTool}
+                variant="homepage"
+                isFavorite={favoriteSlugs.includes(publicTool.slug)}
+                isCompared={compareSlugs.includes(publicTool.slug)}
+                onToggleFavorite={() => onToggleFavorite(tool)}
+                onToggleCompare={() => onToggleCompare(publicTool.slug)}
+                badge={badge}
+                cardBg={cardBg}
+              />
+            );
+          })}
         </div>
       )}
     </section>
@@ -1155,239 +1187,24 @@ function ToolList({
 }) {
   return (
     <div className="grid max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-      {rankedTools.map(({ tool, score }) => (
-        <ToolCard
-          key={tool.name}
-          tool={tool}
-          favoriteSlugs={favoriteSlugs}
-          onToggleFavorite={onToggleFavorite}
-          compareSlugs={compareSlugs}
-          onToggleCompare={onToggleCompare}
-          badge={getSearchConfidenceLabel(score)}
-          matchExplanation={getSearchMatchExplanation(tool, search)}
-          cardBg={cardBg}
-        />
-      ))}
-    </div>
-  );
-}
+      {rankedTools.map(({ tool, score }) => {
+        const publicTool = toPublicToolCardData(tool);
 
-function ToolCard({
-  tool,
-  favoriteSlugs,
-  onToggleFavorite,
-  compareSlugs,
-  onToggleCompare,
-  badge,
-  matchExplanation,
-  cardBg,
-}: {
-  tool: Tool;
-  favoriteSlugs: string[];
-  onToggleFavorite: (tool: Tool) => void;
-  compareSlugs: string[];
-  onToggleCompare: (slug: string) => void;
-  badge?: string;
-  matchExplanation?: string;
-  cardBg: string;
-}) {
-  const shouldReduceMotion = useReducedMotion();
-  const explicitSlug =
-    typeof (tool as Tool & { slug?: string | null }).slug === "string"
-      ? (tool as Tool & { slug?: string | null }).slug?.trim()
-      : "";
-  const slug = explicitSlug || toolSlug(tool.name);
-  const isFavorite = favoriteSlugs.includes(slug);
-  const isCompared = compareSlugs.includes(slug);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const badgeTone =
-    badge === "Strong match"
-      ? "border-cyan-400/25 bg-cyan-400/10 text-cyan-200 [.theme-light_&]:text-cyan-800"
-      : badge === "Good match"
-        ? "border-sky-400/25 bg-sky-400/10 text-sky-200 [.theme-light_&]:text-sky-800"
-        : "border-slate-500/30 bg-slate-500/10 text-slate-200 [.theme-light_&]:text-slate-700";
-
-  const handleCardClick = () => {
-    if (!slug) {
-      console.warn("[AiFinder ToolCard] Missing slug; navigation skipped", {
-        toolName: tool.name,
-      });
-      return;
-    }
-
-    setIsModalOpen(true);
-  };
-
-  return (
-    <div className="relative h-full min-w-0">
-      <Card
-        asChild
-        className={`group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
-      >
-      <motion.article
-        role="link"
-        tabIndex={0}
-        onClick={handleCardClick}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleCardClick();
-          }
-        }}
-        animate={
-          isModalOpen && !shouldReduceMotion
-            ? { opacity: 0.45, scale: 0.985 }
-            : { opacity: 1, scale: 1 }
-        }
-        transition={{ duration: 0.2, ease: "easeOut" }}
-      >
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
-
-        <CardContent className="pointer-events-none relative z-20 flex h-full min-w-0 flex-col p-4 sm:p-5">
-          <div className="mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
-            {badge ? (
-              <Badge
-                variant="outline"
-                className={`min-w-0 max-w-full gap-1.5 px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}
-              >
-                <Sparkles className="h-3 w-3" aria-hidden="true" />
-                <span className="min-w-0 truncate">{badge}</span>
-              </Badge>
-            ) : (
-              <Badge className="ai-product-chip min-w-0 max-w-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
-                <span className="min-w-0 truncate">{tool.category}</span>
-              </Badge>
-            )}
-
-            <div className="pointer-events-auto relative z-40 ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={
-                  isFavorite
-                    ? `Remove ${tool.name} from favorites`
-                    : `Save ${tool.name}`
-                }
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onToggleFavorite(tool);
-                }}
-                className={`rounded-full border border-white/10 bg-black/20 transition-colors duration-200 hover:border-yellow-300/35 hover:bg-yellow-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/60 [.theme-light_&]:hover:bg-amber-50/80 ${
-                  isFavorite ? "text-yellow-300" : "text-slate-300"
-                }`}
-              >
-                <Star
-                  className={isFavorite ? "fill-current" : ""}
-                  aria-hidden="true"
-                />
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label={
-                  isCompared
-                    ? `Remove ${tool.name} from comparison`
-                    : `Compare ${tool.name}`
-                }
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onToggleCompare(slug);
-                }}
-                className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold whitespace-normal transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
-                  isCompared ? "text-cyan-200" : "text-slate-200"
-                }`}
-              >
-                {isCompared ? (
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
-                Compare
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <ToolLogo tool={tool} isOpening={isModalOpen && !shouldReduceMotion} />
-
-            <div className="min-w-0 flex-1">
-              <h3 className="ai-product-heading line-clamp-2 text-lg font-black leading-tight">
-                {tool.name}
-              </h3>
-
-              <Badge className="ai-product-chip mt-2 px-3 py-1 text-xs font-bold">
-                {tool.category}
-              </Badge>
-            </div>
-          </div>
-
-          <p className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5 text-sm font-semibold text-yellow-200 [.theme-light_&]:text-amber-600">
-            <Star className="h-4 w-4 fill-current" aria-hidden="true" />
-            {getToolRating(tool.name)}
-            <span className="break-words text-slate-400 [.theme-light_&]:text-slate-600">
-              ({getReviewCount(tool.name).toLocaleString()} reviews)
-            </span>
-          </p>
-
-          <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300 [.theme-light_&]:text-slate-700">
-            {tool.description}
-          </p>
-
-          {matchExplanation && (
-            <p className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/10 px-3 py-2 text-xs font-semibold leading-5 text-cyan-100 [.theme-light_&]:border-cyan-700/15 [.theme-light_&]:bg-cyan-50/80 [.theme-light_&]:text-cyan-800">
-              {matchExplanation}
-            </p>
-          )}
-
-          <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 pt-5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500 [.theme-light_&]:text-slate-600">
-              Details
-            </span>
-
-            <Button
-              asChild
-              size="sm"
-              className="ai-product-button-primary pointer-events-none min-h-0 min-w-0 whitespace-normal px-3 py-2 text-xs"
-            >
-              <span>
-              View Tool
-              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </span>
-            </Button>
-          </div>
-        </CardContent>
-      </motion.article>
-      </Card>
-
-      <ToolDetailsModal
-        tool={{
-          name: tool.name,
-          slug,
-          category: tool.category,
-          description: tool.description,
-          website: tool.website,
-          logoUrl: tool.logoUrl || getLogoUrl(tool.website),
-          pricing: tool.pricing,
-          platforms: tool.platforms,
-          rating: getToolRating(tool.name),
-          reviewCount: getReviewCount(tool.name),
-          bestFor: tool.bestFor,
-          useCases: tool.useCases,
-          ios: tool.ios,
-          android: tool.android,
-        }}
-        isOpen={isModalOpen}
-        isCompared={isCompared}
-        isFavorite={isFavorite}
-        onClose={() => setIsModalOpen(false)}
-        onToggleCompare={() => onToggleCompare(slug)}
-        onToggleFavorite={() => onToggleFavorite(tool)}
-      />
+        return (
+          <PublicToolCard
+            key={tool.name}
+            tool={publicTool}
+            variant="homepage"
+            isFavorite={favoriteSlugs.includes(publicTool.slug)}
+            isCompared={compareSlugs.includes(publicTool.slug)}
+            onToggleFavorite={() => onToggleFavorite(tool)}
+            onToggleCompare={() => onToggleCompare(publicTool.slug)}
+            badge={getSearchConfidenceLabel(score)}
+            matchExplanation={getSearchMatchExplanation(tool, search)}
+            cardBg={cardBg}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1521,37 +1338,5 @@ function Footer({
         </div>
       </div>
     </footer>
-  );
-}
-
-function ToolLogo({
-  tool,
-  isOpening = false,
-}: {
-  tool: Tool;
-  isOpening?: boolean;
-}) {
-  const [hasLogoError, setHasLogoError] = useState(false);
-  const iconFallback = getIcon(tool.category);
-
-  return (
-    <motion.div
-      animate={isOpening ? { scale: 1.16 } : { scale: 1 }}
-      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.22)]"
-    >
-      {hasLogoError ? (
-        <span className="text-2xl" aria-hidden="true">
-          {iconFallback}
-        </span>
-      ) : (
-        <img
-          src={getLogoUrl(tool.website)}
-          alt={`${tool.name} logo`}
-          className="h-9 w-9 object-contain"
-          onError={() => setHasLogoError(true)}
-        />
-      )}
-    </motion.div>
   );
 }
