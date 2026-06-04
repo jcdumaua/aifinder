@@ -4,6 +4,17 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../lib/supabase";
 import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
 import {
@@ -164,6 +175,7 @@ const ADMIN_PAGE_COPY: Record<
 };
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
+const SELECT_EMPTY_VALUE = "__empty";
 
 const BLOCKED_FILE_EXTENSIONS = [
   ".exe",
@@ -186,6 +198,18 @@ const BLOCKED_FILE_EXTENSIONS = [
 
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+const adminFormSectionClass =
+  "rounded-2xl border border-slate-200 bg-white p-4 sm:p-5";
+const adminFormFieldClass =
+  "space-y-2";
+const adminFormLabelClass =
+  "text-sm font-bold text-slate-900";
+const adminFormControlClass =
+  "h-auto rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-none placeholder:text-slate-400 focus-visible:border-cyan-500 focus-visible:ring-cyan-500/20";
+const adminFormHelpClass =
+  "text-xs leading-5 text-slate-500";
+const adminSelectContentClass =
+  "bg-white text-slate-950";
 
 type SmartAdminStatus =
   | "Pending"
@@ -2126,128 +2150,231 @@ export default function AdminDashboardClient({
       accent="cyan"
       onClose={() => setIsAddToolModalOpen(false)}
     >
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <h2 className="text-lg font-bold">Add New Tool</h2>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input suppressHydrationWarning
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-              placeholder="Tool Name"
-              value={name}
-              maxLength={80}
-              onChange={(e) => setName(e.target.value)}
-            />
-
-            <select suppressHydrationWarning
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option className="bg-white" value="">
-                Select category
-              </option>
-
-              {TOOL_CATEGORIES.map((item) => (
-                <option className="bg-white" key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <input suppressHydrationWarning
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-              placeholder="Website URL"
-              value={website}
-              maxLength={500}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
-
-            <select suppressHydrationWarning
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
-              value={pricing}
-              onChange={(e) => setPricing(e.target.value)}
-            >
-              <option className="bg-white" value="">
-                Select pricing
-              </option>
-
-              {PRICING_OPTIONS.map((item) => (
-                <option className="bg-white" key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            <div className="sm:col-span-2">
-              <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
-                <input suppressHydrationWarning
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-                  placeholder="Logo Image URL"
-                  value={logoUrl}
-                  maxLength={500}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                />
-
-                <label className="flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100">
-                  {isUploadingAddLogo ? (
-                    <span className="text-xl">…</span>
-                  ) : (
-                    <UploadIcon />
-                  )}
-
-                  <input suppressHydrationWarning
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-
-                      if (file) {
-                        await uploadLogoFile(
-                          file,
-                          setLogoUrl,
-                          setIsUploadingAddLogo
-                        );
-                      }
-
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-
-              <p className="mt-2 text-xs text-slate-500">
-                Admin logo upload accepts PNG, JPG, JPEG, or WEBP only.
+        <div className="space-y-4">
+          <section className={adminFormSectionClass}>
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">
+                Tool details
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Required live listing fields for the public directory.
               </p>
             </div>
-          </div>
 
-          {logoUrl && (
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <LogoPreview
-                logoUrl={logoUrl}
-                name={name || "Tool"}
-                accent="cyan"
-              />
-              <p className="break-all text-xs text-slate-600">{logoUrl}</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className={adminFormFieldClass}>
+                <Label className={adminFormLabelClass} htmlFor="admin-add-name">
+                  Tool name <span className="text-cyan-700">*</span>
+                </Label>
+                <Input
+                  suppressHydrationWarning
+                  id="admin-add-name"
+                  className={adminFormControlClass}
+                  placeholder="Tool name"
+                  value={name}
+                  maxLength={80}
+                  aria-required="true"
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
+              <div className={adminFormFieldClass}>
+                <Label
+                  className={adminFormLabelClass}
+                  htmlFor="admin-add-category"
+                >
+                  Category <span className="text-cyan-700">*</span>
+                </Label>
+                <Select
+                  value={category || SELECT_EMPTY_VALUE}
+                  onValueChange={(value) =>
+                    setCategory(value === SELECT_EMPTY_VALUE ? "" : value)
+                  }
+                >
+                  <SelectTrigger
+                    id="admin-add-category"
+                    className={adminFormControlClass}
+                    aria-required="true"
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className={adminSelectContentClass}>
+                    <SelectItem value={SELECT_EMPTY_VALUE}>
+                      Select category
+                    </SelectItem>
+                    {TOOL_CATEGORIES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className={adminFormFieldClass}>
+                <Label
+                  className={adminFormLabelClass}
+                  htmlFor="admin-add-website"
+                >
+                  Website URL <span className="text-cyan-700">*</span>
+                </Label>
+                <Input
+                  suppressHydrationWarning
+                  id="admin-add-website"
+                  className={adminFormControlClass}
+                  placeholder="https://example.com"
+                  value={website}
+                  maxLength={500}
+                  aria-required="true"
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
+              </div>
+
+              <div className={adminFormFieldClass}>
+                <Label
+                  className={adminFormLabelClass}
+                  htmlFor="admin-add-pricing"
+                >
+                  Pricing
+                </Label>
+                <Select
+                  value={pricing || SELECT_EMPTY_VALUE}
+                  onValueChange={(value) =>
+                    setPricing(value === SELECT_EMPTY_VALUE ? "" : value)
+                  }
+                >
+                  <SelectTrigger
+                    id="admin-add-pricing"
+                    className={adminFormControlClass}
+                  >
+                    <SelectValue placeholder="Select pricing" />
+                  </SelectTrigger>
+                  <SelectContent className={adminSelectContentClass}>
+                    <SelectItem value={SELECT_EMPTY_VALUE}>
+                      Select pricing
+                    </SelectItem>
+                    {PRICING_OPTIONS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
+          </section>
 
-          <textarea suppressHydrationWarning
-            className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-            placeholder="Description"
-            value={description}
-            maxLength={500}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-          />
+          <section className={adminFormSectionClass}>
+            <div>
+              <h3 className="text-base font-bold text-slate-950">
+                Logo
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Add a safe logo URL or upload a PNG, JPG, JPEG, or WEBP file.
+              </p>
+            </div>
 
-          <button
-            onClick={addTool}
-            className="mt-5 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700"
-          >
-            Add Tool
-          </button>
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
+              <div className={adminFormFieldClass}>
+                <Label className={adminFormLabelClass} htmlFor="admin-add-logo">
+                  Logo image URL
+                </Label>
+                <Input
+                  suppressHydrationWarning
+                  id="admin-add-logo"
+                  className={adminFormControlClass}
+                  placeholder="https://example.com/logo.png"
+                  value={logoUrl}
+                  maxLength={500}
+                  aria-describedby="admin-add-logo-help"
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                />
+              </div>
+
+              <Label
+                htmlFor="admin-add-logo-file"
+                className="mt-7 flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 focus-within:ring-[3px] focus-within:ring-cyan-500/20"
+                aria-label="Upload logo file"
+              >
+                {isUploadingAddLogo ? (
+                  <span className="text-xl">…</span>
+                ) : (
+                  <UploadIcon />
+                )}
+
+                <Input
+                  suppressHydrationWarning
+                  id="admin-add-logo-file"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+
+                    if (file) {
+                      await uploadLogoFile(
+                        file,
+                        setLogoUrl,
+                        setIsUploadingAddLogo
+                      );
+                    }
+
+                    event.target.value = "";
+                  }}
+                />
+              </Label>
+            </div>
+
+            <p id="admin-add-logo-help" className={`mt-2 ${adminFormHelpClass}`}>
+              Admin logo upload accepts PNG, JPG, JPEG, or WEBP only.
+            </p>
+
+            {logoUrl && (
+              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <LogoPreview
+                  logoUrl={logoUrl}
+                  name={name || "Tool"}
+                  accent="cyan"
+                />
+                <p className="break-all text-xs text-slate-600">{logoUrl}</p>
+              </div>
+            )}
+          </section>
+
+          <section className={adminFormSectionClass}>
+            <div className={adminFormFieldClass}>
+              <Label
+                className={adminFormLabelClass}
+                htmlFor="admin-add-description"
+              >
+                Description <span className="text-cyan-700">*</span>
+              </Label>
+              <Textarea
+                suppressHydrationWarning
+                id="admin-add-description"
+                className={`${adminFormControlClass} min-h-28 resize-y`}
+                placeholder="Description"
+                value={description}
+                maxLength={500}
+                aria-required="true"
+                aria-describedby="admin-add-description-help"
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+              />
+              <p id="admin-add-description-help" className={adminFormHelpClass}>
+                Maximum 500 characters.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              onClick={addTool}
+              variant="ghost"
+              className="mt-5 h-auto rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700"
+            >
+              Add Tool
+            </Button>
+          </section>
         </div>
     </SlideOverPanel>
   );
@@ -3763,76 +3890,172 @@ export default function AdminDashboardClient({
             accent="cyan"
             onClose={closeSlideOvers}
           >
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <input suppressHydrationWarning
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-                  placeholder="Tool Name"
-                  value={editName}
-                  maxLength={80}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
+              <div className="mt-6 space-y-4">
+                <section className={adminFormSectionClass}>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-950">
+                      Tool details
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Update the live listing fields shown in the public directory.
+                    </p>
+                  </div>
 
-                <select suppressHydrationWarning
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                >
-                  <option className="bg-white" value="">
-                    Select category
-                  </option>
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <div className={adminFormFieldClass}>
+                      <Label
+                        className={adminFormLabelClass}
+                        htmlFor="admin-edit-name"
+                      >
+                        Tool name <span className="text-cyan-700">*</span>
+                      </Label>
+                      <Input
+                        suppressHydrationWarning
+                        id="admin-edit-name"
+                        className={adminFormControlClass}
+                        placeholder="Tool name"
+                        value={editName}
+                        maxLength={80}
+                        aria-required="true"
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </div>
 
-                  {TOOL_CATEGORIES.map((item) => (
-                    <option className="bg-white" key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                    <div className={adminFormFieldClass}>
+                      <Label
+                        className={adminFormLabelClass}
+                        htmlFor="admin-edit-category"
+                      >
+                        Category <span className="text-cyan-700">*</span>
+                      </Label>
+                      <Select
+                        value={editCategory || SELECT_EMPTY_VALUE}
+                        onValueChange={(value) =>
+                          setEditCategory(
+                            value === SELECT_EMPTY_VALUE ? "" : value
+                          )
+                        }
+                      >
+                        <SelectTrigger
+                          id="admin-edit-category"
+                          className={adminFormControlClass}
+                          aria-required="true"
+                        >
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent className={adminSelectContentClass}>
+                          <SelectItem value={SELECT_EMPTY_VALUE}>
+                            Select category
+                          </SelectItem>
+                          {TOOL_CATEGORIES.map((item) => (
+                            <SelectItem key={item} value={item}>
+                              {item}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <input suppressHydrationWarning
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-                  placeholder="Website URL"
-                  value={editWebsite}
-                  maxLength={500}
-                  onChange={(e) => setEditWebsite(e.target.value)}
-                />
+                    <div className={adminFormFieldClass}>
+                      <Label
+                        className={adminFormLabelClass}
+                        htmlFor="admin-edit-website"
+                      >
+                        Website URL <span className="text-cyan-700">*</span>
+                      </Label>
+                      <Input
+                        suppressHydrationWarning
+                        id="admin-edit-website"
+                        className={adminFormControlClass}
+                        placeholder="https://example.com"
+                        value={editWebsite}
+                        maxLength={500}
+                        aria-required="true"
+                        onChange={(e) => setEditWebsite(e.target.value)}
+                      />
+                    </div>
 
-                <select suppressHydrationWarning
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
-                  value={editPricing}
-                  onChange={(e) => setEditPricing(e.target.value)}
-                >
-                  <option className="bg-white" value="">
-                    Select pricing
-                  </option>
+                    <div className={adminFormFieldClass}>
+                      <Label
+                        className={adminFormLabelClass}
+                        htmlFor="admin-edit-pricing"
+                      >
+                        Pricing
+                      </Label>
+                      <Select
+                        value={editPricing || SELECT_EMPTY_VALUE}
+                        onValueChange={(value) =>
+                          setEditPricing(value === SELECT_EMPTY_VALUE ? "" : value)
+                        }
+                      >
+                        <SelectTrigger
+                          id="admin-edit-pricing"
+                          className={adminFormControlClass}
+                        >
+                          <SelectValue placeholder="Select pricing" />
+                        </SelectTrigger>
+                        <SelectContent className={adminSelectContentClass}>
+                          <SelectItem value={SELECT_EMPTY_VALUE}>
+                            Select pricing
+                          </SelectItem>
+                          {PRICING_OPTIONS.map((item) => (
+                            <SelectItem key={item} value={item}>
+                              {item}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </section>
 
-                  {PRICING_OPTIONS.map((item) => (
-                    <option className="bg-white" key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                <section className={adminFormSectionClass}>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-950">
+                      Logo
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Keep the current logo URL or upload a replacement image.
+                    </p>
+                  </div>
 
-                <div className="sm:col-span-2">
-                  <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
-                    <input suppressHydrationWarning
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-                      placeholder="Logo Image URL"
-                      value={editLogoUrl}
-                      maxLength={500}
-                      onChange={(e) => setEditLogoUrl(e.target.value)}
-                    />
+                  <div className="mt-4 grid grid-cols-[minmax(0,1fr)_64px] gap-3 sm:grid-cols-[1fr_76px]">
+                    <div className={adminFormFieldClass}>
+                      <Label
+                        className={adminFormLabelClass}
+                        htmlFor="admin-edit-logo"
+                      >
+                        Logo image URL
+                      </Label>
+                      <Input
+                        suppressHydrationWarning
+                        id="admin-edit-logo"
+                        className={adminFormControlClass}
+                        placeholder="https://example.com/logo.png"
+                        value={editLogoUrl}
+                        maxLength={500}
+                        aria-describedby="admin-edit-logo-help"
+                        onChange={(e) => setEditLogoUrl(e.target.value)}
+                      />
+                    </div>
 
-                    <label className="flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100">
+                    <Label
+                      htmlFor="admin-edit-logo-file"
+                      className="mt-7 flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 focus-within:ring-[3px] focus-within:ring-cyan-500/20"
+                      aria-label="Upload replacement logo file"
+                    >
                       {isUploadingEditLogo ? (
                         <span className="text-xl">…</span>
                       ) : (
                         <UploadIcon />
                       )}
 
-                      <input suppressHydrationWarning
+                      <Input
+                        suppressHydrationWarning
+                        id="admin-edit-logo-file"
                         type="file"
                         accept="image/png,image/jpeg,image/webp"
-                        className="hidden"
+                        className="sr-only"
                         onChange={async (event) => {
                           const file = event.target.files?.[0];
 
@@ -3847,47 +4070,75 @@ export default function AdminDashboardClient({
                           event.target.value = "";
                         }}
                       />
-                    </label>
+                    </Label>
                   </div>
-                </div>
-              </div>
 
-              {editLogoUrl && (
-                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  <LogoPreview
-                    logoUrl={editLogoUrl}
-                    name={editName || "Tool"}
-                    accent="cyan"
-                  />
-                  <p className="break-all text-xs text-slate-600">
-                    {editLogoUrl}
+                  <p id="admin-edit-logo-help" className={`mt-2 ${adminFormHelpClass}`}>
+                    Admin logo upload accepts PNG, JPG, JPEG, or WEBP only.
                   </p>
+
+                  {editLogoUrl && (
+                    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <LogoPreview
+                        logoUrl={editLogoUrl}
+                        name={editName || "Tool"}
+                        accent="cyan"
+                      />
+                      <p className="break-all text-xs text-slate-600">
+                        {editLogoUrl}
+                      </p>
+                    </div>
+                  )}
+                </section>
+
+                <section className={adminFormSectionClass}>
+                  <div className={adminFormFieldClass}>
+                    <Label
+                      className={adminFormLabelClass}
+                      htmlFor="admin-edit-description"
+                    >
+                      Description <span className="text-cyan-700">*</span>
+                    </Label>
+                    <Textarea
+                      suppressHydrationWarning
+                      id="admin-edit-description"
+                      className={`${adminFormControlClass} min-h-32 resize-y`}
+                      placeholder="Description"
+                      value={editDescription}
+                      maxLength={500}
+                      aria-required="true"
+                      aria-describedby="admin-edit-description-help"
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={5}
+                    />
+                    <p
+                      id="admin-edit-description-help"
+                      className={adminFormHelpClass}
+                    >
+                      Maximum 500 characters.
+                    </p>
+                  </div>
+                </section>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Button
+                    type="button"
+                    onClick={updateTool}
+                    variant="ghost"
+                    className="h-auto w-full rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700 sm:w-auto"
+                  >
+                    Save Changes
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={closeEditModal}
+                    variant="ghost"
+                    className="h-auto w-full rounded-full border border-slate-200 px-6 py-3 text-sm text-slate-950 hover:bg-slate-100 sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
                 </div>
-              )}
-
-              <textarea suppressHydrationWarning
-                className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500 focus:bg-white"
-                placeholder="Description"
-                value={editDescription}
-                maxLength={500}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={5}
-              />
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <button
-                  onClick={updateTool}
-                  className="w-full rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700 sm:w-auto"
-                >
-                  Save Changes
-                </button>
-
-                <button
-                  onClick={closeEditModal}
-                  className="w-full rounded-full border border-slate-200 px-6 py-3 text-sm hover:bg-slate-100 sm:w-auto"
-                >
-                  Cancel
-                </button>
               </div>
           </SlideOverPanel>
         )}
