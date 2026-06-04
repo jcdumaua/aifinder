@@ -9,7 +9,9 @@ import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
 import { SearchBar } from "../components/home/SearchBar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { normalizeToolCategory } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
@@ -1173,6 +1175,10 @@ function ToolCard({
 
   return (
     <div className="relative h-full min-w-0">
+      <Card
+        asChild
+        className={`group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
+      >
       <motion.article
         role="link"
         tabIndex={0}
@@ -1189,76 +1195,78 @@ function ToolCard({
             : { opacity: 1, scale: 1 }
         }
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className={`group relative isolate flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[1.75rem] border p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:p-5 ${cardBg} ai-product-hover`}
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
 
-        <div className="pointer-events-none relative z-20 mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
-          {badge ? (
-            <span className={`inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}>
-              <Sparkles className="h-3 w-3" aria-hidden="true" />
-              <span className="min-w-0 truncate">{badge}</span>
-            </span>
-          ) : (
-            <span className="ai-product-chip inline-flex min-w-0 max-w-full items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
-              <span className="min-w-0 truncate">{tool.category}</span>
-            </span>
-          )}
+        <CardContent className="pointer-events-none relative z-20 flex h-full min-w-0 flex-col p-4 sm:p-5">
+          <div className="mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
+            {badge ? (
+              <Badge
+                variant="outline"
+                className={`min-w-0 max-w-full gap-1.5 px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeTone}`}
+              >
+                <Sparkles className="h-3 w-3" aria-hidden="true" />
+                <span className="min-w-0 truncate">{badge}</span>
+              </Badge>
+            ) : (
+              <Badge className="ai-product-chip min-w-0 max-w-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
+                <span className="min-w-0 truncate">{tool.category}</span>
+              </Badge>
+            )}
 
-          <div className="pointer-events-auto relative z-40 ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={
-                isFavorite
-                  ? `Remove ${tool.name} from favorites`
-                  : `Save ${tool.name}`
-              }
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onToggleFavorite(tool);
-              }}
-              className={`rounded-full border border-white/10 bg-black/20 transition-colors duration-200 hover:border-yellow-300/35 hover:bg-yellow-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/60 [.theme-light_&]:hover:bg-amber-50/80 ${
-                isFavorite ? "text-yellow-300" : "text-slate-300"
-              }`}
-            >
-              <Star
-                className={isFavorite ? "fill-current" : ""}
-                aria-hidden="true"
-              />
-            </Button>
+            <div className="pointer-events-auto relative z-40 ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={
+                  isFavorite
+                    ? `Remove ${tool.name} from favorites`
+                    : `Save ${tool.name}`
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onToggleFavorite(tool);
+                }}
+                className={`rounded-full border border-white/10 bg-black/20 transition-colors duration-200 hover:border-yellow-300/35 hover:bg-yellow-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-amber-300/60 [.theme-light_&]:hover:bg-amber-50/80 ${
+                  isFavorite ? "text-yellow-300" : "text-slate-300"
+                }`}
+              >
+                <Star
+                  className={isFavorite ? "fill-current" : ""}
+                  aria-hidden="true"
+                />
+              </Button>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={
-                isCompared
-                  ? `Remove ${tool.name} from comparison`
-                  : `Compare ${tool.name}`
-              }
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onToggleCompare(slug);
-              }}
-              className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold whitespace-normal transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
-                isCompared ? "text-cyan-200" : "text-slate-200"
-              }`}
-            >
-              {isCompared ? (
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              Compare
-            </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={
+                  isCompared
+                    ? `Remove ${tool.name} from comparison`
+                    : `Compare ${tool.name}`
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onToggleCompare(slug);
+                }}
+                className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold whitespace-normal transition-colors duration-200 hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm [.theme-light_&]:hover:border-cyan-700/20 [.theme-light_&]:hover:bg-cyan-50/80 ${
+                  isCompared ? "text-cyan-200" : "text-slate-200"
+                }`}
+              >
+                {isCompared ? (
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Compare
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="pointer-events-none relative z-20 flex flex-1 flex-col">
           <div className="flex items-start gap-4">
             <ToolLogo tool={tool} isOpening={isModalOpen && !shouldReduceMotion} />
 
@@ -1267,9 +1275,9 @@ function ToolCard({
                 {tool.name}
               </h3>
 
-              <p className="ai-product-chip mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold">
+              <Badge className="ai-product-chip mt-2 px-3 py-1 text-xs font-bold">
                 {tool.category}
-              </p>
+              </Badge>
             </div>
           </div>
 
@@ -1296,13 +1304,20 @@ function ToolCard({
               Details
             </span>
 
-            <span className="ai-product-button-primary inline-flex min-h-0 min-w-0 items-center gap-1.5 whitespace-normal px-3 py-2 text-xs">
-              View
+            <Button
+              asChild
+              size="sm"
+              className="ai-product-button-primary pointer-events-none min-h-0 min-w-0 whitespace-normal px-3 py-2 text-xs"
+            >
+              <span>
+              View Tool
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </span>
+              </span>
+            </Button>
           </div>
-        </div>
+        </CardContent>
       </motion.article>
+      </Card>
 
       <ToolDetailsModal
         tool={{

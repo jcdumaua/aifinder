@@ -4,6 +4,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ToolDetailsModal } from "@/components/tool-details-modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -396,7 +399,11 @@ function ToolGrid({
         const isOpening = selectedTool?.slug === tool.slug && !shouldReduceMotion;
 
         return (
-          <div key={tool.slug} className="relative">
+          <div key={tool.slug} className="relative h-full min-w-0">
+            <Card
+              asChild
+              className={`group relative h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
+            >
             <motion.article
               role="link"
               tabIndex={0}
@@ -413,36 +420,53 @@ function ToolGrid({
                   : { opacity: 1, scale: 1 }
               }
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className={`group relative cursor-pointer rounded-3xl border p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
             >
-              {badge && (
-                <span className="ai-product-chip mb-3 inline-block rounded-full px-3 py-1 text-xs font-bold">
-                  {badge}
-                </span>
-              )}
+              <CardContent className="pointer-events-none flex h-full min-w-0 flex-col p-5">
+                <div className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
+                  {badge && (
+                    <Badge className="ai-product-chip max-w-full px-3 py-1 text-xs font-bold">
+                      <span className="min-w-0 truncate">{badge}</span>
+                    </Badge>
+                  )}
 
-              <div className="flex items-start justify-between gap-3">
-                <ToolLogo tool={tool} />
+                  <div className="pointer-events-auto ml-auto">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onToggleCompare(tool.slug);
+                      }}
+                      className={`rounded-full border border-white/10 bg-black/20 px-3 text-xs font-bold hover:border-cyan-300/35 hover:bg-cyan-300/[0.08] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/80 [.theme-light_&]:text-slate-700 [.theme-light_&]:shadow-sm ${
+                        isCompared ? "text-cyan-200" : "text-slate-200"
+                      }`}
+                    >
+                      {isCompared ? "In Compare" : "Compare"}
+                    </Button>
+                  </div>
+                </div>
 
-                <button
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onToggleCompare(tool.slug);
-                  }}
-                  className="ai-product-button-secondary min-h-0 px-3 py-1 text-xs"
-                >
-                  {isCompared ? "✓ Compare" : "+ Compare"}
-                </button>
-              </div>
+                <div className="flex items-start gap-4">
+                  <ToolLogo tool={tool} />
 
-              <div className="mt-4 block">
-                <h3 className="ai-product-heading text-lg font-black">{tool.name}</h3>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="ai-product-heading line-clamp-2 text-lg font-black leading-tight">
+                      {tool.name}
+                    </h3>
 
-                <p className="mt-2 text-sm text-cyan-300">{tool.pricing}</p>
+                    <Badge className="ai-product-chip mt-2 px-3 py-1 text-xs font-bold">
+                      {tool.pricing}
+                    </Badge>
+                  </div>
+                </div>
 
-                <p className="mt-1 text-sm text-yellow-300">
-                  ⭐ {tool.rating} ({tool.reviewCount.toLocaleString()} reviews)
+                <p className="mt-4 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-yellow-300">
+                  {tool.rating} / 5
+                  <span className="break-words text-slate-400 [.theme-light_&]:text-slate-600">
+                    ({tool.reviewCount.toLocaleString()} reviews)
+                  </span>
                 </p>
 
                 <p className={`mt-3 line-clamp-4 text-sm leading-6 ${softText}`}>
@@ -451,20 +475,28 @@ function ToolGrid({
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {tool.platforms.slice(0, 3).map((platform) => (
-                    <span
+                    <Badge
                       key={platform}
-                      className="ai-product-chip rounded-full px-3 py-1 text-xs"
+                      variant="secondary"
+                      className="ai-product-chip px-3 py-1 text-xs"
                     >
                       {platform}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
 
-                <span className="mt-5 inline-block text-sm font-bold text-cyan-300">
-                  View Tool →
-                </span>
-              </div>
+                <div className="mt-auto pt-5">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="ai-product-button-primary pointer-events-none min-h-0 px-3 py-2 text-xs"
+                  >
+                    <span>View Tool</span>
+                  </Button>
+                </div>
+              </CardContent>
             </motion.article>
+            </Card>
           </div>
         );
       })}
