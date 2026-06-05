@@ -872,7 +872,7 @@ function SearchResultsModal({
   useOverlayScrollLock(true);
 
   return (
-    <div className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[80] flex items-center justify-center overflow-y-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+    <div suppressHydrationWarning={true} className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[80] flex items-center justify-center overflow-y-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
       <motion.section
         aria-label="AI search results"
         aria-modal="true"
