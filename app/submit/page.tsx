@@ -428,7 +428,7 @@ export default function SubmitToolPage() {
               aria-modal="true"
               role="dialog"
               tabIndex={-1}
-              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[86dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
+              className="tool-details-modal-panel relative flex max-h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={
@@ -455,7 +455,7 @@ export default function SubmitToolPage() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </Button>
 
-              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 pb-32 pt-6 sm:max-h-[90dvh] sm:px-8 sm:pb-24 sm:pt-8 md:max-h-[84dvh] md:px-6 md:pb-20 md:pt-6 lg:max-h-[86dvh] xl:max-h-[90dvh] xl:px-8 xl:pb-24 xl:pt-8">
+              <div className="tool-details-modal-scroll relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8 md:px-6 md:pb-5 md:pt-6 xl:px-8 xl:pb-6 xl:pt-8">
                 <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20 md:pb-4 xl:pb-5">
                   <div>
                     <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
@@ -768,7 +768,7 @@ export default function SubmitToolPage() {
                 </form>
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-white/10 bg-slate-950/[0.88] px-5 py-2.5 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.92] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3 md:px-6 md:py-2.5 xl:px-8 xl:py-3">
+              <div className="relative z-20 flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/[0.88] px-5 py-2.5 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.92] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3 md:px-6 md:py-2.5 xl:px-8 xl:py-3">
                 <Button
                   type="button"
                   onClick={closeSubmitPage}
