@@ -168,7 +168,7 @@ export function ToolDetailsModal({
             role="dialog"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
-            className="tool-details-modal-panel relative flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem] md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
+            className="tool-details-modal-panel relative flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={
@@ -188,7 +188,7 @@ export function ToolDetailsModal({
               type="button"
               aria-label={`Close ${tool.name} details`}
               onClick={onClose}
-              className="ai-product-button-secondary ai-modal-close-button z-20 [.theme-light_&]:text-slate-700"
+              className="ai-product-button-secondary ai-modal-close-button absolute top-3 right-3 z-20 [.theme-light_&]:text-slate-700 sm:top-4 sm:right-4"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
