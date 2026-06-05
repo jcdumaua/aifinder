@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,14 @@ const BLOCKED_FILE_EXTENSIONS = [
 
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 type PopupMessage = {
   type: "success" | "error";
@@ -114,6 +122,10 @@ function validateOptionalLogoUrl(value: string) {
 export default function SubmitToolPage() {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const popupOkButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -281,7 +293,7 @@ export default function SubmitToolPage() {
     }
   }
 
-  function closeSubmitPage() {
+  const closeSubmitPage = useCallback(() => {
     const navigateAway = () => {
       if (window.history.length > 1) {
         router.back();
@@ -298,11 +310,82 @@ export default function SubmitToolPage() {
 
     setIsClosing(true);
     window.setTimeout(navigateAway, 240);
-  }
+  }, [router, shouldReduceMotion]);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (popup) {
+      popupOkButtonRef.current?.focus();
+    }
+  }, [popup]);
+
+  useEffect(() => {
+    function getFocusableElements(container: HTMLElement) {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter(
+        (element) =>
+          !element.hasAttribute("disabled") &&
+          element.getAttribute("aria-hidden") !== "true" &&
+          element.offsetParent !== null
+      );
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (isClosing) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSubmitPage();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const trapContainer = popupRef.current || dialogRef.current;
+      if (!trapContainer) return;
+
+      const focusableElements = getFocusableElements(trapContainer);
+      const firstFocusable = focusableElements[0];
+      const lastFocusable = focusableElements[focusableElements.length - 1];
+
+      if (!firstFocusable || !lastFocusable) {
+        event.preventDefault();
+        trapContainer.focus();
+        return;
+      }
+
+      const activeElement = document.activeElement;
+
+      if (!trapContainer.contains(activeElement)) {
+        event.preventDefault();
+        firstFocusable.focus();
+        return;
+      }
+
+      if (event.shiftKey && activeElement === firstFocusable) {
+        event.preventDefault();
+        lastFocusable.focus();
+        return;
+      }
+
+      if (!event.shiftKey && activeElement === lastFocusable) {
+        event.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeSubmitPage, isClosing]);
 
   const isSuccessPopup = popup?.type === "success";
   const inputClass =
-    "ai-product-input h-auto w-full rounded-2xl px-4 py-3.5 text-sm leading-6 outline-none sm:px-5 sm:py-4 sm:text-base";
+    "ai-product-input h-auto w-full rounded-2xl px-4 py-3.5 text-sm leading-6 outline-none md:py-3 xl:px-5 xl:py-4 xl:text-base";
   const labelClass =
     "ai-product-heading text-sm font-black leading-5";
   const helperClass =
@@ -310,7 +393,7 @@ export default function SubmitToolPage() {
   const selectContentClass =
     "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
   const sectionClass =
-    "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5";
+    "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5 md:p-4 xl:p-5";
 
   return (
     <main className="ai-product-page relative min-h-dvh overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12">
@@ -329,81 +412,24 @@ export default function SubmitToolPage() {
         </p>
       </div>
 
-      {popup && (
-        <div
-          className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9999] flex items-center justify-center px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className={`tool-details-modal-panel relative w-full max-w-md rounded-[2rem] border p-7 text-center ${
-              isSuccessPopup
-                ? "border-emerald-400/25"
-                : "border-red-400/25"
-            }`}
-          >
-            <Button
-              type="button"
-              aria-label="Close message"
-              onClick={() => setPopup(null)}
-              variant="ghost"
-              size="icon"
-              className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </Button>
-
-            <div
-              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
-                isSuccessPopup
-                  ? "bg-green-400/15 text-green-300"
-                  : "bg-red-400/15 text-red-300"
-              }`}
-            >
-              {isSuccessPopup ? "✓" : "!"}
-            </div>
-
-            <h2 className="ai-product-heading mt-5 text-2xl font-black">
-              {popup.title}
-            </h2>
-
-            <p className="ai-product-body mt-3 text-sm leading-6">
-              {popup.message}
-            </p>
-
-            <Button
-              type="button"
-              onClick={() => setPopup(null)}
-              variant="ghost"
-              className={`mt-6 h-auto rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
-                isSuccessPopup
-                  ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
-                  : "bg-red-300 text-slate-950 hover:bg-red-200"
-              }`}
-            >
-              OK
-            </Button>
-          </div>
-        </div>
-      )}
-
       <AnimatePresence>
         {!isClosing && (
           <motion.div
-            className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-10 flex items-center justify-center px-3 py-4 sm:px-6 sm:py-8"
+            className="ai-modal-backdrop fixed inset-0 z-10 flex h-dvh min-h-dvh w-screen items-center justify-center overflow-x-hidden px-3 py-4 sm:px-6 sm:py-8 md:py-6 xl:py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
           >
             <motion.section
-              aria-label="Submit AI tool"
+              ref={dialogRef}
+              aria-labelledby="submit-tool-modal-title"
+              aria-describedby="submit-tool-modal-description"
               aria-modal="true"
               role="dialog"
-              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] xl:max-w-4xl"
-              initial={
-                shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }
-              }
+              tabIndex={-1}
+              className="tool-details-modal-panel relative max-h-[88dvh] w-full max-w-3xl overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[86dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={
                 shouldReduceMotion
@@ -421,6 +447,7 @@ export default function SubmitToolPage() {
                 type="button"
                 aria-label="Close submit tool page"
                 onClick={closeSubmitPage}
+                ref={closeButtonRef}
                 variant="ghost"
                 size="icon"
                 className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
@@ -428,18 +455,24 @@ export default function SubmitToolPage() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </Button>
 
-              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 pb-32 pt-6 sm:max-h-[90dvh] sm:px-8 sm:pb-24 sm:pt-8">
-                <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20">
+              <div className="tool-details-modal-scroll relative z-10 max-h-[88dvh] overflow-y-auto overscroll-contain px-5 pb-32 pt-6 sm:max-h-[90dvh] sm:px-8 sm:pb-24 sm:pt-8 md:max-h-[84dvh] md:px-6 md:pb-20 md:pt-6 lg:max-h-[86dvh] xl:max-h-[90dvh] xl:px-8 xl:pb-24 xl:pt-8">
+                <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20 md:pb-4 xl:pb-5">
                   <div>
                     <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
                       Submit AI Tool
                     </p>
 
-                    <h1 className="ai-product-section-title mt-3 max-w-3xl text-3xl sm:text-4xl xl:text-5xl">
+                    <h1
+                      id="submit-tool-modal-title"
+                      className="ai-product-section-title mt-3 max-w-3xl text-3xl sm:text-4xl md:text-[2rem] xl:text-5xl"
+                    >
                       Submit your AI tool to AiFinder
                     </h1>
 
-                    <p className="ai-product-body mt-4 max-w-2xl text-sm leading-7 sm:text-base">
+                    <p
+                      id="submit-tool-modal-description"
+                      className="ai-product-body mt-4 max-w-2xl text-sm leading-7 sm:text-base md:mt-3 md:text-sm md:leading-6 xl:mt-4 xl:text-base xl:leading-7"
+                    >
                       Send your tool for review. Approved tools will appear
                       publicly on AiFinder.
                     </p>
@@ -448,7 +481,7 @@ export default function SubmitToolPage() {
 
                 <form
                   id="submit-tool-form"
-                  className="mt-6 space-y-5 pb-2"
+                  className="mt-6 space-y-5 pb-2 md:mt-5 md:space-y-4 xl:mt-6 xl:space-y-5"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void submitTool();
@@ -473,7 +506,7 @@ export default function SubmitToolPage() {
                       evaluate the tool.
                     </p>
 
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-6 grid gap-5 sm:grid-cols-2 md:mt-5 md:gap-4 xl:mt-6 xl:gap-5">
                       <div>
                         <Label className={labelClass} htmlFor="tool-name">
                           Tool name{" "}
@@ -583,7 +616,7 @@ export default function SubmitToolPage() {
                         <Label className={labelClass} htmlFor="tool-logo">
                           Logo
                         </Label>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem]">
+                        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem] md:grid-cols-[minmax(0,1fr)_4.25rem] xl:grid-cols-[minmax(0,1fr)_4.75rem]">
                           <Input
                             suppressHydrationWarning
                             id="tool-logo"
@@ -598,7 +631,7 @@ export default function SubmitToolPage() {
 
                           <Label
                             htmlFor="tool-logo-file"
-                            className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 focus-within:ring-[3px] focus-within:ring-ring/50 [.theme-dark_&]:text-slate-300"
+                            className="ai-product-button-secondary flex min-h-14 cursor-pointer items-center justify-center rounded-2xl px-4 text-slate-500 focus-within:ring-[3px] focus-within:ring-ring/50 [.theme-dark_&]:text-slate-300 md:min-h-12 xl:min-h-14"
                             aria-label="Upload logo file"
                           >
                             {isUploadingLogo ? (
@@ -668,7 +701,7 @@ export default function SubmitToolPage() {
                         <Textarea
                           suppressHydrationWarning
                           id="tool-description"
-                          className={`${inputClass} mt-2 min-h-36 resize-y`}
+                          className={`${inputClass} mt-2 min-h-36 resize-y md:min-h-32 xl:min-h-36`}
                           placeholder="Describe what the tool does, who it helps, and the core use case."
                           value={description}
                           maxLength={500}
@@ -688,7 +721,7 @@ export default function SubmitToolPage() {
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Submitter details
                     </p>
-                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2 md:gap-4 xl:gap-5">
                       <div>
                         <Label className={labelClass} htmlFor="submitter-name">
                           Your name
@@ -735,7 +768,7 @@ export default function SubmitToolPage() {
                 </form>
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-white/10 bg-slate-950/[0.88] px-5 py-2.5 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.92] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3">
+              <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-white/10 bg-slate-950/[0.88] px-5 py-2.5 backdrop-blur-xl [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.92] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3 md:px-6 md:py-2.5 xl:px-8 xl:py-3">
                 <Button
                   type="button"
                   onClick={closeSubmitPage}
@@ -755,6 +788,65 @@ export default function SubmitToolPage() {
                   {isSubmitting ? "Submitting..." : "Submit for Review"}
                 </Button>
               </div>
+
+              {popup && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-md [.theme-light_&]:bg-slate-950/20">
+                  <div
+                    ref={popupRef}
+                    role={isSuccessPopup ? "status" : "alert"}
+                    aria-live={isSuccessPopup ? "polite" : "assertive"}
+                    aria-atomic="true"
+                    className={`tool-details-modal-panel relative w-full max-w-md rounded-[2rem] border p-7 text-center ${
+                      isSuccessPopup
+                        ? "border-emerald-400/25"
+                        : "border-red-400/25"
+                    }`}
+                  >
+                    <Button
+                      type="button"
+                      aria-label="Close message"
+                      onClick={() => setPopup(null)}
+                      variant="ghost"
+                      size="icon"
+                      className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+
+                    <div
+                      className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black ${
+                        isSuccessPopup
+                          ? "bg-green-400/15 text-green-300"
+                          : "bg-red-400/15 text-red-300"
+                      }`}
+                    >
+                      {isSuccessPopup ? "✓" : "!"}
+                    </div>
+
+                    <h2 className="ai-product-heading mt-5 text-2xl font-black">
+                      {popup.title}
+                    </h2>
+
+                    <p className="ai-product-body mt-3 text-sm leading-6">
+                      {popup.message}
+                    </p>
+
+                    <Button
+                      type="button"
+                      ref={popupOkButtonRef}
+                      onClick={() => setPopup(null)}
+                      variant="ghost"
+                      className={`mt-6 h-auto rounded-full px-7 py-3 text-sm font-bold transition-colors duration-200 ${
+                        isSuccessPopup
+                          ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
+                          : "bg-red-300 text-slate-950 hover:bg-red-200"
+                      }`}
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </div>
+              )}
             </motion.section>
           </motion.div>
         )}
