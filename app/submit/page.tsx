@@ -393,7 +393,7 @@ export default function SubmitToolPage() {
   const selectContentClass =
     "bg-white text-slate-950 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-white";
   const sectionClass =
-    "rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5 md:p-4 xl:p-5";
+    "min-w-0 overflow-x-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white/[0.68] sm:p-5 md:p-4 xl:p-5";
 
   return (
     <main className="ai-product-page relative min-h-dvh overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12">
@@ -415,7 +415,7 @@ export default function SubmitToolPage() {
       <AnimatePresence>
         {!isClosing && (
           <motion.div
-            className="ai-modal-backdrop fixed inset-0 z-10 flex h-dvh min-h-dvh w-screen items-center justify-center overflow-x-hidden px-3 py-4 sm:px-6 sm:py-8 md:py-6 xl:py-8"
+            className="ai-modal-backdrop fixed inset-0 z-10 flex h-dvh min-h-dvh w-dvw max-w-[100dvw] items-center justify-center overflow-x-hidden px-3 py-4 sm:px-6 sm:py-8 md:py-6 xl:py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -428,7 +428,7 @@ export default function SubmitToolPage() {
               aria-modal="true"
               role="dialog"
               tabIndex={-1}
-              className="tool-details-modal-panel relative flex max-h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
+              className="tool-details-modal-panel relative flex max-h-[88dvh] min-w-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={
@@ -455,8 +455,8 @@ export default function SubmitToolPage() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </Button>
 
-              <div className="tool-details-modal-scroll relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8 md:px-6 md:pb-5 md:pt-6 xl:px-8 xl:pb-6 xl:pt-8">
-                <div className="border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20 md:pb-4 xl:pb-5">
+              <div className="tool-details-modal-scroll relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-5 pt-6 sm:px-8 sm:pb-6 sm:pt-8 md:px-6 md:pb-5 md:pt-6 xl:px-8 xl:pb-6 xl:pt-8">
+                <div className="min-w-0 overflow-x-hidden border-b border-white/10 pb-5 pr-16 [.theme-light_&]:border-slate-200 sm:pr-20 md:pb-4 xl:pb-5">
                   <div>
                     <p className="ai-product-eyebrow text-sm font-bold uppercase tracking-widest">
                       Submit AI Tool
@@ -481,7 +481,7 @@ export default function SubmitToolPage() {
 
                 <form
                   id="submit-tool-form"
-                  className="mt-6 space-y-5 pb-2 md:mt-5 md:space-y-4 xl:mt-6 xl:space-y-5"
+                  className="mt-6 min-w-0 space-y-5 pb-2 md:mt-5 md:space-y-4 xl:mt-6 xl:space-y-5"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void submitTool();
@@ -506,7 +506,7 @@ export default function SubmitToolPage() {
                       evaluate the tool.
                     </p>
 
-                    <div className="mt-6 grid gap-5 sm:grid-cols-2 md:mt-5 md:gap-4 xl:mt-6 xl:gap-5">
+                    <div className="mt-6 grid min-w-0 gap-5 sm:grid-cols-2 md:mt-5 md:gap-4 xl:mt-6 xl:gap-5">
                       <div>
                         <Label className={labelClass} htmlFor="tool-name">
                           Tool name{" "}
@@ -616,7 +616,7 @@ export default function SubmitToolPage() {
                         <Label className={labelClass} htmlFor="tool-logo">
                           Logo
                         </Label>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem] md:grid-cols-[minmax(0,1fr)_4.25rem] xl:grid-cols-[minmax(0,1fr)_4.75rem]">
+                        <div className="mt-2 grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_4.75rem] md:grid-cols-[minmax(0,1fr)_4.25rem] xl:grid-cols-[minmax(0,1fr)_4.75rem]">
                           <Input
                             suppressHydrationWarning
                             id="tool-logo"
@@ -643,7 +643,7 @@ export default function SubmitToolPage() {
                               />
                             )}
 
-                            <Input
+                            <input
                               suppressHydrationWarning
                               id="tool-logo-file"
                               type="file"
@@ -721,7 +721,7 @@ export default function SubmitToolPage() {
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Submitter details
                     </p>
-                    <div className="mt-5 grid gap-5 sm:grid-cols-2 md:gap-4 xl:gap-5">
+                    <div className="mt-5 grid min-w-0 gap-5 sm:grid-cols-2 md:gap-4 xl:gap-5">
                       <div>
                         <Label className={labelClass} htmlFor="submitter-name">
                           Your name

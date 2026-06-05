@@ -1159,9 +1159,12 @@ h1, h2, h3 {
 
 .tool-details-modal-scroll {
   color-scheme: light dark;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(8, 145, 178, 0.28) transparent;
+  touch-action: pan-y;
 }
 
 .tool-details-modal-scroll::-webkit-scrollbar {
