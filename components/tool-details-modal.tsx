@@ -8,7 +8,7 @@ import {
 } from "framer-motion";
 import { ExternalLink, GitCompare, Star, X } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "@/app/theme-provider";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
@@ -55,11 +55,19 @@ export function ToolDetailsModal({
     null,
   );
   const [visualViewportHeight, setVisualViewportHeight] = useState<number>(0);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useOverlayScrollLock(isOpen);
 
   useEffect(() => {
-    setPortalContainer(document.body);
+    const portalTimer = window.setTimeout(() => {
+      setPortalContainer(document.body);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(portalTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -158,7 +166,8 @@ export function ToolDetailsModal({
           <motion.section
             aria-modal="true"
             role="dialog"
-            aria-label={`${tool.name} details`}
+            aria-labelledby={titleId}
+            aria-describedby={descriptionId}
             className="tool-details-modal-panel relative flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[2rem] md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -179,15 +188,15 @@ export function ToolDetailsModal({
               type="button"
               aria-label={`Close ${tool.name} details`}
               onClick={onClose}
-              className="ai-product-button-secondary ai-modal-close-button [.theme-light_&]:text-slate-700"
+              className="ai-product-button-secondary ai-modal-close-button z-20 [.theme-light_&]:text-slate-700"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 px-4 pb-5 pr-14 pt-6 [.theme-light_&]:border-slate-200 sm:px-6 sm:pb-7 sm:pr-16 sm:pt-8 md:px-8 xl:pr-20">
-              <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
+            <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 px-4 py-4 pr-12 [.theme-light_&]:border-slate-200 sm:px-6 sm:py-5 sm:pr-16 md:px-8 xl:pr-20">
+              <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
 
-              <div className="relative flex items-start">
+              <div className="relative flex min-w-0 items-start gap-3 sm:gap-4">
                 <motion.div
                   initial={
                     shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
@@ -197,42 +206,48 @@ export function ToolDetailsModal({
                     duration: shouldReduceMotion ? 0 : 0.26,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_42px_rgba(15,23,42,0.16)] sm:h-24 sm:w-24 sm:rounded-[1.5rem] sm:p-4"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-[0_10px_25px_rgba(15,23,42,0.12)] sm:h-16 sm:w-16 sm:rounded-2xl sm:p-3"
                 >
                   <img
                     src={tool.logoUrl}
                     alt={`${tool.name} logo`}
-                    className="h-10 w-10 object-contain sm:h-14 sm:w-14"
+                    className="h-8 w-8 object-contain sm:h-10 sm:w-10"
                   />
                 </motion.div>
+
+                <div className="min-w-0 max-w-full pt-0.5">
+                  <p className="break-words text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+                    {tool.category}
+                  </p>
+
+                  <h2
+                    id={titleId}
+                    className="ai-product-section-title mt-0.5 break-words text-xl leading-tight sm:text-3xl xl:text-[2rem]"
+                  >
+                    {tool.name}
+                  </h2>
+
+                  <p
+                    id={descriptionId}
+                    className="mt-1 break-words text-xs leading-relaxed text-slate-300 [.theme-light_&]:text-slate-700 sm:mt-2 sm:text-[15px] sm:leading-6"
+                  >
+                    {tool.description}
+                  </p>
+                </div>
               </div>
 
-              <div className="relative mt-5 min-w-0 max-w-full sm:mt-6">
-                <p className="break-words text-xs font-black uppercase tracking-[0.22em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                  {tool.category}
-                </p>
-
-                <h2 className="ai-product-section-title mt-2 break-words text-3xl xl:text-4xl">
-                  {tool.name}
-                </h2>
-
-                <p className="mt-4 break-words text-base leading-8 text-slate-300 [.theme-light_&]:text-slate-700">
-                  {tool.description}
-                </p>
-              </div>
-
-              <div className="relative mt-5 flex min-w-0 max-w-full flex-wrap gap-2.5">
+              <div className="relative mt-3 flex min-w-0 max-w-full flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                 {tool.pricing && (
-                  <span className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal">
+                  <span className="ai-product-chip max-w-full break-words rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-normal sm:px-2.5 sm:py-1 sm:text-[11px]">
                     {tool.pricing}
                   </span>
                 )}
 
                 {hasRating && (
-                  <span className="max-w-full break-words rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200 whitespace-normal [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700">
+                  <span className="max-w-full break-words rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold text-amber-200 whitespace-normal [.theme-light_&]:border-amber-200/80 [.theme-light_&]:bg-amber-50/80 [.theme-light_&]:text-amber-700 sm:px-2.5 sm:py-1 sm:text-[11px]">
                     {tool.rating} / 5
                     {hasReviewCount
-                      ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
+                      ? ` · ${tool.reviewCount?.toLocaleString()}`
                       : ""}
                   </span>
                 )}
@@ -240,7 +255,7 @@ export function ToolDetailsModal({
                 {platforms.map((platform) => (
                   <span
                     key={platform}
-                    className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
+                    className="ai-product-chip max-w-full break-words rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-normal sm:px-2.5 sm:py-1 sm:text-[11px]"
                   >
                     {platform}
                   </span>
@@ -249,44 +264,28 @@ export function ToolDetailsModal({
             </header>
 
             <div className="tool-details-modal-scroll relative z-10 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
-              <div className="min-w-0 max-w-full px-4 py-6 sm:px-6 sm:py-8 md:px-8">
-                <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  <DetailPanel
-                    label="Pricing"
-                    value={tool.pricing || "Not listed"}
-                  />
-                  <DetailPanel
-                    label="Rating"
-                    value={
-                      hasRating
-                        ? `${tool.rating} / 5${
-                            hasReviewCount
-                              ? ` · ${tool.reviewCount?.toLocaleString()} reviews`
-                              : ""
-                          }`
-                        : "Not listed"
-                    }
-                  />
+              <div className="min-w-0 max-w-full px-4 py-4 sm:px-6 sm:py-6 md:px-8">
+                <div className="grid min-w-0 gap-4">
                   <DetailPanel
                     label="Best For"
                     value={tool.bestFor || tool.category}
                   />
                 </div>
 
-                <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                <section className="mt-4 border-t border-white/10 pt-4 [.theme-light_&]:border-slate-200 sm:mt-6 sm:pt-6">
                   <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                     About {tool.name}
                   </h3>
 
-                  <div className="mt-4 max-w-full space-y-4 break-words text-sm leading-7 text-slate-300 [.theme-light_&]:text-slate-700">
+                  <div className="mt-2 max-w-full space-y-2 break-words text-sm leading-6 text-slate-300 [.theme-light_&]:text-slate-700 sm:mt-3 sm:space-y-3 sm:leading-7">
                     <p>
-                      {tool.name} is listed on AiFinder as a{" "}
-                      {tool.category.toLowerCase()} tool for people comparing
-                      practical AI software by pricing, platform, ratings, and
-                      common use cases.
+                      {tool.name} is a {tool.category.toLowerCase()} tool featured on AiFinder for users 
+                      comparing AI software by pricing, platforms, and real-world results.
                     </p>
 
-                    <p>{tool.description}</p>
+                    <div className="rounded-lg border-l-2 border-cyan-400/30 bg-cyan-400/5 py-1 pl-3 text-slate-400 [.theme-light_&]:border-cyan-900/20 [.theme-light_&]:bg-cyan-50/50 [.theme-light_&]:text-slate-600">
+                      {tool.description}
+                    </div>
 
                     <p>
                       This tool is especially relevant for{" "}
@@ -297,36 +296,17 @@ export function ToolDetailsModal({
                   </div>
                 </section>
 
-                {platforms.length > 0 && (
-                  <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
-                    <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                      Platforms
-                    </h3>
-
-                    <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2.5">
-                      {platforms.map((platform) => (
-                        <span
-                          key={platform}
-                          className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-semibold whitespace-normal"
-                        >
-                          {platform}
-                        </span>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
                 {useCases.length > 0 && (
-                  <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                  <section className="mt-4 border-t border-white/10 pt-4 [.theme-light_&]:border-slate-200 sm:mt-6 sm:pt-6">
                     <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
                       Features & Use Cases
                     </h3>
 
-                    <div className="mt-4 flex min-w-0 max-w-full flex-wrap gap-2.5">
+                    <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-2 sm:mt-3">
                       {useCases.map((useCase) => (
                         <span
                           key={useCase}
-                          className="ai-product-chip max-w-full break-words rounded-full px-3 py-1.5 text-xs font-bold whitespace-normal"
+                          className="ai-product-chip max-w-full break-words rounded-lg px-2.5 py-1 text-[11px] font-bold whitespace-normal sm:px-3 sm:py-1.5 sm:text-xs"
                         >
                           {useCase}
                         </span>
@@ -335,35 +315,31 @@ export function ToolDetailsModal({
                   </section>
                 )}
 
-                <section className="mt-7 border-t border-white/10 pt-6 [.theme-light_&]:border-slate-200">
+                <section className="mt-4 border-t border-white/10 pt-4 [.theme-light_&]:border-slate-200 sm:mt-6 sm:pt-6">
                   <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300 [.theme-light_&]:text-cyan-800">
-                    Availability
+                    Open Destinations
                   </h3>
 
-                  <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <DetailPanel label="Website" value="Official site" />
-                    <DetailPanel
-                      label="iOS"
-                      value={tool.ios ? "Available" : "Not listed"}
+                  <div className="mt-2 grid min-w-0 gap-2 sm:mt-3 sm:grid-cols-3 sm:gap-3">
+                    <DestinationPanel
+                      label="Website"
+                      value="Official site"
+                      href={tool.website}
                     />
-                    <DetailPanel
+                    <DestinationPanel
+                      label="iOS"
+                      value={tool.ios ? "Open app listing" : "Not listed"}
+                      href={tool.ios || undefined}
+                    />
+                    <DestinationPanel
                       label="Android"
-                      value={tool.android ? "Available" : "Not listed"}
+                      value={tool.android ? "Open app listing" : "Not listed"}
+                      href={tool.android || undefined}
                     />
                   </div>
                 </section>
 
-                <div className="mt-8 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <a
-                    href={tool.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ai-product-button-primary min-w-0 gap-2 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
-                  >
-                    Visit Website
-                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-
+                <div className="mt-6 grid min-w-0 gap-3 md:grid-cols-3">
                   <button
                     type="button"
                     onClick={onToggleCompare}
@@ -390,28 +366,6 @@ export function ToolDetailsModal({
                     {isFavorite ? "Saved" : "Save"}
                   </button>
 
-                  {tool.ios && (
-                    <a
-                      href={tool.ios}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
-                    >
-                      iOS App
-                    </a>
-                  )}
-
-                  {tool.android && (
-                    <a
-                      href={tool.android}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
-                    >
-                      Android App
-                    </a>
-                  )}
-
                   <Link
                     href={`/tool/${tool.slug}`}
                     className="ai-product-button-secondary min-w-0 whitespace-normal px-4 py-3 text-center text-sm sm:px-5"
@@ -434,6 +388,48 @@ export function ToolDetailsModal({
   return createPortal(modal, portalContainer);
 }
 
+function DestinationPanel({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+}) {
+  const content = (
+    <>
+      <span className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
+        {label}
+      </span>
+
+      <span className="ai-product-heading mt-1 flex items-center gap-2 break-words text-sm font-black leading-tight sm:mt-2 sm:leading-6">
+        {value}
+        {href && <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />}
+      </span>
+    </>
+  );
+
+  if (!href) {
+    return (
+      <div className="ai-product-surface-soft min-w-0 rounded-2xl border p-3 opacity-70 sm:p-4">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="ai-product-surface-soft min-w-0 rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-cyan-300/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 [.theme-light_&]:hover:border-cyan-700/20 sm:p-4"
+    >
+      {content}
+    </a>
+  );
+}
+
 function DetailPanel({
   label,
   value,
@@ -442,12 +438,12 @@ function DetailPanel({
   value: string;
 }) {
   return (
-    <section className="ai-product-surface-soft min-w-0 rounded-2xl border p-4 sm:p-5">
+    <section className="ai-product-surface-soft min-w-0 rounded-2xl border p-3.5 sm:p-5">
       <h3 className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300 [.theme-light_&]:text-cyan-800">
         {label}
       </h3>
 
-      <p className="ai-product-heading mt-3 break-words text-base font-black leading-6">
+      <p className="ai-product-heading mt-2 break-words text-sm font-black leading-snug sm:mt-3 sm:text-base sm:leading-6">
         {value}
       </p>
     </section>
