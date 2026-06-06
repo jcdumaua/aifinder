@@ -168,7 +168,7 @@ export function ToolDetailsModal({
             role="dialog"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
-            className="tool-details-modal-panel relative flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
+            className="tool-details-modal-panel relative isolate flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={
@@ -183,12 +183,13 @@ export function ToolDetailsModal({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-40 rounded-t-[inherit] bg-[linear-gradient(145deg,rgba(15,23,42,0.99),rgba(2,6,23,0.96)_72%,rgba(8,47,73,0.72))] [.theme-light_&]:bg-[linear-gradient(145deg,rgba(255,255,255,0.995),rgba(248,250,252,0.985)_72%,rgba(236,254,255,0.92))]" />
 
             <button
               type="button"
               aria-label={`Close ${tool.name} details`}
               onClick={onClose}
-              className="ai-product-button-secondary ai-modal-close-button absolute top-3 right-3 z-20 [.theme-light_&]:text-slate-700 sm:top-4 sm:right-4"
+              className="ai-product-button-secondary ai-modal-close-button absolute top-3 right-3 z-30 [.theme-light_&]:text-slate-700 sm:top-4 sm:right-4"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
