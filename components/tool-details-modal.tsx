@@ -182,20 +182,22 @@ export function ToolDetailsModal({
             }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-40 rounded-t-[inherit] bg-[linear-gradient(145deg,rgba(15,23,42,0.99),rgba(2,6,23,0.96)_72%,rgba(8,47,73,0.72))] [.theme-light_&]:bg-[linear-gradient(145deg,rgba(255,255,255,0.995),rgba(248,250,252,0.985)_72%,rgba(236,254,255,0.92))]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_28%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.06),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_50%_30%,rgba(14,116,144,0.08),transparent_36%),linear-gradient(135deg,rgba(236,254,255,0.46),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
 
-            <button
-              type="button"
-              aria-label={`Close ${tool.name} details`}
-              onClick={onClose}
-              className="ai-product-button-secondary ai-modal-close-button absolute top-3 right-3 z-30 [.theme-light_&]:text-slate-700 sm:top-4 sm:right-4"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 bg-slate-950/95 px-4 py-4 pr-16 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white sm:px-6 sm:py-5 sm:pr-20 md:px-8 xl:pr-20">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 rounded-t-[1.5rem] bg-slate-950 [.theme-light_&]:bg-white sm:h-28 sm:rounded-t-3xl" />
+              <div className="pointer-events-none absolute left-1/2 top-12 h-44 w-56 -translate-x-1/2 rounded-full bg-cyan-400/8 blur-3xl [.theme-light_&]:bg-cyan-200/20 sm:top-14" />
 
-            <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 px-4 py-4 pr-12 [.theme-light_&]:border-slate-200 sm:px-6 sm:py-5 sm:pr-16 md:px-8 xl:pr-20">
-              <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl [.theme-light_&]:bg-cyan-200/30" />
+              <div className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4">
+                <button
+                  type="button"
+                  aria-label={`Close ${tool.name} details`}
+                  onClick={onClose}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white p-0 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.12)] transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 [.theme-dark_&]:border-slate-700 [.theme-dark_&]:bg-slate-950 [.theme-dark_&]:text-slate-100 [.theme-dark_&]:hover:bg-slate-900"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
 
               <div className="relative flex min-w-0 items-start gap-3 sm:gap-4">
                 <motion.div
