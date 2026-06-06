@@ -30,9 +30,24 @@ Describe the upgrade to make, why it is needed, and the desired project outcome.
 ## Testing Checklist
 
 - Run the most relevant automated checks available for the touched area.
+- For UI changes, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
 - Manually review affected flows when automated tests are not enough.
 - Confirm there are no unrelated file changes.
 - Confirm no secrets or sensitive data were added.
+
+## Responsive CCR Requirements
+
+For UI-facing changes, include:
+
+- Desktop Result
+- Tablet Result
+- Large Tablet Result
+- Mobile Result
+- Foldable Result
+- Hydration Result
+- Accessibility Result
+- Animation Result
+- Responsive Issues Found
 
 ## What to Explain After Changes
 

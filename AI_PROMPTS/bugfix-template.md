@@ -32,8 +32,23 @@ Describe the bug, expected behavior, actual behavior, and any known reproduction
 
 - Verify the original bug scenario now works.
 - Check at least one nearby normal path still works.
+- For UI bugs, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
 - Run relevant tests, linting, type checks, or build checks when appropriate.
 - Inspect the final diff for unrelated edits.
+
+## Responsive CCR Requirements
+
+For UI-facing bug fixes, include:
+
+- Desktop Result
+- Tablet Result
+- Large Tablet Result
+- Mobile Result
+- Foldable Result
+- Hydration Result
+- Accessibility Result
+- Animation Result
+- Responsive Issues Found
 
 ## What to Explain After Changes
 
