@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, X } from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
@@ -61,6 +61,67 @@ const thinkingMessages = [
   "Analyzing your intent...",
   "Matching the best AI tools...",
 ];
+
+type FilterSelectProps = {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: string[];
+  className: string;
+  isMounted: boolean;
+  onValueChange: (value: string) => void;
+  getOptionLabel?: (value: string) => string;
+};
+
+function FilterSelect({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  className,
+  isMounted,
+  onValueChange,
+  getOptionLabel = (option) => option,
+}: FilterSelectProps) {
+  const displayValue = getOptionLabel(value);
+
+  if (!isMounted) {
+    return (
+      <button
+        id={id}
+        type="button"
+        aria-disabled="true"
+        aria-label={label}
+        tabIndex={-1}
+        className={`flex items-center justify-between gap-2 ${className}`}
+      >
+        <span className="min-w-0 truncate">{displayValue}</span>
+        <ChevronDown aria-hidden="true" className="size-4 shrink-0 opacity-50" />
+      </button>
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger id={id} aria-label={label} className={className}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>
+            {getOptionLabel(option)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function subscribeToHydrationStore() {
+  return () => {};
+}
 
 const seoCategoryCopy = [
   {
@@ -180,6 +241,11 @@ export default function Home() {
   const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
 
   const tools = databaseTools;
+  const areFilterSelectsMounted = useSyncExternalStore(
+    subscribeToHydrationStore,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     async function loadToolsFromSupabase() {
@@ -498,67 +564,57 @@ export default function Home() {
                 <Label htmlFor="home-category-filter" className="sr-only">
                   Filter by category
                 </Label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger
-                    id="home-category-filter"
-                    aria-label="Filter tools by category"
-                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
-                  >
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterSelect
+                  id="home-category-filter"
+                  label="Filter tools by category"
+                  value={selectedCategory}
+                  placeholder="All Categories"
+                  options={["All", ...categories]}
+                  className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  isMounted={areFilterSelectsMounted}
+                  onValueChange={setSelectedCategory}
+                  getOptionLabel={(category) =>
+                    category === "All" ? "All Categories" : category
+                  }
+                />
               </div>
 
               <div>
                 <Label htmlFor="home-pricing-filter" className="sr-only">
                   Filter by pricing
                 </Label>
-                <Select value={selectedPricing} onValueChange={setSelectedPricing}>
-                  <SelectTrigger
-                    id="home-pricing-filter"
-                    aria-label="Filter tools by pricing"
-                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
-                  >
-                    <SelectValue placeholder="All Pricing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pricingOptions.map((price) => (
-                      <SelectItem key={price} value={price}>
-                        {price === "All" ? "All Pricing" : price}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterSelect
+                  id="home-pricing-filter"
+                  label="Filter tools by pricing"
+                  value={selectedPricing}
+                  placeholder="All Pricing"
+                  options={pricingOptions}
+                  className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  isMounted={areFilterSelectsMounted}
+                  onValueChange={setSelectedPricing}
+                  getOptionLabel={(price) =>
+                    price === "All" ? "All Pricing" : price
+                  }
+                />
               </div>
 
               <div>
                 <Label htmlFor="home-platform-filter" className="sr-only">
                   Filter by platform
                 </Label>
-                <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-                  <SelectTrigger
-                    id="home-platform-filter"
-                    aria-label="Filter tools by platform"
-                    className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
-                  >
-                    <SelectValue placeholder="All Platforms" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {platformOptions.map((platform) => (
-                      <SelectItem key={platform} value={platform}>
-                        {platform === "All" ? "All Platforms" : platform}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FilterSelect
+                  id="home-platform-filter"
+                  label="Filter tools by platform"
+                  value={selectedPlatform}
+                  placeholder="All Platforms"
+                  options={platformOptions}
+                  className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
+                  isMounted={areFilterSelectsMounted}
+                  onValueChange={setSelectedPlatform}
+                  getOptionLabel={(platform) =>
+                    platform === "All" ? "All Platforms" : platform
+                  }
+                />
               </div>
             </div>
 
