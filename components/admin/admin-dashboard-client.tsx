@@ -22,7 +22,7 @@ import {
   placeholderDiscoveredTools,
   type DiscoveredTool,
 } from "../../lib/discovered-tools";
-import { TOOL_CATEGORIES } from "../../lib/tool-categories";
+import { isToolCategory, TOOL_CATEGORIES } from "../../lib/tool-categories";
 
 type Tool = {
   id?: number;
@@ -1695,6 +1695,11 @@ export default function AdminDashboardClient({
       return;
     }
 
+    if (!isToolCategory(category)) {
+      showError("Please select a valid category.");
+      return;
+    }
+
     const secureToken = await getCsrfToken();
 
     if (!secureToken) return;
@@ -1767,6 +1772,11 @@ export default function AdminDashboardClient({
 
     if (!editName || !editCategory || !editDescription || !editWebsite) {
       showError("Please fill all required fields.");
+      return;
+    }
+
+    if (!isToolCategory(editCategory)) {
+      showError("Please select a valid category.");
       return;
     }
 
