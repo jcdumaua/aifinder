@@ -1082,6 +1082,14 @@ h1, h2, h3 {
   backdrop-filter: blur(18px) saturate(1.04);
 }
 
+.ai-corner-safe-panel {
+  background: transparent !important;
+  background-clip: padding-box;
+  isolation: isolate;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
 .tool-details-modal-backdrop-layer {
   background:
     radial-gradient(circle at 50% 10%, rgba(14, 165, 233, 0.10), transparent 32%),

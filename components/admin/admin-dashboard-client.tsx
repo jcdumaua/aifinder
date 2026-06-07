@@ -409,6 +409,15 @@ function SmartStatusBadge({
   );
 }
 
+function AdminModalLayers() {
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white" />
+      <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.08),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.58),rgba(255,255,255,0.24),rgba(248,250,252,0))]" />
+    </>
+  );
+}
+
 function SlideOverPanel({
   eyebrow,
   title,
@@ -437,8 +446,10 @@ function SlideOverPanel({
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex h-dvh w-full max-w-[520px] flex-col border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70">
-        <div className="relative border-b border-slate-200 p-4 pr-16 sm:p-5 sm:pr-20">
+      <div className="ai-corner-safe-panel relative isolate flex h-dvh w-full max-w-[520px] flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70 sm:rounded-l-2xl">
+        <AdminModalLayers />
+
+        <div className="relative z-10 border-b border-slate-200 p-4 pr-16 sm:p-5 sm:pr-20">
           <div>
             <p
               className={`text-xs font-bold uppercase tracking-widest ${accentClass}`}
@@ -466,7 +477,7 @@ function SlideOverPanel({
         </div>
 
         <div
-          className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5"
+          className="relative z-10 min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5"
           data-overlay-scroll-container="true"
         >
           {children}
@@ -1876,12 +1887,14 @@ export default function AdminDashboardClient({
       aria-modal="true"
     >
       <div
-        className={`relative w-full max-w-md rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
+        className={`ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
           isSuccessPopup
             ? "border-emerald-200 bg-white"
             : "border-red-200 bg-white"
         }`}
       >
+        <AdminModalLayers />
+        <div className="relative z-10">
         <button
           type="button"
           onClick={() => setPopup(null)}
@@ -1919,6 +1932,7 @@ export default function AdminDashboardClient({
         >
           OK
         </button>
+        </div>
       </div>
     </div>
   );
@@ -1929,7 +1943,9 @@ export default function AdminDashboardClient({
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-md rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
+      <div className="ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
+        <AdminModalLayers />
+        <div className="relative z-10">
         <button
           type="button"
           onClick={() => setConfirmDialog(null)}
@@ -1982,6 +1998,7 @@ export default function AdminDashboardClient({
           >
             {isConfirming ? "Working..." : confirmDialog.confirmLabel}
           </button>
+        </div>
         </div>
       </div>
     </div>

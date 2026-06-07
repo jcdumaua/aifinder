@@ -107,7 +107,10 @@ export default function AdminLoginPage() {
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-[2rem] border border-red-400/30 bg-slate-950 p-7 text-center shadow-2xl">
+      <div className="ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-[2rem] border border-red-400/30 bg-slate-950 p-7 text-center shadow-2xl">
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-slate-950" />
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_20%_0%,rgba(248,113,113,0.16),transparent_34%),linear-gradient(135deg,rgba(248,113,113,0.08),rgba(15,23,42,0.02),rgba(2,6,23,0))]" />
+        <div className="relative z-10">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-400/15 text-4xl font-black text-red-300">
           !
         </div>
@@ -126,6 +129,7 @@ export default function AdminLoginPage() {
         >
           OK
         </button>
+        </div>
       </div>
     </div>
   );

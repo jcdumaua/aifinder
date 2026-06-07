@@ -428,7 +428,7 @@ export default function SubmitToolPage() {
               aria-modal="true"
               role="dialog"
               tabIndex={-1}
-              className="tool-details-modal-panel relative isolate flex max-h-[88dvh] min-w-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
+              className="tool-details-modal-panel ai-corner-safe-panel relative isolate flex max-h-[88dvh] min-w-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={
@@ -797,12 +797,15 @@ export default function SubmitToolPage() {
                     role={isSuccessPopup ? "status" : "alert"}
                     aria-live={isSuccessPopup ? "polite" : "assertive"}
                     aria-atomic="true"
-                    className={`tool-details-modal-panel relative w-full max-w-md rounded-[2rem] border p-7 text-center ${
+                    className={`tool-details-modal-panel ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-[2rem] border p-7 text-center ${
                       isSuccessPopup
                         ? "border-emerald-400/25"
                         : "border-red-400/25"
                     }`}
                   >
+                    <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-slate-950 [.theme-light_&]:bg-white" />
+                    <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.12),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.07),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_20%_0%,rgba(14,116,144,0.08),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.62),rgba(255,255,255,0.22),rgba(248,250,252,0))]" />
+                    <div className="relative z-10">
                     <Button
                       type="button"
                       aria-label="Close message"
@@ -845,6 +848,7 @@ export default function SubmitToolPage() {
                     >
                       OK
                     </Button>
+                    </div>
                   </div>
                 </div>
               )}

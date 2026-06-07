@@ -168,7 +168,7 @@ export function ToolDetailsModal({
             role="dialog"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
-            className="tool-details-modal-panel relative isolate flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
+            className="tool-details-modal-panel ai-corner-safe-panel relative isolate flex min-w-0 max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-2rem)] w-full max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[calc(var(--aifinder-modal-viewport-height,100dvh)-3rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={

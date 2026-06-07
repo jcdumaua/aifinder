@@ -35,6 +35,7 @@ type PublicToolCardProps = {
   matchExplanation?: string;
   softText?: string;
   isOpen?: boolean;
+  useCornerSafeShell?: boolean;
   onOpenTool: (tool: PublicToolCardData) => void;
   onToggleFavorite: (tool: PublicToolCardData) => void;
   onToggleCompare: (tool: PublicToolCardData) => void;
@@ -50,6 +51,7 @@ export function PublicToolCard({
   matchExplanation,
   softText = "text-slate-300 [.theme-light_&]:text-slate-700",
   isOpen = false,
+  useCornerSafeShell = false,
   onOpenTool,
   onToggleFavorite,
   onToggleCompare,
@@ -79,7 +81,7 @@ export function PublicToolCard({
     <div className="relative h-full min-w-0">
       <Card
         asChild
-        className={`group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
+        className={`${useCornerSafeShell ? "ai-corner-safe-panel " : ""}group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
       >
         <motion.article
           role="link"

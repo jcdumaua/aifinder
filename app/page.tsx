@@ -936,7 +936,7 @@ function SearchResultsModal({
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className={`relative isolate flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border bg-white p-4 shadow-2xl [.theme-dark_&]:bg-slate-950 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100vw-1.5rem)] sm:p-5 lg:p-6 2xl:max-w-7xl ${cardBg}`}
+        className={`ai-corner-safe-panel relative isolate flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border bg-white p-4 shadow-2xl [.theme-dark_&]:bg-slate-950 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100vw-1.5rem)] sm:p-5 lg:p-6 2xl:max-w-7xl ${cardBg}`}
       >
         <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white [.theme-dark_&]:bg-slate-950" />
         <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))] [.theme-dark_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))]" />
@@ -1009,7 +1009,10 @@ function SearchThinkingOverlay({ message }: { message: string }) {
 
   return (
     <div className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[85] flex items-center justify-center px-4">
-      <div className="ai-thinking-panel rounded-3xl border border-cyan-900/10 bg-white/95 p-6 text-center shadow-2xl shadow-slate-950/10">
+      <div className="ai-thinking-panel ai-corner-safe-panel relative isolate overflow-hidden rounded-3xl border border-cyan-900/10 bg-white/95 p-6 text-center shadow-2xl shadow-slate-950/10">
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white" />
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.68),rgba(255,255,255,0.22),rgba(248,250,252,0))]" />
+        <div className="relative z-10">
         <div className="ai-brain-loader mx-auto">
           <svg
             className="ai-head-svg"
@@ -1097,6 +1100,7 @@ function SearchThinkingOverlay({ message }: { message: string }) {
           AI Search Engine
         </p>
         <p className="mt-2 text-sm font-semibold text-slate-700">{message}</p>
+        </div>
       </div>
     </div>
   );
@@ -1340,6 +1344,7 @@ function ToolList({
             badge={getSearchConfidenceLabel(score)}
             matchExplanation={getSearchMatchExplanation(tool, search)}
             cardBg={cardBg}
+            useCornerSafeShell
           />
         );
       })}
