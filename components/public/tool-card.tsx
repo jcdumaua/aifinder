@@ -79,7 +79,7 @@ export function PublicToolCard({
     <div className="relative h-full min-w-0">
       <Card
         asChild
-        className={`group relative ${isHomepage ? "isolate" : ""} h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 ${cardBg} ai-product-hover`}
+        className={`group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
       >
         <motion.article
           role="link"
@@ -98,12 +98,15 @@ export function PublicToolCard({
           }
           transition={{ duration: 0.2, ease: "easeOut" }}
         >
+          <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white [.theme-dark_&]:bg-slate-950" />
+          <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.90)_72%,rgba(236,254,255,0.70))] [.theme-dark_&]:bg-[linear-gradient(135deg,rgba(15,23,42,0.78),rgba(2,6,23,0.88)_74%,rgba(8,47,73,0.42))]" />
+
           {isHomepage && (
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
           )}
 
           <CardContent
-            className={`pointer-events-none ${isHomepage ? "relative z-20 p-4 sm:p-5" : "p-5"} flex h-full min-w-0 flex-col`}
+            className={`pointer-events-none relative z-10 ${isHomepage ? "p-4 sm:p-5" : "p-5"} flex h-full min-w-0 flex-col`}
           >
             <div className={`${isHomepage ? "mb-5" : "mb-4"} flex min-w-0 flex-wrap items-start justify-between gap-3`}>
               {badge ? (

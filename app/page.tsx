@@ -936,8 +936,11 @@ function SearchResultsModal({
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className={`relative flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border p-4 shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100vw-1.5rem)] sm:p-5 lg:p-6 2xl:max-w-7xl ${cardBg}`}
+        className={`relative isolate flex max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border bg-white p-4 shadow-2xl [.theme-dark_&]:bg-slate-950 sm:max-h-[calc(100dvh-2.5rem)] sm:w-[calc(100vw-1.5rem)] sm:p-5 lg:p-6 2xl:max-w-7xl ${cardBg}`}
       >
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white [.theme-dark_&]:bg-slate-950" />
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))] [.theme-dark_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))]" />
+
         <button
           type="button"
           aria-label="Close search results"
@@ -947,7 +950,7 @@ function SearchResultsModal({
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <div className="min-w-0 pr-12 sm:pr-14">
+        <div className="relative z-10 min-w-0 pr-12 sm:pr-14">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300 [.theme-light_&]:text-cyan-800">
               AI Search Results
@@ -964,7 +967,7 @@ function SearchResultsModal({
         </div>
 
         {aiSearchResponse && (
-          <div className="mt-5 min-w-0 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.05)] [.theme-light_&]:bg-cyan-50/70">
+          <div className="relative z-10 mt-5 min-w-0 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 shadow-[inset_0_0_22px_rgba(34,211,238,0.05)] [.theme-light_&]:bg-cyan-50/70">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
               AiFinder Response
             </p>
@@ -974,7 +977,7 @@ function SearchResultsModal({
           </div>
         )}
 
-        <div className="tool-details-modal-scroll min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pt-5 sm:pr-2">
+        <div className="tool-details-modal-scroll relative z-10 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain pt-5 sm:pr-2">
           {filteredTools.length > 0 ? (
             <ToolList
               rankedTools={rankedTools}

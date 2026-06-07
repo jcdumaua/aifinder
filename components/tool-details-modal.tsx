@@ -182,11 +182,12 @@ export function ToolDetailsModal({
             }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_28%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.06),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_50%_30%,rgba(14,116,144,0.08),transparent_36%),linear-gradient(135deg,rgba(236,254,255,0.46),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
+            <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-slate-950 [.theme-light_&]:bg-white" />
+            <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_50%_28%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.06),rgba(59,130,246,0.04),rgba(15,23,42,0))] [.theme-light_&]:bg-[radial-gradient(circle_at_50%_30%,rgba(14,116,144,0.08),transparent_36%),linear-gradient(135deg,rgba(236,254,255,0.46),rgba(255,255,255,0.20),rgba(248,250,252,0))]" />
 
             <header className="relative z-10 max-w-full shrink-0 overflow-hidden border-b border-white/10 bg-slate-950/95 px-4 py-4 pr-16 [.theme-light_&]:border-slate-200 [.theme-light_&]:bg-white sm:px-6 sm:py-5 sm:pr-20 md:px-8 xl:pr-20">
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 rounded-t-[1.5rem] bg-slate-950 [.theme-light_&]:bg-white sm:h-28 sm:rounded-t-3xl" />
-              <div className="pointer-events-none absolute left-1/2 top-12 h-44 w-56 -translate-x-1/2 rounded-full bg-cyan-400/8 blur-3xl [.theme-light_&]:bg-cyan-200/20 sm:top-14" />
+              <div className="pointer-events-none absolute inset-0 z-0 bg-slate-950 [.theme-light_&]:bg-white" />
+              <div className="pointer-events-none absolute left-1/2 top-12 z-0 h-44 w-56 -translate-x-1/2 rounded-full bg-cyan-400/8 blur-3xl [.theme-light_&]:bg-cyan-200/20 sm:top-14" />
 
               <div className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4">
                 <button
@@ -199,7 +200,7 @@ export function ToolDetailsModal({
                 </button>
               </div>
 
-              <div className="relative flex min-w-0 items-start gap-3 sm:gap-4">
+              <div className="relative z-10 flex min-w-0 items-start gap-3 sm:gap-4">
                 <motion.div
                   initial={
                     shouldReduceMotion ? false : { opacity: 0, scale: 0.75 }
@@ -239,7 +240,7 @@ export function ToolDetailsModal({
                 </div>
               </div>
 
-              <div className="relative mt-3 flex min-w-0 max-w-full flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
+              <div className="relative z-10 mt-3 flex min-w-0 max-w-full flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                 {tool.pricing && (
                   <span className="ai-product-chip max-w-full break-words rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-normal sm:px-2.5 sm:py-1 sm:text-[11px]">
                     {tool.pricing}
