@@ -2,10 +2,14 @@
 
 Use this framework for future UI, modal, layout, hydration, accessibility, and animation CCR reports. The reusable device source lives in `testing/qa-device-matrix.ts`; Playwright consumes that matrix through `playwright.config.ts`.
 
+For dedicated Axe, keyboard, focus, and dialog checks, use
+`docs/accessibility-qa-framework.md`.
+
 ## Commands
 
 ```bash
 npm run qa:responsive
+npm run qa:accessibility
 npm run build
 npm run lint
 ```

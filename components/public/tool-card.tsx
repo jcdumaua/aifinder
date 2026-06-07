@@ -84,15 +84,6 @@ export function PublicToolCard({
         className={`${useCornerSafeShell ? "ai-corner-safe-panel " : ""}group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
       >
         <motion.article
-          role="link"
-          tabIndex={0}
-          onClick={openTool}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              openTool();
-            }
-          }}
           animate={
             isOpen && !shouldReduceMotion
               ? { opacity: 0.45, scale: 0.985 }
@@ -107,8 +98,15 @@ export function PublicToolCard({
             <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
           )}
 
+          <button
+            type="button"
+            aria-label={`Open ${tool.name} details`}
+            onClick={openTool}
+            className="absolute inset-0 z-20 block h-full w-full rounded-[inherit] bg-transparent text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          />
+
           <CardContent
-            className={`pointer-events-none relative z-10 ${isHomepage ? "p-4 sm:p-5" : "p-5"} flex h-full min-w-0 flex-col`}
+            className={`pointer-events-none relative ${isHomepage ? "p-4 sm:p-5" : "p-5"} flex h-full min-w-0 flex-col`}
           >
             <div className={`${isHomepage ? "mb-5" : "mb-4"} flex min-w-0 flex-wrap items-start justify-between gap-3`}>
               {badge ? (
@@ -129,7 +127,7 @@ export function PublicToolCard({
                 </Badge>
               ) : null}
 
-              <div className={`${isHomepage ? "relative z-40 flex flex-wrap items-center justify-end gap-2" : ""} pointer-events-auto ml-auto min-w-0`}>
+              <div className={`${isHomepage ? "flex flex-wrap items-center justify-end gap-2" : ""} pointer-events-auto relative z-40 ml-auto min-w-0`}>
                 {isHomepage && (
                   <Button
                     type="button"

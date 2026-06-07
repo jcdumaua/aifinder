@@ -31,6 +31,7 @@ Describe the upgrade to make, why it is needed, and the desired project outcome.
 
 - Run the most relevant automated checks available for the touched area.
 - For UI changes, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
+- For accessibility-sensitive UI, modal, keyboard, focus, or label changes, also use `docs/accessibility-qa-framework.md` and run `npm run qa:accessibility`.
 - Manually review affected flows when automated tests are not enough.
 - Confirm there are no unrelated file changes.
 - Confirm no secrets or sensitive data were added.
@@ -46,6 +47,7 @@ For UI-facing changes, include:
 - Foldable Result
 - Hydration Result
 - Accessibility Result
+- Accessibility QA Result
 - Animation Result
 - Responsive Issues Found
 

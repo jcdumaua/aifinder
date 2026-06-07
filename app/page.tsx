@@ -927,6 +927,18 @@ function SearchResultsModal({
   const aiSearchResponse = getConversationalSearchResponse(search, filteredTools.length);
   useOverlayScrollLock(true);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div suppressHydrationWarning={true} className="ai-modal-backdrop fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[80] flex items-center justify-center overflow-y-hidden px-2 py-3 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
       <motion.section

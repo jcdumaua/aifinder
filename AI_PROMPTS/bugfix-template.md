@@ -33,6 +33,7 @@ Describe the bug, expected behavior, actual behavior, and any known reproduction
 - Verify the original bug scenario now works.
 - Check at least one nearby normal path still works.
 - For UI bugs, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
+- For accessibility, modal, keyboard, focus, or label bugs, also use `docs/accessibility-qa-framework.md` and run `npm run qa:accessibility`.
 - Run relevant tests, linting, type checks, or build checks when appropriate.
 - Inspect the final diff for unrelated edits.
 
@@ -47,6 +48,7 @@ For UI-facing bug fixes, include:
 - Foldable Result
 - Hydration Result
 - Accessibility Result
+- Accessibility QA Result
 - Animation Result
 - Responsive Issues Found
 
