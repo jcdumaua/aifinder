@@ -442,11 +442,11 @@ function SlideOverPanel({
 
   return (
     <div
-      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9997] flex justify-end bg-slate-500/25 backdrop-blur-sm"
+      className="fixed inset-0 z-[9997] flex min-h-dvh w-screen justify-end overflow-x-hidden bg-slate-500/25 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
     >
-      <div className="ai-corner-safe-panel relative isolate flex h-dvh w-full max-w-[520px] flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70 sm:rounded-l-2xl">
+      <div className="aifinder-responsive-slide-panel ai-corner-safe-panel relative isolate flex flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70 sm:rounded-l-2xl">
         <AdminModalLayers />
 
         <div className="relative z-10 border-b border-slate-200 p-4 pr-16 sm:p-5 sm:pr-20">
@@ -1882,12 +1882,12 @@ export default function AdminDashboardClient({
 
   const messagePopup = popup && (
     <div
-      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9999] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
+      className="aifinder-responsive-modal-backdrop fixed inset-0 z-[9999] flex w-screen items-end justify-center bg-slate-500/25 backdrop-blur-md sm:items-center"
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
+        className={`aifinder-responsive-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
           isSuccessPopup
             ? "border-emerald-200 bg-white"
             : "border-red-200 bg-white"
@@ -1939,11 +1939,11 @@ export default function AdminDashboardClient({
 
   const confirmationPopup = confirmDialog && (
     <div
-      className="fixed inset-0 h-dvh min-h-dvh w-screen overflow-x-hidden z-[9998] flex items-end justify-center bg-slate-500/25 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6"
+      className="aifinder-responsive-modal-backdrop fixed inset-0 z-[9998] flex w-screen items-end justify-center bg-slate-500/25 backdrop-blur-md sm:items-center"
       role="dialog"
       aria-modal="true"
     >
-      <div className="ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
+      <div className="aifinder-responsive-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
         <AdminModalLayers />
         <div className="relative z-10">
         <button
@@ -1976,11 +1976,11 @@ export default function AdminDashboardClient({
           {confirmDialog.message}
         </p>
 
-        <div className="mt-6 flex justify-center gap-3">
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <button
             onClick={() => setConfirmDialog(null)}
             disabled={isConfirming}
-            className="rounded-full border border-slate-200 px-7 py-3 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-full border border-slate-200 px-7 py-3 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             Cancel
           </button>
@@ -1988,7 +1988,7 @@ export default function AdminDashboardClient({
           <button
             onClick={runConfirmAction}
             disabled={isConfirming}
-            className={`rounded-full px-7 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`w-full rounded-full px-7 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
               confirmDialog.confirmTone === "green"
                 ? "bg-emerald-600 hover:bg-emerald-500"
                 : confirmDialog.confirmTone === "red"

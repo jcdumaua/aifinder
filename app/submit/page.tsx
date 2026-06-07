@@ -415,7 +415,7 @@ export default function SubmitToolPage() {
       <AnimatePresence>
         {!isClosing && (
           <motion.div
-            className="ai-modal-backdrop fixed inset-0 z-10 flex h-dvh min-h-dvh w-dvw max-w-[100dvw] items-center justify-center overflow-x-hidden px-3 py-4 sm:px-6 sm:py-8 md:py-6 xl:py-8"
+            className="aifinder-responsive-modal-backdrop ai-modal-backdrop fixed inset-0 z-10 flex w-dvw max-w-[100dvw] items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -428,7 +428,7 @@ export default function SubmitToolPage() {
               aria-modal="true"
               role="dialog"
               tabIndex={-1}
-              className="tool-details-modal-panel ai-corner-safe-panel relative isolate flex max-h-[88dvh] min-w-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:max-h-[90dvh] sm:rounded-[2rem] md:max-h-[84dvh] md:max-w-[42rem] lg:max-h-[84dvh] lg:max-w-[44rem] xl:max-h-[90dvh] xl:max-w-4xl"
+              className="aifinder-responsive-modal-panel tool-details-modal-panel ai-corner-safe-panel relative isolate flex max-w-3xl flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:rounded-[2rem] md:max-w-[42rem] lg:max-w-[44rem] xl:max-w-4xl"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={
@@ -791,13 +791,13 @@ export default function SubmitToolPage() {
               </div>
 
               {popup && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-md [.theme-light_&]:bg-slate-950/20">
+                <div className="aifinder-responsive-modal-backdrop absolute inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-md [.theme-light_&]:bg-slate-950/20">
                   <div
                     ref={popupRef}
                     role={isSuccessPopup ? "status" : "alert"}
                     aria-live={isSuccessPopup ? "polite" : "assertive"}
                     aria-atomic="true"
-                    className={`tool-details-modal-panel ai-corner-safe-panel relative isolate w-full max-w-md overflow-hidden rounded-[2rem] border p-7 text-center ${
+                    className={`aifinder-responsive-modal-panel tool-details-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-[2rem] border p-5 text-center sm:p-7 ${
                       isSuccessPopup
                         ? "border-emerald-400/25"
                         : "border-red-400/25"
