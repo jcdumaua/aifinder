@@ -2,6 +2,40 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
 
+function getSessionSigningSecret() {
+  return process.env.ADMIN_SESSION_SECRET || "";
+}
+
+async function signSession(payload: string, secret: string) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function safeCompare(first: string, second: string) {
+  if (first.length !== second.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+
+  for (let index = 0; index < first.length; index += 1) {
+    mismatch |= first.charCodeAt(index) ^ second.charCodeAt(index);
+  }
+
+  return mismatch === 0;
+}
+
 function addSecurityHeaders(response: NextResponse) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -29,7 +63,11 @@ function addSecurityHeaders(response: NextResponse) {
   return response;
 }
 
-function hasActiveAdminSessionCookie(request: NextRequest) {
+async function hasActiveAdminSessionCookie(request: NextRequest) {
+  const sessionSecret = getSessionSigningSecret();
+
+  if (!sessionSecret) return false;
+
   const session = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
 
   if (!session) return false;
@@ -39,6 +77,13 @@ function hasActiveAdminSessionCookie(request: NextRequest) {
   if (lastDotIndex === -1) return false;
 
   const payload = session.slice(0, lastDotIndex);
+  const signature = session.slice(lastDotIndex + 1);
+  const expectedSignature = await signSession(payload, sessionSecret);
+
+  if (!safeCompare(signature, expectedSignature)) {
+    return false;
+  }
+
   const [role, expiresAtText] = payload.split(":");
   const expiresAt = Number(expiresAtText);
 
@@ -51,11 +96,11 @@ function hasActiveAdminSessionCookie(request: NextRequest) {
   return true;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin-login")) {
-    if (!hasActiveAdminSessionCookie(request)) {
+    if (!(await hasActiveAdminSessionCookie(request))) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/admin-login";
       loginUrl.searchParams.set("from", pathname);

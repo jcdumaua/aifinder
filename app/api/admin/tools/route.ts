@@ -165,7 +165,9 @@ async function findDuplicateWebsiteDomain(
 ) {
   const { data, error } = await supabaseAdmin
     .from("tools")
-    .select("id, website");
+    .select("id, website")
+    .eq("normalized_domain", normalizedDomain)
+    .limit(1);
 
   if (error) {
     console.error("Tool duplicate domain check error:", error.message);
@@ -173,19 +175,11 @@ async function findDuplicateWebsiteDomain(
   }
 
   const duplicate = (data || []).find((tool) => {
-    if (!tool.website) return false;
-
-    try {
-      const toolDomain = getNormalizedDomain(tool.website);
-
-      if (excludedToolId && tool.id === excludedToolId) {
-        return false;
-      }
-
-      return toolDomain === normalizedDomain;
-    } catch {
+    if (excludedToolId && tool.id === excludedToolId) {
       return false;
     }
+
+    return true;
   });
 
   return duplicate || null;

@@ -20,13 +20,11 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 type ExistingToolRow = {
   id: number;
   name: string | null;
-  website: string | null;
 };
 
 type ExistingSubmissionRow = {
   id: number;
   name: string | null;
-  website: string | null;
   status: string | null;
 };
 
@@ -83,7 +81,9 @@ async function checkDuplicateDomain(
 ) {
   const { data: toolsData, error: toolsError } = await supabase
     .from("tools")
-    .select("id, name, website");
+    .select("id, name")
+    .eq("normalized_domain", normalizedDomain)
+    .maybeSingle();
 
   if (toolsError) {
     console.error("Duplicate tools check error:", toolsError.message);
@@ -91,17 +91,7 @@ async function checkDuplicateDomain(
     throw new Error("Unable to check existing tools. Please try again later.");
   }
 
-  const tools = (toolsData || []) as ExistingToolRow[];
-
-  const existingTool = tools.find((tool) => {
-    if (!tool.website) return false;
-
-    try {
-      return getNormalizedDomain(tool.website) === normalizedDomain;
-    } catch {
-      return false;
-    }
-  });
+  const existingTool = toolsData as ExistingToolRow | null;
 
   if (existingTool) {
     return {
@@ -113,8 +103,11 @@ async function checkDuplicateDomain(
 
   const { data: submissionsData, error: submissionsError } = await supabase
     .from("submitted_tools")
-    .select("id, name, website, status")
-    .in("status", ["pending", "approved"]);
+    .select("id, name, status")
+    .eq("normalized_domain", normalizedDomain)
+    .in("status", ["pending", "approved"])
+    .limit(1)
+    .maybeSingle();
 
   if (submissionsError) {
     console.error(
@@ -127,17 +120,7 @@ async function checkDuplicateDomain(
     );
   }
 
-  const submissions = (submissionsData || []) as ExistingSubmissionRow[];
-
-  const existingSubmission = submissions.find((submission) => {
-    if (!submission.website) return false;
-
-    try {
-      return getNormalizedDomain(submission.website) === normalizedDomain;
-    } catch {
-      return false;
-    }
-  });
+  const existingSubmission = submissionsData as ExistingSubmissionRow | null;
 
   if (existingSubmission) {
     return {
