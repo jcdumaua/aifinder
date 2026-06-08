@@ -32,6 +32,7 @@ Describe the upgrade to make, why it is needed, and the desired project outcome.
 - Run the most relevant automated checks available for the touched area.
 - For UI changes, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
 - For accessibility-sensitive UI, modal, keyboard, focus, or label changes, also use `docs/accessibility-qa-framework.md` and run `npm run qa:accessibility`.
+- For code-quality-sensitive upgrades, review SonarLint findings in VS Code when available.
 - Manually review affected flows when automated tests are not enough.
 - Confirm there are no unrelated file changes.
 - Confirm no secrets or sensitive data were added.
@@ -48,6 +49,7 @@ For UI-facing changes, include:
 - Hydration Result
 - Accessibility Result
 - Accessibility QA Result
+- Code Quality / SonarLint Result when applicable
 - Animation Result
 - Responsive Issues Found
 
@@ -56,4 +58,5 @@ For UI-facing changes, include:
 - Exactly what files were modified or created.
 - What changed in each file.
 - What testing or verification was performed.
+- Code Quality / SonarLint Result when applicable.
 - What the project owner should review before committing.

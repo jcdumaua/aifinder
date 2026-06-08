@@ -28,6 +28,12 @@ For TypeScript-impacting code changes:
 ./node_modules/.bin/tsc --noEmit
 ```
 
+For code quality review:
+
+- Use SonarLint in VS Code when available.
+- Include a Code Quality / SonarLint Result in CCR reports for code, UI, API, security, and refactor tasks when applicable.
+- Report whether SonarLint findings were checked, fixed, not applicable, or not available in the local environment.
+
 When a local server is already running, use the documented `PLAYWRIGHT_BASE_URL` and `PLAYWRIGHT_SKIP_WEB_SERVER=1` forms from:
 
 - `docs/responsive-qa-framework.md`
@@ -112,3 +118,11 @@ Expected modal/dialog accessibility:
 - No horizontal overflow
 - Internal scrolling for long content
 
+## Code Quality Reporting Rules
+
+Code-quality-sensitive CCR reports should cover:
+
+- SonarLint status
+- Notable SonarLint findings addressed
+- Known SonarLint findings left unresolved
+- Whether SonarLint was unavailable or not applicable

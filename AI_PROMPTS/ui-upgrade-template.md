@@ -33,6 +33,7 @@ Describe the UI improvement, target page or component, user need, and desired vi
 - Check desktop and mobile layouts.
 - Verify text does not overlap or overflow.
 - Confirm interactive elements remain usable by keyboard and pointer.
+- For code-quality-sensitive UI updates, review SonarLint findings in VS Code when available.
 - Run relevant lint, type, or build checks when practical.
 - Review the diff for unrelated app logic changes.
 
@@ -41,4 +42,5 @@ Describe the UI improvement, target page or component, user need, and desired vi
 - Exactly what files were modified.
 - What changed visually or behaviorally.
 - What responsive or accessibility checks were performed.
+- Code Quality / SonarLint Result when applicable.
 - Any remaining design decisions to review before committing.
