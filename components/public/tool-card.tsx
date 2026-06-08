@@ -84,6 +84,7 @@ export function PublicToolCard({
         className={`${useCornerSafeShell ? "ai-corner-safe-panel " : ""}group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
       >
         <motion.article
+          onClick={openTool}
           animate={
             isOpen && !shouldReduceMotion
               ? { opacity: 0.45, scale: 0.985 }
@@ -97,13 +98,6 @@ export function PublicToolCard({
           {isHomepage && (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-24 bg-gradient-to-b from-cyan-300/[0.055] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 [.theme-light_&]:from-cyan-100/60" />
           )}
-
-          <button
-            type="button"
-            aria-label={`Open ${tool.name} details`}
-            onClick={openTool}
-            className="absolute inset-0 z-20 block h-full w-full rounded-[inherit] bg-transparent text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          />
 
           <CardContent
             className={`pointer-events-none relative ${isHomepage ? "p-4 sm:p-5" : "p-5"} flex h-full min-w-0 flex-col`}
@@ -247,16 +241,20 @@ export function PublicToolCard({
               )}
 
               <Button
-                asChild
+                type="button"
+                aria-label={`Open ${tool.name} details`}
                 size="sm"
-                className={`ai-product-button-primary pointer-events-none min-h-0 ${isHomepage ? "min-w-0 whitespace-normal" : ""} px-3 py-2 text-xs`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openTool();
+                }}
+                className={`ai-product-button-primary pointer-events-auto min-h-0 ${isHomepage ? "min-w-0 whitespace-normal" : ""} px-3 py-2 text-xs`}
               >
-                <span>
-                  View Tool
-                  {isHomepage && (
-                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                </span>
+                View Tool
+                {isHomepage && (
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
               </Button>
             </div>
           </CardContent>

@@ -34,6 +34,7 @@ Describe the bug, expected behavior, actual behavior, and any known reproduction
 - Check at least one nearby normal path still works.
 - For UI bugs, use `docs/responsive-qa-framework.md` and the shared matrix in `testing/qa-device-matrix.ts`.
 - For accessibility, modal, keyboard, focus, or label bugs, also use `docs/accessibility-qa-framework.md` and run `npm run qa:accessibility`.
+- For code-quality-sensitive bug fixes, review SonarLint findings in VS Code when available.
 - Run relevant tests, linting, type checks, or build checks when appropriate.
 - Inspect the final diff for unrelated edits.
 
@@ -49,6 +50,7 @@ For UI-facing bug fixes, include:
 - Hydration Result
 - Accessibility Result
 - Accessibility QA Result
+- Code Quality / SonarLint Result when applicable
 - Animation Result
 - Responsive Issues Found
 
@@ -58,4 +60,5 @@ For UI-facing bug fixes, include:
 - The root cause or likely cause.
 - How the fix addresses the bug.
 - What tests or manual checks were performed.
+- Code Quality / SonarLint Result when applicable.
 - What should be reviewed before committing.
