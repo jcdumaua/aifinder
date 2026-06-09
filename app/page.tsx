@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { normalizeToolCategory } from "@/lib/tool-categories";
+import { normalizeToolCategory, TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
   categories,
@@ -551,7 +551,7 @@ export default function Home() {
                   label="Filter tools by category"
                   value={selectedCategory}
                   placeholder="All Categories"
-                  options={["All", ...categories]}
+                  options={["All", ...TOOL_CATEGORIES]}
                   className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
                   isMounted={areFilterSelectsMounted}
                   onValueChange={(val) => {
