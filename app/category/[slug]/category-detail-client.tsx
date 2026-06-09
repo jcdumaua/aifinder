@@ -96,11 +96,16 @@ export default function CategoryDetailClient({
   const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
 
   useEffect(() => {
+  const loadTimer = window.setTimeout(() => {
     const savedFavorites = localStorage.getItem("aifinder-favorites");
+
     if (savedFavorites) {
       setFavoriteSlugs(JSON.parse(savedFavorites));
     }
-  }, []);
+  }, 0);
+
+  return () => window.clearTimeout(loadTimer);
+}, []);
 
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {

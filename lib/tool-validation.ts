@@ -1,4 +1,4 @@
-import { isToolCategory } from "./tool-categories";
+import { isToolCategory, type ToolCategory } from "./tool-categories";
 
 export const TOOL_PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"] as const;
 
@@ -97,7 +97,7 @@ export function validateTextField(
   return trimmedValue;
 }
 
-export function validateToolCategory(value: unknown) {
+export function validateToolCategory(value: unknown): ToolCategory {
   const category = validateTextField(
     value,
     "Category",

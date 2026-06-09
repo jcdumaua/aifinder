@@ -234,7 +234,6 @@ export default function Home() {
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSearchThinking, setIsSearchThinking] = useState(false);
-  const [thinkingStep, setThinkingStep] = useState(0);
   const [selectedTool, setSelectedTool] = useState<PublicToolCardData | null>(
     null,
   );
@@ -286,40 +285,13 @@ export default function Home() {
     const savedFavorites = localStorage.getItem("aifinder-favorites");
     const savedSearches = localStorage.getItem("aifinder-recent-searches");
 
-    if (savedFavorites) setFavoriteSlugs(JSON.parse(savedFavorites));
-    if (savedSearches) setRecentSearches(JSON.parse(savedSearches));
+    const loadTimer = window.setTimeout(() => {
+      if (savedFavorites) setFavoriteSlugs(JSON.parse(savedFavorites));
+      if (savedSearches) setRecentSearches(JSON.parse(savedSearches));
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, []);
-
-  useEffect(() => {
-    const hasSearchState =
-      Boolean(search.trim()) ||
-      selectedCategory !== "All" ||
-      selectedPricing !== "All" ||
-      selectedPlatform !== "All";
-
-    setIsSearchModalOpen(hasSearchState);
-  }, [search, selectedCategory, selectedPricing, selectedPlatform]);
-
-  useEffect(() => {
-    if (!isSearchThinking) return;
-
-    setThinkingStep(0);
-
-    const stepTimer = window.setInterval(() => {
-      setThinkingStep((step) => Math.min(step + 1, thinkingMessages.length - 1));
-    }, 320);
-
-    const doneTimer = window.setTimeout(() => {
-      window.clearInterval(stepTimer);
-      setIsSearchThinking(false);
-      setIsSearchModalOpen(true);
-    }, 900);
-
-    return () => {
-      window.clearInterval(stepTimer);
-      window.clearTimeout(doneTimer);
-    };
-  }, [isSearchThinking]);
 
   const saveFavorites = (newFavorites: string[]) => {
     setFavoriteSlugs(newFavorites);
@@ -361,6 +333,15 @@ export default function Home() {
       saveRecentSearch(cleanValue);
       setIsSearchModalOpen(false);
       setIsSearchThinking(true);
+
+      window.setTimeout(() => {
+        setIsSearchThinking(false);
+        setIsSearchModalOpen(true);
+      }, 900);
+    } else {
+      const noOtherFilters = 
+        selectedCategory === "All" && selectedPricing === "All" && selectedPlatform === "All";
+      if (noOtherFilters) setIsSearchModalOpen(false);
     }
   };
 
@@ -424,6 +405,7 @@ export default function Home() {
     setSelectedCategory("All");
     setSelectedPricing("All");
     setSelectedPlatform("All");
+    setIsSearchModalOpen(false);
   };
 
   const clearRecentSearches = () => {
@@ -572,7 +554,15 @@ export default function Home() {
                   options={["All", ...categories]}
                   className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
                   isMounted={areFilterSelectsMounted}
-                  onValueChange={setSelectedCategory}
+                  onValueChange={(val) => {
+                    setSelectedCategory(val);
+                    const isStillActive = 
+                      val !== "All" || 
+                      search.trim() !== "" || 
+                      selectedPricing !== "All" || 
+                      selectedPlatform !== "All";
+                    setIsSearchModalOpen(isStillActive);
+                  }}
                   getOptionLabel={(category) =>
                     category === "All" ? "All Categories" : category
                   }
@@ -591,7 +581,15 @@ export default function Home() {
                   options={pricingOptions}
                   className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
                   isMounted={areFilterSelectsMounted}
-                  onValueChange={setSelectedPricing}
+                  onValueChange={(val) => {
+                    setSelectedPricing(val);
+                    const isStillActive = 
+                      search.trim() !== "" || 
+                      selectedCategory !== "All" || 
+                      val !== "All" || 
+                      selectedPlatform !== "All";
+                    setIsSearchModalOpen(isStillActive);
+                  }}
                   getOptionLabel={(price) =>
                     price === "All" ? "All Pricing" : price
                   }
@@ -610,7 +608,15 @@ export default function Home() {
                   options={platformOptions}
                   className={`h-auto w-full rounded-2xl border px-4 py-2.5 text-sm font-semibold ${inputBg}`}
                   isMounted={areFilterSelectsMounted}
-                  onValueChange={setSelectedPlatform}
+                  onValueChange={(val) => {
+                    setSelectedPlatform(val);
+                    const isStillActive = 
+                      search.trim() !== "" || 
+                      selectedCategory !== "All" || 
+                      selectedPricing !== "All" || 
+                      val !== "All";
+                    setIsSearchModalOpen(isStillActive);
+                  }}
                   getOptionLabel={(platform) =>
                     platform === "All" ? "All Platforms" : platform
                   }
@@ -765,7 +771,7 @@ export default function Home() {
         )}
 
         {isSearchThinking && (
-          <SearchThinkingOverlay message={thinkingMessages[thinkingStep]} />
+          <SearchThinkingOverlay />
         )}
 
         {hasActiveFilters && isSearchModalOpen && !isSearchThinking && (
@@ -1016,8 +1022,19 @@ function SearchResultsModal({
   );
 }
 
-function SearchThinkingOverlay({ message }: { message: string }) {
+function SearchThinkingOverlay() {
+  const [step, setStep] = useState(0);
   useOverlayScrollLock(true);
+
+  useEffect(() => {
+    const stepTimer = window.setInterval(() => {
+      setStep((s) => Math.min(s + 1, thinkingMessages.length - 1));
+    }, 320);
+
+    return () => window.clearInterval(stepTimer);
+  }, []);
+
+  const message = thinkingMessages[step];
 
   return (
     <div className="aifinder-responsive-modal-backdrop ai-modal-backdrop fixed inset-0 z-[85] flex w-screen items-center justify-center">

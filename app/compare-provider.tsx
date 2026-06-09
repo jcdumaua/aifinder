@@ -26,13 +26,15 @@ export function CompareProvider({
   );
 
   useEffect(() => {
-    const savedCompare = localStorage.getItem(
-      "aifinder-compare"
-    );
+    const savedCompare = localStorage.getItem("aifinder-compare");
 
-    if (savedCompare) {
-      setCompareSlugs(JSON.parse(savedCompare));
-    }
+    const loadTimer = window.setTimeout(() => {
+      if (savedCompare) {
+        setCompareSlugs(JSON.parse(savedCompare));
+      }
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   const saveCompare = (items: string[]) => {

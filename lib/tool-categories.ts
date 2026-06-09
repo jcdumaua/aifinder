@@ -27,7 +27,7 @@ const LEGACY_CATEGORY_MAP: Record<string, ToolCategory> = {
   "Website Builders": "Design AI",
 };
 
-export function isToolCategory(category: string): category is ToolCategory {
+export function isToolCategory(category: unknown): category is ToolCategory {
   return TOOL_CATEGORIES.some((item) => item === category);
 }
 

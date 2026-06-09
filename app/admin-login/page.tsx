@@ -98,8 +98,12 @@ export default function AdminLoginPage() {
   }
 
   useEffect(() => {
-    checkAdminSession();
-  }, []);
+  const sessionTimer = window.setTimeout(() => {
+    void checkAdminSession();
+  }, 0);
+
+  return () => window.clearTimeout(sessionTimer);
+}, []);
 
   const messagePopup = popup && (
     <div
