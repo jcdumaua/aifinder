@@ -72,9 +72,14 @@ This is currently acceptable. Do not try to fix it unless specifically assigned.
 For UI changes, test:
 
 - Desktop: 1440x1000
-- iPad portrait: 768x1024
-- iPad landscape: 1024x768
+- iPad/tablet portrait: 768x1024
+- iPad/tablet landscape: 1024x768
+- iPad mini portrait: 744x1133
+- iPad mini landscape: 1133x744
 - Mobile: 390x844
+- Small mobile: 360x740
+- Foldable cover screen: 344x882
+- Foldable open screen: 768x884
 
 Check for:
 
