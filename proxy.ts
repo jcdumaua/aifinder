@@ -96,7 +96,7 @@ async function hasActiveAdminSessionCookie(request: NextRequest) {
   return true;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin-login")) {
