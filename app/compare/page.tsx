@@ -36,17 +36,15 @@ function buildToolData(row: PublicToolRow): ComparePageTool | null {
   const category = publicTool.category;
 
   return {
+    ...publicTool,
     name,
     slug: toolSlug(name),
     category,
     description,
     website,
-    pricing: publicTool.pricing,
     logoUrl: cleanText(publicTool.logoUrl) || getLogoUrl(website),
-    platforms: publicTool.platforms,
     featured: Boolean(publicTool.featured),
     bestFor: cleanText(publicTool.bestFor) || description,
-    useCases: publicTool.useCases,
     rating: getToolRating(name),
     reviewCount: getReviewCount(name),
     ios: cleanText(publicTool.ios) || null,

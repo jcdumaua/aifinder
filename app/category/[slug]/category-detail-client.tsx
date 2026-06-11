@@ -6,6 +6,10 @@ import {
   PublicToolCard,
   type PublicToolCardData,
 } from "@/components/public/tool-card";
+import {
+  toPublicToolCardData,
+  type PublicTool,
+} from "@/lib/public-tool-adapter";
 import { ToolDetailsModal } from "@/components/tool-details-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,18 +24,13 @@ import {
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
-export type CategoryPageTool = {
-  name: string;
+export type CategoryPageTool = Omit<
+  PublicTool,
+  "android" | "featured" | "ios" | "logoUrl" | "slug"
+> & {
   slug: string;
-  category: string;
-  description: string;
-  website: string;
-  pricing: string;
   logoUrl: string;
-  platforms: string[];
   featured: boolean;
-  bestFor: string;
-  useCases: string[];
   ios: string | null;
   android: string | null;
   rating: number;
@@ -57,25 +56,6 @@ type CategoryDetailClientProps = {
 
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
-
-function toPublicToolCardData(tool: CategoryPageTool): PublicToolCardData {
-  return {
-    name: tool.name,
-    slug: tool.slug,
-    category: tool.category,
-    description: tool.description,
-    website: tool.website,
-    logoUrl: tool.logoUrl,
-    pricing: tool.pricing,
-    platforms: tool.platforms,
-    rating: tool.rating,
-    reviewCount: tool.reviewCount,
-    bestFor: tool.bestFor,
-    useCases: tool.useCases,
-    ios: tool.ios,
-    android: tool.android,
-  };
-}
 
 export default function CategoryDetailClient({
   category,

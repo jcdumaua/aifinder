@@ -22,7 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { normalizePublicToolRow } from "@/lib/public-tool-adapter";
+import {
+  normalizePublicToolRow,
+  toPublicToolCardData,
+} from "@/lib/public-tool-adapter";
 import { TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
@@ -179,32 +182,6 @@ const faqItems = [
       "Yes. You can submit an AI tool through the Submit Tool page. Submissions are reviewed before they appear publicly on AiFinder.",
   },
 ];
-
-function toPublicToolCardData(tool: Tool): PublicToolCardData {
-  const explicitSlug =
-    typeof (tool as Tool & { slug?: string | null }).slug === "string"
-      ? (tool as Tool & { slug?: string | null }).slug?.trim()
-      : "";
-  const slug = explicitSlug || toolSlug(tool.name);
-
-  return {
-    name: tool.name,
-    slug,
-    category: tool.category,
-    description: tool.description,
-    website: tool.website,
-    logoUrl: tool.logoUrl || getLogoUrl(tool.website),
-    pricing: tool.pricing,
-    platforms: tool.platforms,
-    rating: getToolRating(tool.name),
-    reviewCount: getReviewCount(tool.name),
-    bestFor: tool.bestFor,
-    useCases: tool.useCases,
-    ios: tool.ios,
-    android: tool.android,
-    fallbackIcon: getIcon(tool.category),
-  };
-}
 
 export default function Home() {
   const shouldReduceMotion = useReducedMotion();
@@ -847,7 +824,13 @@ function Section({
       ) : (
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {tools.map((tool) => {
-            const publicTool = toPublicToolCardData(tool);
+            const publicTool = toPublicToolCardData(tool, {
+              slugFallback: toolSlug,
+              logoFallback: getLogoUrl,
+              ratingFallback: getToolRating,
+              reviewCountFallback: getReviewCount,
+              fallbackIcon: getIcon,
+            });
             const cardKey = `${title}:${publicTool.slug}`;
 
             return (
@@ -1329,7 +1312,13 @@ function ToolList({
   return (
     <div className="grid max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {rankedTools.map(({ tool, score }) => {
-        const publicTool = toPublicToolCardData(tool);
+        const publicTool = toPublicToolCardData(tool, {
+          slugFallback: toolSlug,
+          logoFallback: getLogoUrl,
+          ratingFallback: getToolRating,
+          reviewCountFallback: getReviewCount,
+          fallbackIcon: getIcon,
+        });
         const cardKey = `search:${publicTool.slug}`;
 
         return (

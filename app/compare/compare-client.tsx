@@ -2,20 +2,16 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { PublicTool } from "@/lib/public-tool-adapter";
 import { useCompare } from "../compare-provider";
 
-export type ComparePageTool = {
-  name: string;
+export type ComparePageTool = Omit<
+  PublicTool,
+  "android" | "featured" | "ios" | "logoUrl" | "slug"
+> & {
   slug: string;
-  category: string;
-  description: string;
-  website: string;
-  pricing: string;
   logoUrl: string;
-  platforms: string[];
   featured: boolean;
-  bestFor: string;
-  useCases: string[];
   rating: number;
   reviewCount: number;
   ios: string | null;

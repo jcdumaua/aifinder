@@ -87,7 +87,10 @@ function getCategoryDescription(category: string) {
 }
 
 function buildToolData(row: ToolRow): CategoryPageTool | null {
-  const publicTool = normalizePublicToolRow(row);
+  const publicTool = normalizePublicToolRow(row, {
+    logoFallback: getLogoUrl,
+    useCasesFallback: (category) => [category, `${category} tools`],
+  });
   const name = cleanText(publicTool.name);
   const website = cleanText(publicTool.website);
   const description = cleanText(publicTool.description);
@@ -97,29 +100,24 @@ function buildToolData(row: ToolRow): CategoryPageTool | null {
   }
 
   const category = publicTool.category;
-  const useCases =
-    publicTool.useCases.length > 0
-      ? publicTool.useCases
-      : [category, `${category} tools`];
 
   return {
+    ...publicTool,
     name,
     slug: toolSlug(name),
     category,
     description,
     website,
-    pricing: publicTool.pricing,
-    logoUrl: cleanText(row.logo_url) || getLogoUrl(website),
-    platforms: publicTool.platforms,
+    logoUrl: cleanText(publicTool.logoUrl) || getLogoUrl(website),
     featured: Boolean(publicTool.featured),
     bestFor: cleanText(publicTool.bestFor) || description,
-    useCases,
+    useCases: publicTool.useCases,
     ios: cleanText(publicTool.ios) || null,
     android: cleanText(publicTool.android) || null,
     rating: getToolRating(name),
     reviewCount: getReviewCount(name),
-    createdAt: row.created_at || null,
-    updatedAt: row.updated_at || row.created_at || null,
+    createdAt: publicTool.createdAt || null,
+    updatedAt: publicTool.updatedAt || null,
   };
 }
 
