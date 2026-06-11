@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import {
+  normalizePublicToolRow,
+  type PublicToolRow,
+} from "../../../lib/public-tool-adapter";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
-import { normalizeToolCategory } from "../../../lib/tool-categories";
 import {
   categories,
   getLogoUrl,
@@ -24,20 +27,9 @@ type PageProps = {
   }>;
 };
 
-type ToolRow = {
+type ToolRow = PublicToolRow & {
   id?: number;
-  name?: string | null;
-  category?: string | null;
-  description?: string | null;
-  website?: string | null;
-  pricing?: string | null;
   logo_url?: string | null;
-  platforms?: string[] | null;
-  featured?: boolean | null;
-  best_for?: string | null;
-  use_cases?: string[] | null;
-  ios?: string | null;
-  android?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -69,31 +61,8 @@ const categoryDescriptions: Record<string, string> = {
     "Explore AI agents that can handle multi-step tasks, automate workflows, research topics, and connect apps.",
 };
 
-function normalizeCategory(category: string | null | undefined) {
-  return normalizeToolCategory(category);
-}
-
-function normalizePricing(pricing: string | null | undefined) {
-  if (pricing === "Free" || pricing === "Paid" || pricing === "Free + Paid") {
-    return pricing;
-  }
-
-  if (pricing === "Freemium") return "Free + Paid";
-
-  return "Free + Paid";
-}
-
 function cleanText(value: string | null | undefined, fallback = "") {
   return (value || fallback).trim();
-}
-
-function toArray(value: unknown, fallback: string[] = []) {
-  return Array.isArray(value)
-    ? value.filter(
-        (item): item is string =>
-          typeof item === "string" && item.trim().length > 0
-      )
-    : fallback;
 }
 
 function trimDescription(value: string, maxLength = 155) {
@@ -118,15 +87,20 @@ function getCategoryDescription(category: string) {
 }
 
 function buildToolData(row: ToolRow): CategoryPageTool | null {
-  const name = cleanText(row.name);
-  const website = cleanText(row.website);
-  const description = cleanText(row.description);
+  const publicTool = normalizePublicToolRow(row);
+  const name = cleanText(publicTool.name);
+  const website = cleanText(publicTool.website);
+  const description = cleanText(publicTool.description);
 
   if (!name || !website || !description) {
     return null;
   }
 
-  const category = normalizeCategory(row.category);
+  const category = publicTool.category;
+  const useCases =
+    publicTool.useCases.length > 0
+      ? publicTool.useCases
+      : [category, `${category} tools`];
 
   return {
     name,
@@ -134,14 +108,14 @@ function buildToolData(row: ToolRow): CategoryPageTool | null {
     category,
     description,
     website,
-    pricing: normalizePricing(row.pricing),
+    pricing: publicTool.pricing,
     logoUrl: cleanText(row.logo_url) || getLogoUrl(website),
-    platforms: toArray(row.platforms, ["Web"]),
-    featured: Boolean(row.featured),
-    bestFor: cleanText(row.best_for) || description,
-    useCases: toArray(row.use_cases, [category, `${category} tools`]),
-    ios: cleanText(row.ios) || null,
-    android: cleanText(row.android) || null,
+    platforms: publicTool.platforms,
+    featured: Boolean(publicTool.featured),
+    bestFor: cleanText(publicTool.bestFor) || description,
+    useCases,
+    ios: cleanText(publicTool.ios) || null,
+    android: cleanText(publicTool.android) || null,
     rating: getToolRating(name),
     reviewCount: getReviewCount(name),
     createdAt: row.created_at || null,
