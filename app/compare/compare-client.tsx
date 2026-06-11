@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { PublicTool } from "@/lib/public-tool-adapter";
-import { rankToolsForQueryWithDirectMatches } from "@/lib/search-relevance";
+import {
+  getSearchSuggestionsForQuery,
+  rankToolsForQueryWithDirectMatches,
+} from "@/lib/search-relevance";
 import { useCompare } from "../compare-provider";
 
 export type ComparePageTool = Omit<
@@ -65,6 +68,10 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const searchResultMessage = hasSearchQuery
     ? `Showing ${suggestedTools.length} matches for "${searchQuery}"`
     : null;
+  const noResultSuggestions =
+    hasSearchQuery && suggestedTools.length === 0
+      ? getSearchSuggestionsForQuery(searchQuery)
+      : [];
 
   return (
     <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
@@ -202,6 +209,13 @@ export default function CompareClient({ tools }: CompareClientProps) {
                   ? "No tools matched that search. Try a tool name, category, or use case."
                   : "No tools available to add. Clear your current comparison to see more options."}
               </p>
+              {hasSearchQuery && (
+                <SearchSuggestionChips
+                  suggestions={noResultSuggestions}
+                  mutedText={mutedText}
+                  onSelect={setSearch}
+                />
+              )}
             </div>
           ) : (
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -245,6 +259,34 @@ export default function CompareClient({ tools }: CompareClientProps) {
         </section>
       </section>
     </main>
+  );
+}
+
+function SearchSuggestionChips({
+  suggestions,
+  mutedText,
+  onSelect,
+}: {
+  suggestions: string[];
+  mutedText: string;
+  onSelect: (value: string) => void;
+}) {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <p className={`py-2 text-xs font-bold ${mutedText}`}>Try:</p>
+      {suggestions.map((suggestion) => (
+        <button
+          key={suggestion}
+          type="button"
+          onClick={() => onSelect(suggestion)}
+          className="ai-product-chip rounded-full px-3 py-2 text-xs font-bold"
+        >
+          {suggestion}
+        </button>
+      ))}
+    </div>
   );
 }
 

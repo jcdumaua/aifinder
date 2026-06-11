@@ -17,6 +17,11 @@ type IntentAlias = {
   terms: string[];
 };
 
+type SearchSuggestionGroup = {
+  triggers: string[];
+  suggestions: string[];
+};
+
 export type SearchIntent = {
   categories: Set<ToolCategory>;
   excludedCategories: Set<ToolCategory>;
@@ -388,6 +393,49 @@ const intentAliases: IntentAlias[] = [
   },
 ];
 
+const searchSuggestionGroups: SearchSuggestionGroup[] = [
+  {
+    triggers: [
+      "ai art",
+      "art",
+      "art generator",
+      "image",
+      "photo",
+      "photo generator",
+    ],
+    suggestions: ["ai art", "art generator", "photo generator"],
+  },
+  {
+    triggers: ["assistant", "chat", "chatbot", "agent", "ai agents"],
+    suggestions: ["assistant", "chatbot", "AI agents"],
+  },
+  {
+    triggers: [
+      "code",
+      "code helper",
+      "coding",
+      "developer",
+      "developer assistant",
+    ],
+    suggestions: ["code helper", "coding", "developer assistant"],
+  },
+  {
+    triggers: [
+      "voice",
+      "voice generator",
+      "audio",
+      "audio generator",
+      "speech",
+      "speech generator",
+    ],
+    suggestions: ["voice generator", "audio generator", "speech generator"],
+  },
+  {
+    triggers: ["seo", "search ranking", "marketing"],
+    suggestions: ["seo", "search ranking", "marketing"],
+  },
+];
+
 export function normalizeSearchText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -448,6 +496,21 @@ export function normalizeIntentTerms(query: string): SearchIntent {
     strict,
     terms,
   };
+}
+
+export function getSearchSuggestionsForQuery(query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return [];
+
+  const suggestions = searchSuggestionGroups.flatMap((group) => {
+    const matchesGroup = group.triggers.some((trigger) =>
+      normalizedPhraseIncludes(normalizedQuery, trigger)
+    );
+
+    return matchesGroup ? group.suggestions : [];
+  });
+
+  return Array.from(new Set(suggestions)).slice(0, 3);
 }
 
 export function getToolSearchProfile(tool: SearchableTool) {

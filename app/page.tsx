@@ -42,6 +42,7 @@ import { useCompare } from "./compare-provider";
 import { supabase } from "../lib/supabase";
 import {
   getConversationalSearchResponse,
+  getSearchSuggestionsForQuery,
   getSearchMatchExplanation,
   getSearchConfidenceLabel,
   rankToolsForQuery,
@@ -59,7 +60,6 @@ const guidedSuggestions = [
   { label: "📊 Business", searchValue: "business" },
 ];
 
-const emptySearchSuggestions = ["video", "writing", "business", "coding", "automation"];
 const thinkingMessages = [
   "AiFinder is thinking...",
   "Analyzing your intent...",
@@ -740,7 +740,7 @@ export default function Home() {
               setSelectedTool(tool);
               setSelectedCardKey(cardKey);
             }}
-            emptySuggestions={emptySearchSuggestions}
+            emptySuggestions={getSearchSuggestionsForQuery(search)}
             onSelectSuggestion={applySearch}
             onClose={() => setIsSearchModalOpen(false)}
             cardBg={cardBg}
@@ -1119,18 +1119,21 @@ function AIEmptySearchState({
         automation. You can also submit a tool if something is missing.
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {suggestions.map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => onSelect(suggestion)}
-            className="ai-product-chip rounded-full px-3 py-2 text-xs font-bold"
-          >
-            {suggestion}
-          </button>
-        ))}
-      </div>
+      {suggestions.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <p className={`py-2 text-xs font-bold ${mutedText}`}>Try:</p>
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => onSelect(suggestion)}
+              className="ai-product-chip rounded-full px-3 py-2 text-xs font-bold"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

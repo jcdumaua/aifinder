@@ -21,7 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { rankToolsForQueryWithDirectMatches } from "@/lib/search-relevance";
+import {
+  getSearchSuggestionsForQuery,
+  rankToolsForQueryWithDirectMatches,
+} from "@/lib/search-relevance";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -123,6 +126,10 @@ export default function CategoryDetailClient({
         hasSelectedFilters ? "matches" : "smart matches"
       } for "${searchQuery}"${hasSelectedFilters ? " with filters applied" : ""}`
     : null;
+  const noResultSuggestions =
+    hasSearchQuery && filteredTools.length === 0
+      ? getSearchSuggestionsForQuery(searchQuery)
+      : [];
 
   const pageBg = "ai-product-page";
   const cardBg = "ai-product-surface";
@@ -370,14 +377,21 @@ export default function CategoryDetailClient({
           ) : (
             <div className={`mt-5 rounded-3xl border p-8 ${cardBg}`}>
               {hasSearchQuery ? (
-                <p className={mutedText}>
-                  No {category} tools matched your search
-                  {hasSelectedFilters ? " and filters" : ""}. Try a broader
-                  use case
-                  {hasSelectedFilters
-                    ? " or clear pricing/platform filters."
-                    : " or a different tool name."}
-                </p>
+                <>
+                  <p className={mutedText}>
+                    No {category} tools matched your search
+                    {hasSelectedFilters ? " and filters" : ""}. Try a broader
+                    use case
+                    {hasSelectedFilters
+                      ? " or clear pricing/platform filters."
+                      : " or a different tool name."}
+                  </p>
+                  <SearchSuggestionChips
+                    suggestions={noResultSuggestions}
+                    mutedText={mutedText}
+                    onSelect={setSearch}
+                  />
+                </>
               ) : (
                 <p className={mutedText}>
                   No tools found for these filters. Try clearing filters or
@@ -482,6 +496,34 @@ export default function CategoryDetailClient({
         />
       </section>
     </main>
+  );
+}
+
+function SearchSuggestionChips({
+  suggestions,
+  mutedText,
+  onSelect,
+}: {
+  suggestions: string[];
+  mutedText: string;
+  onSelect: (value: string) => void;
+}) {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <p className={`py-2 text-xs font-bold ${mutedText}`}>Try:</p>
+      {suggestions.map((suggestion) => (
+        <button
+          key={suggestion}
+          type="button"
+          onClick={() => onSelect(suggestion)}
+          className="ai-product-chip rounded-full px-3 py-2 text-xs font-bold"
+        >
+          {suggestion}
+        </button>
+      ))}
+    </div>
   );
 }
 
