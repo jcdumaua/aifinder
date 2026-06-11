@@ -10,6 +10,13 @@ type IntentGroup = {
   strict?: boolean;
 };
 
+type IntentAlias = {
+  aliases: string[];
+  intents: string[];
+  categories: ToolCategory[];
+  terms: string[];
+};
+
 export type SearchIntent = {
   categories: Set<ToolCategory>;
   excludedCategories: Set<ToolCategory>;
@@ -333,6 +340,51 @@ const intentGroups: IntentGroup[] = [
   },
 ];
 
+const intentAliases: IntentAlias[] = [
+  {
+    aliases: ["chat", "chatbot", "assistant"],
+    intents: ["chatbot-support"],
+    categories: ["Chatbots", "AI Agents", "Productivity"],
+    terms: ["chatbot", "assistant", "support", "answers"],
+  },
+  {
+    aliases: ["agent", "agents", "automation"],
+    intents: ["automation-agents"],
+    categories: ["AI Agents", "Productivity", "Business"],
+    terms: ["agents", "automation", "workflow", "tasks"],
+  },
+  {
+    aliases: ["ai art", "art generator", "photo generator"],
+    intents: ["design-image"],
+    categories: ["Image AI", "Design AI"],
+    terms: ["image", "art", "photo", "design", "creative"],
+  },
+  {
+    aliases: ["website builder", "site builder"],
+    intents: ["business", "productivity"],
+    categories: ["Design AI", "Business", "Productivity"],
+    terms: ["website", "design", "business", "workflow"],
+  },
+  {
+    aliases: ["code helper", "coding helper", "developer assistant"],
+    intents: ["coding"],
+    categories: ["Coding"],
+    terms: ["code", "coding", "developer", "debugging"],
+  },
+  {
+    aliases: ["voice generator", "audio generator", "speech generator"],
+    intents: ["voice-audio"],
+    categories: ["Voice AI"],
+    terms: ["voice", "audio", "speech", "voiceover"],
+  },
+  {
+    aliases: ["search ranking", "seo"],
+    intents: ["seo"],
+    categories: ["SEO AI", "Marketing AI"],
+    terms: ["seo", "keywords", "ranking", "traffic"],
+  },
+];
+
 export function normalizeSearchText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -362,6 +414,18 @@ export function normalizeIntentTerms(query: string): SearchIntent {
       excludedCategories.add(category),
     );
     group.terms.forEach((term) => terms.add(term));
+  });
+
+  intentAliases.forEach((aliasGroup) => {
+    const matchesAlias = aliasGroup.aliases.some((alias) =>
+      normalizedQuery.includes(normalizeSearchText(alias))
+    );
+
+    if (!matchesAlias) return;
+
+    aliasGroup.intents.forEach((intent) => intents.add(intent));
+    aliasGroup.categories.forEach((category) => categories.add(category));
+    aliasGroup.terms.forEach((term) => terms.add(term));
   });
 
   tokens.forEach((token) => terms.add(token));
