@@ -2,11 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { CompareProvider } from "./compare-provider";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
 import { GlobalToaster } from "@/components/ui/global-toaster";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const siteUrl = "https://aifinder-eight.vercel.app";
 
@@ -106,7 +102,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html lang="en" suppressHydrationWarning className="font-sans">
       <body className="bg-slate-50 text-slate-950 antialiased">
         <ThemeProvider>
           <CompareProvider>
