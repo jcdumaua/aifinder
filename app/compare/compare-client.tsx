@@ -40,28 +40,27 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const { compareSlugs, toggleCompare, clearCompare } = useCompare();
 
   const [search, setSearch] = useState("");
+  const searchQuery = search.trim();
 
   const selectedTools = tools.filter((tool) => compareSlugs.includes(tool.slug));
 
   const suggestedTools = useMemo(() => {
-    const searchValue = search.trim();
     const availableTools = tools.filter(
       (tool) => !compareSlugs.includes(tool.slug),
     );
 
-    if (!searchValue) return availableTools.slice(0, 12);
+    if (!searchQuery) return availableTools.slice(0, 12);
 
-    return rankToolsForQueryWithDirectMatches(availableTools, searchValue)
+    return rankToolsForQueryWithDirectMatches(availableTools, searchQuery)
       .map(({ tool }) => tool)
       .slice(0, 12);
-  }, [tools, compareSlugs, search]);
+  }, [tools, compareSlugs, searchQuery]);
 
   const pageBg = "ai-product-page";
   const cardBg = "ai-product-surface";
   const inputBg = "ai-product-input";
   const mutedText = "ai-product-muted";
   const softText = "ai-product-body";
-  const searchQuery = search.trim();
   const hasSearchQuery = searchQuery.length > 0;
   const searchResultMessage = hasSearchQuery
     ? `Showing ${suggestedTools.length} matches for "${searchQuery}"`

@@ -518,39 +518,48 @@ export function rankToolsForQuery<TSearchableTool extends SearchableTool>(
     .map(({ score, tool }) => ({ score, tool }));
 }
 
-function getDirectSearchTokens(query: string) {
-  return normalizeSearchText(query)
+function getDirectSearchTokens(normalizedQuery: string) {
+  return normalizedQuery
     .split(" ")
     .filter((token) => token.length > 2 && !stopWords.has(token));
+}
+
+function createDirectToolMatcher(query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  const tokens = getDirectSearchTokens(normalizedQuery);
+
+  return (tool: SearchableTool) => {
+    if (!normalizedQuery) return false;
+
+    const profile = getToolSearchProfile(tool);
+    const directFields = [
+      profile.name,
+      profile.description,
+      profile.category,
+      profile.pricing,
+      profile.platformText,
+      profile.useCaseText,
+      profile.bestFor,
+    ];
+
+    if (directFields.some((field) => field.includes(normalizedQuery))) {
+      return true;
+    }
+
+    return (
+      tokens.length > 0 &&
+      tokens.every((token) =>
+        directFields.some((field) => field.includes(token)),
+      )
+    );
+  };
 }
 
 export function toolDirectlyMatchesQuery(
   tool: SearchableTool,
   query: string,
 ) {
-  const normalizedQuery = normalizeSearchText(query);
-  if (!normalizedQuery) return false;
-
-  const profile = getToolSearchProfile(tool);
-  const directFields = [
-    profile.name,
-    profile.description,
-    profile.category,
-    profile.pricing,
-    profile.platformText,
-    profile.useCaseText,
-    profile.bestFor,
-  ];
-
-  if (directFields.some((field) => field.includes(normalizedQuery))) {
-    return true;
-  }
-
-  const tokens = getDirectSearchTokens(query);
-  return (
-    tokens.length > 0 &&
-    tokens.every((token) => directFields.some((field) => field.includes(token)))
-  );
+  return createDirectToolMatcher(query)(tool);
 }
 
 export function rankToolsForQueryWithDirectMatches<
@@ -561,9 +570,10 @@ export function rankToolsForQueryWithDirectMatches<
 ): RankedTool<TSearchableTool>[] {
   const rankedMatches = rankToolsForQuery(tools, query);
   const rankedTools = new Set(rankedMatches.map(({ tool }) => tool));
+  const directlyMatchesQuery = createDirectToolMatcher(query);
   const fallbackMatches = tools
     .filter(
-      (tool) => !rankedTools.has(tool) && toolDirectlyMatchesQuery(tool, query),
+      (tool) => !rankedTools.has(tool) && directlyMatchesQuery(tool),
     )
     .map((tool) => ({
       score: scoreToolForQuery(tool, query),

@@ -75,6 +75,7 @@ export default function CategoryDetailClient({
     null,
   );
   const [selectedCardKey, setSelectedCardKey] = useState<string | null>(null);
+  const searchQuery = search.trim();
 
   useEffect(() => {
   const loadTimer = window.setTimeout(() => {
@@ -89,7 +90,6 @@ export default function CategoryDetailClient({
 }, []);
 
   const filteredTools = useMemo(() => {
-    const searchValue = search.trim();
     const filteredByControls = tools.filter((tool) => {
       const matchesPricing =
         selectedPricing === "All" || tool.pricing === selectedPricing;
@@ -99,13 +99,13 @@ export default function CategoryDetailClient({
       return matchesPricing && matchesPlatform;
     });
 
-    if (!searchValue) return filteredByControls;
+    if (!searchQuery) return filteredByControls;
 
     return rankToolsForQueryWithDirectMatches(
       filteredByControls,
-      searchValue,
+      searchQuery,
     ).map(({ tool }) => tool);
-  }, [tools, search, selectedPricing, selectedPlatform]);
+  }, [tools, searchQuery, selectedPricing, selectedPlatform]);
 
   const topRatedTools = [...tools]
     .sort((a, b) => b.rating - a.rating)
@@ -113,7 +113,6 @@ export default function CategoryDetailClient({
 
   const compareTools = tools.filter((tool) => compareSlugs.includes(tool.slug));
 
-  const searchQuery = search.trim();
   const hasSearchQuery = searchQuery.length > 0;
   const hasSelectedFilters =
     selectedPricing !== "All" || selectedPlatform !== "All";
