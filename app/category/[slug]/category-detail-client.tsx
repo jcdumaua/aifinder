@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { rankToolsForQuery } from "@/lib/search-relevance";
+import { rankToolsForQueryWithDirectMatches } from "@/lib/search-relevance";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -101,9 +101,10 @@ export default function CategoryDetailClient({
 
     if (!searchValue) return filteredByControls;
 
-    return rankToolsForQuery(filteredByControls, searchValue).map(
-      ({ tool }) => tool,
-    );
+    return rankToolsForQueryWithDirectMatches(
+      filteredByControls,
+      searchValue,
+    ).map(({ tool }) => tool);
   }, [tools, search, selectedPricing, selectedPlatform]);
 
   const topRatedTools = [...tools]

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { PublicTool } from "@/lib/public-tool-adapter";
-import { rankToolsForQuery } from "@/lib/search-relevance";
+import { rankToolsForQueryWithDirectMatches } from "@/lib/search-relevance";
 import { useCompare } from "../compare-provider";
 
 export type ComparePageTool = Omit<
@@ -51,7 +51,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
 
     if (!searchValue) return availableTools.slice(0, 12);
 
-    return rankToolsForQuery(availableTools, searchValue)
+    return rankToolsForQueryWithDirectMatches(availableTools, searchValue)
       .map(({ tool }) => tool)
       .slice(0, 12);
   }, [tools, compareSlugs, search]);
