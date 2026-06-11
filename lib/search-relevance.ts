@@ -412,7 +412,7 @@ export function normalizeIntentTerms(query: string): SearchIntent {
 
   intentGroups.forEach((group) => {
     const matchesTrigger = group.triggers.some((trigger) =>
-      normalizedQuery.includes(normalizeSearchText(trigger))
+      normalizedPhraseIncludes(normalizedQuery, trigger)
     );
 
     if (!matchesTrigger) return;
