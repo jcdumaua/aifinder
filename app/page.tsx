@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { normalizeToolCategory, TOOL_CATEGORIES } from "@/lib/tool-categories";
+import { normalizePublicToolRow } from "@/lib/public-tool-adapter";
+import { TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
   categories,
@@ -179,20 +180,6 @@ const faqItems = [
   },
 ];
 
-function normalizeCategory(category: string | null | undefined) {
-  return normalizeToolCategory(category);
-}
-
-function normalizePricing(pricing: string | null | undefined): Tool["pricing"] {
-  if (pricing === "Free" || pricing === "Paid" || pricing === "Free + Paid") {
-    return pricing;
-  }
-
-  if (pricing === "Freemium") return "Free + Paid";
-
-  return "Free + Paid";
-}
-
 function toPublicToolCardData(tool: Tool): PublicToolCardData {
   const explicitSlug =
     typeof (tool as Tool & { slug?: string | null }).slug === "string"
@@ -259,20 +246,7 @@ export default function Home() {
         return;
       }
 
-      const formattedTools: Tool[] =
-        data?.map((tool) => ({
-          name: tool.name,
-          category: normalizeCategory(tool.category),
-          description: tool.description,
-          website: tool.website,
-          pricing: normalizePricing(tool.pricing),
-          platforms: tool.platforms || ["Web"],
-          featured: tool.featured || false,
-          bestFor: tool.best_for || tool.description,
-          useCases: tool.use_cases || [],
-          ios: tool.ios || undefined,
-          android: tool.android || undefined,
-        })) || [];
+      const formattedTools: Tool[] = data?.map(normalizePublicToolRow) || [];
 
       setDatabaseTools(formattedTools);
       setIsLoadingTools(false);
