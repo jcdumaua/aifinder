@@ -112,6 +112,9 @@ export default function CategoryDetailClient({
 
   const compareTools = tools.filter((tool) => compareSlugs.includes(tool.slug));
 
+  const hasSearchQuery = search.trim().length > 0;
+  const hasSelectedFilters =
+    selectedPricing !== "All" || selectedPlatform !== "All";
   const hasActiveFilters =
     search || selectedPricing !== "All" || selectedPlatform !== "All";
 
@@ -351,10 +354,21 @@ export default function CategoryDetailClient({
             />
           ) : (
             <div className={`mt-5 rounded-3xl border p-8 ${cardBg}`}>
-              <p className={mutedText}>
-                No tools found for this filter. Try clearing filters or searching
-                for another use case.
-              </p>
+              {hasSearchQuery ? (
+                <p className={mutedText}>
+                  No {category} tools matched your search
+                  {hasSelectedFilters ? " and filters" : ""}. Try a broader
+                  use case
+                  {hasSelectedFilters
+                    ? " or clear pricing/platform filters."
+                    : " or a different tool name."}
+                </p>
+              ) : (
+                <p className={mutedText}>
+                  No tools found for these filters. Try clearing filters or
+                  searching for another use case.
+                </p>
+              )}
             </div>
           )}
         </section>

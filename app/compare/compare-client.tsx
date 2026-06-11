@@ -61,6 +61,7 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const inputBg = "ai-product-input";
   const mutedText = "ai-product-muted";
   const softText = "ai-product-body";
+  const hasSearchQuery = search.trim().length > 0;
 
   return (
     <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
@@ -183,7 +184,9 @@ export default function CompareClient({ tools }: CompareClientProps) {
           {suggestedTools.length === 0 ? (
             <div className={`mt-5 rounded-3xl border p-8 ${cardBg}`}>
               <p className={mutedText}>
-                No tools found. Try another search or clear your current comparison.
+                {hasSearchQuery
+                  ? "No tools matched that search. Try a tool name, category, or use case."
+                  : "No tools available to add. Clear your current comparison to see more options."}
               </p>
             </div>
           ) : (
