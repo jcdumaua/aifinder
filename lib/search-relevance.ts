@@ -340,6 +340,9 @@ const intentGroups: IntentGroup[] = [
   },
 ];
 
+// Keep aliases conservative: prefer common user phrases, avoid broad one-word
+// aliases unless they signal clear intent, and do not turn this into a large
+// synonym dictionary.
 const intentAliases: IntentAlias[] = [
   {
     aliases: ["chat", "chatbot", "assistant"],
@@ -389,6 +392,13 @@ export function normalizeSearchText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function normalizedPhraseIncludes(normalizedText: string, phrase: string) {
+  const normalizedPhrase = normalizeSearchText(phrase);
+  if (!normalizedText || !normalizedPhrase) return false;
+
+  return ` ${normalizedText} `.includes(` ${normalizedPhrase} `);
+}
+
 export function normalizeIntentTerms(query: string): SearchIntent {
   const normalizedQuery = normalizeSearchText(query);
   const categories = new Set<ToolCategory>();
@@ -418,7 +428,7 @@ export function normalizeIntentTerms(query: string): SearchIntent {
 
   intentAliases.forEach((aliasGroup) => {
     const matchesAlias = aliasGroup.aliases.some((alias) =>
-      normalizedQuery.includes(normalizeSearchText(alias))
+      normalizedPhraseIncludes(normalizedQuery, alias)
     );
 
     if (!matchesAlias) return;
