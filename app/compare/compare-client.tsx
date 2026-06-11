@@ -61,7 +61,11 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const inputBg = "ai-product-input";
   const mutedText = "ai-product-muted";
   const softText = "ai-product-body";
-  const hasSearchQuery = search.trim().length > 0;
+  const searchQuery = search.trim();
+  const hasSearchQuery = searchQuery.length > 0;
+  const searchResultMessage = hasSearchQuery
+    ? `Showing ${suggestedTools.length} matches for "${searchQuery}"`
+    : null;
 
   return (
     <main className={`min-h-dvh overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
@@ -180,6 +184,10 @@ export default function CompareClient({ tools }: CompareClientProps) {
               className={`w-full rounded-2xl border px-5 py-4 outline-none sm:max-w-sm ${inputBg}`}
             />
           </div>
+
+          {searchResultMessage && (
+            <p className={`mt-4 text-sm ${mutedText}`}>{searchResultMessage}</p>
+          )}
 
           {suggestedTools.length === 0 ? (
             <div className={`mt-5 rounded-3xl border p-8 ${cardBg}`}>

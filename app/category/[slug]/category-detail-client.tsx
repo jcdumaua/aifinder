@@ -112,11 +112,17 @@ export default function CategoryDetailClient({
 
   const compareTools = tools.filter((tool) => compareSlugs.includes(tool.slug));
 
-  const hasSearchQuery = search.trim().length > 0;
+  const searchQuery = search.trim();
+  const hasSearchQuery = searchQuery.length > 0;
   const hasSelectedFilters =
     selectedPricing !== "All" || selectedPlatform !== "All";
   const hasActiveFilters =
     search || selectedPricing !== "All" || selectedPlatform !== "All";
+  const searchResultMessage = hasSearchQuery
+    ? `Showing ${filteredTools.length} ${
+        hasSelectedFilters ? "matches" : "smart matches"
+      } for "${searchQuery}"${hasSelectedFilters ? " with filters applied" : ""}`
+    : null;
 
   const pageBg = "ai-product-page";
   const cardBg = "ai-product-surface";
@@ -329,11 +335,13 @@ export default function CategoryDetailClient({
               </h2>
             </div>
 
-            {hasActiveFilters && (
+            {searchResultMessage ? (
+              <p className={`text-sm ${mutedText}`}>{searchResultMessage}</p>
+            ) : hasActiveFilters ? (
               <p className={`text-sm ${mutedText}`}>
                 Filtered from {tools.length} total tools
               </p>
-            )}
+            ) : null}
           </div>
 
           {filteredTools.length > 0 ? (
