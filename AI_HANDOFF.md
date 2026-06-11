@@ -89,6 +89,34 @@ Check for:
 - no overlapping modals
 - no sticky or fixed elements covering content
 
+## Discovery Search Quality QA
+
+For search relevance changes, build passing is not enough. Manually spot-check
+homepage search, one category page, and `/compare` when relevant.
+
+Preserve useful searches:
+
+- ai art
+- art generator
+- photo generator
+- assistant
+- website builder
+- code helper
+- voice generator
+- seo
+- search ranking
+
+Check noisy false positives:
+
+- artisan
+- cart
+- cartoon
+- business card
+- random unrelated text
+
+Exact/direct matches should still appear. Smart matches should not be caused by
+unsafe substring matches.
+
 ## Commit Flow
 
 1. npm run check
