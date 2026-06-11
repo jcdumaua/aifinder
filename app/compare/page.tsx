@@ -16,19 +16,15 @@ export const revalidate = 300;
 
 const siteUrl = "https://aifinder-eight.vercel.app";
 
-type ToolRow = PublicToolRow & {
-  id?: number;
-  logo_url?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
 function cleanText(value: string | null | undefined, fallback = "") {
   return (value || fallback).trim();
 }
 
-function buildToolData(row: ToolRow): ComparePageTool | null {
-  const publicTool = normalizePublicToolRow(row);
+function buildToolData(row: PublicToolRow): ComparePageTool | null {
+  const publicTool = normalizePublicToolRow(row, {
+    logoFallback: getLogoUrl,
+    useCasesFallback: (category) => [category, `${category} tools`],
+  });
   const name = cleanText(publicTool.name);
   const website = cleanText(publicTool.website);
   const description = cleanText(publicTool.description);
@@ -38,10 +34,6 @@ function buildToolData(row: ToolRow): ComparePageTool | null {
   }
 
   const category = publicTool.category;
-  const useCases =
-    publicTool.useCases.length > 0
-      ? publicTool.useCases
-      : [category, `${category} tools`];
 
   return {
     name,
@@ -50,17 +42,17 @@ function buildToolData(row: ToolRow): ComparePageTool | null {
     description,
     website,
     pricing: publicTool.pricing,
-    logoUrl: cleanText(row.logo_url) || getLogoUrl(website),
+    logoUrl: cleanText(publicTool.logoUrl) || getLogoUrl(website),
     platforms: publicTool.platforms,
     featured: Boolean(publicTool.featured),
     bestFor: cleanText(publicTool.bestFor) || description,
-    useCases,
+    useCases: publicTool.useCases,
     rating: getToolRating(name),
     reviewCount: getReviewCount(name),
     ios: cleanText(publicTool.ios) || null,
     android: cleanText(publicTool.android) || null,
-    createdAt: row.created_at || null,
-    updatedAt: row.updated_at || row.created_at || null,
+    createdAt: publicTool.createdAt || null,
+    updatedAt: publicTool.updatedAt || null,
   };
 }
 
@@ -75,7 +67,7 @@ async function getTools() {
     return [];
   }
 
-  return ((data || []) as ToolRow[])
+  return ((data || []) as PublicToolRow[])
     .map(buildToolData)
     .filter((tool): tool is ComparePageTool => Boolean(tool));
 }

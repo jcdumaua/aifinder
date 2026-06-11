@@ -246,7 +246,8 @@ export default function Home() {
         return;
       }
 
-      const formattedTools: Tool[] = data?.map(normalizePublicToolRow) || [];
+      const formattedTools: Tool[] =
+        data?.map((tool) => normalizePublicToolRow(tool)) || [];
 
       setDatabaseTools(formattedTools);
       setIsLoadingTools(false);
