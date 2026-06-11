@@ -19,9 +19,20 @@ export type SearchIntent = {
   terms: Set<string>;
 };
 
-export type RankedTool = {
+export type SearchableTool = Pick<
+  Tool,
+  | "bestFor"
+  | "category"
+  | "description"
+  | "name"
+  | "platforms"
+  | "pricing"
+  | "useCases"
+>;
+
+export type RankedTool<TSearchableTool extends SearchableTool = Tool> = {
   score: number;
-  tool: Tool;
+  tool: TSearchableTool;
 };
 
 const minimumSearchScore = 28;
@@ -365,7 +376,7 @@ export function normalizeIntentTerms(query: string): SearchIntent {
   };
 }
 
-export function getToolSearchProfile(tool: Tool) {
+export function getToolSearchProfile(tool: SearchableTool) {
   const useCases = Array.isArray(tool.useCases) ? tool.useCases : [];
   const platforms = Array.isArray(tool.platforms) ? tool.platforms : [];
   const name = normalizeSearchText(tool.name);
@@ -423,7 +434,7 @@ function intentHasAnyTerm(intent: SearchIntent, terms: string[]) {
   return terms.some((term) => intent.terms.has(term));
 }
 
-export function scoreToolForQuery(tool: Tool, query: string) {
+export function scoreToolForQuery(tool: SearchableTool, query: string) {
   const intent = normalizeIntentTerms(query);
   if (!intent.normalizedQuery) return 1;
 
@@ -487,7 +498,10 @@ export function scoreToolForQuery(tool: Tool, query: string) {
   return Math.max(0, score);
 }
 
-export function rankToolsForQuery(tools: Tool[], query: string): RankedTool[] {
+export function rankToolsForQuery<TSearchableTool extends SearchableTool>(
+  tools: TSearchableTool[],
+  query: string,
+): RankedTool<TSearchableTool>[] {
   const intent = normalizeIntentTerms(query);
 
   return tools

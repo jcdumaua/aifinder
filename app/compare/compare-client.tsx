@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { PublicTool } from "@/lib/public-tool-adapter";
+import { rankToolsForQuery } from "@/lib/search-relevance";
 import { useCompare } from "../compare-provider";
 
 export type ComparePageTool = Omit<
@@ -43,19 +44,15 @@ export default function CompareClient({ tools }: CompareClientProps) {
   const selectedTools = tools.filter((tool) => compareSlugs.includes(tool.slug));
 
   const suggestedTools = useMemo(() => {
-    const searchValue = search.toLowerCase().trim();
+    const searchValue = search.trim();
+    const availableTools = tools.filter(
+      (tool) => !compareSlugs.includes(tool.slug),
+    );
 
-    return tools
-      .filter((tool) => !compareSlugs.includes(tool.slug))
-      .filter((tool) => {
-        if (!searchValue) return true;
+    if (!searchValue) return availableTools.slice(0, 12);
 
-        return `${tool.name} ${tool.category} ${tool.description} ${tool.bestFor} ${tool.useCases.join(
-          " "
-        )}`
-          .toLowerCase()
-          .includes(searchValue);
-      })
+    return rankToolsForQuery(availableTools, searchValue)
+      .map(({ tool }) => tool)
       .slice(0, 12);
   }, [tools, compareSlugs, search]);
 

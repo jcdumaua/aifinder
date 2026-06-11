@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { rankToolsForQuery } from "@/lib/search-relevance";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -88,19 +89,21 @@ export default function CategoryDetailClient({
 }, []);
 
   const filteredTools = useMemo(() => {
-    return tools.filter((tool) => {
-      const searchText = `${tool.name} ${tool.description} ${tool.bestFor} ${tool.useCases.join(
-        " "
-      )}`.toLowerCase();
-
-      const matchesSearch = searchText.includes(search.toLowerCase());
+    const searchValue = search.trim();
+    const filteredByControls = tools.filter((tool) => {
       const matchesPricing =
         selectedPricing === "All" || tool.pricing === selectedPricing;
       const matchesPlatform =
         selectedPlatform === "All" || tool.platforms.includes(selectedPlatform);
 
-      return matchesSearch && matchesPricing && matchesPlatform;
+      return matchesPricing && matchesPlatform;
     });
+
+    if (!searchValue) return filteredByControls;
+
+    return rankToolsForQuery(filteredByControls, searchValue).map(
+      ({ tool }) => tool,
+    );
   }, [tools, search, selectedPricing, selectedPlatform]);
 
   const topRatedTools = [...tools]
