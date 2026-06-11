@@ -7,13 +7,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../lib/supabase";
 import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
@@ -208,8 +201,6 @@ const adminFormControlClass =
   "h-auto rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 shadow-none placeholder:text-slate-400 focus-visible:border-cyan-500 focus-visible:ring-cyan-500/20";
 const adminFormHelpClass =
   "text-xs leading-5 text-slate-500";
-const adminSelectContentClass =
-  "bg-white text-slate-950";
 
 type SmartAdminStatus =
   | "Pending"
@@ -2212,30 +2203,24 @@ export default function AdminDashboardClient({
                 >
                   Category <span className="text-cyan-700">*</span>
                 </Label>
-                <Select
+                <select
+                  id="admin-add-category"
+                  className={`${adminFormControlClass} appearance-auto bg-white text-slate-950`}
                   value={category || SELECT_EMPTY_VALUE}
-                  onValueChange={(value) =>
-                    setCategory(value === SELECT_EMPTY_VALUE ? "" : value)
+                  onChange={(e) =>
+                    setCategory(
+                      e.target.value === SELECT_EMPTY_VALUE ? "" : e.target.value
+                    )
                   }
+                  aria-required="true"
                 >
-                  <SelectTrigger
-                    id="admin-add-category"
-                    className={adminFormControlClass}
-                    aria-required="true"
-                  >
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className={adminSelectContentClass}>
-                    <SelectItem value={SELECT_EMPTY_VALUE}>
-                      Select category
-                    </SelectItem>
-                    {TOOL_CATEGORIES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value={SELECT_EMPTY_VALUE}>Select category</option>
+                  {TOOL_CATEGORIES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className={adminFormFieldClass}>
@@ -2264,29 +2249,23 @@ export default function AdminDashboardClient({
                 >
                   Pricing
                 </Label>
-                <Select
+                <select
+                  id="admin-add-pricing"
+                  className={`${adminFormControlClass} appearance-auto bg-white text-slate-950`}
                   value={pricing || SELECT_EMPTY_VALUE}
-                  onValueChange={(value) =>
-                    setPricing(value === SELECT_EMPTY_VALUE ? "" : value)
+                  onChange={(e) =>
+                    setPricing(
+                      e.target.value === SELECT_EMPTY_VALUE ? "" : e.target.value
+                    )
                   }
                 >
-                  <SelectTrigger
-                    id="admin-add-pricing"
-                    className={adminFormControlClass}
-                  >
-                    <SelectValue placeholder="Select pricing" />
-                  </SelectTrigger>
-                  <SelectContent className={adminSelectContentClass}>
-                    <SelectItem value={SELECT_EMPTY_VALUE}>
-                      Select pricing
-                    </SelectItem>
-                    {PRICING_OPTIONS.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value={SELECT_EMPTY_VALUE}>Select pricing</option>
+                  {PRICING_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </section>
@@ -3955,32 +3934,24 @@ export default function AdminDashboardClient({
                       >
                         Category <span className="text-cyan-700">*</span>
                       </Label>
-                      <Select
+                      <select
+                        id="admin-edit-category"
+                        className={`${adminFormControlClass} appearance-auto bg-white text-slate-950`}
                         value={editCategory || SELECT_EMPTY_VALUE}
-                        onValueChange={(value) =>
+                        onChange={(e) =>
                           setEditCategory(
-                            value === SELECT_EMPTY_VALUE ? "" : value
+                            e.target.value === SELECT_EMPTY_VALUE ? "" : e.target.value
                           )
                         }
+                        aria-required="true"
                       >
-                        <SelectTrigger
-                          id="admin-edit-category"
-                          className={adminFormControlClass}
-                          aria-required="true"
-                        >
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent className={adminSelectContentClass}>
-                          <SelectItem value={SELECT_EMPTY_VALUE}>
-                            Select category
-                          </SelectItem>
-                          {TOOL_CATEGORIES.map((item) => (
-                            <SelectItem key={item} value={item}>
-                              {item}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <option value={SELECT_EMPTY_VALUE}>Select category</option>
+                        {TOOL_CATEGORIES.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className={adminFormFieldClass}>
@@ -4009,29 +3980,23 @@ export default function AdminDashboardClient({
                       >
                         Pricing
                       </Label>
-                      <Select
+                      <select
+                        id="admin-edit-pricing"
+                        className={`${adminFormControlClass} appearance-auto bg-white text-slate-950`}
                         value={editPricing || SELECT_EMPTY_VALUE}
-                        onValueChange={(value) =>
-                          setEditPricing(value === SELECT_EMPTY_VALUE ? "" : value)
+                        onChange={(e) =>
+                          setEditPricing(
+                            e.target.value === SELECT_EMPTY_VALUE ? "" : e.target.value
+                          )
                         }
                       >
-                        <SelectTrigger
-                          id="admin-edit-pricing"
-                          className={adminFormControlClass}
-                        >
-                          <SelectValue placeholder="Select pricing" />
-                        </SelectTrigger>
-                        <SelectContent className={adminSelectContentClass}>
-                          <SelectItem value={SELECT_EMPTY_VALUE}>
-                            Select pricing
-                          </SelectItem>
-                          {PRICING_OPTIONS.map((item) => (
-                            <SelectItem key={item} value={item}>
-                              {item}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <option value={SELECT_EMPTY_VALUE}>Select pricing</option>
+                        {PRICING_OPTIONS.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </section>
