@@ -336,7 +336,14 @@ export default function CategoryDetailClient({
             </div>
 
             {searchResultMessage ? (
-              <p className={`text-sm ${mutedText}`}>{searchResultMessage}</p>
+              <p
+                className={`text-sm ${mutedText}`}
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {searchResultMessage}
+              </p>
             ) : hasActiveFilters ? (
               <p className={`text-sm ${mutedText}`}>
                 Filtered from {tools.length} total tools

@@ -186,7 +186,14 @@ export default function CompareClient({ tools }: CompareClientProps) {
           </div>
 
           {searchResultMessage && (
-            <p className={`mt-4 text-sm ${mutedText}`}>{searchResultMessage}</p>
+            <p
+              className={`mt-4 text-sm ${mutedText}`}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {searchResultMessage}
+            </p>
           )}
 
           {suggestedTools.length === 0 ? (
