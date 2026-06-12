@@ -3490,6 +3490,49 @@ export default function AdminDashboardClient({
                 )}
               </div>
 
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Default content preview
+                </p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {([
+                    ["heroTitle", DEFAULT_HOMEPAGE_CONTENT_CONFIG.heroTitle],
+                    [
+                      "heroSubtitle",
+                      DEFAULT_HOMEPAGE_CONTENT_CONFIG.heroSubtitle,
+                    ],
+                    [
+                      "primaryCtaLabel",
+                      DEFAULT_HOMEPAGE_CONTENT_CONFIG.primaryCtaLabel,
+                    ],
+                    [
+                      "secondaryCtaLabel",
+                      DEFAULT_HOMEPAGE_CONTENT_CONFIG.secondaryCtaLabel,
+                    ],
+                    [
+                      "starterSearchHeading",
+                      DEFAULT_HOMEPAGE_CONTENT_CONFIG.starterSearchHeading,
+                    ],
+                    [
+                      "featuredToolsHeading",
+                      DEFAULT_HOMEPAGE_CONTENT_CONFIG.featuredToolsHeading,
+                    ],
+                  ] as const).map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <p className="text-xs font-bold text-slate-500">
+                        {label}
+                      </p>
+                      <p className="mt-1 break-words text-sm font-bold leading-6 text-slate-950">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="mb-3 grid gap-3 lg:grid-cols-4">
                 {([
                   ["Safe sections", HOMEPAGE_SECTION_IDS],
