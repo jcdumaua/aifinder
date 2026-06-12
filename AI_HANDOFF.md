@@ -117,6 +117,26 @@ Check noisy false positives:
 Exact/direct matches should still appear. Smart matches should not be caused by
 unsafe substring matches.
 
+Plural search tolerance checks:
+
+- website builders
+- voice generators
+- AI assistants
+- coding helpers
+- art generators
+- developer assistants
+
+Double-s safety checks:
+
+- business
+- process
+- class
+- glass
+
+Plural matching must stay word-boundary safe. Do not reintroduce substring noise
+such as artisan -> art, cart -> art, or cartoon -> art. Build passing is not
+enough; manual search QA is required for search relevance changes.
+
 ## Commit Flow
 
 1. npm run check
