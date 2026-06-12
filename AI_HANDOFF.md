@@ -275,6 +275,18 @@ A future storage/design proposal must define:
 - How responsive QA and accessibility QA are confirmed before publish.
 - Migration/backfill plan if existing homepage content becomes database-driven.
 
+### Homepage Control Room Public Read Contract
+
+Future public homepage behavior must follow a safe read contract:
+
+- The public homepage may only read published homepage content/settings.
+- Drafts, preview configs, audit events, checklist state, and admin-only metadata must not be exposed publicly.
+- Public reads should use validated published config only.
+- If published config is missing or invalid, the homepage must fall back to safe default content/settings.
+- Public homepage reads must not require admin authentication.
+- Public homepage reads must not expose secrets, private admin notes, validation internals, or audit details.
+- Homepage content/settings publishing must not change app code, search logic, security rules, or API behavior unless separately approved.
+
 
 ## Commit Flow
 
