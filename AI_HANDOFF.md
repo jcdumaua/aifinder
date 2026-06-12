@@ -299,6 +299,18 @@ Future Admin homepage writes must follow a safe write contract:
 - Admin edits must not directly mutate public homepage output without a validated published config.
 - Failed validation must show clear admin-safe errors and must not partially publish changes.
 
+### Homepage Control Room Rollback and Revert Contract
+
+Future Homepage Control Room rollback/revert behavior must stay safe:
+
+- Revert actions must restore a previously validated published homepage config.
+- Revert actions must not delete audit history or hide the original publish event.
+- Revert actions must create a new audit event with actor, action, message, and timestamp.
+- Reverts must respect workflow validation, readiness validation, and admin-only access.
+- A reverted config must still pass content, layout, tool placement, accessibility, and responsive safety checks.
+- If revert fails or the previous config is invalid, the homepage must fall back to safe default content/settings.
+- Revert behavior must not change app code, database schema, API behavior, search logic, or security rules unless separately approved.
+
 
 ## Commit Flow
 
