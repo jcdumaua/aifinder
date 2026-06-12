@@ -204,6 +204,17 @@ desktop responsive safety checked before publish.
 - Publish actions must create an audit trail event.
 - Build passing is not enough; workflow behavior must be manually verified when live controls are added.
 
+## Homepage Pre-Publish Checklist QA Rules
+
+- Future homepage publishing must require a pre-publish checklist.
+- Required checks must pass before publish is allowed.
+- Content, layout, tool placements, workflow state, and audit readiness must be validated.
+- Desktop, tablet/iPad, and mobile QA must be completed before publish.
+- Accessibility/readability checks must be completed before publish.
+- Failed checks must block publishing and show clear validation errors.
+- Completed checklist state must not be faked or bypassed.
+- Build passing is not enough; checklist behavior must be manually verified when live controls are added.
+
 ## Commit Flow
 
 1. npm run check
