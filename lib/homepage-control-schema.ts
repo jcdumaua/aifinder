@@ -32,6 +32,64 @@ export const HOMEPAGE_DENSITY_PRESETS = [
 
 export type HomepageDensityPreset = (typeof HOMEPAGE_DENSITY_PRESETS)[number];
 
+export type HomepageLayoutPresetDetail = {
+  id: HomepageLayoutPreset;
+  label: string;
+  description: string;
+};
+
+export const HOMEPAGE_LAYOUT_PRESET_DETAILS: HomepageLayoutPresetDetail[] = [
+  {
+    id: "clean",
+    label: "Clean",
+    description: "Balanced default layout for clear discovery.",
+  },
+  {
+    id: "premium",
+    label: "Premium",
+    description: "More polished visual emphasis while staying controlled.",
+  },
+  {
+    id: "compact",
+    label: "Compact",
+    description: "Tighter layout for denser homepage content.",
+  },
+  {
+    id: "spacious",
+    label: "Spacious",
+    description: "More breathing room between homepage sections.",
+  },
+  {
+    id: "search-first",
+    label: "Search First",
+    description: "Prioritizes the discovery and search experience.",
+  },
+];
+
+export type HomepageDensityPresetDetail = {
+  id: HomepageDensityPreset;
+  label: string;
+  description: string;
+};
+
+export const HOMEPAGE_DENSITY_PRESET_DETAILS: HomepageDensityPresetDetail[] = [
+  {
+    id: "compact",
+    label: "Compact",
+    description: "Smaller spacing for denser sections.",
+  },
+  {
+    id: "comfortable",
+    label: "Comfortable",
+    description: "Balanced default density for most homepage layouts.",
+  },
+  {
+    id: "spacious",
+    label: "Spacious",
+    description: "More breathing room for a calmer page rhythm.",
+  },
+];
+
 export const HOMEPAGE_PUBLISH_STATUSES = [
   "draft",
   "preview",
