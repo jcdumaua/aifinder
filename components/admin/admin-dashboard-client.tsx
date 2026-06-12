@@ -19,6 +19,7 @@ import {
   DEFAULT_HOMEPAGE_CONTENT_CONFIG,
   DEFAULT_HOMEPAGE_CONTROL_CONFIG,
   DEFAULT_HOMEPAGE_TOOL_PLACEMENTS,
+  HOMEPAGE_CONTROL_AUDIT_ACTIONS,
   HOMEPAGE_DENSITY_PRESET_DETAILS,
   HOMEPAGE_DENSITY_PRESETS,
   HOMEPAGE_LAYOUT_PRESET_DETAILS,
@@ -3670,6 +3671,26 @@ export default function AdminDashboardClient({
                         ))}
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Audit trail blueprint
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Future homepage control changes should be tracked before
+                  publish.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {HOMEPAGE_CONTROL_AUDIT_ACTIONS.map((action) => (
+                    <span
+                      key={action}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700"
+                    >
+                      {action}
+                    </span>
                   ))}
                 </div>
               </div>
