@@ -253,6 +253,14 @@ desktop responsive safety checked before publish.
 - Future live implementation must start with a storage/design proposal before any draft editor, preview mode, validation wiring, or protected publish flow.
 - “Publish to Homepage” means publishing approved content/settings, not deploying code.
 
+### Homepage Control Room Storage and Design Proposal Gate
+
+- Before live editable Homepage Control Room controls are added, create a storage/design proposal first.
+- The proposal must define where homepage drafts, previews, published settings, audit events, and checklist state will live.
+- The proposal must explain Supabase table structure, Row Level Security expectations, admin-only access, rollback/revert behavior, and validation flow.
+- Do not add database tables, migrations, API routes, or live publishing until the proposal is reviewed and approved.
+- Storage/design approval must happen before draft editor, preview mode, validation wiring, or protected publish flow.
+
 
 ## Commit Flow
 
