@@ -368,3 +368,67 @@ export function validateHomepageToolPlacementConfig(
 
   return errors;
 }
+
+export const HOMEPAGE_CONTROL_AUDIT_ACTIONS = [
+  "created-draft",
+  "updated-draft",
+  "previewed",
+  "published",
+  "reverted",
+  "validation-failed",
+] as const;
+
+export type HomepageControlAuditAction =
+  (typeof HOMEPAGE_CONTROL_AUDIT_ACTIONS)[number];
+
+export type HomepageControlAuditEvent = {
+  action: HomepageControlAuditAction;
+  message: string;
+  createdAt: string;
+  actorLabel: string;
+  validationErrors?: string[];
+};
+
+export function isHomepageControlAuditAction(
+  value: string
+): value is HomepageControlAuditAction {
+  return (HOMEPAGE_CONTROL_AUDIT_ACTIONS as readonly string[]).includes(value);
+}
+
+export function validateHomepageControlAuditEvent(
+  event: HomepageControlAuditEvent
+): string[] {
+  const errors: string[] = [];
+
+  if (!isHomepageControlAuditAction(event.action)) {
+    errors.push("Audit action is not allowed.");
+  }
+
+  if (!event.message.trim()) {
+    errors.push("Audit message is required.");
+  }
+
+  if (!event.createdAt.trim()) {
+    errors.push("Audit createdAt is required.");
+  }
+
+  if (!event.actorLabel.trim()) {
+    errors.push("Audit actorLabel is required.");
+  }
+
+  if (
+    event.validationErrors !== undefined &&
+    !Array.isArray(event.validationErrors)
+  ) {
+    errors.push("Audit validationErrors must be an array.");
+  }
+
+  if (
+    Array.isArray(event.validationErrors) &&
+    event.validationErrors.some((error) => typeof error !== "string")
+  ) {
+    errors.push("Audit validationErrors must contain strings only.");
+  }
+
+  return errors;
+}
