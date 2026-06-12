@@ -3434,6 +3434,60 @@ export default function AdminDashboardClient({
             </section>
           )}
 
+          {view === "discovery" && (
+            <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80">
+              <div className="mb-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Search Quality
+                </p>
+                <h2 className="mt-1 text-lg font-black text-slate-950">
+                  Search Quality Guardrails
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Search aliases are conservative and curated. Phrase matching
+                  must remain word-boundary safe, and build passing is not
+                  enough; manual search QA is required.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Avoid substring noise
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-600">
+                    <li>artisan -&gt; art</li>
+                    <li>cart -&gt; art</li>
+                    <li>cartoon -&gt; art</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Simple plural variants
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-600">
+                    <li>website builders</li>
+                    <li>voice generators</li>
+                    <li>AI assistants</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Double-s safety
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-600">
+                    <li>business</li>
+                    <li>process</li>
+                    <li>class</li>
+                    <li>glass</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+          )}
+
           {view === "security" && (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
