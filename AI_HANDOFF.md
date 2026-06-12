@@ -245,6 +245,15 @@ desktop responsive safety checked before publish.
 - Admin publishing must not bypass readiness validation, pre-publish checklist, audit trail, responsive QA, or James/Gemini review.
 - Do not call this "code deployment"; call it "Publish to Homepage" for content/settings.
 
+### Homepage Control Room Phase 0 Status
+
+- Phase 0 is blueprint/foundation work only.
+- Completed foundations include homepage config, content, tool placement, visual presets, audit trail, publish workflow, pre-publish checklist, readiness validation, and CMS publishing model.
+- Phase 0 must not create live editable homepage controls, database publishing, or public homepage behavior changes.
+- Future live implementation must start with a storage/design proposal before any draft editor, preview mode, validation wiring, or protected publish flow.
+- “Publish to Homepage” means publishing approved content/settings, not deploying code.
+
+
 ## Commit Flow
 
 1. npm run check
