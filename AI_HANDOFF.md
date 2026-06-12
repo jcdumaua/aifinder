@@ -225,6 +225,16 @@ desktop responsive safety checked before publish.
 - Admin readiness display must stay read-only unless a future editable phase explicitly approves controls.
 - Build passing is not enough; readiness behavior must be manually verified when live controls are added.
 
+## Homepage Control Room Live Implementation Gate Rules
+
+- Do not add live editable homepage controls without an explicitly approved future phase.
+- Future implementation must move through storage/design proposal, draft-only admin editor, preview-only mode, validation and audit wiring, protected publish flow, and responsive visual QA.
+- No homepage change should go live directly from an editor form.
+- Draft, preview, readiness, checklist, and audit rules must be respected before publish.
+- Raw CSS, arbitrary styling, and uncontrolled drag-and-drop remain blocked unless separately approved.
+- Public homepage behavior must not change during blueprint-only phases.
+- Build passing is not enough; Gemini/James review and visual QA are required before live controls.
+
 ## Commit Flow
 
 1. npm run check
