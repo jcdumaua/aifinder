@@ -18,12 +18,14 @@ import {
 import {
   DEFAULT_HOMEPAGE_CONTENT_CONFIG,
   DEFAULT_HOMEPAGE_CONTROL_CONFIG,
+  DEFAULT_HOMEPAGE_TOOL_PLACEMENTS,
   HOMEPAGE_DENSITY_PRESETS,
   HOMEPAGE_LAYOUT_PRESETS,
   HOMEPAGE_PUBLISH_STATUSES,
   HOMEPAGE_SECTION_IDS,
   validateHomepageContentConfig,
   validateHomepageControlConfig,
+  validateHomepageToolPlacementConfig,
 } from "../../lib/homepage-control-schema";
 import { isToolCategory, TOOL_CATEGORIES } from "../../lib/tool-categories";
 
@@ -133,6 +135,14 @@ const DEFAULT_HOMEPAGE_CONTENT_ERRORS = validateHomepageContentConfig(
 );
 const DEFAULT_HOMEPAGE_CONTENT_IS_VALID =
   DEFAULT_HOMEPAGE_CONTENT_ERRORS.length === 0;
+const DEFAULT_HOMEPAGE_TOOL_PLACEMENT_ERRORS =
+  DEFAULT_HOMEPAGE_TOOL_PLACEMENTS.flatMap((placement) =>
+    validateHomepageToolPlacementConfig(placement).map(
+      (error) => `${placement.placementId}: ${error}`
+    )
+  );
+const DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID =
+  DEFAULT_HOMEPAGE_TOOL_PLACEMENT_ERRORS.length === 0;
 
 const ADMIN_PAGE_COPY: Record<
   AdminView,
@@ -3528,6 +3538,94 @@ export default function AdminDashboardClient({
                       <p className="mt-1 break-words text-sm font-bold leading-6 text-slate-950">
                         {value}
                       </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                className={`mb-3 rounded-2xl border p-3 ${
+                  DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-950">
+                      Default placement validation
+                    </p>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID
+                          ? "text-emerald-700"
+                          : "text-amber-700"
+                      }`}
+                    >
+                      {DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID
+                        ? "Default placements: valid"
+                        : "Default placements need review"}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex rounded-full border bg-white px-3 py-1 text-xs font-bold ${
+                      DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID
+                        ? "border-emerald-200 text-emerald-700"
+                        : "border-amber-200 text-amber-700"
+                    }`}
+                  >
+                    {DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID
+                      ? "Valid"
+                      : "Review"}
+                  </span>
+                </div>
+
+                {!DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID && (
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-700">
+                    {DEFAULT_HOMEPAGE_TOOL_PLACEMENT_ERRORS.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Tool placement blueprint
+                </p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {DEFAULT_HOMEPAGE_TOOL_PLACEMENTS.map((placement) => (
+                    <div
+                      key={placement.placementId}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-black text-slate-950">
+                            {placement.title}
+                          </p>
+                          <p className="mt-1 break-words text-xs font-bold text-slate-500">
+                            {placement.placementId}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600">
+                          {placement.enabled ? "Enabled" : "Off"}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="font-bold text-slate-500">Max items</p>
+                          <p className="mt-1 font-black text-slate-950">
+                            {placement.maxItems}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-500">Tool slugs</p>
+                          <p className="mt-1 font-black text-slate-950">
+                            {placement.toolSlugs.length}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
