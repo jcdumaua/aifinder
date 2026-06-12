@@ -33,7 +33,7 @@ create table if not exists public.homepage_control_configs (
 
   status text not null check (status in ('draft', 'preview', 'published')),
 
-  version integer not null,
+  version integer not null check (version > 0),
   is_active_published boolean not null default false,
 
   content_config jsonb not null default '{}'::jsonb,
@@ -166,6 +166,24 @@ revoke all on public.homepage_control_audit_events from anon;
 revoke all on public.homepage_control_checklist_runs from anon;
 ```
 
+## Admin Identity / RLS Policy Notes
+
+Before this draft becomes a real migration, the final Admin identity model must be confirmed.
+
+Possible direction:
+
+- If AiFinder uses Supabase Auth/admin profiles, `created_by`, `published_by`, `actor_id`, and `completed_by` should reference the approved Admin identity table.
+- If AiFinder continues using protected Admin API routes with server-side/service-role access, direct client-side Admin write policies should not be opened.
+- RLS policies must never allow anonymous users to read or write base Control Room tables.
+- Public users should only access the public-safe view or a server-side fetch that reads from it.
+
+Required future RLS policy work:
+
+- Define admin read policy for configs, audit events, and checklist runs.
+- Define admin insert/update policy for draft/preview flows.
+- Define protected publish/revert write path.
+- Keep audit and checklist state admin-only.
+
 ## Important Security Notes
 
 The public-safe view uses `security_invoker = true`.
@@ -231,6 +249,24 @@ A future publish flow must:
 10. Set `published_by`, `published_by_label`, and `published_at`.
 11. Trigger cache/revalidation only after database write succeeds.
 
+## Future Publish RPC / Transaction Function Notes
+
+A future publish RPC or protected server-side transaction should handle publishing atomically.
+
+It should:
+
+- Validate that all Tool UUID/ID values in `tool_placements` exist in the tools table.
+- Confirm each referenced tool is public-safe and not deleted or archived.
+- Validate checklist completion.
+- Deactivate the previous active published config.
+- Activate the new published config.
+- Set publish metadata.
+- Create a publish audit event.
+- Return a clear success/failure result.
+- Avoid separate unprotected client-side update queries.
+
+This RPC/function should not be created until the final Admin identity and RLS model are approved.
+
 ## Rollback/Revert Notes
 
 A future revert flow must:
@@ -243,6 +279,32 @@ A future revert flow must:
 6. Activate restored config or restored copy.
 7. Trigger cache/revalidation only after database write succeeds.
 8. Fall back to safe defaults if validation fails.
+
+## Updated At Trigger Draft
+
+Future real SQL should include an `updated_at` trigger for mutable Control Room tables.
+
+Draft direction:
+
+```sql
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger homepage_control_configs_set_updated_at
+before update on public.homepage_control_configs
+for each row execute function public.set_updated_at();
+
+create trigger homepage_control_checklist_runs_set_updated_at
+before update on public.homepage_control_checklist_runs
+for each row execute function public.set_updated_at();
+```
+
+This must be reviewed before execution.
 
 ## Trigger Recommendations
 
