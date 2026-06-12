@@ -347,6 +347,19 @@ Before moving from blueprint-only work to live Homepage Control Room implementat
 - Confirm James and Gemini approve moving from blueprint/read-only work into live implementation.
 - If any readiness item is unclear, continue with documentation/read-only planning only.
 
+### Homepage Control Room Phase 0 Completion Checklist
+
+Before Phase 0 is considered complete, confirm:
+
+- All Homepage Control Room work remains blueprint, schema, validation, documentation, or read-only Admin display only.
+- No live editable homepage controls have been added.
+- No public homepage behavior has changed.
+- No Supabase tables, migrations, API routes, or live publishing logic have been added.
+- Config, content, tool placement, visual preset, audit trail, publish workflow, pre-publish checklist, readiness, preview, revert, public read, and admin write guardrails are documented.
+- Admin blueprint displays remain read-only and non-clickable.
+- `npm run check` passes with only accepted known warnings.
+- James and Gemini review must happen before any future live implementation phase begins.
+
 
 ## Commit Flow
 
