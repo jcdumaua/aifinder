@@ -98,6 +98,15 @@ export const HOMEPAGE_PUBLISH_STATUSES = [
 
 export type HomepagePublishStatus = (typeof HOMEPAGE_PUBLISH_STATUSES)[number];
 
+export const HOMEPAGE_CONTROL_STATUS_TRANSITIONS: Record<
+  HomepagePublishStatus,
+  HomepagePublishStatus[]
+> = {
+  draft: ["preview"],
+  preview: ["draft", "published"],
+  published: ["draft", "preview"],
+};
+
 export type HomepageControlConfig = {
   status: HomepagePublishStatus;
   layoutPreset: HomepageLayoutPreset;
@@ -134,6 +143,40 @@ export function isHomepagePublishStatus(
   value: string
 ): value is HomepagePublishStatus {
   return (HOMEPAGE_PUBLISH_STATUSES as readonly string[]).includes(value);
+}
+
+export function canTransitionHomepageControlStatus(
+  from: HomepagePublishStatus,
+  to: HomepagePublishStatus
+) {
+  return HOMEPAGE_CONTROL_STATUS_TRANSITIONS[from].includes(to);
+}
+
+export function validateHomepageControlStatusTransition(
+  from: string,
+  to: string
+): string[] {
+  const errors: string[] = [];
+  const fromStatus = isHomepagePublishStatus(from) ? from : null;
+  const toStatus = isHomepagePublishStatus(to) ? to : null;
+
+  if (!fromStatus) {
+    errors.push("Current publish status is not allowed.");
+  }
+
+  if (!toStatus) {
+    errors.push("Next publish status is not allowed.");
+  }
+
+  if (!fromStatus || !toStatus) {
+    return errors;
+  }
+
+  if (!canTransitionHomepageControlStatus(fromStatus, toStatus)) {
+    errors.push("Homepage control status transition is not allowed.");
+  }
+
+  return errors;
 }
 
 function hasDuplicateValues(values: readonly string[]) {
