@@ -137,6 +137,19 @@ Plural matching must stay word-boundary safe. Do not reintroduce substring noise
 such as artisan -> art, cart -> art, or cartoon -> art. Build passing is not
 enough; manual search QA is required for search relevance changes.
 
+## Homepage Control Room Safety Rules
+
+Future Homepage Control Room work should use approved presets, not raw CSS.
+Edits should follow Draft -> Preview -> Publish, with mobile, tablet, and
+desktop responsive safety checked before publish.
+
+- Section ordering should be controlled, not unlimited free drag-and-drop at first.
+- Visual controls should use safe presets like compact, normal, and spacious,
+  not random pixel values.
+- Homepage text changes should preserve SEO clarity and brand tone.
+- Discovery chips and featured tools should remain curated and non-noisy.
+- Build passing is not enough; visual QA is required for homepage control changes.
+
 ## Commit Flow
 
 1. npm run check
