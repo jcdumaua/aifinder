@@ -19,7 +19,9 @@ import {
   DEFAULT_HOMEPAGE_CONTENT_CONFIG,
   DEFAULT_HOMEPAGE_CONTROL_CONFIG,
   DEFAULT_HOMEPAGE_TOOL_PLACEMENTS,
+  HOMEPAGE_DENSITY_PRESET_DETAILS,
   HOMEPAGE_DENSITY_PRESETS,
+  HOMEPAGE_LAYOUT_PRESET_DETAILS,
   HOMEPAGE_LAYOUT_PRESETS,
   HOMEPAGE_PUBLISH_STATUSES,
   HOMEPAGE_SECTION_IDS,
@@ -3625,6 +3627,47 @@ export default function AdminDashboardClient({
                             {placement.toolSlugs.length}
                           </p>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Visual preset descriptions
+                </p>
+                <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                  {([
+                    ["Layout presets", HOMEPAGE_LAYOUT_PRESET_DETAILS],
+                    ["Density presets", HOMEPAGE_DENSITY_PRESET_DETAILS],
+                  ] as const).map(([title, presets]) => (
+                    <div
+                      key={title}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <p className="text-sm font-black text-slate-950">
+                        {title}
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {presets.map((preset) => (
+                          <div
+                            key={preset.id}
+                            className="rounded-xl border border-slate-200 bg-white p-3"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-sm font-black text-slate-950">
+                                {preset.label}
+                              </p>
+                              <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+                                {preset.id}
+                              </span>
+                            </div>
+                            <p className="mt-2 break-words text-xs leading-5 text-slate-600">
+                              {preset.description}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
