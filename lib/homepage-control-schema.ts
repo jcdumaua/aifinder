@@ -117,3 +117,71 @@ export function validateHomepageControlConfig(
 
   return errors;
 }
+
+export type HomepageContentConfig = {
+  heroTitle: string;
+  heroSubtitle: string;
+  primaryCtaLabel: string;
+  secondaryCtaLabel: string;
+  starterSearchHeading: string;
+  featuredToolsHeading: string;
+};
+
+export const DEFAULT_HOMEPAGE_CONTENT_CONFIG: HomepageContentConfig = {
+  heroTitle: "Find the right AI tools faster",
+  heroSubtitle:
+    "Search, compare, and save curated AI tools for your next workflow.",
+  primaryCtaLabel: "Explore tools",
+  secondaryCtaLabel: "Compare tools",
+  starterSearchHeading: "Start with a popular AI search",
+  featuredToolsHeading: "Featured AI tools",
+};
+
+const HOMEPAGE_CONTENT_MAX_LENGTHS: Record<keyof HomepageContentConfig, number> =
+  {
+    heroTitle: 80,
+    heroSubtitle: 180,
+    primaryCtaLabel: 32,
+    secondaryCtaLabel: 32,
+    starterSearchHeading: 72,
+    featuredToolsHeading: 72,
+  };
+
+function containsRawHtml(value: string) {
+  return /<[^>]+>/.test(value);
+}
+
+function containsScriptLikeContent(value: string) {
+  return /script|javascript:|onerror\s*=|onload\s*=/i.test(value);
+}
+
+export function validateHomepageContentConfig(
+  config: HomepageContentConfig
+): string[] {
+  const errors: string[] = [];
+
+  (Object.keys(HOMEPAGE_CONTENT_MAX_LENGTHS) as Array<
+    keyof HomepageContentConfig
+  >).forEach((field) => {
+    const value = config[field].trim();
+    const maxLength = HOMEPAGE_CONTENT_MAX_LENGTHS[field];
+
+    if (!value) {
+      errors.push(`${field} is required.`);
+    }
+
+    if (value.length > maxLength) {
+      errors.push(`${field} must be ${maxLength} characters or fewer.`);
+    }
+
+    if (containsRawHtml(value)) {
+      errors.push(`${field} cannot include raw HTML.`);
+    }
+
+    if (containsScriptLikeContent(value)) {
+      errors.push(`${field} cannot include script-like content.`);
+    }
+  });
+
+  return errors;
+}
