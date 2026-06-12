@@ -436,6 +436,15 @@ const searchSuggestionGroups: SearchSuggestionGroup[] = [
   },
 ];
 
+const starterSearchSuggestions = [
+  "AI art",
+  "Chatbot",
+  "Code helper",
+  "Voice generator",
+  "SEO",
+  "Website builder",
+];
+
 export function normalizeSearchText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -511,6 +520,10 @@ export function getSearchSuggestionsForQuery(query: string) {
   });
 
   return Array.from(new Set(suggestions)).slice(0, 3);
+}
+
+export function getStarterSearchSuggestions() {
+  return [...starterSearchSuggestions];
 }
 
 export function getToolSearchProfile(tool: SearchableTool) {

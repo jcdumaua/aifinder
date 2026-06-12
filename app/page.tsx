@@ -43,6 +43,7 @@ import { supabase } from "../lib/supabase";
 import {
   getConversationalSearchResponse,
   getSearchSuggestionsForQuery,
+  getStarterSearchSuggestions,
   getSearchMatchExplanation,
   getSearchConfidenceLabel,
   rankToolsForQuery,
@@ -52,13 +53,10 @@ import {
 const pricingOptions = ["All", "Free + Paid", "Free", "Paid"];
 const platformOptions = ["All", "Web", "iOS", "Android", "Desktop"];
 
-const guidedSuggestions = [
-  { label: "✨ Video", searchValue: "video" },
-  { label: "⚡ Automation", searchValue: "automation" },
-  { label: "🧠 Coding", searchValue: "coding" },
-  { label: "✍️ Writing", searchValue: "writing" },
-  { label: "📊 Business", searchValue: "business" },
-];
+const guidedSuggestions = getStarterSearchSuggestions().map((suggestion) => ({
+  label: suggestion,
+  searchValue: suggestion,
+}));
 
 const thinkingMessages = [
   "AiFinder is thinking...",
@@ -370,6 +368,12 @@ export default function Home() {
     selectedCategory !== "All" ||
     selectedPricing !== "All" ||
     selectedPlatform !== "All";
+  const showStarterSearches =
+    !searchDraft.trim() &&
+    !hasActiveFilters &&
+    !isSearchModalOpen &&
+    !isSearchThinking &&
+    recentSearches.length === 0;
 
   const pageBg = "ai-product-page";
 
@@ -456,10 +460,12 @@ export default function Home() {
               }}
             />
 
-            <AIGuidedSuggestions
-              suggestions={guidedSuggestions}
-              onSelect={applySearch}
-            />
+            {showStarterSearches && (
+              <AIGuidedSuggestions
+                suggestions={guidedSuggestions}
+                onSelect={applySearch}
+              />
+            )}
 
             {recentSearches.length > 0 && (
               <div className="ai-product-surface-soft mt-5 rounded-3xl border p-4">
