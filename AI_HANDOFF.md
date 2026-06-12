@@ -235,6 +235,16 @@ desktop responsive safety checked before publish.
 - Public homepage behavior must not change during blueprint-only phases.
 - Build passing is not enough; Gemini/James review and visual QA are required before live controls.
 
+## Homepage Control Room CMS Publishing Model
+
+- Future Admin homepage changes should work like a CMS publish flow.
+- Safe content/settings changes may include hero text, section visibility/order, starter chips, featured tools, visual presets, layout presets, and SEO text.
+- These changes should use Draft -> Preview -> Validate -> Publish to Homepage.
+- Publishing homepage settings should not require a Vercel redeploy when only content/settings change.
+- Actual code upgrades, security changes, schema changes, API changes, dependency changes, and search logic changes must remain in VS Code/Codex/GitHub/Vercel workflow.
+- Admin publishing must not bypass readiness validation, pre-publish checklist, audit trail, responsive QA, or James/Gemini review.
+- Do not call this "code deployment"; call it "Publish to Homepage" for content/settings.
+
 ## Commit Flow
 
 1. npm run check
