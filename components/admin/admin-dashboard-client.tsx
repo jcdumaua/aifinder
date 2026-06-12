@@ -3360,6 +3360,61 @@ export default function AdminDashboardClient({
             </div>
           )}
 
+          {view === "settings" && (
+            <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Homepage Controls
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950">
+                    Homepage Control Room Blueprint
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Future safe controls may manage homepage text, section
+                    visibility, section order, starter chips, featured tools,
+                    and visual presets.
+                  </p>
+                </div>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-600">
+                  Roadmap Only
+                </span>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Preset-based controls
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Controls should use approved presets, not raw CSS or
+                    one-off layout overrides.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Draft to publish
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Draft -&gt; Preview -&gt; Publish should be required before
+                    any live homepage changes.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-950">
+                    Responsive safety
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Mobile and responsive safety must stay protected. No
+                    homepage settings are connected yet.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {view === "discovery" && (
             <section
               id="discovery-intake"
