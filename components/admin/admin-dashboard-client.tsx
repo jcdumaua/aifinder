@@ -16,10 +16,12 @@ import {
   type DiscoveredTool,
 } from "../../lib/discovered-tools";
 import {
+  DEFAULT_HOMEPAGE_CONTROL_CONFIG,
   HOMEPAGE_DENSITY_PRESETS,
   HOMEPAGE_LAYOUT_PRESETS,
   HOMEPAGE_PUBLISH_STATUSES,
   HOMEPAGE_SECTION_IDS,
+  validateHomepageControlConfig,
 } from "../../lib/homepage-control-schema";
 import { isToolCategory, TOOL_CATEGORIES } from "../../lib/tool-categories";
 
@@ -118,6 +120,12 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Security", href: "/admin/security", view: "security" },
   { label: "Settings", href: "/admin/settings", view: "settings" },
 ];
+
+const DEFAULT_HOMEPAGE_CONFIG_ERRORS = validateHomepageControlConfig(
+  DEFAULT_HOMEPAGE_CONTROL_CONFIG
+);
+const DEFAULT_HOMEPAGE_CONFIG_IS_VALID =
+  DEFAULT_HOMEPAGE_CONFIG_ERRORS.length === 0;
 
 const ADMIN_PAGE_COPY: Record<
   AdminView,
@@ -3385,6 +3393,50 @@ export default function AdminDashboardClient({
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-600">
                   Roadmap Only
                 </span>
+              </div>
+
+              <div
+                className={`mb-3 rounded-2xl border p-3 ${
+                  DEFAULT_HOMEPAGE_CONFIG_IS_VALID
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-950">
+                      Default config validation
+                    </p>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        DEFAULT_HOMEPAGE_CONFIG_IS_VALID
+                          ? "text-emerald-700"
+                          : "text-amber-700"
+                      }`}
+                    >
+                      {DEFAULT_HOMEPAGE_CONFIG_IS_VALID
+                        ? "Default config: valid"
+                        : "Default config needs review"}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex rounded-full border bg-white px-3 py-1 text-xs font-bold ${
+                      DEFAULT_HOMEPAGE_CONFIG_IS_VALID
+                        ? "border-emerald-200 text-emerald-700"
+                        : "border-amber-200 text-amber-700"
+                    }`}
+                  >
+                    {DEFAULT_HOMEPAGE_CONFIG_IS_VALID ? "Valid" : "Review"}
+                  </span>
+                </div>
+
+                {!DEFAULT_HOMEPAGE_CONFIG_IS_VALID && (
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-700">
+                    {DEFAULT_HOMEPAGE_CONFIG_ERRORS.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="mb-3 grid gap-3 lg:grid-cols-4">
