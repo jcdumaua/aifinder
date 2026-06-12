@@ -199,7 +199,8 @@ The future public-safe view should only expose the active published homepage con
 ### Proposed SQL Shape
 
 ```sql
-create view public.public_homepage_control_config as
+create view public.public_homepage_control_config
+with (security_invoker = true) as
 select
   id,
   version,
@@ -246,6 +247,33 @@ This keeps homepage tool data current if a tool is renamed, re-rated, archived, 
 
 Before publishing, validation must check that featured Tool UUID/ID references still point to valid, public-safe, non-deleted tools.
 
+Validation must confirm every Tool UUID/ID in `tool_placements` still exists in the tools table and is public-safe before publish. This protects the homepage from ghost/deleted/archived tool references.
+
+## Explicit Permission / GRANT Proposal
+
+The real migration draft must include explicit permission rules.
+
+Required direction:
+
+- Anonymous/public role should not receive SELECT access on base Control Room tables.
+- Anonymous/public role may receive SELECT only on the public-safe view, if final review approves direct public view access.
+- Anonymous/public role may need usage on the public schema depending on the final Supabase access path.
+- Admin writes should go through protected Admin API routes, RPC, or server-side transaction logic.
+- Do not rely on frontend-only access control.
+
+Example direction for the future SQL draft:
+
+```sql
+grant usage on schema public to anon;
+grant select on public.public_homepage_control_config to anon;
+
+revoke all on public.homepage_control_configs from anon;
+revoke all on public.homepage_control_audit_events from anon;
+revoke all on public.homepage_control_checklist_runs from anon;
+```
+
+These statements must be reviewed against the final Supabase permission model before execution.
+
 ## RLS Proposal
 
 ### Base Tables
@@ -280,6 +308,8 @@ Do not rely on frontend checks only.
 
 The eventual publish operation should be atomic.
 
+The real implementation should use a single SQL transaction, protected RPC, or protected server-side transaction block. The deactivate-old and activate-new steps must not run as separate unprotected client-side queries.
+
 A protected server-side publish flow should:
 
 1. Validate the selected preview config.
@@ -305,6 +335,14 @@ The eventual revert operation should:
 6. Trigger cache/revalidation.
 7. Fall back to safe defaults if validation fails.
 
+## Trigger Recommendations
+
+Before real SQL is applied, consider these database-level helpers:
+
+- Use an `updated_at` trigger for config and checklist rows to avoid timestamp drift.
+- Consider database-level version assignment or a protected versioning function to avoid duplicate or out-of-order versions.
+- Keep audit event timestamps database-generated.
+
 ## Retention Proposal
 
 Recommended future retention direction:
@@ -313,6 +351,7 @@ Recommended future retention direction:
 - Audit events: treat as permanent unless a future approved retention policy says otherwise.
 - Abandoned drafts: may be pruned after 30 days only after a future approved policy.
 - Checklist runs: keep enough history to prove publish readiness.
+- Tool records used by homepage placements should prefer soft-delete/archive behavior over hard deletes.
 
 ## Open Questions Before Real Migration
 
