@@ -30,6 +30,7 @@ import {
   HOMEPAGE_SECTION_IDS,
   validateHomepageContentConfig,
   validateHomepageControlConfig,
+  validateHomepageControlReadiness,
   validateHomepageToolPlacementConfig,
 } from "../../lib/homepage-control-schema";
 import { isToolCategory, TOOL_CATEGORIES } from "../../lib/tool-categories";
@@ -148,6 +149,7 @@ const DEFAULT_HOMEPAGE_TOOL_PLACEMENT_ERRORS =
   );
 const DEFAULT_HOMEPAGE_TOOL_PLACEMENTS_ARE_VALID =
   DEFAULT_HOMEPAGE_TOOL_PLACEMENT_ERRORS.length === 0;
+const HOMEPAGE_CONTROL_READINESS = validateHomepageControlReadiness();
 
 const ADMIN_PAGE_COPY: Record<
   AdminView,
@@ -3415,6 +3417,78 @@ export default function AdminDashboardClient({
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-600">
                   Roadmap Only
                 </span>
+              </div>
+
+              <div
+                className={`mb-3 rounded-2xl border p-3 ${
+                  HOMEPAGE_CONTROL_READINESS.isReady
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-950">
+                      Control Room readiness
+                    </p>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        HOMEPAGE_CONTROL_READINESS.isReady
+                          ? "text-emerald-700"
+                          : "text-amber-700"
+                      }`}
+                    >
+                      {HOMEPAGE_CONTROL_READINESS.isReady
+                        ? "Ready"
+                        : "Needs review"}
+                      {HOMEPAGE_CONTROL_READINESS.errors.length > 0 &&
+                        ` - ${HOMEPAGE_CONTROL_READINESS.errors.length} error${
+                          HOMEPAGE_CONTROL_READINESS.errors.length === 1
+                            ? ""
+                            : "s"
+                        }`}
+                      {HOMEPAGE_CONTROL_READINESS.warnings.length > 0 &&
+                        ` - ${
+                          HOMEPAGE_CONTROL_READINESS.warnings.length
+                        } warning${
+                          HOMEPAGE_CONTROL_READINESS.warnings.length === 1
+                            ? ""
+                            : "s"
+                        }`}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex rounded-full border bg-white px-3 py-1 text-xs font-bold ${
+                      HOMEPAGE_CONTROL_READINESS.isReady
+                        ? "border-emerald-200 text-emerald-700"
+                        : "border-amber-200 text-amber-700"
+                    }`}
+                  >
+                    {HOMEPAGE_CONTROL_READINESS.isReady
+                      ? "Ready"
+                      : "Review"}
+                  </span>
+                </div>
+
+                {(HOMEPAGE_CONTROL_READINESS.errors.length > 0 ||
+                  HOMEPAGE_CONTROL_READINESS.warnings.length > 0) && (
+                  <div className="mt-2 space-y-2 text-xs leading-5">
+                    {HOMEPAGE_CONTROL_READINESS.errors.length > 0 && (
+                      <ul className="space-y-1 text-amber-700">
+                        {HOMEPAGE_CONTROL_READINESS.errors.map((error) => (
+                          <li key={error}>{error}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {HOMEPAGE_CONTROL_READINESS.warnings.length > 0 && (
+                      <ul className="space-y-1 text-slate-600">
+                        {HOMEPAGE_CONTROL_READINESS.warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div
