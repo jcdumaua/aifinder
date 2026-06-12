@@ -25,6 +25,7 @@ import {
   HOMEPAGE_DENSITY_PRESETS,
   HOMEPAGE_LAYOUT_PRESET_DETAILS,
   HOMEPAGE_LAYOUT_PRESETS,
+  HOMEPAGE_PRE_PUBLISH_CHECKLIST,
   HOMEPAGE_PUBLISH_STATUSES,
   HOMEPAGE_SECTION_IDS,
   validateHomepageContentConfig,
@@ -3716,6 +3717,36 @@ export default function AdminDashboardClient({
                         </div>
                       ))
                   )}
+                </div>
+              </div>
+
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Pre-publish checklist blueprint
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Future homepage publishing should pass required safety checks
+                  before going live.
+                </p>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {HOMEPAGE_PRE_PUBLISH_CHECKLIST.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <p className="text-sm font-black text-slate-950">
+                          {item.label}
+                        </p>
+                        <span className="inline-flex w-fit shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600">
+                          {item.required ? "Required" : "Optional"}
+                        </span>
+                      </div>
+                      <p className="mt-2 break-words text-xs leading-5 text-slate-600">
+                        {item.description}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
