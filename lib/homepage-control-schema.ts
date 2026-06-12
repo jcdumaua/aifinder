@@ -55,3 +55,65 @@ export const DEFAULT_HOMEPAGE_CONTROL_CONFIG: HomepageControlConfig = {
   visibleSections: [...HOMEPAGE_SECTION_IDS],
   sectionOrder: [...HOMEPAGE_SECTION_IDS],
 };
+
+export function isHomepageSectionId(value: string): value is HomepageSectionId {
+  return (HOMEPAGE_SECTION_IDS as readonly string[]).includes(value);
+}
+
+export function isHomepageLayoutPreset(
+  value: string
+): value is HomepageLayoutPreset {
+  return (HOMEPAGE_LAYOUT_PRESETS as readonly string[]).includes(value);
+}
+
+export function isHomepageDensityPreset(
+  value: string
+): value is HomepageDensityPreset {
+  return (HOMEPAGE_DENSITY_PRESETS as readonly string[]).includes(value);
+}
+
+export function isHomepagePublishStatus(
+  value: string
+): value is HomepagePublishStatus {
+  return (HOMEPAGE_PUBLISH_STATUSES as readonly string[]).includes(value);
+}
+
+function hasDuplicateValues(values: readonly string[]) {
+  return new Set(values).size !== values.length;
+}
+
+export function validateHomepageControlConfig(
+  config: HomepageControlConfig
+): string[] {
+  const errors: string[] = [];
+
+  if (!isHomepagePublishStatus(config.status)) {
+    errors.push("Publish status is not allowed.");
+  }
+
+  if (!isHomepageLayoutPreset(config.layoutPreset)) {
+    errors.push("Layout preset is not allowed.");
+  }
+
+  if (!isHomepageDensityPreset(config.densityPreset)) {
+    errors.push("Density preset is not allowed.");
+  }
+
+  if (!config.visibleSections.every(isHomepageSectionId)) {
+    errors.push("Visible sections include an unknown section.");
+  }
+
+  if (!config.sectionOrder.every(isHomepageSectionId)) {
+    errors.push("Section order includes an unknown section.");
+  }
+
+  if (hasDuplicateValues(config.visibleSections)) {
+    errors.push("Visible sections include duplicates.");
+  }
+
+  if (hasDuplicateValues(config.sectionOrder)) {
+    errors.push("Section order includes duplicates.");
+  }
+
+  return errors;
+}
