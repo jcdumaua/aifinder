@@ -323,6 +323,18 @@ Future Homepage Control Room preview behavior must stay safe:
 - Preview mode must not mutate public homepage output, search logic, security rules, API behavior, or database schema.
 - A previewed config must still pass readiness and pre-publish checks before it can be published.
 
+### Homepage Control Room Protected Preview Link Gate
+
+Future protected preview links must not be added without a separate approved design:
+
+- Preview links must never expose drafts, audit logs, checklist internals, admin notes, secrets, tokens, or environment values.
+- Preview links must be scoped to a specific preview config and must not expose general Admin access.
+- Preview links must use expiration, revocation, and access controls before any external sharing is allowed.
+- Preview links must clearly show preview status and must not be mistaken for the live homepage.
+- Preview links must not publish, mutate, or approve homepage settings.
+- Preview link behavior must be reviewed for security, privacy, responsive QA, and rollback safety before implementation.
+- Until this design is approved, preview mode should remain admin-only.
+
 
 ## Commit Flow
 
