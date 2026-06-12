@@ -53,6 +53,9 @@ Possible responsibilities:
 - Track created/updated/published timestamps
 - Track admin actor labels where safe
 - Keep public-safe published settings separate from admin-only metadata
+- Store featured tool placement references by Tool UUID/ID, not slug, for referential integrity
+- Use versioned rows rather than a single-row overwrite model
+- Enforce only one active published config at the database level
 
 ### `homepage_control_audit_events`
 
@@ -172,6 +175,7 @@ Required checks should include:
 - Tool placement validation
 - Workflow validation
 - Audit event readiness
+- Search Quality QA complete
 - Desktop QA complete
 - Tablet/iPad QA complete
 - Mobile QA complete
@@ -204,6 +208,44 @@ High-level expectations:
 - RLS must protect write actions.
 - Admin API routes must verify session and CSRF protection.
 - Public homepage reads must not expose private metadata.
+- Public reads should use a public-safe view/function that only returns the active published config.
+
+## Gemini Review Changes Required Before Phase 1C
+
+Gemini reviewed this proposal and returned: Approved with changes.
+
+Before moving to Supabase table design, the following changes must be incorporated.
+
+### Required Changes
+
+- Featured tool placements should store Tool UUID/ID for database referential integrity.
+- The application layer should resolve tool slugs for UI routing.
+- Search Quality QA must be added to the pre-publish checklist because starter chips and featured tools affect homepage discovery quality.
+- The database design must enforce only one active published homepage config at a time.
+- Public homepage reads should use a public-safe Supabase view or database function that only exposes the active published config.
+- Drafts, previews, audit events, checklist state, admin notes, and validation internals must never be exposed through public reads.
+
+### Recommended Storage Direction
+
+- Use versioned rows for `homepage_control_configs`, not a single-row overwrite model.
+- Keep enough published versions to support rollback/revert.
+- Define a future retention policy, such as keeping the last 10 published versions.
+- Audit events should eventually store an admin ID when multi-admin support exists, while actor labels may remain acceptable during early single-admin phases.
+- Public homepage config should be cached or revalidated instead of fetched from Supabase on every request.
+
+### Public Fetch Recommendation
+
+The preferred future public fetch model is:
+
+- Public homepage reads from a safe published-config view/function.
+- Only validated published content/settings are returned.
+- Admin-only metadata is stripped.
+- Next.js should cache or revalidate the result.
+- Publishing from Admin should eventually trigger revalidation.
+
+### Phase 1C Gate
+
+Phase 1C may proceed only after these changes are reflected in the proposal.
 
 ## Implementation Phases After Proposal
 
@@ -227,7 +269,7 @@ Before implementation, decide:
 - How many previous published versions should be kept?
 - Should preview links ever be allowed, or should preview remain admin-only forever?
 - Should section order be controlled by numeric order or array order?
-- Should featured tool placements reference slugs or tool IDs?
+- Featured tool placements should reference Tool UUID/ID as the database source of truth; the app layer should resolve slugs for routing.
 - Should published homepage config be cached, revalidated, or fetched dynamically?
 - Should audit events store only actor labels or future admin IDs?
 - Should checklist completion expire after content/settings change?
