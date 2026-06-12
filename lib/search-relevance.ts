@@ -18,6 +18,7 @@ type IntentAlias = {
 };
 
 type SearchSuggestionGroup = {
+  starter: string;
   triggers: string[];
   suggestions: string[];
 };
@@ -395,6 +396,7 @@ const intentAliases: IntentAlias[] = [
 
 const searchSuggestionGroups: SearchSuggestionGroup[] = [
   {
+    starter: "AI art",
     triggers: [
       "ai art",
       "art",
@@ -406,10 +408,12 @@ const searchSuggestionGroups: SearchSuggestionGroup[] = [
     suggestions: ["ai art", "art generator", "photo generator"],
   },
   {
+    starter: "Chatbot",
     triggers: ["assistant", "chat", "chatbot", "agent", "ai agents"],
     suggestions: ["assistant", "chatbot", "AI agents"],
   },
   {
+    starter: "Code helper",
     triggers: [
       "code",
       "code helper",
@@ -420,6 +424,7 @@ const searchSuggestionGroups: SearchSuggestionGroup[] = [
     suggestions: ["code helper", "coding", "developer assistant"],
   },
   {
+    starter: "Voice generator",
     triggers: [
       "voice",
       "voice generator",
@@ -431,18 +436,15 @@ const searchSuggestionGroups: SearchSuggestionGroup[] = [
     suggestions: ["voice generator", "audio generator", "speech generator"],
   },
   {
+    starter: "SEO",
     triggers: ["seo", "search ranking", "marketing"],
     suggestions: ["seo", "search ranking", "marketing"],
   },
-];
-
-const starterSearchSuggestions = [
-  "AI art",
-  "Chatbot",
-  "Code helper",
-  "Voice generator",
-  "SEO",
-  "Website builder",
+  {
+    starter: "Website builder",
+    triggers: ["website builder", "site builder"],
+    suggestions: ["website builder", "business", "productivity"],
+  },
 ];
 
 export function normalizeSearchText(value: string) {
@@ -523,7 +525,7 @@ export function getSearchSuggestionsForQuery(query: string) {
 }
 
 export function getStarterSearchSuggestions() {
-  return [...starterSearchSuggestions];
+  return searchSuggestionGroups.map((group) => group.starter);
 }
 
 export function getToolSearchProfile(tool: SearchableTool) {
