@@ -150,6 +150,17 @@ desktop responsive safety checked before publish.
 - Discovery chips and featured tools should remain curated and non-noisy.
 - Build passing is not enough; visual QA is required for homepage control changes.
 
+## Homepage Content Control QA Rules
+
+- Homepage text must preserve AiFinder's brand tone: clean, simple, fast, premium.
+- Hero title/subtitle must stay clear for SEO and user understanding.
+- CTA labels must stay short and action-focused.
+- No raw HTML or script-like content.
+- Text length limits must be respected.
+- Draft -> Preview -> Publish is required before future live text changes.
+- Visual QA is required on desktop, tablet/iPad, and mobile.
+- Build passing is not enough for homepage content/control changes.
+
 ## Commit Flow
 
 1. npm run check
