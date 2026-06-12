@@ -311,6 +311,18 @@ Future Homepage Control Room rollback/revert behavior must stay safe:
 - If revert fails or the previous config is invalid, the homepage must fall back to safe default content/settings.
 - Revert behavior must not change app code, database schema, API behavior, search logic, or security rules unless separately approved.
 
+### Homepage Control Room Preview Mode Contract
+
+Future Homepage Control Room preview behavior must stay safe:
+
+- Preview mode must show draft or preview homepage settings without changing the published homepage.
+- Preview mode must be admin-only unless a separately approved protected preview-link system is designed.
+- Preview mode must validate content, layout, tool placements, visual presets, and responsive safety before showing a preview.
+- Preview mode must clearly label that the page is a preview, not the live homepage.
+- Preview mode must not expose audit logs, checklist internals, admin notes, secrets, tokens, or environment values.
+- Preview mode must not mutate public homepage output, search logic, security rules, API behavior, or database schema.
+- A previewed config must still pass readiness and pre-publish checks before it can be published.
+
 
 ## Commit Flow
 
