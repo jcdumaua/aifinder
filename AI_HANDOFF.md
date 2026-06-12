@@ -287,6 +287,18 @@ Future public homepage behavior must follow a safe read contract:
 - Public homepage reads must not expose secrets, private admin notes, validation internals, or audit details.
 - Homepage content/settings publishing must not change app code, search logic, security rules, or API behavior unless separately approved.
 
+### Homepage Control Room Admin Write Contract
+
+Future Admin homepage writes must follow a safe write contract:
+
+- Admin writes may create or update drafts and preview configs only until a protected publish flow is approved.
+- Admin writes must be restricted to authenticated admins and must respect existing session/CSRF protections.
+- Admin writes must validate payloads against approved Homepage Control Room schema helpers before saving.
+- Admin writes must never store raw CSS, arbitrary class names, secrets, tokens, or private environment values.
+- Publish and revert writes must respect workflow transitions, readiness validation, checklist requirements, and audit trail rules.
+- Admin edits must not directly mutate public homepage output without a validated published config.
+- Failed validation must show clear admin-safe errors and must not partially publish changes.
+
 
 ## Commit Flow
 
