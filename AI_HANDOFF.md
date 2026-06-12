@@ -193,6 +193,17 @@ desktop responsive safety checked before publish.
 - Publish/revert actions must require separate review before live use.
 - Build passing is not enough; audit behavior must be manually verified when live controls are added.
 
+## Homepage Publish Workflow QA Rules
+
+- Future homepage edits must start in draft status.
+- Draft changes must be previewed before publishing.
+- Published changes must only come from a valid preview state.
+- Reverts must move through a controlled status transition.
+- Invalid status jumps must be blocked by validation.
+- Publish actions must require visual QA on desktop, tablet/iPad, and mobile.
+- Publish actions must create an audit trail event.
+- Build passing is not enough; workflow behavior must be manually verified when live controls are added.
+
 ## Commit Flow
 
 1. npm run check
