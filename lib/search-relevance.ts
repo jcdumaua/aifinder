@@ -451,11 +451,32 @@ export function normalizeSearchText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function getSimpleTokenVariants(token: string) {
+  if (token.length > 3 && token.endsWith("s") && !token.endsWith("ss")) {
+    return [token, token.slice(0, -1)];
+  }
+
+  return [token];
+}
+
 function normalizedPhraseIncludes(normalizedText: string, phrase: string) {
   const normalizedPhrase = normalizeSearchText(phrase);
   if (!normalizedText || !normalizedPhrase) return false;
 
-  return ` ${normalizedText} `.includes(` ${normalizedPhrase} `);
+  const textTokens = normalizedText.split(" ");
+  const phraseTokens = normalizedPhrase.split(" ");
+
+  if (phraseTokens.length > textTokens.length) return false;
+
+  return textTokens.some((_, startIndex) => {
+    const tokenWindow = textTokens.slice(startIndex, startIndex + phraseTokens.length);
+
+    if (tokenWindow.length !== phraseTokens.length) return false;
+
+    return phraseTokens.every((phraseToken, tokenIndex) =>
+      getSimpleTokenVariants(tokenWindow[tokenIndex]).includes(phraseToken)
+    );
+  });
 }
 
 export function normalizeIntentTerms(query: string): SearchIntent {
