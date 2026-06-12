@@ -60,6 +60,10 @@ Stores homepage control configurations for draft, preview, and published states.
   - admin user/profile UUID, nullable during early single-admin phase
 - `created_by_label`
   - safe actor label
+- `published_by`
+  - admin user/profile UUID for the Admin who approved the live publish action, nullable during early single-admin phase
+- `published_by_label`
+  - safe actor label for the Admin who approved the live publish action
 - `created_at`
   - timestamp
 - `updated_at`
@@ -77,7 +81,10 @@ Stores homepage control configurations for draft, preview, and published states.
   - `published`
 - Only one active published config should be allowed.
 - Tool placements must reference Tool UUID/ID, not slug.
+- Tool deletion/archive behavior must be handled before publish so configs do not point to dead Tool UUIDs.
 - Published rows must pass validation before becoming active.
+- `status` should use a text column with a strict CHECK constraint rather than a native Postgres enum.
+- Active published enforcement should use a partial unique index so only one row can have `is_active_published = true`.
 
 ### Recommended Indexes
 
@@ -92,8 +99,10 @@ The public homepage should not read this table directly unless a strict public-s
 
 Preferred approach:
 
-- Public reads use a safe view or database function that only returns the single active published config.
-- The view/function must strip admin-only metadata.
+- Public reads use a safe view that only returns the single active published config.
+- The view must strip admin-only metadata.
+- The public-safe view/function must explicitly exclude validation errors, created_by fields, published_by fields, audit details, checklist state, admin notes, actor IDs, secrets, tokens, and environment values.
+- The anonymous role should receive SELECT access only on the public-safe view, not the base tables.
 
 ## 2. `homepage_control_audit_events`
 
@@ -135,6 +144,7 @@ Stores audit history for Homepage Control Room actions.
 - Publish and revert actions must create audit events.
 - Validation failures should create audit events.
 - Audit history must not be deleted by revert actions.
+- Audit events should be treated as permanent unless a future approved retention policy says otherwise.
 
 ### Recommended Indexes
 
@@ -179,7 +189,8 @@ Stores future pre-publish checklist completion state.
 - Tool placement validation
 - Workflow validation
 - Audit event readiness
-- Search Quality QA
+- Double-S Safety Check
+- Discovery Search Quality QA
 - Desktop QA
 - Tablet/iPad QA
 - Mobile QA
@@ -206,7 +217,15 @@ A future public-safe view/function should expose only:
 - density preset
 - section order/visibility
 - starter chips
-- featured tool placement references resolved safely for the homepage
+- tool placement IDs only, so the app layer can hydrate current tool data from the tools table
+
+The public-safe view/function should not resolve Tool UUIDs into full tool objects.
+
+The app layer should hydrate:
+
+Tool ID → current tool record → current slug/name/logo/category/rating/pricing
+
+This keeps homepage tool data current if a tool is renamed, re-rated, archived, or updated.
 
 It must not expose:
 
@@ -261,7 +280,7 @@ Recommended direction:
 - Suggested future retention policy:
   - keep the last 10 published versions
   - keep audit events longer than config drafts, if storage allows
-  - prune abandoned drafts after a future approved policy
+  - abandoned drafts may be pruned after 30 days only after a future approved policy
 
 ## Tool Placement Reference Strategy
 
@@ -286,6 +305,7 @@ Recommended direction:
 - Do not fetch from Supabase on every homepage hit if avoidable.
 - Use Next.js ISR or tag-based revalidation in the future.
 - When Admin publishes, trigger homepage revalidation after protected publish flow is approved.
+- Public homepage should prefer reading through a server-side function/API or safe server fetch instead of exposing direct base-table access.
 
 ## Publish Flow Summary
 
@@ -323,6 +343,19 @@ Future revert flow should:
 - Should public-safe view resolve tool IDs to slug/name/logo, or should the app resolve after fetch?
 - Should abandoned drafts expire automatically?
 - Should publish revalidation use ISR revalidate time or tag-based revalidation?
+
+## SQL Direction Notes Before Migration
+
+Preferred future SQL direction:
+
+- Use text status with a CHECK constraint:
+  - `status in ('draft', 'preview', 'published')`
+- Use a partial unique index to enforce one active published config:
+  - unique where `is_active_published = true`
+- Use a public-safe view for published homepage reads.
+- Grant anonymous SELECT only on the public-safe view, not on base Control Room tables.
+- Keep checklist items as JSONB point-in-time snapshots.
+- Hydrate Tool UUID/ID references in the app layer, not inside the public-safe view.
 
 ## Recommended Next Step
 
