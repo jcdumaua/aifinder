@@ -261,6 +261,20 @@ desktop responsive safety checked before publish.
 - Do not add database tables, migrations, API routes, or live publishing until the proposal is reviewed and approved.
 - Storage/design approval must happen before draft editor, preview mode, validation wiring, or protected publish flow.
 
+### Homepage Control Room Storage Proposal Checklist
+
+A future storage/design proposal must define:
+
+- Tables needed for homepage drafts, previews, published config, audit events, and checklist state.
+- Which data is admin-only and which data can be safely read by the public homepage.
+- Row Level Security expectations for read, write, publish, revert, and audit access.
+- How draft, preview, and published states stay separated.
+- How validation errors, warnings, and checklist completion are stored.
+- How publish and revert actions create audit events.
+- How rollback works if a published homepage config causes issues.
+- How responsive QA and accessibility QA are confirmed before publish.
+- Migration/backfill plan if existing homepage content becomes database-driven.
+
 
 ## Commit Flow
 
