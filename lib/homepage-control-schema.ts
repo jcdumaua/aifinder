@@ -39,3 +39,19 @@ export const HOMEPAGE_PUBLISH_STATUSES = [
 ] as const;
 
 export type HomepagePublishStatus = (typeof HOMEPAGE_PUBLISH_STATUSES)[number];
+
+export type HomepageControlConfig = {
+  status: HomepagePublishStatus;
+  layoutPreset: HomepageLayoutPreset;
+  densityPreset: HomepageDensityPreset;
+  visibleSections: HomepageSectionId[];
+  sectionOrder: HomepageSectionId[];
+};
+
+export const DEFAULT_HOMEPAGE_CONTROL_CONFIG: HomepageControlConfig = {
+  status: "draft",
+  layoutPreset: "clean",
+  densityPreset: "comfortable",
+  visibleSections: [...HOMEPAGE_SECTION_IDS],
+  sectionOrder: [...HOMEPAGE_SECTION_IDS],
+};
