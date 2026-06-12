@@ -475,3 +475,120 @@ export function validateHomepageControlAuditEvent(
 
   return errors;
 }
+
+export const HOMEPAGE_PRE_PUBLISH_CHECK_IDS = [
+  "content-valid",
+  "layout-valid",
+  "tool-placements-valid",
+  "workflow-valid",
+  "audit-event-ready",
+  "desktop-qa-complete",
+  "tablet-qa-complete",
+  "mobile-qa-complete",
+  "accessibility-qa-complete",
+] as const;
+
+export type HomepagePrePublishCheckId =
+  (typeof HOMEPAGE_PRE_PUBLISH_CHECK_IDS)[number];
+
+export type HomepagePrePublishChecklistItem = {
+  id: HomepagePrePublishCheckId;
+  label: string;
+  required: boolean;
+  description: string;
+};
+
+export const HOMEPAGE_PRE_PUBLISH_CHECKLIST: HomepagePrePublishChecklistItem[] =
+  [
+    {
+      id: "content-valid",
+      label: "Content valid",
+      required: true,
+      description: "Homepage content passes length and safety validation.",
+    },
+    {
+      id: "layout-valid",
+      label: "Layout valid",
+      required: true,
+      description: "Section visibility, ordering, and presets are allowed.",
+    },
+    {
+      id: "tool-placements-valid",
+      label: "Tool placements valid",
+      required: true,
+      description: "Featured tool placements use safe IDs and limits.",
+    },
+    {
+      id: "workflow-valid",
+      label: "Workflow valid",
+      required: true,
+      description: "Publish status transition is allowed.",
+    },
+    {
+      id: "audit-event-ready",
+      label: "Audit event ready",
+      required: true,
+      description: "Publish action can create a safe audit trail event.",
+    },
+    {
+      id: "desktop-qa-complete",
+      label: "Desktop QA complete",
+      required: true,
+      description: "Desktop visual QA has been completed.",
+    },
+    {
+      id: "tablet-qa-complete",
+      label: "Tablet QA complete",
+      required: true,
+      description: "Tablet and iPad visual QA has been completed.",
+    },
+    {
+      id: "mobile-qa-complete",
+      label: "Mobile QA complete",
+      required: true,
+      description: "Mobile visual QA has been completed.",
+    },
+    {
+      id: "accessibility-qa-complete",
+      label: "Accessibility QA complete",
+      required: true,
+      description: "Readability, contrast, and accessibility checks are done.",
+    },
+  ];
+
+export function isHomepagePrePublishCheckId(
+  value: string
+): value is HomepagePrePublishCheckId {
+  return (HOMEPAGE_PRE_PUBLISH_CHECK_IDS as readonly string[]).includes(value);
+}
+
+export function validateHomepagePrePublishChecklist(
+  checklist: HomepagePrePublishChecklistItem[]
+): string[] {
+  const errors: string[] = [];
+  const checkIds = checklist.map((item) => item.id);
+
+  if (!checklist.every((item) => isHomepagePrePublishCheckId(item.id))) {
+    errors.push("Pre-publish checklist includes an unknown check ID.");
+  }
+
+  if (hasDuplicateValues(checkIds)) {
+    errors.push("Pre-publish checklist includes duplicate check IDs.");
+  }
+
+  checklist.forEach((item) => {
+    if (!item.label.trim()) {
+      errors.push(`${item.id} label is required.`);
+    }
+
+    if (!item.description.trim()) {
+      errors.push(`${item.id} description is required.`);
+    }
+
+    if (typeof item.required !== "boolean") {
+      errors.push(`${item.id} required must be a boolean.`);
+    }
+  });
+
+  return errors;
+}
