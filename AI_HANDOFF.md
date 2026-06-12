@@ -215,6 +215,16 @@ desktop responsive safety checked before publish.
 - Completed checklist state must not be faked or bypassed.
 - Build passing is not enough; checklist behavior must be manually verified when live controls are added.
 
+## Homepage Control Room Readiness QA Rules
+
+- Future live homepage controls must check Control Room readiness before publishing.
+- Readiness must include config, content, tool placement, workflow, audit, and checklist validation.
+- Errors must block publishing.
+- Warnings must be visible to admins before publishing.
+- Readiness status must not be hardcoded or bypassed.
+- Admin readiness display must stay read-only unless a future editable phase explicitly approves controls.
+- Build passing is not enough; readiness behavior must be manually verified when live controls are added.
+
 ## Commit Flow
 
 1. npm run check
