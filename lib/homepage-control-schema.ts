@@ -592,3 +592,26 @@ export function validateHomepagePrePublishChecklist(
 
   return errors;
 }
+
+export type HomepageControlReadinessResult = {
+  isReady: boolean;
+  errors: string[];
+  warnings: string[];
+};
+
+export function validateHomepageControlReadiness(): HomepageControlReadinessResult {
+  const errors = [
+    ...validateHomepageControlConfig(DEFAULT_HOMEPAGE_CONTROL_CONFIG),
+    ...validateHomepageContentConfig(DEFAULT_HOMEPAGE_CONTENT_CONFIG),
+    ...DEFAULT_HOMEPAGE_TOOL_PLACEMENTS.flatMap(
+      validateHomepageToolPlacementConfig
+    ),
+    ...validateHomepagePrePublishChecklist(HOMEPAGE_PRE_PUBLISH_CHECKLIST),
+  ];
+
+  return {
+    isReady: errors.length === 0,
+    errors,
+    warnings: [],
+  };
+}
