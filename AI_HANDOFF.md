@@ -172,6 +172,17 @@ desktop responsive safety checked before publish.
 - Visual QA is required on desktop, tablet/iPad, and mobile.
 - Build passing is not enough for homepage placement changes.
 
+## Homepage Visual Preset QA Rules
+
+- Visual controls must use approved presets only.
+- Do not allow raw CSS, arbitrary class names, or random pixel values.
+- Presets must preserve AiFinder's clean, simple, fast, premium design.
+- Presets must not reduce readability, contrast, or accessibility.
+- Layout and density changes must be checked on desktop, tablet/iPad, and mobile.
+- No horizontal scrolling, clipped buttons, overlapping cards, or hidden controls.
+- Search-first layouts must keep discovery/search easy to find.
+- Build passing is not enough; visual QA is required.
+
 ## Commit Flow
 
 1. npm run check
