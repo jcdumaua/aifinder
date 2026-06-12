@@ -335,6 +335,18 @@ Future protected preview links must not be added without a separate approved des
 - Preview link behavior must be reviewed for security, privacy, responsive QA, and rollback safety before implementation.
 - Until this design is approved, preview mode should remain admin-only.
 
+### Homepage Control Room Implementation Readiness Review Gate
+
+Before moving from blueprint-only work to live Homepage Control Room implementation:
+
+- Review all Phase 0 foundations end-to-end before adding editable controls.
+- Confirm the storage/design proposal is written, reviewed, and approved.
+- Confirm Supabase tables, Row Level Security, API routes, validation flow, audit trail, preview mode, publish flow, and rollback behavior are planned before coding.
+- Confirm public read and admin write contracts are still respected.
+- Confirm no live homepage behavior changes happen before Draft → Preview → Validate → Publish is approved.
+- Confirm James and Gemini approve moving from blueprint/read-only work into live implementation.
+- If any readiness item is unclear, continue with documentation/read-only planning only.
+
 
 ## Commit Flow
 
