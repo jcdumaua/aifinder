@@ -20,6 +20,7 @@ import {
   DEFAULT_HOMEPAGE_CONTROL_CONFIG,
   DEFAULT_HOMEPAGE_TOOL_PLACEMENTS,
   HOMEPAGE_CONTROL_AUDIT_ACTIONS,
+  HOMEPAGE_CONTROL_STATUS_TRANSITIONS,
   HOMEPAGE_DENSITY_PRESET_DETAILS,
   HOMEPAGE_DENSITY_PRESETS,
   HOMEPAGE_LAYOUT_PRESET_DETAILS,
@@ -3692,6 +3693,29 @@ export default function AdminDashboardClient({
                       {action}
                     </span>
                   ))}
+                </div>
+              </div>
+
+              <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Publish workflow blueprint
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Future homepage edits should move through controlled workflow
+                  states.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {Object.entries(HOMEPAGE_CONTROL_STATUS_TRANSITIONS).flatMap(
+                    ([from, targets]) =>
+                      targets.map((to) => (
+                        <div
+                          key={`${from}-${to}`}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700"
+                        >
+                          {from} -&gt; {to}
+                        </div>
+                      ))
+                  )}
                 </div>
               </div>
 
