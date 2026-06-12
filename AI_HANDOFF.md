@@ -360,6 +360,13 @@ Before Phase 0 is considered complete, confirm:
 - `npm run check` passes with only accepted known warnings.
 - James and Gemini review must happen before any future live implementation phase begins.
 
+### Homepage Control Room Next Step After Phase 0
+
+After Phase 0, do not start live editable controls immediately.
+
+The next approved step must be a storage/design proposal for the future Homepage Control Room. That proposal should define Supabase storage, RLS, admin-only writes, public published reads, draft/preview/published separation, validation flow, audit trail, checklist state, preview behavior, publish flow, and rollback/revert behavior.
+
+Only after that proposal is reviewed and approved should implementation move toward a draft-only Admin editor.
 
 ## Commit Flow
 
