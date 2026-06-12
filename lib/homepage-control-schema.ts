@@ -185,3 +185,128 @@ export function validateHomepageContentConfig(
 
   return errors;
 }
+
+export const HOMEPAGE_TOOL_PLACEMENT_IDS = [
+  "featured-tools",
+  "editors-picks",
+  "trending-override",
+  "new-tools-highlight",
+] as const;
+
+export type HomepageToolPlacementId =
+  (typeof HOMEPAGE_TOOL_PLACEMENT_IDS)[number];
+
+export const HOMEPAGE_TOOL_PLACEMENT_MAX_ITEMS = [3, 6, 12] as const;
+
+export type HomepageToolPlacementMaxItems =
+  (typeof HOMEPAGE_TOOL_PLACEMENT_MAX_ITEMS)[number];
+
+export type HomepageToolPlacementConfig = {
+  placementId: HomepageToolPlacementId;
+  enabled: boolean;
+  title: string;
+  toolSlugs: string[];
+  maxItems: HomepageToolPlacementMaxItems;
+};
+
+export const DEFAULT_HOMEPAGE_TOOL_PLACEMENTS: HomepageToolPlacementConfig[] = [
+  {
+    placementId: "featured-tools",
+    enabled: false,
+    title: "Featured AI tools",
+    toolSlugs: [],
+    maxItems: 6,
+  },
+  {
+    placementId: "editors-picks",
+    enabled: false,
+    title: "Editor's picks",
+    toolSlugs: [],
+    maxItems: 6,
+  },
+  {
+    placementId: "trending-override",
+    enabled: false,
+    title: "Trending tools",
+    toolSlugs: [],
+    maxItems: 6,
+  },
+  {
+    placementId: "new-tools-highlight",
+    enabled: false,
+    title: "New tools to try",
+    toolSlugs: [],
+    maxItems: 6,
+  },
+];
+
+export function isHomepageToolPlacementId(
+  value: string
+): value is HomepageToolPlacementId {
+  return (HOMEPAGE_TOOL_PLACEMENT_IDS as readonly string[]).includes(value);
+}
+
+function isHomepageToolPlacementMaxItems(
+  value: number
+): value is HomepageToolPlacementMaxItems {
+  return (HOMEPAGE_TOOL_PLACEMENT_MAX_ITEMS as readonly number[]).includes(
+    value
+  );
+}
+
+export function validateHomepageToolPlacementConfig(
+  config: HomepageToolPlacementConfig
+): string[] {
+  const errors: string[] = [];
+  const title = config.title.trim();
+
+  if (!isHomepageToolPlacementId(config.placementId)) {
+    errors.push("Tool placement ID is not allowed.");
+  }
+
+  if (!title) {
+    errors.push("Tool placement title is required.");
+  }
+
+  if (title.length > 72) {
+    errors.push("Tool placement title must be 72 characters or fewer.");
+  }
+
+  if (containsRawHtml(title)) {
+    errors.push("Tool placement title cannot include raw HTML.");
+  }
+
+  if (containsScriptLikeContent(title)) {
+    errors.push("Tool placement title cannot include script-like content.");
+  }
+
+  if (!isHomepageToolPlacementMaxItems(config.maxItems)) {
+    errors.push("Tool placement maxItems is not allowed.");
+  }
+
+  if (!Array.isArray(config.toolSlugs)) {
+    errors.push("Tool placement slugs must be an array.");
+  } else {
+    if (config.toolSlugs.some((slug) => typeof slug !== "string" || !slug.trim())) {
+      errors.push("Tool placement slugs must be non-empty strings.");
+    }
+
+    if (config.toolSlugs.some(containsRawHtml)) {
+      errors.push("Tool placement slugs cannot include raw HTML.");
+    }
+
+    if (config.toolSlugs.some(containsScriptLikeContent)) {
+      errors.push("Tool placement slugs cannot include script-like content.");
+    }
+
+    if (hasDuplicateValues(config.toolSlugs)) {
+      errors.push("Tool placement slugs include duplicates.");
+    }
+
+    if (config.toolSlugs.length > config.maxItems) {
+      errors.push("Tool placement slugs exceed maxItems.");
+    }
+  }
+
+  return errors;
+}
