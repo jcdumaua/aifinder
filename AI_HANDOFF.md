@@ -161,6 +161,17 @@ desktop responsive safety checked before publish.
 - Visual QA is required on desktop, tablet/iPad, and mobile.
 - Build passing is not enough for homepage content/control changes.
 
+## Homepage Tool Placement QA Rules
+
+- Featured tools and Editor's Picks must remain curated and high-quality.
+- Tool placement controls must use approved placement IDs only.
+- Do not allow duplicate tool slugs inside the same placement.
+- Respect safe max item limits.
+- Sponsored/paid placement behavior must not be added without separate review.
+- Tool placements must not override discovery quality or mislead users.
+- Visual QA is required on desktop, tablet/iPad, and mobile.
+- Build passing is not enough for homepage placement changes.
+
 ## Commit Flow
 
 1. npm run check
