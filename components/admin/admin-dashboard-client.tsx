@@ -15,6 +15,12 @@ import {
   placeholderDiscoveredTools,
   type DiscoveredTool,
 } from "../../lib/discovered-tools";
+import {
+  HOMEPAGE_DENSITY_PRESETS,
+  HOMEPAGE_LAYOUT_PRESETS,
+  HOMEPAGE_PUBLISH_STATUSES,
+  HOMEPAGE_SECTION_IDS,
+} from "../../lib/homepage-control-schema";
 import { isToolCategory, TOOL_CATEGORIES } from "../../lib/tool-categories";
 
 type Tool = {
@@ -3379,6 +3385,34 @@ export default function AdminDashboardClient({
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-slate-600">
                   Roadmap Only
                 </span>
+              </div>
+
+              <div className="mb-3 grid gap-3 lg:grid-cols-4">
+                {([
+                  ["Safe sections", HOMEPAGE_SECTION_IDS],
+                  ["Layout presets", HOMEPAGE_LAYOUT_PRESETS],
+                  ["Density presets", HOMEPAGE_DENSITY_PRESETS],
+                  ["Publish statuses", HOMEPAGE_PUBLISH_STATUSES],
+                ] as const).map(([title, options]) => (
+                  <div
+                    key={title}
+                    className="rounded-2xl border border-slate-200 bg-white p-3"
+                  >
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                      {title}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {options.map((option) => (
+                        <span
+                          key={option}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700"
+                        >
+                          {option}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
