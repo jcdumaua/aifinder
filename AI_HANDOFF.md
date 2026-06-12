@@ -183,6 +183,16 @@ desktop responsive safety checked before publish.
 - Search-first layouts must keep discovery/search easy to find.
 - Build passing is not enough; visual QA is required.
 
+## Homepage Control Audit Trail QA Rules
+
+- Future homepage control changes must create an audit event.
+- Draft updates, previews, publishes, reverts, and validation failures must be trackable.
+- Audit events must include action, message, createdAt, and actor label.
+- Validation errors should be recorded when publish or preview fails.
+- Audit logs must not expose secrets, tokens, or private environment values.
+- Publish/revert actions must require separate review before live use.
+- Build passing is not enough; audit behavior must be manually verified when live controls are added.
+
 ## Commit Flow
 
 1. npm run check
