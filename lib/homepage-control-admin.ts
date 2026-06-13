@@ -17,6 +17,12 @@ export type CreateHomepageControlDraftResult = {
   warnings: string[];
 };
 
+export type ListHomepageControlConfigsResult = {
+  configs: HomepageControlConfigRow[];
+  errors: string[];
+  warnings: string[];
+};
+
 function normalizeActor(actor: HomepageControlActor) {
   const label = actor.label.trim();
   const id = actor.id?.trim() || null;
@@ -153,6 +159,57 @@ export async function createHomepageControlDraft(
     return {
       draft: null,
       errors: [`Unexpected Homepage Control Room draft error: ${message}`],
+      warnings: [],
+    };
+  }
+}
+
+export async function listHomepageControlConfigs(): Promise<ListHomepageControlConfigsResult> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("homepage_control_configs")
+      .select(
+        "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at"
+      )
+      .order("updated_at", { ascending: false })
+      .limit(25);
+
+    if (error) {
+      return {
+        configs: [],
+        errors: [
+          `Failed to list Homepage Control Room configs: ${error.message}`,
+        ],
+        warnings: [],
+      };
+    }
+
+    const configs: HomepageControlConfigRow[] = [];
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    for (const item of data || []) {
+      const parsed = parseHomepageControlConfigRow(item);
+
+      if (parsed.row) {
+        configs.push(parsed.row);
+      }
+
+      errors.push(...parsed.errors);
+      warnings.push(...parsed.warnings);
+    }
+
+    return {
+      configs,
+      errors,
+      warnings,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      configs: [],
+      errors: [`Unexpected Homepage Control Room list error: ${message}`],
       warnings: [],
     };
   }
