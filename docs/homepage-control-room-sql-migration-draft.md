@@ -184,6 +184,63 @@ Required future RLS policy work:
 - Define protected publish/revert write path.
 - Keep audit and checklist state admin-only.
 
+## Draft Admin RLS Policy SQL Template
+
+This section is documentation only. Do not execute until the final Admin identity
+model is approved.
+
+The `false` predicates below are intentional safe placeholders. They keep every
+base Control Room table closed until AiFinder's final Admin model decides
+whether writes are handled by Supabase Auth/admin profiles or by protected
+Next.js Admin API routes using server-side credentials.
+
+```sql
+-- Documentation-only draft.
+-- These policies intentionally deny access until final Admin identity is approved.
+
+create policy homepage_control_configs_admin_select_placeholder
+on public.homepage_control_configs
+for select
+using (false);
+
+create policy homepage_control_configs_admin_insert_placeholder
+on public.homepage_control_configs
+for insert
+with check (false);
+
+create policy homepage_control_configs_admin_update_placeholder
+on public.homepage_control_configs
+for update
+using (false)
+with check (false);
+
+create policy homepage_control_audit_events_admin_select_placeholder
+on public.homepage_control_audit_events
+for select
+using (false);
+
+create policy homepage_control_audit_events_admin_insert_placeholder
+on public.homepage_control_audit_events
+for insert
+with check (false);
+
+create policy homepage_control_checklist_runs_admin_select_placeholder
+on public.homepage_control_checklist_runs
+for select
+using (false);
+
+create policy homepage_control_checklist_runs_admin_insert_placeholder
+on public.homepage_control_checklist_runs
+for insert
+with check (false);
+
+create policy homepage_control_checklist_runs_admin_update_placeholder
+on public.homepage_control_checklist_runs
+for update
+using (false)
+with check (false);
+```
+
 ## Important Security Notes
 
 The public-safe view uses `security_invoker = true`.
@@ -249,23 +306,138 @@ A future publish flow must:
 10. Set `published_by`, `published_by_label`, and `published_at`.
 11. Trigger cache/revalidation only after database write succeeds.
 
-## Future Publish RPC / Transaction Function Notes
+## Draft Publish RPC SQL Skeleton
 
-A future publish RPC or protected server-side transaction should handle publishing atomically.
+This section is documentation only. Do not execute until the final Admin identity
+and RLS model are approved.
 
-It should:
+The final implementation may use a protected Next.js Admin API transaction
+instead of a SQL RPC if that fits AiFinder's current session/CSRF model better.
+Either direction must publish atomically.
 
-- Validate that all Tool UUID/ID values in `tool_placements` exist in the tools table.
-- Confirm each referenced tool is public-safe and not deleted or archived.
-- Validate checklist completion.
-- Deactivate the previous active published config.
-- Activate the new published config.
-- Set publish metadata.
-- Create a publish audit event.
-- Return a clear success/failure result.
-- Avoid separate unprotected client-side update queries.
+```sql
+-- Documentation-only skeleton.
+-- Do not execute until final Admin identity, RLS, and tools schema details are approved.
 
-This RPC/function should not be created until the final Admin identity and RLS model are approved.
+create or replace function public.publish_homepage_control_config(
+  target_config_id uuid,
+  actor_id uuid,
+  actor_label text
+)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+  target_config public.homepage_control_configs%rowtype;
+  missing_tool_count integer := 0;
+  unsafe_tool_count integer := 0;
+  checklist_ready boolean := false;
+begin
+  select *
+  into target_config
+  from public.homepage_control_configs
+  where id = target_config_id
+  for update;
+
+  if not found then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Homepage config not found.'
+    );
+  end if;
+
+  if target_config.status <> 'preview' then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Only preview configs can be published.'
+    );
+  end if;
+
+  -- Validate Tool UUIDs stored in target_config.tool_placements.
+  -- Final SQL must match the approved JSON shape and tools table columns.
+  -- Direction:
+  -- 1. Extract every referenced Tool UUID from tool_placements.
+  -- 2. Confirm every Tool UUID exists in public.tools.
+  -- 3. Confirm every referenced tool is public-safe, not deleted, and not archived.
+  -- Example placeholders:
+  -- missing_tool_count := count of referenced Tool UUIDs not found in public.tools;
+  -- unsafe_tool_count := count of referenced tools that are not public-safe.
+
+  if missing_tool_count > 0 then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Tool placement references include missing tools.'
+    );
+  end if;
+
+  if unsafe_tool_count > 0 then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Tool placement references include unsafe tools.'
+    );
+  end if;
+
+  select exists (
+    select 1
+    from public.homepage_control_checklist_runs checklist
+    where checklist.config_id = target_config_id
+      and checklist.all_required_complete = true
+  )
+  into checklist_ready;
+
+  if checklist_ready is not true then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Pre-publish checklist is incomplete.'
+    );
+  end if;
+
+  update public.homepage_control_configs
+  set is_active_published = false
+  where is_active_published = true;
+
+  update public.homepage_control_configs
+  set
+    status = 'published',
+    is_active_published = true,
+    published_by = actor_id,
+    published_by_label = actor_label,
+    published_at = now(),
+    updated_at = now()
+  where id = target_config_id;
+
+  insert into public.homepage_control_audit_events (
+    config_id,
+    action,
+    message,
+    actor_id,
+    actor_label,
+    metadata
+  )
+  values (
+    target_config_id,
+    'published',
+    'Homepage config published.',
+    actor_id,
+    actor_label,
+    jsonb_build_object('source', 'publish_homepage_control_config')
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'configId', target_config_id,
+    'publishedAt', now()
+  );
+exception
+  when others then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'Homepage publish failed.'
+    );
+end;
+$$;
+```
 
 ## Rollback/Revert Notes
 
