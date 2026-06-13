@@ -136,6 +136,11 @@ create index if not exists homepage_control_checklist_created_at_idx
 on public.homepage_control_checklist_runs (created_at desc);
 ```
 
+Audit metadata must stay small. Do not store secrets, tokens, private
+environment values, raw request/response payload dumps, or large debug blobs in
+`metadata`. Avoid audit log bloat; large debug payloads should not be stored
+permanently.
+
 ```sql
 drop view if exists public.public_homepage_control_config;
 
@@ -280,6 +285,11 @@ Tool ID → current tool record → current slug/name/logo/category/rating/prici
 
 The public view should not resolve Tool IDs into full tool objects.
 
+Tool UUID/ID validation must happen inside the same protected transaction/RPC as
+the publish operation. Do not validate tools in a separate earlier request and
+then publish later, because a tool could be changed, archived, deleted, or made
+unsafe between validation and publish.
+
 ## Publish Transaction Notes
 
 The real implementation must publish atomically.
@@ -311,6 +321,11 @@ A future publish flow must:
 This section is documentation only. Do not execute until the final Admin identity
 and RLS model are approved.
 
+`security definer` functions are risky. If a SQL RPC is chosen, the final
+function must be hardened before real execution, including a safe `search_path`,
+least-privilege grants, explicit input validation, and review against privilege
+escalation risks.
+
 The final implementation may use a protected Next.js Admin API transaction
 instead of a SQL RPC if that fits AiFinder's current session/CSRF model better.
 Either direction must publish atomically.
@@ -327,6 +342,7 @@ create or replace function public.publish_homepage_control_config(
 returns jsonb
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
   target_config public.homepage_control_configs%rowtype;
@@ -360,6 +376,8 @@ begin
   -- 1. Extract every referenced Tool UUID from tool_placements.
   -- 2. Confirm every Tool UUID exists in public.tools.
   -- 3. Confirm every referenced tool is public-safe, not deleted, and not archived.
+  -- This validation must happen inside this same protected publish transaction
+  -- to avoid a TOCTOU bug between validation and publish.
   -- Example placeholders:
   -- missing_tool_count := count of referenced Tool UUIDs not found in public.tools;
   -- unsafe_tool_count := count of referenced tools that are not public-safe.
