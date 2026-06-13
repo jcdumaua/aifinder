@@ -4,9 +4,11 @@
 
 This document contains a draft SQL migration for AiFinder’s future Homepage Control Room.
 
-This is documentation only.
+This is documentation only and is mirrored by the draft migration file
+`supabase/migrations/20260612000100_create_homepage_control_room.sql`.
 
-Do not run this SQL in Supabase yet. Do not place this in `supabase/migrations` yet. Do not apply database changes until James, ChatGPT, Gemini, and the final safety review approve it.
+Do not run this SQL in Supabase yet. Do not apply database changes until James,
+ChatGPT, Gemini, and the final safety review approve it.
 
 ## Migration Safety Rules
 
@@ -30,53 +32,47 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.homepage_control_configs (
   id uuid primary key default gen_random_uuid(),
-
-  status text not null check (status in ('draft', 'preview', 'published')),
-
+  status text not null check (status in ('draft', 'preview', 'published', 'archived')),
   version integer not null check (version > 0),
-  is_active_published boolean not null default false,
-
-  content_config jsonb not null default '{}'::jsonb,
-  layout_config jsonb not null default '{}'::jsonb,
+  is_active boolean not null default false,
+  config jsonb not null default '{}'::jsonb,
+  content jsonb not null default '{}'::jsonb,
   tool_placements jsonb not null default '[]'::jsonb,
-  starter_chips jsonb not null default '[]'::jsonb,
-
+  pre_publish_checklist jsonb not null default '[]'::jsonb,
   validation_errors jsonb not null default '[]'::jsonb,
   validation_warnings jsonb not null default '[]'::jsonb,
-
-  created_by uuid null,
-  created_by_label text null,
-
-  published_by uuid null,
-  published_by_label text null,
-
+  created_by uuid,
+  updated_by uuid,
+  published_by uuid,
+  published_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  published_at timestamptz null,
-
-  reverted_from_config_id uuid null references public.homepage_control_configs(id)
+  updated_at timestamptz not null default now()
 );
 
-create unique index if not exists homepage_control_one_active_published
-on public.homepage_control_configs (is_active_published)
-where is_active_published = true;
+create unique index if not exists homepage_control_one_active_published_idx
+  on public.homepage_control_configs (is_active)
+  where is_active = true and status = 'published';
 
 create index if not exists homepage_control_configs_status_idx
-on public.homepage_control_configs (status);
-
-create index if not exists homepage_control_configs_published_idx
-on public.homepage_control_configs (is_active_published, published_at desc);
+  on public.homepage_control_configs (status);
 
 create index if not exists homepage_control_configs_created_at_idx
-on public.homepage_control_configs (created_at desc);
+  on public.homepage_control_configs (created_at desc);
+
+create index if not exists homepage_control_configs_published_at_idx
+  on public.homepage_control_configs (published_at desc);
 ```
+
+Naming notes:
+
+- `is_active` marks the active homepage row and is constrained by the partial unique index to published rows only.
+- `config` and `content` keep the first schema broad but small.
+- Starter/discovery chip controls are intentionally omitted as top-level columns for now; they can live inside `config` until a future approved phase needs a dedicated column.
 
 ```sql
 create table if not exists public.homepage_control_audit_events (
   id uuid primary key default gen_random_uuid(),
-
-  config_id uuid null references public.homepage_control_configs(id),
-
+  config_id uuid references public.homepage_control_configs (id) on delete set null,
   action text not null check (
     action in (
       'created-draft',
@@ -87,54 +83,46 @@ create table if not exists public.homepage_control_audit_events (
       'validation-failed'
     )
   ),
-
+  actor_id uuid,
+  actor_label text not null,
   message text not null,
-
-  actor_id uuid null,
-  actor_label text null,
-
-  validation_errors jsonb not null default '[]'::jsonb,
   metadata jsonb not null default '{}'::jsonb,
-
   created_at timestamptz not null default now()
 );
 
-create index if not exists homepage_control_audit_config_id_idx
-on public.homepage_control_audit_events (config_id);
+create index if not exists homepage_control_audit_events_config_id_idx
+  on public.homepage_control_audit_events (config_id);
 
-create index if not exists homepage_control_audit_action_idx
-on public.homepage_control_audit_events (action);
+create index if not exists homepage_control_audit_events_action_idx
+  on public.homepage_control_audit_events (action);
 
-create index if not exists homepage_control_audit_created_at_idx
-on public.homepage_control_audit_events (created_at desc);
-
-create index if not exists homepage_control_audit_actor_id_idx
-on public.homepage_control_audit_events (actor_id);
+create index if not exists homepage_control_audit_events_created_at_idx
+  on public.homepage_control_audit_events (created_at desc);
 
 create table if not exists public.homepage_control_checklist_runs (
   id uuid primary key default gen_random_uuid(),
-
-  config_id uuid not null references public.homepage_control_configs(id),
-
-  checklist_items jsonb not null default '{}'::jsonb,
-  all_required_complete boolean not null default false,
-
-  completed_by uuid null,
-  completed_by_label text null,
-
+  config_id uuid not null references public.homepage_control_configs (id) on delete cascade,
+  checklist jsonb not null default '[]'::jsonb,
+  completed_by uuid,
+  completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists homepage_control_checklist_config_id_idx
-on public.homepage_control_checklist_runs (config_id);
+create index if not exists homepage_control_checklist_runs_config_id_idx
+  on public.homepage_control_checklist_runs (config_id);
 
-create index if not exists homepage_control_checklist_complete_idx
-on public.homepage_control_checklist_runs (all_required_complete);
+create index if not exists homepage_control_checklist_runs_created_at_idx
+  on public.homepage_control_checklist_runs (created_at desc);
 
-create index if not exists homepage_control_checklist_created_at_idx
-on public.homepage_control_checklist_runs (created_at desc);
+create index if not exists homepage_control_checklist_runs_completed_at_idx
+  on public.homepage_control_checklist_runs (completed_at desc);
 ```
+
+Checklist notes:
+
+- `checklist` keeps the JSON shape flexible until final Admin UI requirements are approved.
+- Completion readiness should be validated from checklist JSON and/or future approved workflow logic before publish. A separate derived completion column is intentionally omitted for now to avoid storing derived state before the final publish model is approved.
 
 Audit metadata must stay small. Do not store secrets, tokens, private
 environment values, raw request/response payload dumps, or large debug blobs in
@@ -144,31 +132,33 @@ permanently.
 ```sql
 drop view if exists public.public_homepage_control_config;
 
+-- Public view safety:
+-- Supabase-test this security_invoker view with RLS and permissions before applying.
+-- Public reads must work without exposing base table admin data.
+
 create view public.public_homepage_control_config
 with (security_invoker = true) as
 select
   id,
   version,
-  content_config,
-  layout_config,
+  config,
+  content,
   tool_placements,
-  starter_chips,
-  published_at
+  published_at,
+  updated_at
 from public.homepage_control_configs
 where status = 'published'
-  and is_active_published = true
+  and is_active = true
 limit 1;
 
 alter table public.homepage_control_configs enable row level security;
 alter table public.homepage_control_audit_events enable row level security;
 alter table public.homepage_control_checklist_runs enable row level security;
 
-grant usage on schema public to anon;
-grant select on public.public_homepage_control_config to anon;
-
 revoke all on public.homepage_control_configs from anon;
 revoke all on public.homepage_control_audit_events from anon;
 revoke all on public.homepage_control_checklist_runs from anon;
+grant select on public.public_homepage_control_config to anon;
 ```
 
 ## Admin Identity / RLS Policy Notes
@@ -203,45 +193,53 @@ Next.js Admin API routes using server-side credentials.
 -- Documentation-only draft.
 -- These policies intentionally deny access until final Admin identity is approved.
 
-create policy homepage_control_configs_admin_select_placeholder
+drop policy if exists "Admin can read homepage control configs"
+  on public.homepage_control_configs;
+
+create policy "Admin can read homepage control configs"
 on public.homepage_control_configs
 for select
 using (false);
 
-create policy homepage_control_configs_admin_insert_placeholder
-on public.homepage_control_configs
-for insert
-with check (false);
+drop policy if exists "Admin can write homepage control configs"
+  on public.homepage_control_configs;
 
-create policy homepage_control_configs_admin_update_placeholder
+create policy "Admin can write homepage control configs"
 on public.homepage_control_configs
-for update
+for all
 using (false)
 with check (false);
 
-create policy homepage_control_audit_events_admin_select_placeholder
+drop policy if exists "Admin can read homepage control audit events"
+  on public.homepage_control_audit_events;
+
+create policy "Admin can read homepage control audit events"
 on public.homepage_control_audit_events
 for select
 using (false);
 
-create policy homepage_control_audit_events_admin_insert_placeholder
+drop policy if exists "Admin can insert homepage control audit events"
+  on public.homepage_control_audit_events;
+
+create policy "Admin can insert homepage control audit events"
 on public.homepage_control_audit_events
 for insert
 with check (false);
 
-create policy homepage_control_checklist_runs_admin_select_placeholder
+drop policy if exists "Admin can read homepage control checklist runs"
+  on public.homepage_control_checklist_runs;
+
+create policy "Admin can read homepage control checklist runs"
 on public.homepage_control_checklist_runs
 for select
 using (false);
 
-create policy homepage_control_checklist_runs_admin_insert_placeholder
-on public.homepage_control_checklist_runs
-for insert
-with check (false);
+drop policy if exists "Admin can write homepage control checklist runs"
+  on public.homepage_control_checklist_runs;
 
-create policy homepage_control_checklist_runs_admin_update_placeholder
+create policy "Admin can write homepage control checklist runs"
 on public.homepage_control_checklist_runs
-for update
+for all
 using (false)
 with check (false);
 ```
@@ -251,6 +249,10 @@ with check (false);
 The public-safe view uses `security_invoker = true`.
 
 The anonymous role should only read the public-safe view, not the base Control Room tables.
+
+The `security_invoker = true` public view, RLS policies, and grants must be
+Supabase-tested before this draft is applied. Public reads must work without
+exposing base table admin data.
 
 The public-safe view must not expose:
 
@@ -305,7 +307,7 @@ Recommended future direction:
 A future publish flow must:
 
 1. Validate selected preview config.
-2. Validate content/layout/tool placements/starter chips.
+2. Validate config/content/tool placements.
 3. Confirm checklist completion.
 4. Confirm Double-S Safety Check.
 5. Confirm Discovery Search Quality QA.
@@ -313,7 +315,7 @@ A future publish flow must:
 7. Create audit event.
 8. Deactivate current active published config.
 9. Activate selected published config.
-10. Set `published_by`, `published_by_label`, and `published_at`.
+10. Set `published_by` and `published_at`.
 11. Trigger cache/revalidation only after database write succeeds.
 
 ## Draft Publish RPC SQL Skeleton
@@ -333,6 +335,15 @@ Either direction must publish atomically.
 ```sql
 -- Documentation-only skeleton.
 -- Do not execute until final Admin identity, RLS, and tools schema details are approved.
+-- SECURITY DEFINER FUNCTIONS ARE RISKY and must be hardened before real execution.
+-- This skeleton is intentionally disabled and exists only to document the future publish contract.
+-- Final implementation may instead use a protected Next.js Admin API transaction if that better fits
+-- AiFinder's current session and CSRF model.
+-- Tool UUID/ID validation must happen inside the same protected transaction/RPC as publish to prevent
+-- TOCTOU bugs where a tool changes, is deleted, or is archived between validation and activation.
+-- Future publish logic must validate public-safe tools, checklist completion, workflow state, audit
+-- readiness, deactivate the previous active config, activate the target config, set publish metadata,
+-- insert a publish audit event, and return JSON success/failure.
 
 create or replace function public.publish_homepage_control_config(
   target_config_id uuid,
@@ -344,117 +355,17 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  target_config public.homepage_control_configs%rowtype;
-  missing_tool_count integer := 0;
-  unsafe_tool_count integer := 0;
-  checklist_ready boolean := false;
 begin
-  select *
-  into target_config
-  from public.homepage_control_configs
-  where id = target_config_id
-  for update;
-
-  if not found then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Homepage config not found.'
-    );
-  end if;
-
-  if target_config.status <> 'preview' then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Only preview configs can be published.'
-    );
-  end if;
-
-  -- Validate Tool UUIDs stored in target_config.tool_placements.
-  -- Final SQL must match the approved JSON shape and tools table columns.
-  -- Direction:
-  -- 1. Extract every referenced Tool UUID from tool_placements.
-  -- 2. Confirm every Tool UUID exists in public.tools.
-  -- 3. Confirm every referenced tool is public-safe, not deleted, and not archived.
-  -- This validation must happen inside this same protected publish transaction
-  -- to avoid a TOCTOU bug between validation and publish.
-  -- Example placeholders:
-  -- missing_tool_count := count of referenced Tool UUIDs not found in public.tools;
-  -- unsafe_tool_count := count of referenced tools that are not public-safe.
-
-  if missing_tool_count > 0 then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Tool placement references include missing tools.'
-    );
-  end if;
-
-  if unsafe_tool_count > 0 then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Tool placement references include unsafe tools.'
-    );
-  end if;
-
-  select exists (
-    select 1
-    from public.homepage_control_checklist_runs checklist
-    where checklist.config_id = target_config_id
-      and checklist.all_required_complete = true
-  )
-  into checklist_ready;
-
-  if checklist_ready is not true then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Pre-publish checklist is incomplete.'
-    );
-  end if;
-
-  update public.homepage_control_configs
-  set is_active_published = false
-  where is_active_published = true;
-
-  update public.homepage_control_configs
-  set
-    status = 'published',
-    is_active_published = true,
-    published_by = actor_id,
-    published_by_label = actor_label,
-    published_at = now(),
-    updated_at = now()
-  where id = target_config_id;
-
-  insert into public.homepage_control_audit_events (
-    config_id,
-    action,
-    message,
-    actor_id,
-    actor_label,
-    metadata
-  )
-  values (
-    target_config_id,
-    'published',
-    'Homepage config published.',
-    actor_id,
-    actor_label,
-    jsonb_build_object('source', 'publish_homepage_control_config')
-  );
-
   return jsonb_build_object(
-    'success', true,
-    'configId', target_config_id,
-    'publishedAt', now()
+    'success', false,
+    'error', 'Draft publish RPC skeleton is disabled pending final approval.'
   );
-exception
-  when others then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'Homepage publish failed.'
-    );
 end;
 $$;
+
+revoke all on function public.publish_homepage_control_config(uuid, uuid, text) from public;
+revoke all on function public.publish_homepage_control_config(uuid, uuid, text) from anon;
+revoke all on function public.publish_homepage_control_config(uuid, uuid, text) from authenticated;
 ```
 
 ## Rollback/Revert Notes
@@ -478,20 +389,31 @@ Draft direction:
 
 ```sql
 create or replace function public.set_updated_at()
-returns trigger as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$;
 
-create trigger homepage_control_configs_set_updated_at
+drop trigger if exists set_homepage_control_configs_updated_at
+  on public.homepage_control_configs;
+
+create trigger set_homepage_control_configs_updated_at
 before update on public.homepage_control_configs
-for each row execute function public.set_updated_at();
+for each row
+execute function public.set_updated_at();
 
-create trigger homepage_control_checklist_runs_set_updated_at
+drop trigger if exists set_homepage_control_checklist_runs_updated_at
+  on public.homepage_control_checklist_runs;
+
+create trigger set_homepage_control_checklist_runs_updated_at
 before update on public.homepage_control_checklist_runs
-for each row execute function public.set_updated_at();
+for each row
+execute function public.set_updated_at();
 ```
 
 This must be reviewed before execution.
@@ -531,5 +453,5 @@ Before this draft becomes a real migration, decide:
 1. James reviews this SQL migration draft.
 2. Gemini reviews this draft for security, RLS, scalability, and migration risk.
 3. Revise the draft if needed.
-4. Only after final approval, move SQL into a real migration file.
+4. Only after final approval, revise the draft migration file if needed.
 5. Do not apply SQL to Supabase until separately approved.

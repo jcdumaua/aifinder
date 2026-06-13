@@ -92,6 +92,10 @@ create index if not exists homepage_control_checklist_runs_completed_at_idx
 
 drop view if exists public.public_homepage_control_config;
 
+-- Public view safety:
+-- Supabase-test this security_invoker view with RLS and permissions before applying.
+-- Public reads must work without exposing base table admin data.
+
 create view public.public_homepage_control_config
 with (security_invoker = true) as
 select
@@ -104,7 +108,8 @@ select
   updated_at
 from public.homepage_control_configs
 where status = 'published'
-  and is_active = true;
+  and is_active = true
+limit 1;
 
 alter table public.homepage_control_configs enable row level security;
 alter table public.homepage_control_audit_events enable row level security;
@@ -118,6 +123,7 @@ grant select on public.public_homepage_control_config to anon;
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
