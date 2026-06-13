@@ -23,6 +23,18 @@ export type ListHomepageControlConfigsResult = {
   warnings: string[];
 };
 
+export type GetHomepageControlConfigResult = {
+  config: HomepageControlConfigRow | null;
+  errors: string[];
+  warnings: string[];
+};
+
+const HOMEPAGE_CONTROL_CONFIG_SELECT =
+  "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function normalizeActor(actor: HomepageControlActor) {
   const label = actor.label.trim();
   const id = actor.id?.trim() || null;
@@ -168,9 +180,7 @@ export async function listHomepageControlConfigs(): Promise<ListHomepageControlC
   try {
     const { data, error } = await supabaseAdmin
       .from("homepage_control_configs")
-      .select(
-        "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at"
-      )
+      .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
       .order("updated_at", { ascending: false })
       .limit(25);
 
@@ -210,6 +220,70 @@ export async function listHomepageControlConfigs(): Promise<ListHomepageControlC
     return {
       configs: [],
       errors: [`Unexpected Homepage Control Room list error: ${message}`],
+      warnings: [],
+    };
+  }
+}
+
+export async function getHomepageControlConfigById(
+  id: string
+): Promise<GetHomepageControlConfigResult> {
+  try {
+    if (!UUID_PATTERN.test(id)) {
+      return {
+        config: null,
+        errors: ["Invalid Homepage Control Room config ID."],
+        warnings: [],
+      };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("homepage_control_configs")
+      .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      return {
+        config: null,
+        errors: [
+          `Failed to fetch Homepage Control Room config: ${error.message}`,
+        ],
+        warnings: [],
+      };
+    }
+
+    if (!data) {
+      return {
+        config: null,
+        errors: ["Homepage Control Room config not found."],
+        warnings: [],
+      };
+    }
+
+    const parsed = parseHomepageControlConfigRow(data);
+
+    if (!parsed.success || !parsed.row) {
+      return {
+        config: null,
+        errors: parsed.errors,
+        warnings: parsed.warnings,
+      };
+    }
+
+    return {
+      config: parsed.row,
+      errors: [],
+      warnings: parsed.warnings,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      config: null,
+      errors: [
+        `Unexpected Homepage Control Room config fetch error: ${message}`,
+      ],
       warnings: [],
     };
   }

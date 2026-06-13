@@ -1,3 +1,4 @@
+import Link from "next/link";
 import HomepageControlCreateDraftButton from "../../../components/admin/homepage-control-create-draft-button";
 import { listHomepageControlConfigs } from "../../../lib/homepage-control-admin";
 
@@ -88,7 +89,7 @@ export default async function AdminHomepageControlPage() {
               {result.configs.map((config) => (
                 <article
                   key={config.id}
-                  className="grid gap-4 p-5 text-sm sm:p-6 lg:grid-cols-[120px_150px_120px_1fr_1fr]"
+                  className="grid gap-4 p-5 text-sm sm:p-6 lg:grid-cols-[100px_120px_100px_1fr_1fr_80px]"
                 >
                   <div>
                     <p className="text-xs font-semibold uppercase text-gray-500">
@@ -131,6 +132,14 @@ export default async function AdminHomepageControlPage() {
                     <p className="mt-1 text-gray-700">
                       {formatDate(config.updated_at)}
                     </p>
+                  </div>
+                  <div className="flex items-center">
+                    <Link
+                      href={`/admin/homepage-control/${config.id}`}
+                      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                    >
+                      View
+                    </Link>
                   </div>
                 </article>
               ))}
