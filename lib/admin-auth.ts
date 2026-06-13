@@ -3,6 +3,17 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 export const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
 export const ADMIN_CSRF_COOKIE_NAME = "aifinder_admin_csrf_token";
 
+export type VerifiedAdminActor = {
+  id: string | null;
+  label: string;
+};
+
+export type VerifyAdminSessionResult = {
+  isAdmin: boolean;
+  actor: VerifiedAdminActor | null;
+  errors: string[];
+};
+
 function signSession(payload: string, secret: string) {
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
@@ -32,40 +43,77 @@ function getCookieValue(request: Request, cookieName: string) {
   return decodeURIComponent(matchingCookie.slice(cookieName.length + 1));
 }
 
-function isValidAdminSession(request: Request) {
+export function verifyAdminSession(request: Request): VerifyAdminSessionResult {
   const sessionSecret = process.env.ADMIN_SESSION_SECRET;
 
   if (!sessionSecret) {
     console.error("ADMIN_SESSION_SECRET is missing.");
-    return false;
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session is not configured."],
+    };
   }
 
   const session = getCookieValue(request, ADMIN_SESSION_COOKIE_NAME);
 
-  if (!session) return false;
+  if (!session) {
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session cookie is missing."],
+    };
+  }
 
   const lastDotIndex = session.lastIndexOf(".");
 
-  if (lastDotIndex === -1) return false;
+  if (lastDotIndex === -1) {
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session format is invalid."],
+    };
+  }
 
   const payload = session.slice(0, lastDotIndex);
   const signature = session.slice(lastDotIndex + 1);
   const expectedSignature = signSession(payload, sessionSecret);
 
   if (!safeCompare(signature, expectedSignature)) {
-    return false;
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session signature is invalid."],
+    };
   }
 
   const [role, expiresAtText] = payload.split(":");
   const expiresAt = Number(expiresAtText);
 
-  if (role !== "admin") return false;
-
-  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) {
-    return false;
+  if (role !== "admin") {
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session role is invalid."],
+    };
   }
 
-  return true;
+  if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) {
+    return {
+      isAdmin: false,
+      actor: null,
+      errors: ["Admin session is expired."],
+    };
+  }
+
+  return {
+    isAdmin: true,
+    actor: {
+      id: null,
+      label: "AiFinder Admin",
+    },
+    errors: [],
+  };
 }
 
 export function createAdminCsrfToken() {
@@ -98,5 +146,5 @@ export function verifyAdminCsrfRequest(request: Request) {
 }
 
 export function isAuthorizedAdminRequest(request: Request) {
-  return isValidAdminSession(request);
+  return verifyAdminSession(request).isAdmin;
 }
