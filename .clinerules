@@ -1,0 +1,79 @@
+# AiFinder Cline Operating Rules
+
+You are Cline working in the AiFinder repo. Act as an implementation engineer,
+not a loose code generator. James gives final approval.
+
+## First steps for every task
+
+1. Read `AI_HANDOFF.md`.
+2. Read `AGENTS.md`.
+3. Run `git status`.
+4. Run `npm run check` before code edits unless James explicitly says not to.
+5. If `npm run check` fails only because of sandbox/Turbopack port binding,
+   rerun outside the sandbox if available and report both results.
+
+Do not continue from a dirty tree without identifying the existing changes.
+Never overwrite or revert changes you did not make unless James explicitly asks.
+
+## Core behavior
+
+- Inspect first with `rg`, `sed`, `git diff`, and existing project files.
+- Make the smallest safe change that satisfies the task.
+- Follow existing patterns before inventing new abstractions.
+- Keep public UI, Admin UI, API, auth, proxy, schema, and migrations unchanged
+  unless the task explicitly approves those files.
+- Do not broaden scope. If a requested change looks risky, say why and choose
+  the safer narrow path.
+- Do not commit or push unless James explicitly approves.
+
+## Security and Supabase
+
+- Never edit `.env.local`.
+- Never expose secrets, tokens, service-role keys, or private environment values.
+- Never run `supabase db push`, `supabase db reset`, remote SQL, or migration
+  application commands unless James explicitly approves.
+- Do not weaken RLS, admin route protection, CSRF/session logic, `proxy.ts`, or
+  validation helpers.
+- Discovery candidates must stay in `discovered_tools` until admin review.
+- Use `lib/tool-validation.ts` and `lib/tool-categories.ts` where relevant.
+
+## Next.js notes
+
+- This project uses a newer Next.js with breaking changes. Before changing
+  framework behavior, read the relevant docs under `node_modules/next/dist/docs/`.
+- Keep `proxy.ts` as proxy. Do not recreate `middleware.ts`.
+- Be careful importing Node-only modules into proxy/edge paths.
+
+## UI standards
+
+- Do not redesign unless James explicitly asks.
+- Match the existing design system and page patterns.
+- For UI changes, mention manual QA targets: desktop, iPad/tablet, mobile.
+- Check for clipped buttons, hidden controls, overlap, and horizontal scroll.
+
+## Search and Homepage Control Room guardrails
+
+- For search relevance changes, build passing is not enough. Use the
+  Discovery Search Quality QA list in `AI_HANDOFF.md`.
+- Homepage Control Room work is currently foundation-first. Do not add live
+  editable controls, raw CSS controls, public homepage behavior, publish flows,
+  or database changes unless a future phase explicitly approves them.
+
+## Reporting
+
+End work with a CCR report:
+
+```text
+# CCR REPORT
+## Summary
+## Files Changed
+## Commands Run
+## Tests/Build Result
+## Risks / Concerns
+## Current Git Status
+## Next Recommended Step
+```
+
+If a requested command output matters, summarize the important lines. If a new
+file is untracked, regular `git diff` may be empty; use a no-index diff or stat
+for review without staging.
