@@ -108,6 +108,7 @@ export type AdminView =
   | "dashboard"
   | "tools"
   | "discovery"
+  | "homepage-control"
   | "moderation"
   | "analytics"
   | "notifications"
@@ -124,6 +125,11 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", view: "dashboard" },
   { label: "Tools", href: "/admin/tools", view: "tools" },
   { label: "Discovery", href: "/admin/discovery", view: "discovery" },
+  {
+    label: "Homepage Control Room",
+    href: "/admin/homepage-control",
+    view: "homepage-control",
+  },
   { label: "Moderation", href: "/admin/moderation", view: "moderation" },
   { label: "Analytics", href: "/admin/analytics", view: "analytics" },
   { label: "Notifications", href: "/admin/notifications", view: "notifications" },
@@ -172,6 +178,12 @@ const ADMIN_PAGE_COPY: Record<
     title: "Discovery Engine Prep",
     description:
       "Review discovered-tool foundations, duplicate warnings, and future AI recommendation structures.",
+  },
+  "homepage-control": {
+    eyebrow: "Homepage Controls",
+    title: "Homepage Control Room",
+    description:
+      "Create and review draft homepage configs. Draft-only. Does not affect the live homepage.",
   },
   moderation: {
     eyebrow: "Moderation",
@@ -3490,6 +3502,24 @@ export default function AdminDashboardClient({
                   </div>
                 )}
               </div>
+
+              <Link
+                href="/admin/homepage-control"
+                className="mb-3 flex flex-col gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-3 transition hover:border-cyan-300 hover:bg-cyan-100 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="text-sm font-black text-slate-950">
+                    Homepage Control Room
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    Create and review draft homepage configs. Draft-only. Does
+                    not affect the live homepage.
+                  </p>
+                </div>
+                <span className="inline-flex w-fit shrink-0 rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-bold text-cyan-700">
+                  Open draft room
+                </span>
+              </Link>
 
               <div
                 className={`mb-3 rounded-2xl border p-3 ${
