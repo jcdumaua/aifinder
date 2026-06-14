@@ -2,8 +2,15 @@
 
 import { createDefaultHomepageControlDraftValues } from "./homepage-control-defaults";
 import { parseHomepageControlConfigRow } from "./homepage-control-parser";
+import {
+  isHomepageDensityPreset,
+  isHomepageLayoutPreset,
+} from "./homepage-control-schema";
 import type { HomepageControlConfigRow } from "./homepage-control-types";
-import { validateHomepageControlConfigRow } from "./homepage-control-validation";
+import {
+  isRecord,
+  validateHomepageControlConfigRow,
+} from "./homepage-control-validation";
 import { supabaseAdmin } from "./supabase-admin";
 
 export type HomepageControlActor = {
@@ -29,6 +36,23 @@ export type GetHomepageControlConfigResult = {
   warnings: string[];
 };
 
+export type UpdateHomepageControlDraftResult = {
+  draft: HomepageControlConfigRow | null;
+  errors: string[];
+  warnings: string[];
+};
+
+type ParsedHomepageControlDraftUpdate = {
+  layoutPreset: string;
+  densityPreset: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  checklist: {
+    id: string;
+    completed: boolean;
+  }[];
+};
+
 const HOMEPAGE_CONTROL_CONFIG_SELECT =
   "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at";
 
@@ -40,6 +64,187 @@ function normalizeActor(actor: HomepageControlActor) {
   const id = actor.id?.trim() || null;
 
   return { id, label };
+}
+
+function isValidHomepageControlConfigId(id: string) {
+  return UUID_PATTERN.test(id);
+}
+
+function containsRawHtml(value: string) {
+  return /<[^>]+>/.test(value);
+}
+
+function containsScriptLikeContent(value: string) {
+  return /script|javascript:|onerror\s*=|onload\s*=/i.test(value);
+}
+
+function parseDraftUpdatePayload(payload: unknown): {
+  data: ParsedHomepageControlDraftUpdate | null;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!isRecord(payload)) {
+    return {
+      data: null,
+      errors: ["Homepage Control Room draft update payload must be an object."],
+      warnings,
+    };
+  }
+
+  const layoutPreset =
+    typeof payload.layoutPreset === "string" ? payload.layoutPreset : "";
+  const densityPreset =
+    typeof payload.densityPreset === "string" ? payload.densityPreset : "";
+  const heroTitle =
+    typeof payload.heroTitle === "string" ? payload.heroTitle.trim() : "";
+  const heroSubtitle =
+    typeof payload.heroSubtitle === "string" ? payload.heroSubtitle.trim() : "";
+  const checklistValue = payload.checklist;
+
+  if (!isHomepageLayoutPreset(layoutPreset)) {
+    errors.push("Layout preset is not allowed.");
+  }
+
+  if (!isHomepageDensityPreset(densityPreset)) {
+    errors.push("Density preset is not allowed.");
+  }
+
+  if (typeof payload.heroTitle !== "string") {
+    errors.push("Hero title must be text.");
+  }
+
+  if (typeof payload.heroSubtitle !== "string") {
+    errors.push("Hero subtitle must be text.");
+  }
+
+  if (heroTitle.length > 90) {
+    errors.push("Hero title must be 90 characters or fewer.");
+  }
+
+  if (heroSubtitle.length > 220) {
+    errors.push("Hero subtitle must be 220 characters or fewer.");
+  }
+
+  if (containsRawHtml(heroTitle) || containsRawHtml(heroSubtitle)) {
+    errors.push("Hero text cannot include raw HTML.");
+  }
+
+  if (
+    containsScriptLikeContent(heroTitle) ||
+    containsScriptLikeContent(heroSubtitle)
+  ) {
+    errors.push("Hero text cannot include script-like content.");
+  }
+
+  if (!heroTitle) {
+    warnings.push("Hero title is empty.");
+  } else if (heroTitle.length < 8) {
+    warnings.push("Hero title is short; confirm it is clear enough.");
+  }
+
+  if (!heroSubtitle) {
+    warnings.push("Hero subtitle is empty.");
+  } else if (heroSubtitle.length < 20) {
+    warnings.push("Hero subtitle is short; confirm it explains the homepage.");
+  }
+
+  if (!Array.isArray(checklistValue)) {
+    errors.push("Checklist must be an array.");
+  }
+
+  const checklist = Array.isArray(checklistValue)
+    ? checklistValue
+        .map((item) => {
+          if (
+            isRecord(item) &&
+            typeof item.id === "string" &&
+            typeof item.completed === "boolean"
+          ) {
+            return {
+              id: item.id,
+              completed: item.completed,
+            };
+          }
+
+          errors.push("Checklist items must include id and completed fields.");
+          return null;
+        })
+        .filter((item): item is { id: string; completed: boolean } =>
+          Boolean(item)
+        )
+    : [];
+
+  if (errors.length > 0) {
+    return {
+      data: null,
+      errors,
+      warnings,
+    };
+  }
+
+  return {
+    data: {
+      layoutPreset,
+      densityPreset,
+      heroTitle,
+      heroSubtitle,
+      checklist,
+    },
+    errors,
+    warnings,
+  };
+}
+
+function mergeDraftUpdate(
+  current: HomepageControlConfigRow,
+  update: ParsedHomepageControlDraftUpdate,
+  warnings: string[]
+): Pick<
+  HomepageControlConfigRow,
+  | "config"
+  | "content"
+  | "pre_publish_checklist"
+  | "validation_errors"
+  | "validation_warnings"
+> {
+  const currentHero = isRecord(current.content.hero) ? current.content.hero : {};
+  const requestedChecklist = new Map(
+    update.checklist.map((item) => [item.id, item.completed])
+  );
+  const currentChecklistIds = new Set(
+    current.pre_publish_checklist.map((item) => item.id)
+  );
+
+  update.checklist.forEach((item) => {
+    if (!currentChecklistIds.has(item.id)) {
+      warnings.push(`Unknown checklist item ignored: ${item.id}`);
+    }
+  });
+
+  return {
+    config: {
+      ...current.config,
+      layoutPreset: update.layoutPreset,
+      densityPreset: update.densityPreset,
+    },
+    content: {
+      ...current.content,
+      hero: {
+        ...currentHero,
+        title: update.heroTitle,
+        subtitle: update.heroSubtitle,
+      },
+    },
+    pre_publish_checklist: current.pre_publish_checklist.map((item) => ({
+      ...item,
+      completed: requestedChecklist.get(item.id) ?? item.completed,
+    })),
+    validation_errors: [],
+    validation_warnings: warnings,
+  };
 }
 
 function buildDraftValidationRow(
@@ -229,7 +434,7 @@ export async function getHomepageControlConfigById(
   id: string
 ): Promise<GetHomepageControlConfigResult> {
   try {
-    if (!UUID_PATTERN.test(id)) {
+    if (!isValidHomepageControlConfigId(id)) {
       return {
         config: null,
         errors: ["Invalid Homepage Control Room config ID."],
@@ -284,6 +489,203 @@ export async function getHomepageControlConfigById(
       errors: [
         `Unexpected Homepage Control Room config fetch error: ${message}`,
       ],
+      warnings: [],
+    };
+  }
+}
+
+export async function updateHomepageControlDraft(
+  id: string,
+  payload: unknown,
+  actor: HomepageControlActor
+): Promise<UpdateHomepageControlDraftResult> {
+  try {
+    if (!isValidHomepageControlConfigId(id)) {
+      return {
+        draft: null,
+        errors: ["Invalid Homepage Control Room draft ID."],
+        warnings: [],
+      };
+    }
+
+    const normalizedActor = normalizeActor(actor);
+
+    if (!normalizedActor.label) {
+      return {
+        draft: null,
+        errors: ["Homepage Control Room actor label is required."],
+        warnings: [],
+      };
+    }
+
+    const payloadResult = parseDraftUpdatePayload(payload);
+
+    if (!payloadResult.data) {
+      return {
+        draft: null,
+        errors: payloadResult.errors,
+        warnings: payloadResult.warnings,
+      };
+    }
+
+    const currentResult = await getHomepageControlConfigById(id);
+
+    if (!currentResult.config) {
+      return {
+        draft: null,
+        errors: currentResult.errors,
+        warnings: currentResult.warnings,
+      };
+    }
+
+    const current = currentResult.config;
+
+    if (current.status !== "draft") {
+      return {
+        draft: null,
+        errors: ["Only draft Homepage Control Room configs can be edited."],
+        warnings: currentResult.warnings,
+      };
+    }
+
+    const validationWarnings = [
+      ...currentResult.warnings,
+      ...payloadResult.warnings,
+    ];
+    const mergedValues = mergeDraftUpdate(
+      current,
+      payloadResult.data,
+      validationWarnings
+    );
+    const updatedAt = new Date().toISOString();
+    const validationRow: HomepageControlConfigRow = {
+      ...current,
+      ...mergedValues,
+      updated_by: normalizedActor.id,
+      updated_at: updatedAt,
+    };
+    const validationResult = validateHomepageControlConfigRow(validationRow);
+
+    if (!validationResult.isValid) {
+      return {
+        draft: null,
+        errors: validationResult.errors,
+        warnings: [
+          ...validationWarnings,
+          ...validationResult.warnings,
+        ],
+      };
+    }
+
+    const safeUpdate = {
+      ...mergedValues,
+      validation_warnings: [
+        ...validationWarnings,
+        ...validationResult.warnings,
+      ],
+      updated_by: normalizedActor.id,
+      updated_at: updatedAt,
+    };
+
+    const { data: updatedDraft, error: updateError } = await supabaseAdmin
+      .from("homepage_control_configs")
+      .update(safeUpdate)
+      .eq("id", id)
+      .eq("status", "draft")
+      .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
+      .maybeSingle();
+
+    if (updateError) {
+      return {
+        draft: null,
+        errors: [
+          `Failed to update Homepage Control Room draft: ${updateError.message}`,
+        ],
+        warnings: validationWarnings,
+      };
+    }
+
+    if (!updatedDraft) {
+      return {
+        draft: null,
+        errors: ["Draft was not found or is no longer editable."],
+        warnings: validationWarnings,
+      };
+    }
+
+    const parsedDraft = parseHomepageControlConfigRow(updatedDraft);
+
+    if (!parsedDraft.success || !parsedDraft.row) {
+      return {
+        draft: null,
+        errors: parsedDraft.errors,
+        warnings: [...validationWarnings, ...parsedDraft.warnings],
+      };
+    }
+
+    const { error: auditInsertError } = await supabaseAdmin
+      .from("homepage_control_audit_events")
+      .insert({
+        config_id: parsedDraft.row.id,
+        action: "updated-draft",
+        actor_id: normalizedActor.id,
+        actor_label: normalizedActor.label,
+        message: "Homepage Control Room draft updated.",
+        metadata: {
+          source: "homepage-control-admin",
+          version: parsedDraft.row.version,
+          fields: [
+            "config.layoutPreset",
+            "config.densityPreset",
+            "content.hero.title",
+            "content.hero.subtitle",
+            "pre_publish_checklist.completed",
+          ],
+        },
+      });
+
+    if (auditInsertError) {
+      const { error: rollbackError } = await supabaseAdmin
+        .from("homepage_control_configs")
+        .update({
+          config: current.config,
+          content: current.content,
+          pre_publish_checklist: current.pre_publish_checklist,
+          validation_errors: current.validation_errors,
+          validation_warnings: current.validation_warnings,
+          updated_by: current.updated_by,
+          updated_at: current.updated_at,
+        })
+        .eq("id", current.id)
+        .eq("status", "draft");
+      const warnings = [...validationWarnings, ...parsedDraft.warnings];
+
+      if (rollbackError) {
+        warnings.push(
+          `Failed to roll back unaudited Homepage Control Room draft update: ${rollbackError.message}`
+        );
+      }
+
+      return {
+        draft: null,
+        errors: [
+          `Failed to create Homepage Control Room audit event: ${auditInsertError.message}`,
+        ],
+        warnings,
+      };
+    }
+
+    return {
+      draft: parsedDraft.row,
+      errors: [],
+      warnings: [...validationWarnings, ...parsedDraft.warnings],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      draft: null,
+      errors: [`Unexpected Homepage Control Room update error: ${message}`],
       warnings: [],
     };
   }

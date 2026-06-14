@@ -192,13 +192,23 @@ export default async function AdminHomepageControlDetailPage({
                 delete, archive, or affect the live homepage.
               </p>
             </div>
-            <span
-              className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${statusClass(
-                config.status
-              )}`}
-            >
-              {config.status}
-            </span>
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center md:flex-col md:items-end">
+              <span
+                className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${statusClass(
+                  config.status
+                )}`}
+              >
+                {config.status}
+              </span>
+              {config.status === "draft" && (
+                <Link
+                  href={`/admin/homepage-control/${config.id}/edit`}
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800"
+                >
+                  Edit Draft
+                </Link>
+              )}
+            </div>
           </div>
         </section>
 
