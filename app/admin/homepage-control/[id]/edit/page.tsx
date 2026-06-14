@@ -57,8 +57,8 @@ export default async function AdminHomepageControlEditPage({
               This config cannot be edited
             </h1>
             <p className="mt-3 text-sm leading-6">
-              Only draft Homepage Control Room configs can be edited. This
-              config is currently marked as {config.status}.
+              This configuration is locked because it is in {config.status}
+              status. Only draft Homepage Control Room configs can be edited.
             </p>
           </section>
         </div>

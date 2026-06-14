@@ -62,6 +62,13 @@ export type PublishHomepageControlConfigResult = {
   warnings: string[];
 };
 
+export type MarkHomepageControlConfigAsPreviewResult = {
+  success: boolean;
+  data: HomepageControlConfigRow | null;
+  errors: string[];
+  warnings: string[];
+};
+
 export type HomepagePreviewTool = {
   requestedId: string;
   name: string;
@@ -738,6 +745,224 @@ export async function publishHomepageControlConfig(
       success: false,
       data: null,
       errors: ["Unexpected Homepage Control Room publish error."],
+      warnings: [],
+    };
+  }
+}
+
+export async function markHomepageControlConfigAsPreview(
+  id: string,
+  actor: HomepageControlActor
+): Promise<MarkHomepageControlConfigAsPreviewResult> {
+  try {
+    if (!isValidHomepageControlConfigId(id)) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Invalid Homepage Control Room config ID."],
+        warnings: [],
+      };
+    }
+
+    const normalizedActor = normalizeActor(actor);
+
+    if (!normalizedActor.label) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Homepage Control Room actor label is required."],
+        warnings: [],
+      };
+    }
+
+    const currentResult = await getHomepageControlConfigById(id);
+
+    if (!currentResult.config) {
+      return {
+        success: false,
+        data: null,
+        errors: currentResult.errors,
+        warnings: currentResult.warnings,
+      };
+    }
+
+    const current = currentResult.config;
+
+    if (current.status !== "draft") {
+      return {
+        success: false,
+        data: null,
+        errors: ["Only draft Homepage Control Room configs can move to preview."],
+        warnings: currentResult.warnings,
+      };
+    }
+
+    const validationResult = validateHomepageControlConfigRow(current);
+    const errors = [...currentResult.errors, ...validationResult.errors];
+    const warnings = [...currentResult.warnings, ...validationResult.warnings];
+
+    if (current.validation_errors.length > 0) {
+      errors.push(...current.validation_errors);
+    }
+
+    const hero = isRecord(current.content.hero) ? current.content.hero : {};
+    const heroTitle = typeof hero.title === "string" ? hero.title.trim() : "";
+
+    if (!heroTitle) {
+      errors.push("Hero title is required before moving to preview.");
+    }
+
+    const hydratedPlacements = await hydrateHomepagePreviewToolPlacements(current);
+    warnings.push(...hydratedPlacements.warnings);
+
+    if (hydratedPlacements.errors.length > 0) {
+      errors.push(...hydratedPlacements.errors);
+    }
+
+    const missingToolReferences = hydratedPlacements.placements.flatMap(
+      (placement) => [
+        ...placement.unsupportedReferences,
+        ...placement.tools
+          .filter((tool) => tool.isMissing)
+          .map((tool) => tool.requestedId),
+      ]
+    );
+
+    if (missingToolReferences.length > 0) {
+      errors.push(
+        `Tool placements reference missing or unsupported tools: ${Array.from(
+          new Set(missingToolReferences)
+        ).join(", ")}.`
+      );
+    }
+
+    if (errors.length > 0 || !validationResult.isValid) {
+      return {
+        success: false,
+        data: null,
+        errors,
+        warnings,
+      };
+    }
+
+    const updatedAt = new Date().toISOString();
+    const { data: updatedConfig, error: updateError } = await supabaseAdmin
+      .from("homepage_control_configs")
+      .update({
+        status: "preview",
+        updated_by: normalizedActor.id,
+        updated_at: updatedAt,
+      })
+      .eq("id", current.id)
+      .eq("status", "draft")
+      .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
+      .maybeSingle();
+
+    if (updateError) {
+      return {
+        success: false,
+        data: null,
+        errors: [
+          `Failed to move Homepage Control Room config to preview: ${updateError.message}`,
+        ],
+        warnings,
+      };
+    }
+
+    if (!updatedConfig) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Config was not found or is no longer a draft."],
+        warnings,
+      };
+    }
+
+    const parsedConfig = parseHomepageControlConfigRow(updatedConfig);
+
+    if (!parsedConfig.success || !parsedConfig.row) {
+      const rollbackWarnings = [...warnings, ...parsedConfig.warnings];
+      const { error: rollbackError } = await supabaseAdmin
+        .from("homepage_control_configs")
+        .update({
+          status: current.status,
+          updated_by: current.updated_by,
+          updated_at: current.updated_at,
+        })
+        .eq("id", current.id)
+        .eq("status", "preview");
+
+      if (rollbackError) {
+        rollbackWarnings.push(
+          `Failed to roll back invalid Homepage Control Room preview transition: ${rollbackError.message}`
+        );
+      }
+
+      return {
+        success: false,
+        data: null,
+        errors: parsedConfig.errors,
+        warnings: rollbackWarnings,
+      };
+    }
+
+    const { error: auditInsertError } = await supabaseAdmin
+      .from("homepage_control_audit_events")
+      .insert({
+        config_id: parsedConfig.row.id,
+        action: "transitioned-to-preview",
+        actor_id: normalizedActor.id,
+        actor_label: normalizedActor.label,
+        message: "Homepage Control Room config moved to preview.",
+        metadata: {
+          source: "homepage-control-admin",
+          version: parsedConfig.row.version,
+          previousStatus: "draft",
+          nextStatus: "preview",
+        },
+      });
+
+    if (auditInsertError) {
+      const rollbackWarnings = [...warnings, ...parsedConfig.warnings];
+      const { error: rollbackError } = await supabaseAdmin
+        .from("homepage_control_configs")
+        .update({
+          status: current.status,
+          updated_by: current.updated_by,
+          updated_at: current.updated_at,
+        })
+        .eq("id", current.id)
+        .eq("status", "preview");
+
+      if (rollbackError) {
+        rollbackWarnings.push(
+          `Failed to roll back unaudited Homepage Control Room preview transition: ${rollbackError.message}`
+        );
+      }
+
+      return {
+        success: false,
+        data: null,
+        errors: [
+          `Failed to create Homepage Control Room audit event: ${auditInsertError.message}`,
+        ],
+        warnings: rollbackWarnings,
+      };
+    }
+
+    return {
+      success: true,
+      data: parsedConfig.row,
+      errors: [],
+      warnings: [...warnings, ...parsedConfig.warnings],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      success: false,
+      data: null,
+      errors: [`Unexpected Homepage Control Room preview transition error: ${message}`],
       warnings: [],
     };
   }

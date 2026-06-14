@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import HomepageControlMarkPreviewButton from "../../../../components/admin/homepage-control-mark-preview-button";
 import { getHomepageControlConfigById } from "../../../../lib/homepage-control-admin";
 import type { HomepageControlConfigRow } from "../../../../lib/homepage-control-types";
 
@@ -201,12 +202,18 @@ export default async function AdminHomepageControlDetailPage({
                 {config.status}
               </span>
               {config.status === "draft" && (
-                <Link
-                  href={`/admin/homepage-control/${config.id}/edit`}
-                  className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800"
-                >
-                  Edit Draft
-                </Link>
+                <>
+                  <Link
+                    href={`/admin/homepage-control/${config.id}/edit`}
+                    className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800"
+                  >
+                    Edit Draft
+                  </Link>
+                  <HomepageControlMarkPreviewButton
+                    configId={config.id}
+                    label="Move to Preview"
+                  />
+                </>
               )}
               {(config.status === "draft" ||
                 config.status === "preview" ||
