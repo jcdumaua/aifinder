@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import HomepageControlMarkPreviewButton from "../../../../components/admin/homepage-control-mark-preview-button";
+import HomepageControlPublishButton from "../../../../components/admin/homepage-control-publish-button";
 import { getHomepageControlConfigById } from "../../../../lib/homepage-control-admin";
 import type { HomepageControlConfigRow } from "../../../../lib/homepage-control-types";
 
@@ -214,6 +215,9 @@ export default async function AdminHomepageControlDetailPage({
                     label="Move to Preview"
                   />
                 </>
+              )}
+              {config.status === "preview" && (
+                <HomepageControlPublishButton configId={config.id} />
               )}
               {(config.status === "draft" ||
                 config.status === "preview" ||
