@@ -42,6 +42,35 @@ export type UpdateHomepageControlDraftResult = {
   warnings: string[];
 };
 
+export type RecordHomepageControlPreviewResult = {
+  success: boolean;
+  errors: string[];
+  warnings: string[];
+};
+
+export type HomepagePreviewTool = {
+  requestedId: string;
+  name: string;
+  category: string;
+  description: string;
+  website: string;
+  pricing: string;
+  isMissing: boolean;
+};
+
+export type HomepagePreviewToolPlacement = {
+  placementId: string;
+  title: string;
+  tools: HomepagePreviewTool[];
+  unsupportedReferences: string[];
+};
+
+export type HydrateHomepagePreviewToolPlacementsResult = {
+  placements: HomepagePreviewToolPlacement[];
+  errors: string[];
+  warnings: string[];
+};
+
 type ParsedHomepageControlDraftUpdate = {
   layoutPreset: string;
   densityPreset: string;
@@ -245,6 +274,40 @@ function mergeDraftUpdate(
     validation_errors: [],
     validation_warnings: warnings,
   };
+}
+
+function getStringValue(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function getNumericToolIds(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === "number" && Number.isInteger(item) && item > 0) {
+        return item;
+      }
+
+      if (typeof item === "string") {
+        const parsed = Number(item);
+
+        if (Number.isInteger(parsed) && parsed > 0) {
+          return parsed;
+        }
+      }
+
+      return null;
+    })
+    .filter((item): item is number => item !== null);
+}
+
+function getUnsupportedToolReferences(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item) => typeof item === "string" && item.trim().length > 0)
+    .map((item) => String(item));
 }
 
 function buildDraftValidationRow(
@@ -494,6 +557,84 @@ export async function getHomepageControlConfigById(
   }
 }
 
+export async function recordHomepageControlPreview(
+  id: string,
+  actor: HomepageControlActor,
+  version?: number
+): Promise<RecordHomepageControlPreviewResult> {
+  try {
+    if (!isValidHomepageControlConfigId(id)) {
+      return {
+        success: false,
+        errors: ["Invalid Homepage Control Room config ID."],
+        warnings: [],
+      };
+    }
+
+    const normalizedActor = normalizeActor(actor);
+
+    if (!normalizedActor.label) {
+      return {
+        success: false,
+        errors: ["Homepage Control Room actor label is required."],
+        warnings: [],
+      };
+    }
+
+    const metadata: Record<string, unknown> = {
+      source: "homepage-control-preview",
+      previewedAt: new Date().toISOString(),
+    };
+
+    if (typeof version === "number" && Number.isFinite(version)) {
+      metadata.version = version;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("homepage_control_audit_events")
+      .insert({
+        config_id: id,
+        action: "previewed",
+        actor_id: normalizedActor.id,
+        actor_label: normalizedActor.label,
+        message: "Homepage Control Room config previewed.",
+        metadata,
+      });
+
+    if (error) {
+      console.error(
+        "Homepage Control Room preview audit insert failed:",
+        error.message
+      );
+
+      return {
+        success: false,
+        errors: ["Failed to record Homepage Control Room preview audit event."],
+        warnings: [],
+      };
+    }
+
+    return {
+      success: true,
+      errors: [],
+      warnings: [],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    console.error(
+      "Unexpected Homepage Control Room preview audit error:",
+      message
+    );
+
+    return {
+      success: false,
+      errors: ["Unexpected Homepage Control Room preview audit error."],
+      warnings: [],
+    };
+  }
+}
+
 export async function updateHomepageControlDraft(
   id: string,
   payload: unknown,
@@ -686,6 +827,126 @@ export async function updateHomepageControlDraft(
     return {
       draft: null,
       errors: [`Unexpected Homepage Control Room update error: ${message}`],
+      warnings: [],
+    };
+  }
+}
+
+export async function hydrateHomepagePreviewToolPlacements(
+  config: HomepageControlConfigRow
+): Promise<HydrateHomepagePreviewToolPlacementsResult> {
+  try {
+    const placementRecords = config.tool_placements
+      .map((placement, index) => {
+        if (!isRecord(placement)) {
+          return {
+            placementId: `placement-${index + 1}`,
+            title: `Placement ${index + 1}`,
+            toolIds: [],
+            unsupportedReferences: [],
+          };
+        }
+
+        const toolIds = [
+          ...getNumericToolIds(placement.toolIds),
+          ...getNumericToolIds(placement.tool_ids),
+          ...getNumericToolIds(placement.toolId ? [placement.toolId] : []),
+          ...getNumericToolIds(placement.tool_id ? [placement.tool_id] : []),
+        ];
+        const unsupportedReferences = [
+          ...getUnsupportedToolReferences(placement.toolSlugs),
+          ...getUnsupportedToolReferences(placement.tool_slugs),
+        ];
+
+        return {
+          placementId: getStringValue(
+            placement.placementId ?? placement.placement_id,
+            `placement-${index + 1}`
+          ),
+          title: getStringValue(placement.title, `Placement ${index + 1}`),
+          toolIds,
+          unsupportedReferences,
+        };
+      });
+    const uniqueToolIds = Array.from(
+      new Set(placementRecords.flatMap((placement) => placement.toolIds))
+    );
+
+    if (uniqueToolIds.length === 0) {
+      return {
+        placements: placementRecords.map((placement) => ({
+          placementId: placement.placementId,
+          title: placement.title,
+          tools: [],
+          unsupportedReferences: placement.unsupportedReferences,
+        })),
+        errors: [],
+        warnings:
+          placementRecords.length > 0
+            ? [
+                "Tool placement references were not hydrated because no numeric tool IDs were found.",
+              ]
+            : [],
+      };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("tools")
+      .select("id, name, category, description, website, pricing")
+      .in("id", uniqueToolIds);
+
+    if (error) {
+      return {
+        placements: [],
+        errors: [`Failed to hydrate homepage preview tools: ${error.message}`],
+        warnings: [],
+      };
+    }
+
+    const toolMap = new Map<number, HomepagePreviewTool>();
+
+    (data || []).forEach((tool) => {
+      if (typeof tool.id !== "number") return;
+
+      toolMap.set(tool.id, {
+        requestedId: String(tool.id),
+        name: getStringValue(tool.name, "Untitled tool"),
+        category: getStringValue(tool.category, "AI Tool"),
+        description: getStringValue(tool.description, "No description yet."),
+        website: getStringValue(tool.website, "#"),
+        pricing: getStringValue(tool.pricing, "Unknown"),
+        isMissing: false,
+      });
+    });
+
+    return {
+      placements: placementRecords.map((placement) => ({
+        placementId: placement.placementId,
+        title: placement.title,
+        unsupportedReferences: placement.unsupportedReferences,
+        tools: placement.toolIds.map(
+          (toolId) =>
+            toolMap.get(toolId) || {
+              requestedId: String(toolId),
+              name: "Missing tool",
+              category: "Unavailable",
+              description:
+                "This referenced tool was not found in the live tools table.",
+              website: "#",
+              pricing: "Unknown",
+              isMissing: true,
+            }
+        ),
+      })),
+      errors: [],
+      warnings: [],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      placements: [],
+      errors: [`Unexpected homepage preview hydration error: ${message}`],
       warnings: [],
     };
   }

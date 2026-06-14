@@ -208,6 +208,16 @@ export default async function AdminHomepageControlDetailPage({
                   Edit Draft
                 </Link>
               )}
+              {(config.status === "draft" ||
+                config.status === "preview" ||
+                config.status === "published") && (
+                <Link
+                  href={`/admin/homepage-control/${config.id}/preview`}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+                >
+                  Preview
+                </Link>
+              )}
             </div>
           </div>
         </section>
