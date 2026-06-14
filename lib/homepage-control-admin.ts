@@ -48,6 +48,20 @@ export type RecordHomepageControlPreviewResult = {
   warnings: string[];
 };
 
+export type PublishHomepageControlConfigData = {
+  success: boolean;
+  config_id: string;
+  status: string;
+  published_at: string;
+};
+
+export type PublishHomepageControlConfigResult = {
+  success: boolean;
+  data: PublishHomepageControlConfigData | null;
+  errors: string[];
+  warnings: string[];
+};
+
 export type HomepagePreviewTool = {
   requestedId: string;
   name: string;
@@ -630,6 +644,100 @@ export async function recordHomepageControlPreview(
     return {
       success: false,
       errors: ["Unexpected Homepage Control Room preview audit error."],
+      warnings: [],
+    };
+  }
+}
+
+export async function publishHomepageControlConfig(
+  id: string,
+  actor: HomepageControlActor
+): Promise<PublishHomepageControlConfigResult> {
+  try {
+    if (!isValidHomepageControlConfigId(id)) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Invalid Homepage Control Room config ID."],
+        warnings: [],
+      };
+    }
+
+    const normalizedActor = normalizeActor(actor);
+
+    if (!normalizedActor.label) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Homepage Control Room actor label is required."],
+        warnings: [],
+      };
+    }
+
+    const { data, error } = await supabaseAdmin.rpc(
+      "publish_homepage_control_config",
+      {
+        p_config_id: id,
+        p_actor_id: normalizedActor.id,
+        p_actor_label: normalizedActor.label,
+      }
+    );
+
+    if (error) {
+      console.error("Homepage Control Room publish RPC failed:", error.message);
+
+      return {
+        success: false,
+        data: null,
+        errors: ["Failed to publish Homepage Control Room config."],
+        warnings: [],
+      };
+    }
+
+    if (!isRecord(data)) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Homepage Control Room publish returned an invalid response."],
+        warnings: [],
+      };
+    }
+
+    const publishedConfigId =
+      typeof data.config_id === "string" ? data.config_id : "";
+    const publishedStatus = typeof data.status === "string" ? data.status : "";
+    const publishedAt =
+      typeof data.published_at === "string" ? data.published_at : "";
+
+    if (data.success !== true || !publishedConfigId || !publishedStatus) {
+      return {
+        success: false,
+        data: null,
+        errors: ["Homepage Control Room publish returned an incomplete response."],
+        warnings: [],
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        success: true,
+        config_id: publishedConfigId,
+        status: publishedStatus,
+        published_at: publishedAt,
+      },
+      errors: [],
+      warnings: [],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    console.error("Unexpected Homepage Control Room publish error:", message);
+
+    return {
+      success: false,
+      data: null,
+      errors: ["Unexpected Homepage Control Room publish error."],
       warnings: [],
     };
   }
