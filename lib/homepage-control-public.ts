@@ -1,5 +1,7 @@
+import "server-only";
+
 import { parseHomepageControlConfigRow } from "./homepage-control-parser";
-import { supabase } from "./supabase";
+import { supabaseAdmin } from "./supabase-admin";
 import type { HomepageControlConfigRow } from "./homepage-control-types";
 
 export type HomepageControlPublicFetchResult = {
@@ -42,20 +44,17 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
   HomepageControlPublicFetchResult
 > {
   try {
-    const { data, error } = await supabase
-      .from("public_homepage_control_config")
+    const { data, error } = await supabaseAdmin
+      .from("homepage_control_configs")
       .select(
         "id, version, config, content, tool_placements, published_at, updated_at"
       )
+      .eq("status", "published")
+      .eq("is_active", true)
       .limit(1)
       .maybeSingle();
 
     if (error) {
-      console.error(
-        "Failed to fetch published homepage control config:",
-        error.message
-      );
-
       return {
         success: false,
         config: null,
@@ -92,11 +91,7 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
       errors: [],
       warnings: parsed.warnings,
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
-    console.error("Unexpected published homepage control config error:", message);
-
+  } catch {
     return {
       success: false,
       config: null,
