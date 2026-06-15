@@ -26,6 +26,7 @@ import {
   normalizePublicToolRow,
   toPublicToolCardData,
 } from "@/lib/public-tool-adapter";
+import type { PublicHomepageControlConfig } from "@/lib/homepage-control-public";
 import { TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
 import {
@@ -61,7 +62,7 @@ function isPublishedHomepageControlResponse(
   value: unknown
 ): value is {
   success: boolean;
-  config: Record<string, unknown> | null;
+  config: PublicHomepageControlConfig | null;
   hydratedPlacements?: unknown[];
 } {
   return (
@@ -99,6 +100,25 @@ type FilterSelectProps = {
   isMounted: boolean;
   onValueChange: (value: string) => void;
   getOptionLabel?: (value: string) => string;
+};
+
+type PublishedPlacement = PublicHomepageControlConfig["tool_placements"][number];
+type PublishedPlacementId = PublishedPlacement["placementId"];
+
+type HomepageSectionTool = {
+  card: PublicToolCardData;
+};
+
+type ControlledHomepageSection = {
+  title: string;
+  tools: HomepageSectionTool[];
+  missingToolSlugs: string[];
+};
+
+type ControlledHomepageSections = {
+  trending: ControlledHomepageSection | null;
+  topRated: ControlledHomepageSection | null;
+  newTools: ControlledHomepageSection | null;
 };
 
 function FilterSelect({
@@ -221,6 +241,9 @@ export default function Home() {
   const [favoriteSlugs, setFavoriteSlugs] = useState<string[]>([]);
   const [heroTitle, setHeroTitle] = useState(FALLBACK_HERO_TITLE);
   const [heroSubtitle, setHeroSubtitle] = useState(FALLBACK_HERO_SUBTITLE);
+  const [publishedPlacements, setPublishedPlacements] = useState<
+    PublicHomepageControlConfig["tool_placements"]
+  >([]);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSearchThinking, setIsSearchThinking] = useState(false);
   const [selectedTool, setSelectedTool] = useState<PublicToolCardData | null>(
@@ -239,7 +262,10 @@ export default function Home() {
     async function loadToolsFromSupabase() {
       const { data, error } = await supabase
         .from("tools")
-        .select("*")
+        .select(
+          "id, name, slug, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at, updated_at"
+        )
+        .eq("status", "approved")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -295,6 +321,8 @@ export default function Home() {
             setHeroSubtitle(subtitle.trim());
           }
         }
+
+        setPublishedPlacements(result.config.tool_placements);
       } catch {
         // Keep fallback hero copy when the published config cannot be loaded.
       }
@@ -324,14 +352,28 @@ export default function Home() {
     localStorage.setItem("aifinder-favorites", JSON.stringify(newFavorites));
   };
 
-  const toggleFavorite = (tool: Tool) => {
-    const slug = toolSlug(tool.name);
-
+  const toggleFavoriteSlug = (slug: string) => {
     if (favoriteSlugs.includes(slug)) {
       saveFavorites(favoriteSlugs.filter((item) => item !== slug));
     } else {
       saveFavorites([...favoriteSlugs, slug]);
     }
+  };
+
+  const toggleFavorite = (tool: Tool) => {
+    toggleFavoriteSlug(toolSlug(tool.name));
+  };
+
+  const toHomepageSectionTool = (tool: Tool): HomepageSectionTool => {
+    return {
+      card: toPublicToolCardData(tool, {
+        slugFallback: toolSlug,
+        logoFallback: getLogoUrl,
+        ratingFallback: getToolRating,
+        reviewCountFallback: getReviewCount,
+        fallbackIcon: getIcon,
+      }),
+    };
   };
 
   const saveRecentSearch = (value: string) => {
@@ -424,6 +466,111 @@ export default function Home() {
     .slice(0, 8);
 
   const newTools = [...tools].slice(0, 8);
+  const favoriteSectionTools = favoriteTools.map(toHomepageSectionTool);
+  const fallbackTrendingTools = trendingTools.map(toHomepageSectionTool);
+  const fallbackTopRatedTools = topRatedTools.map(toHomepageSectionTool);
+  const fallbackNewTools = newTools.map(toHomepageSectionTool);
+  const homepageToolBySlug = new Map(
+    tools.map((tool) => {
+      const sectionTool = toHomepageSectionTool(tool);
+      return [sectionTool.card.slug, sectionTool] as const;
+    })
+  );
+
+  const findEnabledPlacement = (
+    placementIds: PublishedPlacementId[]
+  ): PublishedPlacement | null => {
+    return (
+      placementIds
+        .map((placementId) =>
+          publishedPlacements.find(
+            (placement) =>
+              placement.enabled && placement.placementId === placementId
+          )
+        )
+        .find((placement) => placement !== undefined) ?? null
+    );
+  };
+
+  const buildControlledSection = (
+    placement: PublishedPlacement | null
+  ): ControlledHomepageSection | null => {
+    if (!placement) {
+      return null;
+    }
+
+    const sectionTools: HomepageSectionTool[] = [];
+    const missingToolSlugs: string[] = [];
+
+    placement.toolSlugs.slice(0, placement.maxItems).forEach((slug) => {
+      const tool = homepageToolBySlug.get(slug);
+
+      if (tool) {
+        sectionTools.push(tool);
+        return;
+      }
+
+      missingToolSlugs.push(slug);
+    });
+
+    return {
+      title: placement.title.trim() || "AI Tools",
+      tools: sectionTools,
+      missingToolSlugs,
+    };
+  };
+
+  const controlledSections: ControlledHomepageSections = {
+    trending: buildControlledSection(
+      findEnabledPlacement(["trending-override", "featured-tools"])
+    ),
+    topRated: buildControlledSection(findEnabledPlacement(["editors-picks"])),
+    newTools: buildControlledSection(
+      findEnabledPlacement(["new-tools-highlight"])
+    ),
+  };
+  const homepagePlacementMissingSlugs = [
+    ...(controlledSections.trending?.missingToolSlugs ?? []),
+    ...(controlledSections.topRated?.missingToolSlugs ?? []),
+    ...(controlledSections.newTools?.missingToolSlugs ?? []),
+  ];
+  const homepagePlacementMissingSlugMessage =
+    homepagePlacementMissingSlugs.join(", ");
+  const displayedTrendingSection =
+    controlledSections.trending && controlledSections.trending.tools.length > 0
+      ? controlledSections.trending
+      : {
+          title: "Trending AI Tools",
+          tools: fallbackTrendingTools,
+          missingToolSlugs: [],
+        };
+  const displayedTopRatedSection =
+    controlledSections.topRated && controlledSections.topRated.tools.length > 0
+      ? controlledSections.topRated
+      : {
+          title: "Top Rated AI Tools",
+          tools: fallbackTopRatedTools,
+          missingToolSlugs: [],
+        };
+  const displayedNewToolsSection =
+    controlledSections.newTools && controlledSections.newTools.tools.length > 0
+      ? controlledSections.newTools
+      : {
+          title: "New AI Tools",
+          tools: fallbackNewTools,
+          missingToolSlugs: [],
+        };
+
+  useEffect(() => {
+    if (!homepagePlacementMissingSlugMessage) {
+      return;
+    }
+
+    console.warn(
+      "[AiFinder Homepage Control] Published placements skipped missing or unapproved tool slugs:",
+      homepagePlacementMissingSlugMessage
+    );
+  }, [homepagePlacementMissingSlugMessage]);
 
   const resetFilters = () => {
     setSearch("");
@@ -680,9 +827,9 @@ export default function Home() {
           <>
             <Section
               title="Your Saved AI Tools"
-              tools={favoriteTools}
+              tools={favoriteSectionTools}
               favoriteSlugs={favoriteSlugs}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={toggleFavoriteSlug}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
               selectedCardKey={selectedCardKey}
@@ -696,10 +843,10 @@ export default function Home() {
             />
 
             <Section
-              title="Trending AI Tools"
-              tools={trendingTools}
+              title={displayedTrendingSection.title}
+              tools={displayedTrendingSection.tools}
               favoriteSlugs={favoriteSlugs}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={toggleFavoriteSlug}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
               selectedCardKey={selectedCardKey}
@@ -713,10 +860,10 @@ export default function Home() {
             />
 
             <Section
-              title="Top Rated AI Tools"
-              tools={topRatedTools}
+              title={displayedTopRatedSection.title}
+              tools={displayedTopRatedSection.tools}
               favoriteSlugs={favoriteSlugs}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={toggleFavoriteSlug}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
               selectedCardKey={selectedCardKey}
@@ -730,10 +877,10 @@ export default function Home() {
             />
 
             <Section
-              title="New AI Tools"
-              tools={newTools}
+              title={displayedNewToolsSection.title}
+              tools={displayedNewToolsSection.tools}
               favoriteSlugs={favoriteSlugs}
-              onToggleFavorite={toggleFavorite}
+              onToggleFavorite={toggleFavoriteSlug}
               compareSlugs={compareSlugs}
               onToggleCompare={toggleCompare}
               selectedCardKey={selectedCardKey}
@@ -879,9 +1026,9 @@ function Section({
   mutedText,
 }: {
   title: string;
-  tools: Tool[];
+  tools: HomepageSectionTool[];
   favoriteSlugs: string[];
-  onToggleFavorite: (tool: Tool) => void;
+  onToggleFavorite: (slug: string) => void;
   compareSlugs: string[];
   onToggleCompare: (slug: string) => void;
   selectedCardKey: string | null;
@@ -904,14 +1051,7 @@ function Section({
         </div>
       ) : (
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {tools.map((tool) => {
-            const publicTool = toPublicToolCardData(tool, {
-              slugFallback: toolSlug,
-              logoFallback: getLogoUrl,
-              ratingFallback: getToolRating,
-              reviewCountFallback: getReviewCount,
-              fallbackIcon: getIcon,
-            });
+          {tools.map(({ card: publicTool }) => {
             const cardKey = `${title}:${publicTool.slug}`;
 
             return (
@@ -925,7 +1065,7 @@ function Section({
                 onOpenTool={(selectedPublicTool) =>
                   onOpenTool(selectedPublicTool, cardKey)
                 }
-                onToggleFavorite={() => onToggleFavorite(tool)}
+                onToggleFavorite={() => onToggleFavorite(publicTool.slug)}
                 onToggleCompare={() => onToggleCompare(publicTool.slug)}
                 badge={badge}
                 cardBg={cardBg}
