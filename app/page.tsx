@@ -561,7 +561,7 @@ export default function Home() {
         };
 
   useEffect(() => {
-    if (!homepagePlacementMissingSlugMessage) {
+    if (isLoadingTools || !homepagePlacementMissingSlugMessage) {
       return;
     }
 
@@ -569,7 +569,7 @@ export default function Home() {
       "[AiFinder Homepage Control] Published placements skipped missing or unapproved tool slugs:",
       homepagePlacementMissingSlugMessage
     );
-  }, [homepagePlacementMissingSlugMessage]);
+  }, [homepagePlacementMissingSlugMessage, isLoadingTools]);
 
   const resetFilters = () => {
     setSearch("");
