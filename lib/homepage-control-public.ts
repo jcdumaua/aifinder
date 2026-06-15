@@ -3,13 +3,11 @@ import "server-only";
 import { parseHomepageControlConfigRow } from "./homepage-control-parser";
 import { supabaseAdmin } from "./supabase-admin";
 import type { HomepageControlConfigRow } from "./homepage-control-types";
-import { isRecord } from "./homepage-control-validation";
 import {
-  isHomepageToolPlacementId,
-  validateHomepageToolPlacementConfig,
-  type HomepageToolPlacementConfig,
-  type HomepageToolPlacementMaxItems,
-} from "./homepage-control-schema";
+  isRecord,
+  normalizeHomepageToolPlacementConfigs,
+} from "./homepage-control-validation";
+import type { HomepageToolPlacementConfig } from "./homepage-control-schema";
 import {
   normalizePublicToolRow,
   toPublicToolCardData,
@@ -121,56 +119,14 @@ function normalizePublicToolPlacements(
   rawPlacements: unknown,
   warnings: string[]
 ): HomepageToolPlacementConfig[] {
-  if (rawPlacements === null || rawPlacements === undefined) {
-    return [];
-  }
-
-  if (!Array.isArray(rawPlacements)) {
-    warnings.push("Published homepage tool_placements must be an array.");
-    return [];
-  }
-
-  const normalized: HomepageToolPlacementConfig[] = [];
-
-  rawPlacements.forEach((item, index) => {
-    if (!isRecord(item)) {
-      warnings.push(`Tool placement at index ${index} is not an object.`);
-      return;
-    }
-
-    if (
-      typeof item.placementId !== "string" ||
-      !isHomepageToolPlacementId(item.placementId) ||
-      typeof item.enabled !== "boolean" ||
-      typeof item.title !== "string" ||
-      !Array.isArray(item.toolSlugs) ||
-      !item.toolSlugs.every((slug) => typeof slug === "string") ||
-      typeof item.maxItems !== "number"
-    ) {
-      warnings.push(`Tool placement at index ${index} has an invalid shape.`);
-      return;
-    }
-
-    const candidate: HomepageToolPlacementConfig = {
-      placementId: item.placementId,
-      enabled: item.enabled,
-      title: item.title,
-      toolSlugs: item.toolSlugs,
-      maxItems: item.maxItems as HomepageToolPlacementMaxItems,
-    };
-    const errors = validateHomepageToolPlacementConfig(candidate);
-
-    if (errors.length > 0) {
-      warnings.push(
-        `Tool placement at index ${index} is invalid: ${errors.join(", ")}`
-      );
-      return;
-    }
-
-    normalized.push(candidate);
+  const result = normalizeHomepageToolPlacementConfigs(rawPlacements, {
+    invalidIssueLevel: "warning",
+    nonArrayMessage: "Published homepage tool_placements must be an array.",
   });
 
-  return normalized;
+  warnings.push(...result.warnings, ...result.errors);
+
+  return result.placements;
 }
 
 function normalizePublicHomepageControlPayload(value: unknown): unknown {

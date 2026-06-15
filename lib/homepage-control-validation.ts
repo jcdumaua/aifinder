@@ -3,11 +3,28 @@ import type {
   HomepageControlStatus,
 } from "./homepage-control-types";
 import { isHomepageControlStatus } from "./homepage-control-types";
+import {
+  isHomepageToolPlacementId,
+  validateHomepageToolPlacementConfig,
+  type HomepageToolPlacementConfig,
+  type HomepageToolPlacementMaxItems,
+} from "./homepage-control-schema";
 
 export type HomepageControlValidationResult = {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+};
+
+export type HomepageToolPlacementNormalizationResult = {
+  placements: HomepageToolPlacementConfig[];
+  errors: string[];
+  warnings: string[];
+};
+
+type HomepageToolPlacementNormalizationOptions = {
+  invalidIssueLevel: "error" | "warning";
+  nonArrayMessage: string;
 };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -16,6 +33,75 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function isArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
+}
+
+export function normalizeHomepageToolPlacementConfigs(
+  rawPlacements: unknown,
+  options: HomepageToolPlacementNormalizationOptions
+): HomepageToolPlacementNormalizationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const placements: HomepageToolPlacementConfig[] = [];
+
+  function addIssue(message: string) {
+    if (options.invalidIssueLevel === "error") {
+      errors.push(message);
+      return;
+    }
+
+    warnings.push(message);
+  }
+
+  if (rawPlacements === null || rawPlacements === undefined) {
+    return { placements, errors, warnings };
+  }
+
+  if (!Array.isArray(rawPlacements)) {
+    addIssue(options.nonArrayMessage);
+    return { placements, errors, warnings };
+  }
+
+  rawPlacements.forEach((item, index) => {
+    if (!isRecord(item)) {
+      addIssue(`Tool placement at index ${index} is not an object.`);
+      return;
+    }
+
+    if (
+      typeof item.placementId !== "string" ||
+      !isHomepageToolPlacementId(item.placementId) ||
+      typeof item.enabled !== "boolean" ||
+      typeof item.title !== "string" ||
+      !Array.isArray(item.toolSlugs) ||
+      !item.toolSlugs.every((slug) => typeof slug === "string") ||
+      typeof item.maxItems !== "number"
+    ) {
+      addIssue(`Tool placement at index ${index} has an invalid shape.`);
+      return;
+    }
+
+    const candidate: HomepageToolPlacementConfig = {
+      placementId: item.placementId,
+      enabled: item.enabled,
+      title: item.title,
+      toolSlugs: item.toolSlugs,
+      maxItems: item.maxItems as HomepageToolPlacementMaxItems,
+    };
+    const placementErrors = validateHomepageToolPlacementConfig(candidate);
+
+    if (placementErrors.length > 0) {
+      addIssue(
+        `Tool placement at index ${index} is invalid: ${placementErrors.join(
+          ", "
+        )}`
+      );
+      return;
+    }
+
+    placements.push(candidate);
+  });
+
+  return { placements, errors, warnings };
 }
 
 export function validateHomepageControlConfigRow(

@@ -10,6 +10,7 @@ import type { HomepageControlConfigRow } from "./homepage-control-types";
 import type { HomepageControlChecklistRun } from "./homepage-control-types";
 import {
   isRecord,
+  normalizeHomepageToolPlacementConfigs,
   validateHomepageControlConfigRow,
 } from "./homepage-control-validation";
 import { supabaseAdmin } from "./supabase-admin";
@@ -125,6 +126,11 @@ type ParsedHomepageControlPreviewChecklistUpdate = {
   }[];
 };
 
+type HomepageToolPlacementPublishValidationResult = {
+  errors: string[];
+  warnings: string[];
+};
+
 const HOMEPAGE_CONTROL_CONFIG_SELECT =
   "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at";
 
@@ -151,6 +157,149 @@ function containsRawHtml(value: string) {
 
 function containsScriptLikeContent(value: string) {
   return /script|javascript:|onerror\s*=|onload\s*=/i.test(value);
+}
+
+function formatSlugList(slugs: string[]) {
+  return Array.from(new Set(slugs)).sort().join(", ");
+}
+
+function isMissingColumnError(errorMessage: string, columnName: string) {
+  const lowerMessage = errorMessage.toLowerCase();
+  const lowerColumnName = columnName.toLowerCase();
+
+  return (
+    lowerMessage.includes(`column tools.${lowerColumnName} does not exist`) ||
+    lowerMessage.includes(`could not find the '${lowerColumnName}' column`) ||
+    lowerMessage.includes(`could not find the column '${lowerColumnName}'`)
+  );
+}
+
+async function validateHomepageToolPlacementsForPublish(
+  config: HomepageControlConfigRow
+): Promise<HomepageToolPlacementPublishValidationResult> {
+  const normalizedResult = normalizeHomepageToolPlacementConfigs(
+    config.tool_placements,
+    {
+      invalidIssueLevel: "error",
+      nonArrayMessage:
+        "Homepage Control Room tool placements must be an array before publish.",
+    }
+  );
+  const errors = [...normalizedResult.errors];
+  const warnings = [...normalizedResult.warnings];
+
+  if (errors.length > 0) {
+    return { errors, warnings };
+  }
+
+  const enabledPlacements = normalizedResult.placements.filter(
+    (placement) => placement.enabled
+  );
+  const placementSlugs = enabledPlacements.flatMap(
+    (placement) => placement.toolSlugs
+  );
+  const uniqueSlugs = Array.from(new Set(placementSlugs));
+
+  if (uniqueSlugs.length === 0) {
+    return { errors, warnings };
+  }
+
+  const { data: slugRows, error: slugError } = await supabaseAdmin
+    .from("tools")
+    .select("slug")
+    .in("slug", uniqueSlugs);
+
+  if (slugError) {
+    if (isMissingColumnError(slugError.message, "slug")) {
+      errors.push(
+        "Cannot publish homepage tool placements because the live tools schema does not expose a slug column for validation."
+      );
+    } else {
+      errors.push("Unable to validate homepage tool placement slugs.");
+    }
+
+    return { errors, warnings };
+  }
+
+  const existingSlugs = new Set(
+    (slugRows ?? [])
+      .map((row) => row.slug)
+      .filter((slug): slug is string => typeof slug === "string")
+  );
+  const missingSlugs = uniqueSlugs.filter((slug) => !existingSlugs.has(slug));
+
+  if (missingSlugs.length > 0) {
+    errors.push(
+      `Homepage tool placements reference missing tool slugs: ${formatSlugList(
+        missingSlugs
+      )}.`
+    );
+  }
+
+  const { data: approvedRows, error: statusError } = await supabaseAdmin
+    .from("tools")
+    .select("slug, status")
+    .eq("status", "approved")
+    .in("slug", uniqueSlugs);
+
+  if (statusError) {
+    if (isMissingColumnError(statusError.message, "status")) {
+      errors.push(
+        "Cannot publish homepage tool placements because the live tools schema does not expose a status column for public-safety validation."
+      );
+    } else {
+      errors.push("Unable to validate homepage tool approval status.");
+    }
+
+    return { errors, warnings };
+  }
+
+  const approvedSlugs = new Set(
+    (approvedRows ?? [])
+      .map((row) => row.slug)
+      .filter((slug): slug is string => typeof slug === "string")
+  );
+  const unapprovedSlugs = uniqueSlugs.filter((slug) => !approvedSlugs.has(slug));
+
+  if (unapprovedSlugs.length > 0) {
+    errors.push(
+      `Homepage tool placements reference tools that are missing or not approved: ${formatSlugList(
+        unapprovedSlugs
+      )}.`
+    );
+  }
+
+  const { data: deletionRows, error: deletionError } = await supabaseAdmin
+    .from("tools")
+    .select("slug, deleted_at")
+    .in("slug", uniqueSlugs);
+
+  if (deletionError) {
+    if (isMissingColumnError(deletionError.message, "deleted_at")) {
+      warnings.push(
+        "Live tools schema does not expose deleted_at; publish validation could not perform a deleted-tool check."
+      );
+    } else {
+      errors.push("Unable to validate homepage tool deletion state.");
+    }
+
+    return { errors, warnings };
+  }
+
+  const deletedSlugs = (deletionRows ?? [])
+    .filter((row) => row.deleted_at !== null)
+    .map((row) => row.slug)
+    .filter((slug): slug is string => typeof slug === "string");
+
+  if (deletedSlugs.length > 0) {
+    errors.push(
+      `Homepage tool placements reference deleted tools: ${formatSlugList(
+        deletedSlugs
+      )}.`
+    );
+  }
+
+  return { errors, warnings };
 }
 
 function parseDraftUpdatePayload(payload: unknown): {
@@ -1132,6 +1281,34 @@ export async function publishHomepageControlConfig(
       };
     }
 
+    const configResult = await getHomepageControlConfigById(id);
+
+    if (!configResult.config) {
+      return {
+        success: false,
+        data: null,
+        errors: configResult.errors,
+        warnings: configResult.warnings,
+      };
+    }
+
+    const placementValidation = await validateHomepageToolPlacementsForPublish(
+      configResult.config
+    );
+
+    if (placementValidation.errors.length > 0) {
+      return {
+        success: false,
+        data: null,
+        errors: placementValidation.errors,
+        warnings: [
+          ...configResult.warnings,
+          ...placementValidation.warnings,
+          "Publish was blocked before activation. Tool placement validation currently runs immediately before the atomic publish RPC.",
+        ],
+      };
+    }
+
     const { data, error } = await supabaseAdmin.rpc(
       "publish_homepage_control_config",
       {
@@ -1185,7 +1362,7 @@ export async function publishHomepageControlConfig(
         published_at: publishedAt,
       },
       errors: [],
-      warnings: [],
+      warnings: [...configResult.warnings, ...placementValidation.warnings],
     };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error.";
