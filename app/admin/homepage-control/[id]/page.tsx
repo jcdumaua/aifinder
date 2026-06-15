@@ -237,6 +237,14 @@ export default async function AdminHomepageControlDetailPage({
   const previewChecklistResult = await getHomepageControlPreviewChecklist(
     config.id
   );
+  const isLegacyDraftChecklist =
+    config.status === "preview" || config.status === "published";
+  const draftChecklistTitle = isLegacyDraftChecklist
+    ? "Legacy draft checklist"
+    : "Pre-publish checklist";
+  const draftChecklistDescription = isLegacyDraftChecklist
+    ? "This checklist is retained for draft history. Final publish readiness is based on the Preview QA checklist above."
+    : "Draft checklist items are finalized during Preview QA.";
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
@@ -352,9 +360,9 @@ export default async function AdminHomepageControlDetailPage({
 
         <section>
           <div className="mb-3">
-            <h2 className="text-lg font-bold">Pre-publish checklist</h2>
+            <h2 className="text-lg font-bold">{draftChecklistTitle}</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Checklist state is displayed for review only.
+              {draftChecklistDescription}
             </p>
           </div>
           <Checklist config={config} />
