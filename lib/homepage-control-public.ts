@@ -3,6 +3,11 @@ import "server-only";
 import { parseHomepageControlConfigRow } from "./homepage-control-parser";
 import { supabaseAdmin } from "./supabase-admin";
 import type { HomepageControlConfigRow } from "./homepage-control-types";
+import { isRecord } from "./homepage-control-validation";
+import {
+  validateHomepageToolPlacementConfig,
+  type HomepageToolPlacementConfig,
+} from "./homepage-control-schema";
 
 export type HomepageControlPublicFetchResult = {
   success: boolean;
@@ -10,6 +15,61 @@ export type HomepageControlPublicFetchResult = {
   errors: string[];
   warnings: string[];
 };
+
+function normalizePublicToolPlacements(
+  rawPlacements: unknown,
+  warnings: string[]
+): HomepageToolPlacementConfig[] {
+  if (rawPlacements === null || rawPlacements === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(rawPlacements)) {
+    warnings.push("Published homepage tool_placements must be an array.");
+    return [];
+  }
+
+  const normalized: HomepageToolPlacementConfig[] = [];
+
+  rawPlacements.forEach((item, index) => {
+    if (!isRecord(item)) {
+      warnings.push(`Tool placement at index ${index} is not an object.`);
+      return;
+    }
+
+    if (
+      typeof item.placementId !== "string" ||
+      typeof item.enabled !== "boolean" ||
+      typeof item.title !== "string" ||
+      !Array.isArray(item.toolSlugs) ||
+      typeof item.maxItems !== "number"
+    ) {
+      warnings.push(`Tool placement at index ${index} has an invalid shape.`);
+      return;
+    }
+
+    const candidate: HomepageToolPlacementConfig = {
+      placementId:
+        item.placementId as HomepageToolPlacementConfig["placementId"],
+      enabled: item.enabled,
+      title: item.title,
+      toolSlugs: item.toolSlugs,
+      maxItems: item.maxItems as HomepageToolPlacementConfig["maxItems"],
+    };
+    const errors = validateHomepageToolPlacementConfig(candidate);
+
+    if (errors.length > 0) {
+      warnings.push(
+        `Tool placement at index ${index} is invalid: ${errors.join(", ")}`
+      );
+      return;
+    }
+
+    normalized.push(candidate);
+  });
+
+  return normalized;
+}
 
 function normalizePublicHomepageControlPayload(value: unknown): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -72,8 +132,19 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
       };
     }
 
+    const publicPayload = normalizePublicHomepageControlPayload(data);
+    const placementWarnings: string[] = [];
+    const normalizedPlacements = normalizePublicToolPlacements(
+      isRecord(publicPayload) ? publicPayload.tool_placements : undefined,
+      placementWarnings
+    );
     const parsed = parseHomepageControlConfigRow(
-      normalizePublicHomepageControlPayload(data)
+      isRecord(publicPayload)
+        ? {
+            ...publicPayload,
+            tool_placements: normalizedPlacements,
+          }
+        : publicPayload
     );
 
     if (!parsed.success || !parsed.row) {
@@ -81,15 +152,20 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
         success: false,
         config: null,
         errors: parsed.errors,
-        warnings: parsed.warnings,
+        warnings: [...parsed.warnings, ...placementWarnings],
       };
     }
 
+    const fetchWarnings = [...parsed.warnings, ...placementWarnings];
+
     return {
       success: true,
-      config: parsed.row,
+      config: {
+        ...parsed.row,
+        tool_placements: normalizedPlacements,
+      },
       errors: [],
-      warnings: parsed.warnings,
+      warnings: fetchWarnings,
     };
   } catch {
     return {
