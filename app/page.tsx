@@ -59,11 +59,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isPublishedHomepageControlResponse(
   value: unknown
-): value is { success: boolean; config: Record<string, unknown> | null } {
+): value is {
+  success: boolean;
+  config: Record<string, unknown> | null;
+  hydratedPlacements?: unknown[];
+} {
   return (
     isRecord(value) &&
     typeof value.success === "boolean" &&
-    (isRecord(value.config) || value.config === null)
+    (isRecord(value.config) || value.config === null) &&
+    (
+      value.hydratedPlacements === undefined ||
+      Array.isArray(value.hydratedPlacements)
+    )
   );
 }
 
