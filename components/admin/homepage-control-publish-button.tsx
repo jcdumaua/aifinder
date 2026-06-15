@@ -66,7 +66,9 @@ function buildHelpfulErrors(errors: string[]) {
     }
 
     if (lowerError.includes("checklist")) {
-      guidance.add("Complete required checklist items before publishing.");
+      guidance.add(
+        "Complete and save required preview checklist items before publishing."
+      );
     }
   });
 

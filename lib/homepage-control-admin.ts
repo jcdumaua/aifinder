@@ -7,6 +7,7 @@ import {
   isHomepageLayoutPreset,
 } from "./homepage-control-schema";
 import type { HomepageControlConfigRow } from "./homepage-control-types";
+import type { HomepageControlChecklistRun } from "./homepage-control-types";
 import {
   isRecord,
   validateHomepageControlConfigRow,
@@ -69,6 +70,20 @@ export type MarkHomepageControlConfigAsPreviewResult = {
   warnings: string[];
 };
 
+export type GetHomepageControlPreviewChecklistResult = {
+  run: HomepageControlChecklistRun | null;
+  checklist: HomepageControlChecklistRun["checklist"];
+  errors: string[];
+  warnings: string[];
+};
+
+export type UpdateHomepageControlPreviewChecklistResult = {
+  success: boolean;
+  run: HomepageControlChecklistRun | null;
+  errors: string[];
+  warnings: string[];
+};
+
 export type HomepagePreviewTool = {
   requestedId: string;
   name: string;
@@ -103,8 +118,18 @@ type ParsedHomepageControlDraftUpdate = {
   }[];
 };
 
+type ParsedHomepageControlPreviewChecklistUpdate = {
+  checklist: {
+    id: string;
+    completed: boolean;
+  }[];
+};
+
 const HOMEPAGE_CONTROL_CONFIG_SELECT =
   "id, status, version, is_active, config, content, tool_placements, pre_publish_checklist, validation_errors, validation_warnings, created_by, updated_by, published_by, published_at, created_at, updated_at";
+
+const HOMEPAGE_CONTROL_CHECKLIST_RUN_SELECT =
+  "id, config_id, checklist, completed_by, completed_at, created_at, updated_at";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -246,6 +271,192 @@ function parseDraftUpdatePayload(payload: unknown): {
     errors,
     warnings,
   };
+}
+
+function isHomepageControlChecklistRunItem(
+  value: unknown
+): value is HomepageControlChecklistRun["checklist"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.label === "string" &&
+    (value.description === undefined ||
+      typeof value.description === "string") &&
+    typeof value.required === "boolean" &&
+    typeof value.completed === "boolean"
+  );
+}
+
+function parseHomepageControlChecklistRunRow(
+  value: unknown
+): {
+  run: HomepageControlChecklistRun | null;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!isRecord(value)) {
+    return {
+      run: null,
+      errors: ["Homepage Control Room checklist run payload must be an object."],
+      warnings,
+    };
+  }
+
+  const id = typeof value.id === "string" ? value.id : "";
+  const configId = typeof value.config_id === "string" ? value.config_id : "";
+  const checklist = Array.isArray(value.checklist) ? value.checklist : [];
+  const completedBy =
+    value.completed_by === null || value.completed_by === undefined
+      ? null
+      : typeof value.completed_by === "string"
+        ? value.completed_by
+        : "";
+  const completedAt =
+    value.completed_at === null || value.completed_at === undefined
+      ? null
+      : typeof value.completed_at === "string"
+        ? value.completed_at
+        : "";
+  const createdAt = typeof value.created_at === "string" ? value.created_at : "";
+  const updatedAt = typeof value.updated_at === "string" ? value.updated_at : "";
+
+  if (!id) errors.push("Homepage Control Room checklist run is missing an id.");
+  if (!configId) {
+    errors.push("Homepage Control Room checklist run is missing config_id.");
+  }
+  if (!Array.isArray(value.checklist)) {
+    errors.push("Homepage Control Room checklist run checklist must be an array.");
+  } else if (!checklist.every(isHomepageControlChecklistRunItem)) {
+    errors.push(
+      "Homepage Control Room checklist run contains invalid checklist items."
+    );
+  }
+  if (completedBy === "") {
+    errors.push(
+      "Homepage Control Room checklist run completed_by must be text or null."
+    );
+  }
+  if (completedAt === "") {
+    errors.push(
+      "Homepage Control Room checklist run completed_at must be text or null."
+    );
+  }
+  if (!createdAt) {
+    errors.push("Homepage Control Room checklist run is missing created_at.");
+  }
+  if (!updatedAt) {
+    errors.push("Homepage Control Room checklist run is missing updated_at.");
+  }
+
+  if (errors.length > 0) {
+    return { run: null, errors, warnings };
+  }
+
+  return {
+    run: {
+      id,
+      config_id: configId,
+      checklist: checklist as HomepageControlChecklistRun["checklist"],
+      completed_by: completedBy,
+      completed_at: completedAt,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    },
+    errors,
+    warnings,
+  };
+}
+
+function parsePreviewChecklistUpdatePayload(payload: unknown): {
+  data: ParsedHomepageControlPreviewChecklistUpdate | null;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!isRecord(payload)) {
+    return {
+      data: null,
+      errors: ["Preview checklist update payload must be an object."],
+      warnings,
+    };
+  }
+
+  if (!Array.isArray(payload.checklist)) {
+    return {
+      data: null,
+      errors: ["Preview checklist must be an array."],
+      warnings,
+    };
+  }
+
+  const checklist = payload.checklist
+    .map((item) => {
+      if (
+        isRecord(item) &&
+        typeof item.id === "string" &&
+        typeof item.completed === "boolean"
+      ) {
+        return {
+          id: item.id,
+          completed: item.completed,
+        };
+      }
+
+      errors.push("Preview checklist items must include id and completed fields.");
+      return null;
+    })
+    .filter((item): item is { id: string; completed: boolean } =>
+      Boolean(item)
+    );
+
+  if (errors.length > 0) {
+    return {
+      data: null,
+      errors,
+      warnings,
+    };
+  }
+
+  return {
+    data: { checklist },
+    errors,
+    warnings,
+  };
+}
+
+function mergePreviewChecklistUpdate(
+  currentChecklist: HomepageControlChecklistRun["checklist"],
+  update: ParsedHomepageControlPreviewChecklistUpdate,
+  warnings: string[]
+) {
+  const requestedChecklist = new Map(
+    update.checklist.map((item) => [item.id, item.completed])
+  );
+  const currentChecklistIds = new Set(currentChecklist.map((item) => item.id));
+
+  update.checklist.forEach((item) => {
+    if (!currentChecklistIds.has(item.id)) {
+      warnings.push(`Unknown preview checklist item ignored: ${item.id}`);
+    }
+  });
+
+  return currentChecklist.map((item) => ({
+    ...item,
+    completed: requestedChecklist.get(item.id) ?? item.completed,
+  }));
+}
+
+function areRequiredChecklistItemsComplete(
+  checklist: HomepageControlChecklistRun["checklist"]
+) {
+  const requiredItems = checklist.filter((item) => item.required);
+
+  return requiredItems.length > 0 && requiredItems.every((item) => item.completed);
 }
 
 function mergeDraftUpdate(
@@ -572,6 +783,246 @@ export async function getHomepageControlConfigById(
       config: null,
       errors: [
         `Unexpected Homepage Control Room config fetch error: ${message}`,
+      ],
+      warnings: [],
+    };
+  }
+}
+
+export async function getHomepageControlPreviewChecklist(
+  id: string
+): Promise<GetHomepageControlPreviewChecklistResult> {
+  try {
+    const configResult = await getHomepageControlConfigById(id);
+
+    if (!configResult.config) {
+      return {
+        run: null,
+        checklist: [],
+        errors: configResult.errors,
+        warnings: configResult.warnings,
+      };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("homepage_control_checklist_runs")
+      .select(HOMEPAGE_CONTROL_CHECKLIST_RUN_SELECT)
+      .eq("config_id", configResult.config.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return {
+        run: null,
+        checklist: configResult.config.pre_publish_checklist,
+        errors: [
+          `Failed to fetch Homepage Control Room preview checklist: ${error.message}`,
+        ],
+        warnings: configResult.warnings,
+      };
+    }
+
+    if (!data) {
+      return {
+        run: null,
+        checklist: configResult.config.pre_publish_checklist,
+        errors: [],
+        warnings: configResult.warnings,
+      };
+    }
+
+    const parsedRun = parseHomepageControlChecklistRunRow(data);
+
+    if (!parsedRun.run) {
+      return {
+        run: null,
+        checklist: configResult.config.pre_publish_checklist,
+        errors: parsedRun.errors,
+        warnings: [...configResult.warnings, ...parsedRun.warnings],
+      };
+    }
+
+    return {
+      run: parsedRun.run,
+      checklist: parsedRun.run.checklist,
+      errors: [],
+      warnings: [...configResult.warnings, ...parsedRun.warnings],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      run: null,
+      checklist: [],
+      errors: [
+        `Unexpected Homepage Control Room preview checklist fetch error: ${message}`,
+      ],
+      warnings: [],
+    };
+  }
+}
+
+export async function updateHomepageControlPreviewChecklist(
+  id: string,
+  payload: unknown,
+  actor: HomepageControlActor
+): Promise<UpdateHomepageControlPreviewChecklistResult> {
+  try {
+    if (!isValidHomepageControlConfigId(id)) {
+      return {
+        success: false,
+        run: null,
+        errors: ["Invalid Homepage Control Room config ID."],
+        warnings: [],
+      };
+    }
+
+    const normalizedActor = normalizeActor(actor);
+
+    if (!normalizedActor.label) {
+      return {
+        success: false,
+        run: null,
+        errors: ["Homepage Control Room actor label is required."],
+        warnings: [],
+      };
+    }
+
+    const payloadResult = parsePreviewChecklistUpdatePayload(payload);
+
+    if (!payloadResult.data) {
+      return {
+        success: false,
+        run: null,
+        errors: payloadResult.errors,
+        warnings: payloadResult.warnings,
+      };
+    }
+
+    const configResult = await getHomepageControlConfigById(id);
+
+    if (!configResult.config) {
+      return {
+        success: false,
+        run: null,
+        errors: configResult.errors,
+        warnings: configResult.warnings,
+      };
+    }
+
+    if (configResult.config.status !== "preview") {
+      return {
+        success: false,
+        run: null,
+        errors: [
+          "Preview checklist can only be updated while the config is in preview.",
+        ],
+        warnings: configResult.warnings,
+      };
+    }
+
+    const currentChecklistResult = await getHomepageControlPreviewChecklist(id);
+    const warnings = [
+      ...configResult.warnings,
+      ...currentChecklistResult.warnings,
+      ...payloadResult.warnings,
+    ];
+
+    if (currentChecklistResult.errors.length > 0) {
+      return {
+        success: false,
+        run: null,
+        errors: currentChecklistResult.errors,
+        warnings,
+      };
+    }
+
+    const mergedChecklist = mergePreviewChecklistUpdate(
+      currentChecklistResult.checklist,
+      payloadResult.data,
+      warnings
+    );
+    const isComplete = areRequiredChecklistItemsComplete(mergedChecklist);
+    const timestamp = new Date().toISOString();
+    const { data: updatedRun, error: upsertError } = await supabaseAdmin
+      .from("homepage_control_checklist_runs")
+      .upsert(
+        {
+          config_id: configResult.config.id,
+          checklist: mergedChecklist,
+          completed_by: isComplete ? normalizedActor.id : null,
+          completed_at: isComplete ? timestamp : null,
+          updated_at: timestamp,
+        },
+        { onConflict: "config_id" }
+      )
+      .select(HOMEPAGE_CONTROL_CHECKLIST_RUN_SELECT)
+      .single();
+
+    if (upsertError) {
+      return {
+        success: false,
+        run: null,
+        errors: [
+          `Failed to update Homepage Control Room preview checklist: ${upsertError.message}`,
+        ],
+        warnings,
+      };
+    }
+
+    const parsedRun = parseHomepageControlChecklistRunRow(updatedRun);
+
+    if (!parsedRun.run) {
+      return {
+        success: false,
+        run: null,
+        errors: parsedRun.errors,
+        warnings: [...warnings, ...parsedRun.warnings],
+      };
+    }
+
+    const { error: auditInsertError } = await supabaseAdmin
+      .from("homepage_control_audit_events")
+      .insert({
+        config_id: configResult.config.id,
+        action: "updated-preview-checklist",
+        actor_id: normalizedActor.id,
+        actor_label: normalizedActor.label,
+        message: "Homepage Control Room preview checklist updated.",
+        metadata: {
+          source: "homepage-control-preview-checklist",
+          version: configResult.config.version,
+          checklistRunId: parsedRun.run.id,
+          completedAt: parsedRun.run.completed_at,
+        },
+      });
+
+    if (auditInsertError) {
+      return {
+        success: false,
+        run: null,
+        errors: [
+          `Failed to create Homepage Control Room preview checklist audit event: ${auditInsertError.message}`,
+        ],
+        warnings: [...warnings, ...parsedRun.warnings],
+      };
+    }
+
+    return {
+      success: true,
+      run: parsedRun.run,
+      errors: [],
+      warnings: [...warnings, ...parsedRun.warnings],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+
+    return {
+      success: false,
+      run: null,
+      errors: [
+        `Unexpected Homepage Control Room preview checklist update error: ${message}`,
       ],
       warnings: [],
     };

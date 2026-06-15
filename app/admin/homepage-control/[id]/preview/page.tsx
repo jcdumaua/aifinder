@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import HomepagePreviewBanner from "../../../../../components/admin/homepage-preview-banner";
+import HomepageControlPreviewChecklist from "../../../../../components/admin/homepage-control-preview-checklist";
 import {
   getHomepageControlConfigById,
+  getHomepageControlPreviewChecklist,
   hydrateHomepagePreviewToolPlacements,
   recordHomepageControlPreview,
   type HomepagePreviewToolPlacement,
@@ -160,6 +162,9 @@ export default async function AdminHomepageControlPreviewPage({
     { id: null, label: "AiFinder Admin" },
     config.version
   );
+  const previewChecklistResult = await getHomepageControlPreviewChecklist(
+    config.id
+  );
   const placementResult = await hydrateHomepagePreviewToolPlacements(config);
   const auditWarnings = previewAuditResult.success
     ? previewAuditResult.warnings
@@ -180,15 +185,22 @@ export default async function AdminHomepageControlPreviewPage({
         {(result.errors.length > 0 ||
           result.warnings.length > 0 ||
           auditWarnings.length > 0 ||
+          previewChecklistResult.errors.length > 0 ||
+          previewChecklistResult.warnings.length > 0 ||
           placementResult.errors.length > 0 ||
           placementResult.warnings.length > 0) && (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            {[...result.errors, ...placementResult.errors].map((item) => (
+            {[
+              ...result.errors,
+              ...previewChecklistResult.errors,
+              ...placementResult.errors,
+            ].map((item) => (
               <p key={item}>{item}</p>
             ))}
             {[
               ...result.warnings,
               ...auditWarnings,
+              ...previewChecklistResult.warnings,
               ...placementResult.warnings,
             ].map((item) => (
               <p key={item}>{item}</p>
@@ -223,6 +235,14 @@ export default async function AdminHomepageControlPreviewPage({
           />
           <PreviewSectionSummary title="Section order" items={sectionOrder} />
         </div>
+
+        {config.status === "preview" && (
+          <HomepageControlPreviewChecklist
+            configId={config.id}
+            initialChecklist={previewChecklistResult.checklist}
+            completedAt={previewChecklistResult.run?.completed_at || null}
+          />
+        )}
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-slate-950">

@@ -2,8 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import HomepageControlMarkPreviewButton from "../../../../components/admin/homepage-control-mark-preview-button";
 import HomepageControlPublishButton from "../../../../components/admin/homepage-control-publish-button";
-import { getHomepageControlConfigById } from "../../../../lib/homepage-control-admin";
-import type { HomepageControlConfigRow } from "../../../../lib/homepage-control-types";
+import {
+  getHomepageControlConfigById,
+  getHomepageControlPreviewChecklist,
+} from "../../../../lib/homepage-control-admin";
+import type {
+  HomepageControlChecklistItem,
+  HomepageControlConfigRow,
+} from "../../../../lib/homepage-control-types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -130,6 +136,65 @@ function Checklist({ config }: { config: HomepageControlConfigRow }) {
   );
 }
 
+function ChecklistStatusSummary({
+  config,
+  checklist,
+  completedAt,
+}: {
+  config: HomepageControlConfigRow;
+  checklist: HomepageControlChecklistItem[];
+  completedAt: string | null;
+}) {
+  const requiredItems = checklist.filter((item) => item.required);
+  const completedRequiredItems = requiredItems.filter((item) => item.completed);
+  const isPreview = config.status === "preview";
+  const qaStatusDescription =
+    config.status === "published"
+      ? "Preview checklist completed before publish."
+      : isPreview
+        ? "Preview checklist progress for this config."
+        : "Preview checklist becomes available after moving this config to preview.";
+  const isComplete =
+    requiredItems.length > 0 &&
+    completedRequiredItems.length === requiredItems.length;
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-slate-950">QA status</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {qaStatusDescription}
+          </p>
+          {completedAt && (
+            <p className="mt-2 text-xs font-semibold text-slate-500">
+              Completed: {formatDate(completedAt)}
+            </p>
+          )}
+        </div>
+        <span
+          className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+            isComplete
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-amber-50 text-amber-700"
+          }`}
+        >
+          {completedRequiredItems.length}/{requiredItems.length} required
+        </span>
+      </div>
+
+      {isPreview && (
+        <Link
+          href={`/admin/homepage-control/${config.id}/preview`}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+        >
+          Complete QA on Preview Page
+        </Link>
+      )}
+    </section>
+  );
+}
+
 function NoticeList({
   title,
   items,
@@ -169,6 +234,9 @@ export default async function AdminHomepageControlDetailPage({
   }
 
   const config = result.config;
+  const previewChecklistResult = await getHomepageControlPreviewChecklist(
+    config.id
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
@@ -184,7 +252,7 @@ export default async function AdminHomepageControlDetailPage({
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Read-only draft detail
+                Read-only config detail
               </p>
               <h1 className="mt-2 text-2xl font-black sm:text-3xl">
                 Homepage Control Room Config v{config.version}
@@ -254,8 +322,17 @@ export default async function AdminHomepageControlDetailPage({
         />
         <NoticeList
           title="Validation warnings"
-          items={[...result.warnings, ...config.validation_warnings]}
+          items={[
+            ...result.warnings,
+            ...previewChecklistResult.warnings,
+            ...config.validation_warnings,
+          ]}
           tone="warning"
+        />
+        <NoticeList
+          title="Preview checklist errors"
+          items={previewChecklistResult.errors}
+          tone="error"
         />
 
         <section className="grid gap-4 md:grid-cols-3">
@@ -266,6 +343,12 @@ export default async function AdminHomepageControlDetailPage({
             value={jsonSummary(config.tool_placements)}
           />
         </section>
+
+        <ChecklistStatusSummary
+          config={config}
+          checklist={previewChecklistResult.checklist}
+          completedAt={previewChecklistResult.run?.completed_at || null}
+        />
 
         <section>
           <div className="mb-3">

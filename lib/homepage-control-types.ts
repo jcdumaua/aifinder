@@ -15,6 +15,8 @@ export const HOMEPAGE_CONTROL_AUDIT_ACTIONS = [
   "published",
   "reverted",
   "validation-failed",
+  "transitioned-to-preview",
+  "updated-preview-checklist",
 ] as const;
 
 export type HomepageControlAuditAction =
@@ -43,6 +45,16 @@ export type HomepageControlConfigRow = {
   updated_by: string | null;
   published_by: string | null;
   published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HomepageControlChecklistRun = {
+  id: string;
+  config_id: string;
+  checklist: HomepageControlChecklistItem[];
+  completed_by: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };
