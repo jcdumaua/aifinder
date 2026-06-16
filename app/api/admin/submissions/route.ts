@@ -178,6 +178,7 @@ async function findDuplicateToolDomain(
     .from("tools")
     .select("id, name")
     .eq("normalized_domain", normalizedDomain)
+    .is("deleted_at", null)
     .limit(1);
 
   if (error) {
@@ -249,7 +250,8 @@ export async function GET(request: Request) {
 
     const { count: totalTools, error: totalToolsError } = await supabaseAdmin
       .from("tools")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true })
+      .is("deleted_at", null);
 
     const { count: pendingSubmissions, error: pendingError } =
       await supabaseAdmin

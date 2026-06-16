@@ -43,6 +43,8 @@ type Tool = {
   website: string;
   pricing?: string | null;
   logo_url?: string | null;
+  status?: string | null;
+  deleted_at?: string | null;
 };
 
 type SubmittedTool = {
@@ -260,7 +262,8 @@ type SmartAdminStatus =
   | "Online"
   | "Slow"
   | "Error"
-  | "Unknown";
+  | "Unknown"
+  | "Archived";
 
 type SmartAdminActivity = {
   id: string;
@@ -419,7 +422,7 @@ function smartStatusClass(status: SmartAdminStatus | ToolHealthStatus) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
 
-  if (status === "Error" || status === "Reported") {
+  if (status === "Error" || status === "Reported" || status === "Archived") {
     return "border-red-200 bg-red-50 text-red-700";
   }
 
@@ -1877,10 +1880,10 @@ export default function AdminDashboardClient({
     if (!id) return;
 
     askConfirm({
-      title: "Delete Tool?",
+      title: "Archive Tool?",
       message:
-        "This will remove the tool from the live AiFinder database. This action cannot be undone.",
-      confirmLabel: "Delete",
+        "This will archive the tool. It will be hidden from public directories but remain in the database.",
+      confirmLabel: "Archive",
       confirmTone: "red",
       onConfirm: async () => {
         const secureToken = await getCsrfToken();
@@ -1906,11 +1909,11 @@ export default function AdminDashboardClient({
         }
 
         if (!response.ok) {
-          showError(result?.error || "Failed to delete tool.");
+          showError(result?.error || "Failed to archive tool.");
           return;
         }
 
-        showSuccess("Tool deleted successfully.", "Tool Deleted");
+        showSuccess("Tool archived successfully.", "Tool Archived");
 
         fetchTools();
         fetchSubmissions();
@@ -2641,7 +2644,7 @@ export default function AdminDashboardClient({
     <SlideOverPanel
       eyebrow="Live Database"
       title="Tools in Database"
-      description="Search, filter, edit, or delete live AiFinder tools."
+      description="Search, filter, edit, or archive live AiFinder tools."
       accent="cyan"
       onClose={() => setIsLiveDatabaseModalOpen(false)}
     >
@@ -2766,7 +2769,14 @@ export default function AdminDashboardClient({
                       />
 
                       <div className="min-w-0">
-                        <h3 className="break-words text-base font-bold">{tool.name}</h3>
+                        <h3 className="break-words text-base font-bold flex flex-wrap items-center gap-2">
+                          {tool.name}
+                          {(tool.status === "archived" || tool.deleted_at) && (
+                            <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">
+                              Archived
+                            </span>
+                          )}
+                        </h3>
 
                         <p className="text-sm text-cyan-700">
                           {tool.category}
@@ -2810,12 +2820,21 @@ export default function AdminDashboardClient({
                         Edit
                       </button>
 
-                      <button
-                        onClick={() => deleteTool(tool.id)}
-                        className="w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 sm:w-auto"
-                      >
-                        Delete
-                      </button>
+                      {tool.status === "archived" || tool.deleted_at ? (
+                        <button
+                          disabled
+                          className="w-full rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400 cursor-not-allowed sm:w-auto border border-slate-200"
+                        >
+                          Archived
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => deleteTool(tool.id)}
+                          className="w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 sm:w-auto"
+                        >
+                          Archive
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -3273,7 +3292,7 @@ export default function AdminDashboardClient({
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
                       Open the existing live database manager to search, filter,
-                      edit, delete, or refresh tools without changing backend
+                      edit, archive, or refresh tools without changing backend
                       behavior.
                     </p>
                   </div>
@@ -3322,7 +3341,13 @@ export default function AdminDashboardClient({
                         <span className="text-xs font-bold text-slate-600">
                           {tool.category}
                         </span>
-                        <SmartStatusBadge status="Online" />
+                        <SmartStatusBadge
+                          status={
+                            tool.status === "archived" || tool.deleted_at
+                              ? "Archived"
+                              : "Online"
+                          }
+                        />
                       </div>
                     ))}
                     {tools.length === 0 && (
