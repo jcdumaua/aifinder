@@ -261,7 +261,7 @@ export default function Home() {
   useEffect(() => {
     async function loadToolsFromSupabase() {
       const { data, error } = await supabase
-        .from("tools")
+        .from("public_safe_tools")
         .select(
           "id, name, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at"
         )

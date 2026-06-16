@@ -58,7 +58,7 @@ async function hydratePublicToolPlacements(
   }
 
   const { data: rawTools, error } = await supabaseAdmin
-    .from("tools")
+    .from("public_safe_tools")
     .select(
       "id, name, slug, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at, updated_at"
     )

@@ -15,7 +15,7 @@ type ToolSitemapRow = {
 
 async function getToolUrls() {
   const { data, error } = await supabaseAdmin
-    .from("tools")
+    .from("public_safe_tools")
     .select("name, created_at, updated_at")
     .order("created_at", { ascending: false });
 

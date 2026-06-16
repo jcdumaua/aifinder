@@ -123,7 +123,7 @@ function buildToolData(row: ToolRow): CategoryPageTool | null {
 
 async function getTools() {
   const { data, error } = await supabaseAdmin
-    .from("tools")
+    .from("public_safe_tools")
     .select("*")
     .order("created_at", { ascending: false });
 

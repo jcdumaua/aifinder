@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { normalizeToolCategory } from "../../../lib/tool-categories";
 import {
-  categories,
   getLogoUrl,
   getReviewCount,
   getToolRating,
@@ -111,7 +110,7 @@ function buildToolData(row: ToolRow): ToolPageData | null {
 
 async function getTools() {
   const { data, error } = await supabaseAdmin
-    .from("tools")
+    .from("public_safe_tools")
     .select("*")
     .order("created_at", { ascending: false });
 
