@@ -2,6 +2,7 @@ import { TOOL_CATEGORIES, type ToolCategory } from "../../lib/tool-categories";
 
 export type Tool = {
   name: string;
+  slug?: string | null;
   category: ToolCategory;
   description: string;
   website: string;

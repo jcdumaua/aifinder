@@ -359,14 +359,16 @@ export default function Home() {
     }
   };
 
+  const getCanonicalToolSlug = (tool: Tool) => tool.slug || toolSlug(tool.name);
+
   const toggleFavorite = (tool: Tool) => {
-    toggleFavoriteSlug(toolSlug(tool.name));
+    toggleFavoriteSlug(getCanonicalToolSlug(tool));
   };
 
   const toHomepageSectionTool = (tool: Tool): HomepageSectionTool => {
     return {
       card: toPublicToolCardData(tool, {
-        slugFallback: toolSlug,
+        slugFallback: (name) => tool.slug || toolSlug(name),
         logoFallback: getLogoUrl,
         ratingFallback: getToolRating,
         reviewCountFallback: getReviewCount,
@@ -417,16 +419,24 @@ export default function Home() {
     submitSearch(value);
   };
 
-  const favoriteTools = tools.filter((tool) =>
-    favoriteSlugs.includes(toolSlug(tool.name))
-  );
+  const favoriteTools = tools.filter((tool) => {
+    const canonicalSlug = getCanonicalToolSlug(tool);
+    const legacySlug = toolSlug(tool.name);
+    return favoriteSlugs.includes(canonicalSlug) || favoriteSlugs.includes(legacySlug);
+  });
 
-  const compareTools = tools.filter((tool) =>
-    compareSlugs.includes(toolSlug(tool.name))
-  );
+  const compareTools = tools.filter((tool) => {
+    const canonicalSlug = getCanonicalToolSlug(tool);
+    const legacySlug = toolSlug(tool.name);
+    return compareSlugs.includes(canonicalSlug) || compareSlugs.includes(legacySlug);
+  });
 
   const selectedOriginalTool = selectedTool
-    ? tools.find((tool) => toolSlug(tool.name) === selectedTool.slug)
+    ? tools.find((tool) => {
+        const canonicalSlug = getCanonicalToolSlug(tool);
+        const legacySlug = toolSlug(tool.name);
+        return canonicalSlug === selectedTool.slug || legacySlug === selectedTool.slug;
+      })
     : undefined;
 
   const rankedFilteredTools = useMemo(() => {
@@ -1536,7 +1546,7 @@ function ToolList({
     <div className="grid max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {rankedTools.map(({ tool, score }) => {
         const publicTool = toPublicToolCardData(tool, {
-          slugFallback: toolSlug,
+          slugFallback: (name) => tool.slug || toolSlug(name),
           logoFallback: getLogoUrl,
           ratingFallback: getToolRating,
           reviewCountFallback: getReviewCount,
