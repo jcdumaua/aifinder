@@ -263,7 +263,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from("public_safe_tools")
         .select(
-          "id, name, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at"
+          "id, slug, name, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at"
         )
         .order("created_at", { ascending: false });
 
