@@ -204,97 +204,34 @@ async function validateHomepageToolPlacementsForPublish(
     return { errors, warnings };
   }
 
-  const { data: slugRows, error: slugError } = await supabaseAdmin
-    .from("tools")
+  const { data: publicSafeRows, error: publicSafeError } = await supabaseAdmin
+    .from("public_safe_tools")
     .select("slug")
     .in("slug", uniqueSlugs);
 
-  if (slugError) {
-    if (isMissingColumnError(slugError.message, "slug")) {
+  if (publicSafeError) {
+    if (isMissingColumnError(publicSafeError.message, "slug")) {
       errors.push(
-        "Cannot publish homepage tool placements because the live tools schema does not expose a slug column for validation."
+        "Cannot publish homepage tool placements because the public-safe tools view does not expose a slug column for validation."
       );
     } else {
-      errors.push("Unable to validate homepage tool placement slugs.");
+      errors.push("Unable to validate homepage tool placements against public-safe tools.");
     }
 
     return { errors, warnings };
   }
 
-  const existingSlugs = new Set(
-    (slugRows ?? [])
+  const publicSafeSlugs = new Set(
+    (publicSafeRows ?? [])
       .map((row) => row.slug)
       .filter((slug): slug is string => typeof slug === "string")
   );
-  const missingSlugs = uniqueSlugs.filter((slug) => !existingSlugs.has(slug));
+  const unsafeSlugs = uniqueSlugs.filter((slug) => !publicSafeSlugs.has(slug));
 
-  if (missingSlugs.length > 0) {
+  if (unsafeSlugs.length > 0) {
     errors.push(
-      `Homepage tool placements reference missing tool slugs: ${formatSlugList(
-        missingSlugs
-      )}.`
-    );
-  }
-
-  const { data: approvedRows, error: statusError } = await supabaseAdmin
-    .from("tools")
-    .select("slug, status")
-    .eq("status", "approved")
-    .in("slug", uniqueSlugs);
-
-  if (statusError) {
-    if (isMissingColumnError(statusError.message, "status")) {
-      errors.push(
-        "Cannot publish homepage tool placements because the live tools schema does not expose a status column for public-safety validation."
-      );
-    } else {
-      errors.push("Unable to validate homepage tool approval status.");
-    }
-
-    return { errors, warnings };
-  }
-
-  const approvedSlugs = new Set(
-    (approvedRows ?? [])
-      .map((row) => row.slug)
-      .filter((slug): slug is string => typeof slug === "string")
-  );
-  const unapprovedSlugs = uniqueSlugs.filter((slug) => !approvedSlugs.has(slug));
-
-  if (unapprovedSlugs.length > 0) {
-    errors.push(
-      `Homepage tool placements reference tools that are missing or not approved: ${formatSlugList(
-        unapprovedSlugs
-      )}.`
-    );
-  }
-
-  const { data: deletionRows, error: deletionError } = await supabaseAdmin
-    .from("tools")
-    .select("slug, deleted_at")
-    .in("slug", uniqueSlugs);
-
-  if (deletionError) {
-    if (isMissingColumnError(deletionError.message, "deleted_at")) {
-      warnings.push(
-        "Live tools schema does not expose deleted_at; publish validation could not perform a deleted-tool check."
-      );
-    } else {
-      errors.push("Unable to validate homepage tool deletion state.");
-    }
-
-    return { errors, warnings };
-  }
-
-  const deletedSlugs = (deletionRows ?? [])
-    .filter((row) => row.deleted_at !== null)
-    .map((row) => row.slug)
-    .filter((slug): slug is string => typeof slug === "string");
-
-  if (deletedSlugs.length > 0) {
-    errors.push(
-      `Homepage tool placements reference deleted tools: ${formatSlugList(
-        deletedSlugs
+      `Homepage tool placements reference missing, deleted, unapproved, or non-public-safe tool slugs: ${formatSlugList(
+        unsafeSlugs
       )}.`
     );
   }

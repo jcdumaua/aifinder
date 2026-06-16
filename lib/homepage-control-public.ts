@@ -62,7 +62,6 @@ async function hydratePublicToolPlacements(
     .select(
       "id, name, slug, description, website, category, pricing, featured, logo_url, platforms, best_for, use_cases, ios, android, created_at, updated_at"
     )
-    .eq("status", "approved")
     .in("slug", Array.from(allSlugs));
 
   if (error) {
