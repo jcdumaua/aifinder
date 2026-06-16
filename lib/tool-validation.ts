@@ -218,6 +218,14 @@ export function getNormalizedDomain(value: string) {
   return getComparableHostname(url).replace(/^www\./, "");
 }
 
+export function createToolSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
 export function validateOptionalEmail(value: unknown) {
   const email = validateTextField(
     value,

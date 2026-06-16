@@ -6,6 +6,7 @@ import {
 } from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 import {
+  createToolSlug,
   getNormalizedDomain,
   TOOL_FIELD_LENGTHS,
   validateHttpsUrl,
@@ -146,10 +147,16 @@ function validateToolBody(body: Record<string, unknown>, requireId = false) {
   const safeWebsite = validateHttpsUrl(body.website, "Website URL");
   const safeLogoUrl = validateOptionalLogoUrl(body.logo_url) || null;
   const pricing = validateToolPricing(body.pricing);
+  const slug = createToolSlug(name);
+
+  if (!slug) {
+    throw new Error("Tool name must include at least one URL-safe character.");
+  }
 
   return {
     id,
     name,
+    slug,
     category,
     description,
     website: safeWebsite,
@@ -163,26 +170,48 @@ async function findDuplicateWebsiteDomain(
   normalizedDomain: string,
   excludedToolId?: number | null
 ) {
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("tools")
     .select("id, website")
     .eq("normalized_domain", normalizedDomain)
-    .limit(1);
+    .is("deleted_at", null);
+
+  if (excludedToolId) {
+    query = query.neq("id", excludedToolId);
+  }
+
+  const { data, error } = await query.limit(1);
 
   if (error) {
     console.error("Tool duplicate domain check error:", error.message);
     throw new Error("Unable to check existing tools.");
   }
 
-  const duplicate = (data || []).find((tool) => {
-    if (excludedToolId && tool.id === excludedToolId) {
-      return false;
-    }
+  return data?.[0] || null;
+}
 
-    return true;
-  });
+async function findDuplicateToolSlug(
+  slug: string,
+  excludedToolId?: number | null
+) {
+  let query = supabaseAdmin
+    .from("tools")
+    .select("id, slug")
+    .eq("slug", slug)
+    .is("deleted_at", null);
 
-  return duplicate || null;
+  if (excludedToolId) {
+    query = query.neq("id", excludedToolId);
+  }
+
+  const { data, error } = await query.limit(1);
+
+  if (error) {
+    console.error("Tool duplicate slug check error:", error.message);
+    throw new Error("Unable to check existing tool slugs.");
+  }
+
+  return data?.[0] || null;
 }
 
 export async function POST(request: Request) {
@@ -207,9 +236,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const duplicateSlug = await findDuplicateToolSlug(cleanBody.slug);
+
+    if (duplicateSlug) {
+      return jsonResponse(
+        { error: "A tool with this generated slug already exists." },
+        409
+      );
+    }
+
     const { error } = await supabaseAdmin.from("tools").insert([
       {
         name: cleanBody.name,
+        slug: cleanBody.slug,
+        status: "approved",
+        deleted_at: null,
         category: cleanBody.category,
         description: cleanBody.description,
         website: cleanBody.website,
@@ -277,10 +318,23 @@ export async function PUT(request: Request) {
       );
     }
 
+    const duplicateSlug = await findDuplicateToolSlug(
+      cleanBody.slug,
+      cleanBody.id
+    );
+
+    if (duplicateSlug) {
+      return jsonResponse(
+        { error: "Another tool with this generated slug already exists." },
+        409
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from("tools")
       .update({
         name: cleanBody.name,
+        slug: cleanBody.slug,
         category: cleanBody.category,
         description: cleanBody.description,
         website: cleanBody.website,
@@ -341,8 +395,12 @@ export async function DELETE(request: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("tools")
-      .delete()
+      .update({
+        status: "archived",
+        deleted_at: new Date().toISOString(),
+      })
       .eq("id", id)
+      .is("deleted_at", null)
       .select("id, name, website")
       .single();
 
@@ -368,7 +426,7 @@ export async function DELETE(request: Request) {
 
     return jsonResponse({
       success: true,
-      message: "Tool deleted.",
+      message: "Tool archived.",
     });
   } catch (error) {
     return jsonResponse(
