@@ -798,6 +798,15 @@ export default function AdminDashboardClient({
   const [selectedDiscoveredTool, setSelectedDiscoveredTool] =
     useState<DiscoveredTool | null>(null);
 
+  const [manualIntakeName, setManualIntakeName] = useState("");
+  const [manualIntakeWebsite, setManualIntakeWebsite] = useState("");
+  const [manualIntakeDescription, setManualIntakeDescription] = useState("");
+  const [manualIntakeCategory, setManualIntakeCategory] = useState("");
+  const [manualIntakePricing, setManualIntakePricing] = useState("Free + Paid");
+  const [manualIntakeScore, setManualIntakeScore] = useState("0.75");
+  const [isSubmittingManualIntake, setIsSubmittingManualIntake] =
+    useState(false);
+
   const [isUploadingAddLogo, setIsUploadingAddLogo] = useState(false);
   const [isUploadingEditLogo, setIsUploadingEditLogo] = useState(false);
   const [isUploadingSubmissionLogo, setIsUploadingSubmissionLogo] =
@@ -1257,6 +1266,108 @@ export default function AdminDashboardClient({
     if (csrfToken) return csrfToken;
 
     return fetchCsrfToken();
+  }
+
+  function resetManualDiscoveryIntakeForm() {
+    setManualIntakeName("");
+    setManualIntakeWebsite("");
+    setManualIntakeDescription("");
+    setManualIntakeCategory("");
+    setManualIntakePricing("Free + Paid");
+    setManualIntakeScore("0.75");
+  }
+
+  async function submitManualDiscoveryIntake(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!manualIntakeName.trim()) {
+      showError("Please enter the discovered tool name.");
+      return;
+    }
+
+    if (!manualIntakeWebsite.trim()) {
+      showError("Please enter the discovered tool website.");
+      return;
+    }
+
+    if (!manualIntakeDescription.trim()) {
+      showError("Please enter a short description.");
+      return;
+    }
+
+    if (!manualIntakeCategory) {
+      showError("Please choose a category.");
+      return;
+    }
+
+    setIsSubmittingManualIntake(true);
+
+    try {
+      const secureToken = await getCsrfToken();
+
+      if (!secureToken) {
+        return;
+      }
+
+      const response = await fetch("/api/admin/discovery/intake", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": secureToken,
+        },
+        body: JSON.stringify({
+          name: manualIntakeName,
+          website: manualIntakeWebsite,
+          description: manualIntakeDescription,
+          category: manualIntakeCategory,
+          pricing: manualIntakePricing,
+          platforms: ["Web"],
+          discovery_score: Number(manualIntakeScore),
+          source_url: manualIntakeWebsite,
+          raw_payload: {
+            source: "admin-manual-intake-form",
+          },
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.status === 401) {
+        showError("Your admin session expired. Please log in again.");
+        logoutAdmin();
+        return;
+      }
+
+      if (!response.ok) {
+        showError(
+          result?.error ||
+            "Manual discovery intake failed. Please check the details."
+        );
+        return;
+      }
+
+      const discoveredStatus = result?.data?.discoveredTool?.status;
+
+      showSuccess(
+        discoveredStatus === "duplicate"
+          ? "Candidate recorded as a duplicate. Review it in the Discovery Queue."
+          : "Candidate added to the Discovery Queue for review.",
+        "Discovery Intake Saved"
+      );
+
+      resetManualDiscoveryIntakeForm();
+    } catch (error) {
+      showError(
+        error instanceof Error
+          ? error.message
+          : "Manual discovery intake failed."
+      );
+    } finally {
+      setIsSubmittingManualIntake(false);
+    }
   }
 
   async function unlockAdmin() {
@@ -3970,6 +4081,164 @@ export default function AdminDashboardClient({
 
           {view === "discovery-tools" && (
             <DiscoveryQueueTable />
+          )}
+
+          {view === "discovery" && (
+            <section className="mb-4 rounded-2xl border border-cyan-200 bg-white p-4 shadow-xl shadow-cyan-100/70">
+              <form onSubmit={submitManualDiscoveryIntake} className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">
+                      Manual Discovery Intake
+                    </p>
+                    <h2 className="mt-1 text-lg font-black text-slate-950">
+                      Add a discovered tool safely
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                      Manually send a candidate through the same protected intake
+                      gate the crawler will use later. The system validates the
+                      URL, checks duplicates, creates evidence, and writes an
+                      audit event.
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin/discovery/tools"
+                    className="inline-flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Open Queue
+                  </Link>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className={adminFormFieldClass}>
+                    <Label htmlFor="manual-intake-name" className={adminFormLabelClass}>
+                      Tool name
+                    </Label>
+                    <Input
+                      id="manual-intake-name"
+                      value={manualIntakeName}
+                      onChange={(event) => setManualIntakeName(event.target.value)}
+                      placeholder="Example AI Tool"
+                      className={adminFormControlClass}
+                    />
+                  </div>
+
+                  <div className={adminFormFieldClass}>
+                    <Label htmlFor="manual-intake-website" className={adminFormLabelClass}>
+                      Website
+                    </Label>
+                    <Input
+                      id="manual-intake-website"
+                      value={manualIntakeWebsite}
+                      onChange={(event) =>
+                        setManualIntakeWebsite(event.target.value)
+                      }
+                      placeholder="https://example.com"
+                      className={adminFormControlClass}
+                    />
+                    <p className={adminFormHelpClass}>
+                      HTTPS only. Localhost, private IPs, and risky downloads are blocked.
+                    </p>
+                  </div>
+
+                  <div className={adminFormFieldClass}>
+                    <Label htmlFor="manual-intake-category" className={adminFormLabelClass}>
+                      Category
+                    </Label>
+                    <select
+                      id="manual-intake-category"
+                      value={manualIntakeCategory || SELECT_EMPTY_VALUE}
+                      onChange={(event) =>
+                        setManualIntakeCategory(
+                          event.target.value === SELECT_EMPTY_VALUE
+                            ? ""
+                            : event.target.value
+                        )
+                      }
+                      className={`${adminFormControlClass} w-full`}
+                    >
+                      <option value={SELECT_EMPTY_VALUE}>Choose category</option>
+                      {TOOL_CATEGORIES.map((toolCategory) => (
+                        <option key={toolCategory} value={toolCategory}>
+                          {toolCategory}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className={adminFormFieldClass}>
+                      <Label htmlFor="manual-intake-pricing" className={adminFormLabelClass}>
+                        Pricing
+                      </Label>
+                      <select
+                        id="manual-intake-pricing"
+                        value={manualIntakePricing}
+                        onChange={(event) =>
+                          setManualIntakePricing(event.target.value)
+                        }
+                        className={`${adminFormControlClass} w-full`}
+                      >
+                        {PRICING_OPTIONS.map((pricingOption) => (
+                          <option key={pricingOption} value={pricingOption}>
+                            {pricingOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={adminFormFieldClass}>
+                      <Label htmlFor="manual-intake-score" className={adminFormLabelClass}>
+                        Discovery score
+                      </Label>
+                      <Input
+                        id="manual-intake-score"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={manualIntakeScore}
+                        onChange={(event) =>
+                          setManualIntakeScore(event.target.value)
+                        }
+                        className={adminFormControlClass}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${adminFormFieldClass} lg:col-span-2`}>
+                    <Label htmlFor="manual-intake-description" className={adminFormLabelClass}>
+                      Description
+                    </Label>
+                    <Textarea
+                      id="manual-intake-description"
+                      value={manualIntakeDescription}
+                      onChange={(event) =>
+                        setManualIntakeDescription(event.target.value)
+                      }
+                      placeholder="Short description for admin review."
+                      className={`${adminFormControlClass} min-h-28`}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs leading-5 text-slate-500">
+                    Duplicate domains are not auto-approved. They are recorded as
+                    blocking duplicate candidates for review.
+                  </p>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingManualIntake}
+                    className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800"
+                  >
+                    {isSubmittingManualIntake
+                      ? "Submitting..."
+                      : "Send to Discovery Queue"}
+                  </Button>
+                </div>
+              </form>
+            </section>
           )}
 
           {view === "discovery" && (
