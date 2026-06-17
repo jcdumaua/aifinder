@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../lib/supabase";
 import { DiscoveryToolDetail } from "./discovery/discovery-tool-detail";
 import { DiscoveryQueueTable } from "./discovery/discovery-queue-table";
+import { DiscoveryRunsTable } from "./discovery/discovery-runs-table";
 import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
 import {
   discoveredToolStatusLabels,
@@ -4240,6 +4241,8 @@ export default function AdminDashboardClient({
               </form>
             </section>
           )}
+
+          {view === "discovery" && <DiscoveryRunsTable />}
 
           {view === "discovery" && (
             <section
