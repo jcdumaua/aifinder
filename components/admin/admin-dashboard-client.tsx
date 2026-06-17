@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../lib/supabase";
+import { DiscoveryQueueTable } from "./discovery/discovery-queue-table";
 import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
 import {
   discoveredToolStatusLabels,
@@ -109,6 +110,7 @@ type ConfirmDialog = {
 export type AdminView =
   | "dashboard"
   | "tools"
+  | "discovery-tools"
   | "discovery"
   | "homepage-control"
   | "moderation"
@@ -127,6 +129,11 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", view: "dashboard" },
   { label: "Tools", href: "/admin/tools", view: "tools" },
   { label: "Discovery", href: "/admin/discovery", view: "discovery" },
+  {
+    label: "Discovery Queue",
+    href: "/admin/discovery/tools",
+    view: "discovery-tools",
+  },
   {
     label: "Homepage Control Room",
     href: "/admin/homepage-control",
@@ -174,6 +181,12 @@ const ADMIN_PAGE_COPY: Record<
     title: "Tool Operations",
     description:
       "Manage live tools, categories, health signals, and add or edit listings from one focused workspace.",
+  },
+  "discovery-tools": {
+    eyebrow: "Discovery Engine",
+    title: "Review Queue",
+    description:
+      "Triage tools found by the discovery engine. Filter candidates before deeper review.",
   },
   discovery: {
     eyebrow: "Discovery",
@@ -3939,6 +3952,10 @@ export default function AdminDashboardClient({
                 </div>
               </div>
             </section>
+          )}
+
+          {view === "discovery-tools" && (
+            <DiscoveryQueueTable />
           )}
 
           {view === "discovery" && (
