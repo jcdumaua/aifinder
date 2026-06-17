@@ -346,8 +346,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
                 Triage Actions
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Update review status only. No approve-to-tools action in Phase
-                3C.
+                Approve candidates into live tools or update review status safely.
               </p>
             </div>
 
