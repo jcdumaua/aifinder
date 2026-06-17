@@ -31,6 +31,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "new", label: "New" },
   { value: "pending_review", label: "Pending Review" },
+  { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
   { value: "ignored", label: "Ignored" },
   { value: "duplicate", label: "Duplicate" },
