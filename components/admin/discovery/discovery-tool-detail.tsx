@@ -21,6 +21,7 @@ type DetailPayload = {
 };
 
 type TriageStatus = "pending_review" | "ignored" | "rejected";
+type DiscoveryAdminAction = TriageStatus | "approve";
 
 function getCookieValue(name: string) {
   if (typeof document === "undefined") return null;
@@ -82,7 +83,7 @@ function DetailRow({ label, value }: { label: string; value: unknown }) {
 export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   const [data, setData] = useState<DetailPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<TriageStatus | null>(null);
+  const [actionLoading, setActionLoading] = useState<DiscoveryAdminAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
@@ -198,6 +199,58 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     }
   }
 
+  async function approveDiscoveredTool() {
+    setActionMessage(null);
+
+    const confirmed = window.confirm(
+      "Approve this discovered tool and add it to the live public tools table?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const csrfToken = getCookieValue("aifinder_admin_csrf_token");
+
+    if (!csrfToken) {
+      setActionMessage("Security token missing. Please refresh or log in again.");
+      return;
+    }
+
+    setActionLoading("approve");
+
+    try {
+      const response = await fetch(`${detailUrl}/approve`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "x-csrf-token": csrfToken,
+        },
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to approve discovered tool.");
+      }
+
+      setActionMessage(
+        `Approved and added to live tools. Tool ID: ${
+          result?.data?.approvedToolId || "created"
+        }.`
+      );
+      await fetchDetail();
+    } catch (approveError) {
+      setActionMessage(
+        approveError instanceof Error
+          ? approveError.message
+          : "Failed to approve discovered tool."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   if (loading) {
     return (
       <section className="flex min-h-96 items-center justify-center rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
@@ -237,6 +290,9 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   }
 
   const website = typeof tool.website === "string" ? tool.website : null;
+  const currentStatus = typeof tool.status === "string" ? tool.status : null;
+  const canApprove =
+    currentStatus === "new" || currentStatus === "pending_review";
 
   return (
     <div className="space-y-6">
@@ -298,6 +354,17 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
+                onClick={() => void approveDiscoveredTool()}
+                disabled={actionLoading !== null || !canApprove}
+                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {actionLoading === "approve"
+                  ? "Approving..."
+                  : "Approve to Live Tools"}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => void updateStatus("pending_review")}
                 disabled={actionLoading !== null}
                 className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-black text-white hover:bg-cyan-700 disabled:opacity-50"
@@ -337,6 +404,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <DetailRow label="Status" value={tool.status} />
+          <DetailRow label="Approved Tool ID" value={tool.approved_tool_id} />
           <DetailRow label="Rejected Reason" value={tool.rejected_reason} />
           <DetailRow label="Category" value={tool.category} />
           <DetailRow label="Pricing" value={tool.pricing} />
@@ -407,8 +475,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
       <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-800">
         <p className="font-black">Phase boundary</p>
         <p className="mt-1">
-          This page supports status triage only. Approve-to-tools and duplicate
-          matching UI will be wired in later controlled steps.
+          This page supports approval into live tools and basic status triage.
+          Duplicate matching UI will be wired in a later controlled step.
         </p>
       </section>
     </div>
