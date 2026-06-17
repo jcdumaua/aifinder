@@ -21,7 +21,28 @@ type DetailPayload = {
 };
 
 type TriageStatus = "pending_review" | "ignored" | "rejected";
-type DiscoveryAdminAction = TriageStatus | "approve";
+type DuplicateCandidateType = "tool" | "submission" | "discovered_tool";
+type DuplicateMatchType =
+  | "canonical_url"
+  | "normalized_domain"
+  | "slug"
+  | "exact_name"
+  | "fuzzy_name";
+type DiscoveryAdminAction = TriageStatus | "approve" | "duplicate";
+
+const duplicateCandidateTypes: DuplicateCandidateType[] = [
+  "tool",
+  "submission",
+  "discovered_tool",
+];
+
+const duplicateMatchTypes: DuplicateMatchType[] = [
+  "canonical_url",
+  "normalized_domain",
+  "slug",
+  "exact_name",
+  "fuzzy_name",
+];
 
 function getCookieValue(name: string) {
   if (typeof document === "undefined") return null;
@@ -86,6 +107,13 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   const [actionLoading, setActionLoading] = useState<DiscoveryAdminAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [duplicateCandidateType, setDuplicateCandidateType] =
+    useState<DuplicateCandidateType>("tool");
+  const [duplicateCandidateId, setDuplicateCandidateId] = useState("");
+  const [duplicateMatchType, setDuplicateMatchType] =
+    useState<DuplicateMatchType>("normalized_domain");
+  const [duplicateMatchScore, setDuplicateMatchScore] = useState("100");
+  const [duplicateReason, setDuplicateReason] = useState("");
 
   const detailUrl = useMemo(
     () => `/api/admin/discovery/discovered-tools/${encodeURIComponent(toolId)}`,
@@ -251,6 +279,90 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     }
   }
 
+
+  async function markDuplicateCandidate() {
+    setActionMessage(null);
+
+    const candidateId = duplicateCandidateId.trim();
+
+    if (!candidateId) {
+      setActionMessage("Candidate ID is required.");
+      return;
+    }
+
+    const matchScore = Number(duplicateMatchScore);
+
+    if (!Number.isFinite(matchScore) || matchScore < 0 || matchScore > 100) {
+      setActionMessage("Match score must be between 0 and 100.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Mark this discovered tool as a duplicate and block approval?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const csrfToken = getCookieValue("aifinder_admin_csrf_token");
+
+    if (!csrfToken) {
+      setActionMessage("Security token missing. Please refresh or log in again.");
+      return;
+    }
+
+    const body: Record<string, unknown> = {
+      candidate_type: duplicateCandidateType,
+      match_type: duplicateMatchType,
+      match_score: matchScore,
+      reason: duplicateReason.trim() || null,
+    };
+
+    if (duplicateCandidateType === "tool") {
+      body.candidate_tool_id = candidateId;
+    }
+
+    if (duplicateCandidateType === "submission") {
+      body.candidate_submission_id = candidateId;
+    }
+
+    if (duplicateCandidateType === "discovered_tool") {
+      body.candidate_discovered_tool_id = candidateId;
+    }
+
+    setActionLoading("duplicate");
+
+    try {
+      const response = await fetch(`${detailUrl}/duplicate`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to mark duplicate.");
+      }
+
+      setActionMessage("Duplicate candidate recorded and approval blocked.");
+      await fetchDetail();
+    } catch (duplicateError) {
+      setActionMessage(
+        duplicateError instanceof Error
+          ? duplicateError.message
+          : "Failed to mark duplicate."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   if (loading) {
     return (
       <section className="flex min-h-96 items-center justify-center rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
@@ -293,6 +405,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   const currentStatus = typeof tool.status === "string" ? tool.status : null;
   const canApprove =
     currentStatus === "new" || currentStatus === "pending_review";
+  const canMarkDuplicate =
+    currentStatus === "new" || currentStatus === "pending_review";
 
   return (
     <div className="space-y-6">
@@ -306,7 +420,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
         </Link>
 
         <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black uppercase tracking-widest text-slate-600">
-          Phase 3C triage
+          Phase 3E duplicate review
         </span>
       </div>
 
@@ -401,6 +515,92 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
           )}
         </div>
 
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+              Mark as Duplicate
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <label className="space-y-1 text-xs font-black text-slate-600">
+                Candidate Type
+                <select
+                  value={duplicateCandidateType}
+                  onChange={(event) =>
+                    setDuplicateCandidateType(
+                      event.target.value as DuplicateCandidateType
+                    )
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                >
+                  {duplicateCandidateTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1 text-xs font-black text-slate-600">
+                Candidate ID
+                <input
+                  value={duplicateCandidateId}
+                  onChange={(event) => setDuplicateCandidateId(event.target.value)}
+                  placeholder="Tool/submission ID or UUID"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs font-black text-slate-600">
+                Match Type
+                <select
+                  value={duplicateMatchType}
+                  onChange={(event) =>
+                    setDuplicateMatchType(event.target.value as DuplicateMatchType)
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                >
+                  {duplicateMatchTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="space-y-1 text-xs font-black text-slate-600">
+                Score
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={duplicateMatchScore}
+                  onChange={(event) => setDuplicateMatchScore(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                />
+              </label>
+
+              <label className="space-y-1 text-xs font-black text-slate-600">
+                Reason
+                <input
+                  value={duplicateReason}
+                  onChange={(event) => setDuplicateReason(event.target.value)}
+                  placeholder="Why this is a duplicate"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void markDuplicateCandidate()}
+              disabled={actionLoading !== null || !canMarkDuplicate}
+              className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800 hover:border-amber-400 disabled:opacity-50"
+            >
+              {actionLoading === "duplicate"
+                ? "Marking Duplicate..."
+                : "Record Duplicate Candidate"}
+            </button>
+          </div>
+
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <DetailRow label="Status" value={tool.status} />
           <DetailRow label="Approved Tool ID" value={tool.approved_tool_id} />
@@ -474,8 +674,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
       <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-800">
         <p className="font-black">Phase boundary</p>
         <p className="mt-1">
-          This page supports approval into live tools and basic status triage.
-          Duplicate matching UI will be wired in a later controlled step.
+          This page supports approval into live tools, basic status triage,
+          and duplicate candidate recording before approval.
         </p>
       </section>
     </div>
