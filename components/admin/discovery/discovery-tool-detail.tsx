@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 
 type DiscoveryToolDetailProps = {
   toolId: string;
@@ -14,12 +20,28 @@ type DetailPayload = {
   duplicateCandidates?: Record<string, unknown>[];
 };
 
+type TriageStatus = "pending_review" | "ignored" | "rejected";
+
+function getCookieValue(name: string) {
+  if (typeof document === "undefined") return null;
+
+  const match = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith(`${name}=`));
+
+  return match ? decodeURIComponent(match.split("=")[1] || "") : null;
+}
+
 function formatValue(value: unknown) {
   if (value === null || value === undefined || value === "") {
     return "—";
   }
 
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return String(value);
   }
 
@@ -44,13 +66,7 @@ function SafeJsonBlock({ value }: { value: unknown }) {
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: unknown;
-}) {
+function DetailRow({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -66,21 +82,25 @@ function DetailRow({
 export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   const [data, setData] = useState<DetailPayload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<TriageStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const detailUrl = useMemo(
+    () => `/api/admin/discovery/discovered-tools/${encodeURIComponent(toolId)}`,
+    [toolId]
+  );
 
   const fetchDetail = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/admin/discovery/discovered-tools/${encodeURIComponent(toolId)}`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      const response = await fetch(detailUrl, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to load discovered tool detail.");
@@ -97,7 +117,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     } finally {
       setLoading(false);
     }
-  }, [toolId]);
+  }, [detailUrl]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -106,6 +126,77 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
 
     return () => window.clearTimeout(timeoutId);
   }, [fetchDetail]);
+
+  async function updateStatus(status: TriageStatus) {
+    setActionMessage(null);
+
+    let reason: string | null = null;
+
+    if (status === "rejected") {
+      const enteredReason = window.prompt(
+        "Reason for rejecting this discovered tool?"
+      );
+
+      if (enteredReason === null) {
+        return;
+      }
+
+      reason = enteredReason.trim();
+
+      if (!reason) {
+        setActionMessage("Reject reason is required.");
+        return;
+      }
+
+      if (reason.length > 500) {
+        setActionMessage("Reject reason must be 500 characters or less.");
+        return;
+      }
+    }
+
+    const csrfToken = getCookieValue("aifinder_admin_csrf_token");
+
+    if (!csrfToken) {
+      setActionMessage("Security token missing. Please refresh or log in again.");
+      return;
+    }
+
+    setActionLoading(status);
+
+    try {
+      const response = await fetch(detailUrl, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
+        body: JSON.stringify({
+          status,
+          reason,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || "Failed to update discovered tool status."
+        );
+      }
+
+      setActionMessage(`Status updated to ${status.replace("_", " ")}.`);
+      await fetchDetail();
+    } catch (updateError) {
+      setActionMessage(
+        updateError instanceof Error
+          ? updateError.message
+          : "Failed to update discovered tool status."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -159,12 +250,12 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
         </Link>
 
         <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black uppercase tracking-widest text-slate-600">
-          Read-only review
+          Phase 3C triage
         </span>
       </div>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-cyan-600">
               Discovered Candidate
@@ -177,21 +268,76 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
             </p>
           </div>
 
-          {website && (
-            <a
-              href={website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:border-cyan-300 hover:text-cyan-700"
-            >
-              Visit website
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+          <div className="flex flex-wrap gap-2">
+            {website && (
+              <a
+                href={website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:border-cyan-300 hover:text-cyan-700"
+              >
+                Visit website
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                Triage Actions
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Update review status only. No approve-to-tools action in Phase
+                3C.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void updateStatus("pending_review")}
+                disabled={actionLoading !== null}
+                className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-black text-white hover:bg-cyan-700 disabled:opacity-50"
+              >
+                {actionLoading === "pending_review"
+                  ? "Updating..."
+                  : "Mark Pending Review"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void updateStatus("ignored")}
+                disabled={actionLoading !== null}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:border-slate-400 disabled:opacity-50"
+              >
+                {actionLoading === "ignored" ? "Updating..." : "Ignore"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void updateStatus("rejected")}
+                disabled={actionLoading !== null}
+                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:border-red-300 disabled:opacity-50"
+              >
+                {actionLoading === "rejected" ? "Updating..." : "Reject"}
+              </button>
+            </div>
+          </div>
+
+          {actionMessage && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-600" />
+              <span>{actionMessage}</span>
+            </div>
           )}
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <DetailRow label="Status" value={tool.status} />
+          <DetailRow label="Rejected Reason" value={tool.rejected_reason} />
           <DetailRow label="Category" value={tool.category} />
           <DetailRow label="Pricing" value={tool.pricing} />
           <DetailRow label="Discovery Score" value={tool.discovery_score} />
@@ -261,8 +407,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
       <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-800">
         <p className="font-black">Phase boundary</p>
         <p className="mt-1">
-          This page is read-only for Phase 3C. Approve-to-tools and triage
-          actions will be wired in a later controlled step.
+          This page supports status triage only. Approve-to-tools and duplicate
+          matching UI will be wired in later controlled steps.
         </p>
       </section>
     </div>
