@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "../../lib/supabase";
+import { DiscoveryToolDetail } from "./discovery/discovery-tool-detail";
 import { DiscoveryQueueTable } from "./discovery/discovery-queue-table";
 import { useOverlayScrollLock } from "../../lib/use-overlay-scroll-lock";
 import {
@@ -111,6 +112,7 @@ export type AdminView =
   | "dashboard"
   | "tools"
   | "discovery-tools"
+  | "discovery-tool-detail"
   | "discovery"
   | "homepage-control"
   | "moderation"
@@ -187,6 +189,12 @@ const ADMIN_PAGE_COPY: Record<
     title: "Review Queue",
     description:
       "Triage tools found by the discovery engine. Filter candidates before deeper review.",
+  },
+  "discovery-tool-detail": {
+    eyebrow: "Discovery Engine",
+    title: "Candidate Review",
+    description:
+      "Inspect discovered-tool metadata, duplicate candidates, and collected evidence in a safe read-only workspace.",
   },
   discovery: {
     eyebrow: "Discovery",
@@ -722,8 +730,10 @@ function formatBytes(value: number) {
 
 export default function AdminDashboardClient({
   view = "dashboard",
+  discoveryToolId,
 }: {
   view?: AdminView;
+  discoveryToolId?: string;
 }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -3952,6 +3962,10 @@ export default function AdminDashboardClient({
                 </div>
               </div>
             </section>
+          )}
+
+          {view === "discovery-tool-detail" && discoveryToolId && (
+            <DiscoveryToolDetail toolId={discoveryToolId} />
           )}
 
           {view === "discovery-tools" && (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
@@ -199,9 +200,12 @@ export function DiscoveryQueueTable() {
                 className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[1.2fr_1fr_90px_140px_120px] xl:items-center"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-black text-slate-950">
+                  <Link
+                    href={`/admin/discovery/tools/${tool.id}`}
+                    className="truncate font-black text-slate-950 hover:text-cyan-700"
+                  >
                     {tool.name || "Unnamed candidate"}
-                  </p>
+                  </Link>
 
                   {tool.website ? (
                     <a
