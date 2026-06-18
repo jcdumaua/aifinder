@@ -144,6 +144,13 @@ async function cleanup(supabase) {
   }
 
   if (created.sourceIds.length > 0) {
+    for (const sourceId of created.sourceIds) {
+      await supabase
+        .from("discovery_audit_events")
+        .delete()
+        .eq("metadata->>source_id", sourceId);
+    }
+
     await supabase
       .from("discovery_sources")
       .delete()

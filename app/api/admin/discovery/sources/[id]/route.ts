@@ -3,6 +3,11 @@ import {
   verifyAdminCsrfRequest,
   verifyAdminSession,
 } from "../../../../../../lib/admin-auth";
+import {
+  ADMIN_RATE_LIMIT_ACTIONS,
+  checkAdminRateLimit,
+  getAdminRateLimitResponseData,
+} from "../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
 import {
   validateHttpsUrl,
@@ -15,6 +20,17 @@ export const dynamic = "force-dynamic";
 const VALID_SOURCE_TYPES = new Set(["rss", "api", "scraper", "manual", "webhook"]);
 const MAX_BODY_SIZE_BYTES = 24 * 1024;
 const MAX_CONFIG_SIZE_BYTES = 10 * 1024;
+
+type DiscoverySourceAuditRow = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  description: string | null;
+  url: string | null;
+  source_type: string | null;
+  config: Record<string, unknown> | null;
+  is_active: boolean | null;
+};
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -112,6 +128,82 @@ function getBooleanValue(value: unknown) {
   return value;
 }
 
+function valuesAreEqual(first: unknown, second: unknown) {
+  return JSON.stringify(first ?? null) === JSON.stringify(second ?? null);
+}
+
+function getSafeUrlAuditValue(value: unknown) {
+  if (typeof value !== "string" || !value) {
+    return null;
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "[invalid-url]";
+  }
+}
+
+function getSafeConfigAuditValue(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { present: false };
+  }
+
+  return {
+    present: Object.keys(value as Record<string, unknown>).length > 0,
+  };
+}
+
+function getSafeSourceAuditValue(field: string, value: unknown) {
+  if (field === "url") {
+    return getSafeUrlAuditValue(value);
+  }
+
+  if (field === "config") {
+    return getSafeConfigAuditValue(value);
+  }
+
+  if (
+    field === "name" ||
+    field === "slug" ||
+    field === "description" ||
+    field === "source_type" ||
+    field === "is_active"
+  ) {
+    return value ?? null;
+  }
+
+  return "[omitted]";
+}
+
+function buildSourceUpdateAuditMetadata(
+  previousSource: DiscoverySourceAuditRow,
+  nextSource: DiscoverySourceAuditRow,
+  updatePayload: Record<string, unknown>
+) {
+  const previousRecord = previousSource as unknown as Record<string, unknown>;
+  const nextRecord = nextSource as unknown as Record<string, unknown>;
+  const changedFields = Object.keys(updatePayload).filter(
+    (field) => !valuesAreEqual(previousRecord[field], nextRecord[field])
+  );
+  const previousValues: Record<string, unknown> = {};
+  const nextValues: Record<string, unknown> = {};
+
+  for (const field of changedFields) {
+    previousValues[field] = getSafeSourceAuditValue(field, previousRecord[field]);
+    nextValues[field] = getSafeSourceAuditValue(field, nextRecord[field]);
+  }
+
+  return {
+    event_type: "source_updated",
+    source_id: nextSource.id,
+    source_slug: nextSource.slug,
+    changed_fields: changedFields,
+    previous_values: previousValues,
+    next_values: nextValues,
+  };
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -131,6 +223,16 @@ export async function PATCH(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
+  }
+
+  const rateLimit = checkAdminRateLimit({
+    request,
+    action: ADMIN_RATE_LIMIT_ACTIONS.discoverySourceUpdate,
+    actor: adminSession.actor,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonResponse(getAdminRateLimitResponseData(rateLimit), rateLimit.status);
   }
 
   const { id } = await context.params;
@@ -236,6 +338,24 @@ export async function PATCH(
     }
   }
 
+  const { data: previousSource, error: previousSourceError } = await supabaseAdmin
+    .from("discovery_sources")
+    .select("id, name, slug, description, url, source_type, config, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (previousSourceError) {
+    console.error("Failed to load discovery source before update.", {
+      message: previousSourceError.message,
+    });
+
+    return jsonResponse({ error: "Failed to update discovery source." }, 500);
+  }
+
+  if (!previousSource) {
+    return jsonResponse({ error: "Failed to update discovery source." }, 500);
+  }
+
   const { data: source, error: updateError } = await supabaseAdmin
     .from("discovery_sources")
     .update(updatePayload)
@@ -251,6 +371,35 @@ export async function PATCH(
     });
 
     return jsonResponse({ error: "Failed to update discovery source." }, 500);
+  }
+
+  const auditMetadata = buildSourceUpdateAuditMetadata(
+    previousSource as DiscoverySourceAuditRow,
+    source as DiscoverySourceAuditRow,
+    updatePayload
+  );
+
+  const { error: auditError } = await supabaseAdmin
+    .from("discovery_audit_events")
+    .insert({
+      discovered_tool_id: null,
+      action: "flag",
+      actor_id: adminSession.actor.id,
+      actor_label: adminSession.actor.label,
+      message: "Discovery source updated.",
+      metadata: auditMetadata,
+    });
+
+  if (auditError) {
+    console.error("Failed to write Discovery Source update audit event.", {
+      message: auditError.message,
+      sourceId: source.id,
+    });
+
+    return jsonResponse(
+      { error: "Discovery source updated, but audit logging failed." },
+      500
+    );
   }
 
   return jsonResponse({

@@ -3,6 +3,11 @@ import {
   verifyAdminCsrfRequest,
   verifyAdminSession,
 } from "../../../../../lib/admin-auth";
+import {
+  ADMIN_RATE_LIMIT_ACTIONS,
+  checkAdminRateLimit,
+  getAdminRateLimitResponseData,
+} from "../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import {
   validateHttpsUrl,
@@ -217,6 +222,16 @@ export async function POST(request: Request) {
     );
   }
 
+  const rateLimit = checkAdminRateLimit({
+    request,
+    action: ADMIN_RATE_LIMIT_ACTIONS.discoverySourceCreate,
+    actor: adminSession.actor,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonResponse(getAdminRateLimitResponseData(rateLimit), rateLimit.status);
+  }
+
   let body: Record<string, unknown>;
 
   try {
@@ -308,6 +323,35 @@ export async function POST(request: Request) {
     });
 
     return jsonResponse({ error: "Failed to create discovery source." }, 500);
+  }
+
+  const { error: auditError } = await supabaseAdmin
+    .from("discovery_audit_events")
+    .insert({
+      discovered_tool_id: null,
+      action: "flag",
+      actor_id: adminSession.actor.id,
+      actor_label: adminSession.actor.label,
+      message: "Discovery source created.",
+      metadata: {
+        event_type: "source_created",
+        source_id: source.id,
+        source_slug: source.slug,
+        source_type: source.source_type,
+        is_active: source.is_active,
+      },
+    });
+
+  if (auditError) {
+    console.error("Failed to write Discovery Source create audit event.", {
+      message: auditError.message,
+      sourceId: source.id,
+    });
+
+    return jsonResponse(
+      { error: "Discovery source created, but audit logging failed." },
+      500
+    );
   }
 
   return jsonResponse(

@@ -3,6 +3,11 @@ import {
   verifyAdminCsrfRequest,
   verifyAdminSession,
 } from "../../../../../lib/admin-auth";
+import {
+  ADMIN_RATE_LIMIT_ACTIONS,
+  checkAdminRateLimit,
+  getAdminRateLimitResponseData,
+} from "../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import {
   getNormalizedDomain,
@@ -202,6 +207,16 @@ export async function POST(request: Request) {
       { error: "Security token missing or expired. Please log in again." },
       403
     );
+  }
+
+  const rateLimit = checkAdminRateLimit({
+    request,
+    action: ADMIN_RATE_LIMIT_ACTIONS.discoveryManualIntake,
+    actor: adminSession.actor,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonResponse(getAdminRateLimitResponseData(rateLimit), rateLimit.status);
   }
 
   let body: Record<string, unknown>;

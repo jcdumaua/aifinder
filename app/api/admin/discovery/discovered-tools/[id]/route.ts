@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { verifyAdminCsrfRequest, verifyAdminSession } from "../../../../../../lib/admin-auth";
+import {
+  ADMIN_RATE_LIMIT_ACTIONS,
+  checkAdminRateLimit,
+  getAdminRateLimitResponseData,
+} from "../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -228,6 +233,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const rateLimit = checkAdminRateLimit({
+    request,
+    action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolStatus,
+    actor: adminSession.actor,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonResponse(getAdminRateLimitResponseData(rateLimit), rateLimit.status);
+  }
+
   const { id } = await context.params;
 
   if (!isValidUuid(id)) {
@@ -346,4 +361,3 @@ export async function PATCH(request: Request, context: RouteContext) {
     data: updatedTool,
   });
 }
-
