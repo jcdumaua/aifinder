@@ -478,6 +478,15 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     approvalConfirmationReady &&
     hasEvidence &&
     !hasDuplicateWarnings;
+  const sourceLabel = hasSource
+    ? `${formatValue(source?.name)} (${formatValue(source?.source_type)})`
+    : "No source linked";
+  const latestAuditEvent = auditEvents[0] || null;
+  const latestAuditLabel = latestAuditEvent
+    ? `${formatAuditAction(latestAuditEvent.action)} · ${formatDate(
+        latestAuditEvent.created_at
+      )}`
+    : "No audit event yet";
 
   return (
     <div className="space-y-6">
@@ -491,7 +500,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
         </Link>
 
         <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black uppercase tracking-widest text-slate-600">
-          Phase 3E duplicate review
+          Discovery candidate review
         </span>
       </div>
 
@@ -523,6 +532,31 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
             )}
           </div>
         </div>
+          <div className="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-cyan-700">
+                  Review Snapshot
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Quick summary before taking any triage or approval action.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full border border-cyan-100 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-cyan-700">
+                Safe review mode
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <DetailRow label="Status" value={tool.status} />
+              <DetailRow label="Source" value={sourceLabel} />
+              <DetailRow label="Evidence" value={evidence.length} />
+              <DetailRow label="Duplicates" value={duplicateCandidates.length} />
+              <DetailRow label="Latest Audit" value={latestAuditLabel} />
+            </div>
+          </div>
+
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -665,7 +699,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
 
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Mark as Duplicate
+              Duplicate Review
             </p>
             <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <label className="space-y-1 text-xs font-black text-slate-600">
@@ -767,10 +801,10 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <h3 className="text-lg font-black text-slate-950">
-            Discovery Origin
+            Source & Run Details
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Source and run metadata for this discovered candidate.
+            Raw source and run metadata used to trace where this candidate came from.
           </p>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
