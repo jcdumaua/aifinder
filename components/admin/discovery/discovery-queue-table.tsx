@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ChevronLeft,
@@ -103,6 +103,25 @@ function getStatusStyle(status: string | null) {
   return styles[status || "new"] || styles.new;
 }
 
+async function fetchCsrfToken() {
+  const response = await fetch("/api/admin/csrf", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || typeof payload?.csrfToken !== "string") {
+    throw new Error("Security token could not be created.");
+  }
+
+  return payload.csrfToken as string;
+}
+
 export function DiscoveryQueueTable() {
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
@@ -110,9 +129,19 @@ export function DiscoveryQueueTable() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [sourceOptions, setSourceOptions] = useState<DiscoverySourceSummary[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkLoadingStatus, setBulkLoadingStatus] = useState<string | null>(null);
+  const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const visibleIds = useMemo(() => tools.map((tool) => tool.id), [tools]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const hasSelection = selectedIds.length > 0;
+  const bulkBusy = Boolean(bulkLoadingStatus);
 
   const fetchTools = useCallback(async () => {
     setLoading(true);
@@ -151,6 +180,7 @@ export function DiscoveryQueueTable() {
 
       setTools(Array.isArray(result.data) ? result.data : []);
       setPagination(result.pagination || null);
+      setSelectedIds([]);
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -191,6 +221,78 @@ export function DiscoveryQueueTable() {
     }
   }, []);
 
+  async function runBulkStatus(status: "pending_review" | "ignored") {
+    if (selectedIds.length === 0 || bulkBusy) return;
+
+    setBulkLoadingStatus(status);
+    setBulkError(null);
+    setBulkMessage(null);
+
+    try {
+      const csrfToken = await fetchCsrfToken();
+
+      const response = await fetch(
+        "/api/admin/discovery/discovered-tools/bulk-status",
+        {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          body: JSON.stringify({
+            ids: selectedIds,
+            status,
+            reason: "Bulk queue safety action.",
+          }),
+        }
+      );
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Bulk action failed.");
+      }
+
+      const result = payload?.data || {};
+      setBulkMessage(
+        `Bulk action complete: ${result.updated || 0} updated, ${
+          result.skipped || 0
+        } skipped.`
+      );
+
+      await fetchTools();
+    } catch (bulkActionError) {
+      setBulkError(
+        bulkActionError instanceof Error
+          ? bulkActionError.message
+          : "Bulk action failed."
+      );
+    } finally {
+      setBulkLoadingStatus(null);
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((currentIds) =>
+      currentIds.includes(id)
+        ? currentIds.filter((currentId) => currentId !== id)
+        : [...currentIds, id]
+    );
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((currentIds) => {
+      if (allVisibleSelected) {
+        return currentIds.filter((id) => !visibleIds.includes(id));
+      }
+
+      return [...new Set([...currentIds, ...visibleIds])];
+    });
+  }
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void fetchSourceOptions();
@@ -226,7 +328,7 @@ export function DiscoveryQueueTable() {
               setSourceFilter(event.target.value);
               setPage(1);
             }}
-            disabled={sourcesLoading}
+            disabled={sourcesLoading || bulkBusy}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500 disabled:opacity-60"
           >
             <option value="all">
@@ -245,7 +347,8 @@ export function DiscoveryQueueTable() {
               setStatusFilter(event.target.value);
               setPage(1);
             }}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500"
+            disabled={bulkBusy}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500 disabled:opacity-60"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -257,7 +360,7 @@ export function DiscoveryQueueTable() {
           <button
             type="button"
             onClick={() => void fetchTools()}
-            disabled={loading}
+            disabled={loading || bulkBusy}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -272,8 +375,68 @@ export function DiscoveryQueueTable() {
         </p>
       )}
 
+      {hasSelection && (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-bold text-slate-700">
+            {selectedIds.length} selected
+          </p>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => void runBulkStatus("pending_review")}
+              disabled={bulkBusy}
+              className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-black text-white hover:bg-cyan-700 disabled:opacity-50"
+            >
+              {bulkLoadingStatus === "pending_review"
+                ? "Updating..."
+                : "Mark Pending Review"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void runBulkStatus("ignored")}
+              disabled={bulkBusy}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:border-slate-300 disabled:opacity-50"
+            >
+              {bulkLoadingStatus === "ignored" ? "Updating..." : "Ignore Selected"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              disabled={bulkBusy}
+              className="rounded-xl px-3 py-2 text-xs font-black text-slate-500 hover:text-slate-800 disabled:opacity-50"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bulkMessage && (
+        <p className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+          {bulkMessage}
+        </p>
+      )}
+
+      {bulkError && (
+        <p className="mb-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+          {bulkError}
+        </p>
+      )}
+
       <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="hidden grid-cols-[1.2fr_0.85fr_0.95fr_90px_120px_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 xl:grid">
+        <div className="hidden grid-cols-[32px_1.2fr_0.85fr_0.95fr_90px_120px_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 xl:grid">
+          <span>
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={toggleSelectAllVisible}
+              disabled={loading || bulkBusy || visibleIds.length === 0}
+              aria-label="Select all visible candidates"
+            />
+          </span>
           <span>Name / Website</span>
           <span>Category</span>
           <span>Source / Run</span>
@@ -304,81 +467,95 @@ export function DiscoveryQueueTable() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {tools.map((tool) => (
-              <article
-                key={tool.id}
-                className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[1.2fr_0.85fr_0.95fr_90px_120px_120px] xl:items-center"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/admin/discovery/tools/${tool.id}`}
-                    className="truncate font-black text-slate-950 hover:text-cyan-700"
-                  >
-                    {tool.name || "Unnamed candidate"}
-                  </Link>
+            {tools.map((tool) => {
+              const isSelected = selectedIds.includes(tool.id);
 
-                  {tool.website ? (
-                    <a
-                      href={tool.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 flex max-w-fit items-center gap-1.5 text-xs font-semibold text-cyan-700 hover:text-cyan-800"
+              return (
+                <article
+                  key={tool.id}
+                  className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[32px_1.2fr_0.85fr_0.95fr_90px_120px_120px] xl:items-center"
+                >
+                  <div>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelected(tool.id)}
+                      disabled={bulkBusy}
+                      aria-label={`Select ${tool.name || "candidate"}`}
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/discovery/tools/${tool.id}`}
+                      className="truncate font-black text-slate-950 hover:text-cyan-700"
                     >
-                      <span className="max-w-[220px] truncate">
-                        {tool.website}
-                      </span>
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
-                  ) : (
-                    <p className="mt-1 text-xs text-slate-400">No website</p>
-                  )}
+                      {tool.name || "Unnamed candidate"}
+                    </Link>
 
-                  {tool.description && (
-                    <p className="mt-1 max-w-sm truncate text-xs font-medium text-slate-500">
-                      {tool.description}
+                    {tool.website ? (
+                      <a
+                        href={tool.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 flex max-w-fit items-center gap-1.5 text-xs font-semibold text-cyan-700 hover:text-cyan-800"
+                      >
+                        <span className="max-w-[220px] truncate">
+                          {tool.website}
+                        </span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <p className="mt-1 text-xs text-slate-400">No website</p>
+                    )}
+
+                    {tool.description && (
+                      <p className="mt-1 max-w-sm truncate text-xs font-medium text-slate-500">
+                        {tool.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
+                      {tool.category || "Uncategorized"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-500">
+                    <p className="font-bold text-slate-700">
+                      {tool.source?.name || "Manual / unknown"}
                     </p>
-                  )}
-                </div>
+                    <p>
+                      {tool.source?.source_type
+                        ? `Source: ${tool.source.source_type}`
+                        : "Source: —"}
+                    </p>
+                    <p className="font-mono">
+                      Run: {formatShortId(tool.run?.id || tool.run_id)}
+                    </p>
+                  </div>
 
-                <div>
-                  <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
-                    {tool.category || "Uncategorized"}
-                  </span>
-                </div>
+                  <div className="font-mono text-xs font-bold text-slate-600">
+                    {formatScore(tool.discovery_score)}
+                  </div>
 
-                <div className="space-y-1 text-xs text-slate-500">
-                  <p className="font-bold text-slate-700">
-                    {tool.source?.name || "Manual / unknown"}
-                  </p>
-                  <p>
-                    {tool.source?.source_type
-                      ? `Source: ${tool.source.source_type}`
-                      : "Source: —"}
-                  </p>
-                  <p className="font-mono">
-                    Run: {formatShortId(tool.run?.id || tool.run_id)}
-                  </p>
-                </div>
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide ${getStatusStyle(
+                        tool.status
+                      )}`}
+                    >
+                      {(tool.status || "new").replace("_", " ")}
+                    </span>
+                  </div>
 
-                <div className="font-mono text-xs font-bold text-slate-600">
-                  {formatScore(tool.discovery_score)}
-                </div>
-
-                <div>
-                  <span
-                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide ${getStatusStyle(
-                      tool.status
-                    )}`}
-                  >
-                    {(tool.status || "new").replace("_", " ")}
-                  </span>
-                </div>
-
-                <div className="text-xs font-medium text-slate-500">
-                  {formatDate(tool.created_at)}
-                </div>
-              </article>
-            ))}
+                  <div className="text-xs font-medium text-slate-500">
+                    {formatDate(tool.created_at)}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
 
@@ -387,7 +564,7 @@ export function DiscoveryQueueTable() {
             <button
               type="button"
               onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-              disabled={page <= 1 || loading}
+              disabled={page <= 1 || loading || bulkBusy}
               className="flex items-center gap-1 text-xs font-black text-slate-600 hover:text-slate-950 disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -405,7 +582,7 @@ export function DiscoveryQueueTable() {
                   Math.min(pagination.totalPages, currentPage + 1)
                 )
               }
-              disabled={page >= pagination.totalPages || loading}
+              disabled={page >= pagination.totalPages || loading || bulkBusy}
               className="flex items-center gap-1 text-xs font-black text-slate-600 hover:text-slate-950 disabled:opacity-30"
             >
               Next
