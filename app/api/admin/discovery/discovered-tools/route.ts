@@ -14,6 +14,9 @@ const VALID_DISCOVERY_STATUSES = new Set([
   "duplicate",
 ]);
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 type DiscoveredToolQueueRow = {
   id: string;
   name: string | null;
@@ -88,6 +91,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const sourceId = searchParams.get("source_id");
   const page = getPositiveInteger(searchParams.get("page"), 1);
   const requestedLimit = getPositiveInteger(searchParams.get("limit"), 20);
   const limit = Math.min(100, Math.max(1, requestedLimit));
@@ -95,6 +99,10 @@ export async function GET(request: Request) {
 
   if (status && !VALID_DISCOVERY_STATUSES.has(status)) {
     return jsonResponse({ error: "Invalid status parameter." }, 400);
+  }
+
+  if (sourceId && !UUID_PATTERN.test(sourceId)) {
+    return jsonResponse({ error: "Invalid source_id parameter." }, 400);
   }
 
   let query = supabaseAdmin
@@ -126,6 +134,10 @@ export async function GET(request: Request) {
 
   if (status) {
     query = query.eq("status", status);
+  }
+
+  if (sourceId) {
+    query = query.eq("source_id", sourceId);
   }
 
   const { data, count, error } = await query;

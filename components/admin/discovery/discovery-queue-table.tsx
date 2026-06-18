@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ExternalLink,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 type DiscoverySourceSummary = {
@@ -32,6 +33,7 @@ type DiscoveryRunSummary = {
 type DiscoveredTool = {
   id: string;
   name: string | null;
+  description: string | null;
   website: string | null;
   category: string | null;
   status: string | null;
@@ -105,6 +107,9 @@ export function DiscoveryQueueTable() {
   const [tools, setTools] = useState<DiscoveredTool[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [sourceOptions, setSourceOptions] = useState<DiscoverySourceSummary[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +128,15 @@ export function DiscoveryQueueTable() {
         params.set("status", statusFilter);
       }
 
+      if (sourceFilter !== "all") {
+        params.set("source_id", sourceFilter);
+      }
+
       const response = await fetch(
         `/api/admin/discovery/discovered-tools?${params.toString()}`,
         {
+          credentials: "same-origin",
+          cache: "no-store",
           headers: {
             Accept: "application/json",
           },
@@ -149,7 +160,44 @@ export function DiscoveryQueueTable() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, sourceFilter, statusFilter]);
+
+  const fetchSourceOptions = useCallback(async () => {
+    setSourcesLoading(true);
+
+    try {
+      const response = await fetch("/api/admin/discovery/sources?limit=100", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load discovery sources.");
+      }
+
+      const result = (await response.json()) as {
+        data?: DiscoverySourceSummary[];
+      };
+
+      setSourceOptions(Array.isArray(result.data) ? result.data : []);
+    } catch {
+      setSourceOptions([]);
+    } finally {
+      setSourcesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchSourceOptions();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchSourceOptions]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -161,7 +209,7 @@ export function DiscoveryQueueTable() {
 
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">
             Discovered Tools Queue
@@ -171,20 +219,51 @@ export function DiscoveryQueueTable() {
           </p>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(event.target.value);
-            setPage(1);
-          }}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <select
+            value={sourceFilter}
+            onChange={(event) => {
+              setSourceFilter(event.target.value);
+              setPage(1);
+            }}
+            disabled={sourcesLoading}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500 disabled:opacity-60"
+          >
+            <option value="all">
+              {sourcesLoading ? "Loading sources..." : "All sources"}
             </option>
-          ))}
-        </select>
+            {sourceOptions.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.name || "Unnamed source"} ({source.source_type || "source"})
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => void fetchTools()}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {pagination && (
@@ -253,6 +332,12 @@ export function DiscoveryQueueTable() {
                   ) : (
                     <p className="mt-1 text-xs text-slate-400">No website</p>
                   )}
+
+                  {tool.description && (
+                    <p className="mt-1 max-w-sm truncate text-xs font-medium text-slate-500">
+                      {tool.description}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -261,19 +346,19 @@ export function DiscoveryQueueTable() {
                   </span>
                 </div>
 
-                  <div className="space-y-1 text-xs text-slate-500">
-                    <p className="font-bold text-slate-700">
-                      {tool.source?.name || "Manual / unknown"}
-                    </p>
-                    <p>
-                      {tool.source?.source_type
-                        ? `Source: ${tool.source.source_type}`
-                        : "Source: —"}
-                    </p>
-                    <p className="font-mono">
-                      Run: {formatShortId(tool.run?.id || tool.run_id)}
-                    </p>
-                  </div>
+                <div className="space-y-1 text-xs text-slate-500">
+                  <p className="font-bold text-slate-700">
+                    {tool.source?.name || "Manual / unknown"}
+                  </p>
+                  <p>
+                    {tool.source?.source_type
+                      ? `Source: ${tool.source.source_type}`
+                      : "Source: —"}
+                  </p>
+                  <p className="font-mono">
+                    Run: {formatShortId(tool.run?.id || tool.run_id)}
+                  </p>
+                </div>
 
                 <div className="font-mono text-xs font-bold text-slate-600">
                   {formatScore(tool.discovery_score)}
@@ -281,7 +366,7 @@ export function DiscoveryQueueTable() {
 
                 <div>
                   <span
-                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider ${getStatusStyle(
+                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide ${getStatusStyle(
                       tool.status
                     )}`}
                   >
