@@ -16,6 +16,8 @@ type DiscoveryToolDetailProps = {
 
 type DetailPayload = {
   tool?: Record<string, unknown> | null;
+  source?: Record<string, unknown> | null;
+  run?: Record<string, unknown> | null;
   evidence?: Record<string, unknown>[];
   duplicateCandidates?: Record<string, unknown>[];
 };
@@ -388,6 +390,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   }
 
   const tool = data?.tool || null;
+  const source = data?.source || null;
+  const run = data?.run || null;
   const evidence = Array.isArray(data?.evidence) ? data.evidence : [];
   const duplicateCandidates = Array.isArray(data?.duplicateCandidates)
     ? data.duplicateCandidates
@@ -616,6 +620,20 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
           <DetailRow label="Updated" value={formatDate(tool.updated_at)} />
         </div>
       </section>
+
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h3 className="text-lg font-black text-slate-950">
+            Discovery Origin
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Source and run metadata for this discovered candidate.
+          </p>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <SafeJsonBlock value={{ source: source || null }} />
+            <SafeJsonBlock value={{ run: run || null }} />
+          </div>
+        </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <h3 className="text-lg font-black text-slate-950">

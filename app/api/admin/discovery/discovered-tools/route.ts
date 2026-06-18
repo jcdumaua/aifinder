@@ -14,6 +14,45 @@ const VALID_DISCOVERY_STATUSES = new Set([
   "duplicate",
 ]);
 
+type DiscoveredToolQueueRow = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  website: string | null;
+  canonical_url: string | null;
+  normalized_domain: string | null;
+  slug: string | null;
+  status: string | null;
+  pricing: string | null;
+  platforms: unknown;
+  category: string | null;
+  logo_url: string | null;
+  discovery_score: number | null;
+  source_id: string | null;
+  run_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type DiscoverySourceSummary = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  source_type: string | null;
+  is_active: boolean | null;
+  last_run_at: string | null;
+};
+
+type DiscoveryRunSummary = {
+  id: string;
+  source_id: string | null;
+  status: string | null;
+  stats: Record<string, unknown> | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+};
+
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
     status,
@@ -99,8 +138,68 @@ export async function GET(request: Request) {
     return jsonResponse({ error: "Failed to fetch discovered tools." }, 500);
   }
 
+  const tools = (data || []) as unknown as DiscoveredToolQueueRow[];
+  const sourceIds = [
+    ...new Set(
+      tools
+        .map((tool) => tool.source_id)
+        .filter((sourceId): sourceId is string => typeof sourceId === "string")
+    ),
+  ];
+  const runIds = [
+    ...new Set(
+      tools
+        .map((tool) => tool.run_id)
+        .filter((runId): runId is string => typeof runId === "string")
+    ),
+  ];
+
+  const { data: sources, error: sourcesError } = sourceIds.length
+    ? await supabaseAdmin
+        .from("discovery_sources")
+        .select("id, name, slug, source_type, is_active, last_run_at")
+        .in("id", sourceIds)
+    : { data: [], error: null };
+
+  if (sourcesError) {
+    console.error("Failed to fetch Discovery Engine queue sources.", {
+      message: sourcesError.message,
+    });
+
+    return jsonResponse({ error: "Failed to fetch discovery sources." }, 500);
+  }
+
+  const { data: runs, error: runsError } = runIds.length
+    ? await supabaseAdmin
+        .from("discovery_runs")
+        .select("id, source_id, status, stats, started_at, finished_at, created_at")
+        .in("id", runIds)
+    : { data: [], error: null };
+
+  if (runsError) {
+    console.error("Failed to fetch Discovery Engine queue runs.", {
+      message: runsError.message,
+    });
+
+    return jsonResponse({ error: "Failed to fetch discovery runs." }, 500);
+  }
+
+  const sourceRows = (sources || []) as unknown as DiscoverySourceSummary[];
+  const runRows = (runs || []) as unknown as DiscoveryRunSummary[];
+
+  const sourceById = new Map(sourceRows.map((source) => [source.id, source]));
+  const runById = new Map(runRows.map((run) => [run.id, run]));
+
   return jsonResponse({
-    data: data || [],
+    data: tools.map((tool) => ({
+      ...tool,
+      source:
+        typeof tool.source_id === "string"
+          ? sourceById.get(tool.source_id) || null
+          : null,
+      run:
+        typeof tool.run_id === "string" ? runById.get(tool.run_id) || null : null,
+    })),
     pagination: {
       total: count || 0,
       page,

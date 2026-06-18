@@ -10,6 +10,25 @@ import {
   Loader2,
 } from "lucide-react";
 
+type DiscoverySourceSummary = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  source_type: string | null;
+  is_active: boolean | null;
+  last_run_at: string | null;
+};
+
+type DiscoveryRunSummary = {
+  id: string;
+  source_id: string | null;
+  status: string | null;
+  stats: Record<string, unknown> | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string | null;
+};
+
 type DiscoveredTool = {
   id: string;
   name: string | null;
@@ -17,6 +36,10 @@ type DiscoveredTool = {
   category: string | null;
   status: string | null;
   discovery_score: number | null;
+  source_id: string | null;
+  run_id: string | null;
+  source: DiscoverySourceSummary | null;
+  run: DiscoveryRunSummary | null;
   created_at: string | null;
 };
 
@@ -57,6 +80,12 @@ function formatScore(value: number | null) {
   const normalized = value <= 1 ? value * 100 : value;
 
   return `${Math.round(normalized)}%`;
+}
+
+function formatShortId(value: string | null) {
+  if (!value) return "—";
+
+  return `${value.slice(0, 8)}...`;
 }
 
 function getStatusStyle(status: string | null) {
@@ -165,9 +194,10 @@ export function DiscoveryQueueTable() {
       )}
 
       <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="hidden grid-cols-[1.2fr_1fr_90px_140px_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 xl:grid">
+        <div className="hidden grid-cols-[1.2fr_0.85fr_0.95fr_90px_120px_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-500 xl:grid">
           <span>Name / Website</span>
           <span>Category</span>
+          <span>Source / Run</span>
           <span>Score</span>
           <span>Status</span>
           <span>Found</span>
@@ -198,7 +228,7 @@ export function DiscoveryQueueTable() {
             {tools.map((tool) => (
               <article
                 key={tool.id}
-                className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[1.2fr_1fr_90px_140px_120px] xl:items-center"
+                className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[1.2fr_0.85fr_0.95fr_90px_120px_120px] xl:items-center"
               >
                 <div className="min-w-0">
                   <Link
@@ -230,6 +260,20 @@ export function DiscoveryQueueTable() {
                     {tool.category || "Uncategorized"}
                   </span>
                 </div>
+
+                  <div className="space-y-1 text-xs text-slate-500">
+                    <p className="font-bold text-slate-700">
+                      {tool.source?.name || "Manual / unknown"}
+                    </p>
+                    <p>
+                      {tool.source?.source_type
+                        ? `Source: ${tool.source.source_type}`
+                        : "Source: —"}
+                    </p>
+                    <p className="font-mono">
+                      Run: {formatShortId(tool.run?.id || tool.run_id)}
+                    </p>
+                  </div>
 
                 <div className="font-mono text-xs font-bold text-slate-600">
                   {formatScore(tool.discovery_score)}

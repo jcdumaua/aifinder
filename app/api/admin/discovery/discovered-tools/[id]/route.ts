@@ -90,9 +90,45 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonResponse({ error: "Failed to fetch duplicate candidates." }, 500);
   }
 
+  const { data: source, error: sourceError } =
+    typeof tool.source_id === "string"
+      ? await supabaseAdmin
+          .from("discovery_sources")
+          .select("id, name, slug, source_type, is_active, last_run_at, url")
+          .eq("id", tool.source_id)
+          .maybeSingle()
+      : { data: null, error: null };
+
+  if (sourceError) {
+    console.error("Failed to fetch Discovery Engine source detail.", {
+      message: sourceError.message,
+    });
+
+    return jsonResponse({ error: "Failed to fetch discovery source." }, 500);
+  }
+
+  const { data: run, error: runError } =
+    typeof tool.run_id === "string"
+      ? await supabaseAdmin
+          .from("discovery_runs")
+          .select("id, source_id, status, stats, error_log, started_at, finished_at, created_at")
+          .eq("id", tool.run_id)
+          .maybeSingle()
+      : { data: null, error: null };
+
+  if (runError) {
+    console.error("Failed to fetch Discovery Engine run detail.", {
+      message: runError.message,
+    });
+
+    return jsonResponse({ error: "Failed to fetch discovery run." }, 500);
+  }
+
   return jsonResponse({
     data: {
       tool,
+      source,
+      run,
       evidence: evidence || [],
       duplicateCandidates: duplicateCandidates || [],
     },

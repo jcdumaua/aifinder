@@ -1361,7 +1361,7 @@ export default function AdminDashboardClient({
     setIsSubmittingManualIntake(true);
 
     try {
-      const secureToken = await getCsrfToken();
+      const secureToken = await fetchCsrfToken();
 
       if (!secureToken) {
         return;
