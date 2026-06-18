@@ -140,6 +140,9 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     useState<DuplicateMatchType>("normalized_domain");
   const [duplicateMatchScore, setDuplicateMatchScore] = useState("100");
   const [duplicateReason, setDuplicateReason] = useState("");
+  const [approvalChecklistConfirmed, setApprovalChecklistConfirmed] =
+    useState(false);
+  const [approvalConfirmationText, setApprovalConfirmationText] = useState("");
 
   const detailUrl = useMemo(
     () => `/api/admin/discovery/discovered-tools/${encodeURIComponent(toolId)}`,
@@ -256,8 +259,32 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   async function approveDiscoveredTool() {
     setActionMessage(null);
 
+    if (!canApprove) {
+      setActionMessage("This candidate is not eligible for approval.");
+      return;
+    }
+
+    if (hasDuplicateWarnings) {
+      setActionMessage(
+        "Approval blocked until duplicate candidates are reviewed or cleared."
+      );
+      return;
+    }
+
+    if (!hasEvidence) {
+      setActionMessage("Approval blocked because no discovery evidence is recorded.");
+      return;
+    }
+
+    if (!approvalChecklistConfirmed || !approvalConfirmationReady) {
+      setActionMessage(
+        "Complete the approval safety checklist and type APPROVE before approving."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
-      "Approve this discovered tool and add it to the live public tools table?"
+      "Final approval: add this discovered candidate to the live public tools table?"
     );
 
     if (!confirmed) {
@@ -293,6 +320,8 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
           result?.data?.approvedToolId || "created"
         }.`
       );
+      setApprovalChecklistConfirmed(false);
+      setApprovalConfirmationText("");
       await fetchDetail();
     } catch (approveError) {
       setActionMessage(
@@ -438,6 +467,17 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
     currentStatus === "new" || currentStatus === "pending_review";
   const canMarkDuplicate =
     currentStatus === "new" || currentStatus === "pending_review";
+  const hasDuplicateWarnings = duplicateCandidates.length > 0;
+  const hasEvidence = evidence.length > 0;
+  const hasSource = Boolean(source);
+  const hasRun = Boolean(run);
+  const approvalConfirmationReady =
+    approvalConfirmationText.trim().toUpperCase() === "APPROVE";
+  const approvalGuardReady =
+    approvalChecklistConfirmed &&
+    approvalConfirmationReady &&
+    hasEvidence &&
+    !hasDuplicateWarnings;
 
   return (
     <div className="space-y-6">
@@ -499,7 +539,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
               <button
                 type="button"
                 onClick={() => void approveDiscoveredTool()}
-                disabled={actionLoading !== null || !canApprove}
+                disabled={actionLoading !== null || !canApprove || !approvalGuardReady}
                 className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 {actionLoading === "approve"
@@ -545,6 +585,83 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
             </div>
           )}
         </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-amber-700">
+                  Approval Safety Guardrails
+                </p>
+                <p className="mt-1 text-sm text-amber-900">
+                  Review this checklist before promoting the candidate to live public tools.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-amber-700">
+                Required before approval
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <DetailRow label="Current Status" value={tool.status} />
+              <DetailRow
+                label="Source"
+                value={
+                  hasSource
+                    ? `${formatValue(source?.name)} (${formatValue(
+                        source?.source_type
+                      )})`
+                    : "No source linked"
+                }
+              />
+              <DetailRow label="Run" value={hasRun ? run?.id : "No run linked"} />
+              <DetailRow label="Evidence Count" value={evidence.length} />
+            </div>
+
+            {hasDuplicateWarnings && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+                Duplicate warning: {duplicateCandidates.length} duplicate candidate
+                {duplicateCandidates.length === 1 ? "" : "s"} recorded. Resolve before approval.
+              </div>
+            )}
+
+            {!hasEvidence && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+                Approval blocked: no discovery evidence is recorded for this candidate.
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_220px]">
+              <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={approvalChecklistConfirmed}
+                  onChange={(event) =>
+                    setApprovalChecklistConfirmed(event.target.checked)
+                  }
+                  disabled={!canApprove || hasDuplicateWarnings || !hasEvidence}
+                  className="mt-1"
+                />
+                <span>
+                  I reviewed the source, run, evidence, category, website,
+                  pricing, and duplicate warnings before approval.
+                </span>
+              </label>
+
+              <label className="space-y-1 text-xs font-black uppercase tracking-widest text-slate-500">
+                Type APPROVE
+                <input
+                  value={approvalConfirmationText}
+                  onChange={(event) =>
+                    setApprovalConfirmationText(event.target.value)
+                  }
+                  disabled={!canApprove || hasDuplicateWarnings || !hasEvidence}
+                  placeholder="APPROVE"
+                  className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-amber-400 disabled:opacity-50"
+                />
+              </label>
+            </div>
+          </div>
 
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-black uppercase tracking-widest text-slate-500">
