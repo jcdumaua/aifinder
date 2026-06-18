@@ -9,7 +9,8 @@
     "lint": "eslint",
     "qa:responsive": "playwright test testing/responsive-qa.spec.ts",
     "qa:accessibility": "playwright test -c playwright.accessibility.config.ts",
-    "check": "npm run lint -- --quiet && npm run build"
+    "check": "npm run lint -- --quiet && npm run build",
+    "smoke:discovery": "node scripts/smoke-discovery-flow.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
