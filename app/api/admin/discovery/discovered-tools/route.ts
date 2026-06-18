@@ -151,6 +151,7 @@ export async function GET(request: Request) {
   }
 
   const tools = (data || []) as unknown as DiscoveredToolQueueRow[];
+  const toolIds = tools.map((tool) => tool.id);
   const sourceIds = [
     ...new Set(
       tools
@@ -196,8 +197,48 @@ export async function GET(request: Request) {
     return jsonResponse({ error: "Failed to fetch discovery runs." }, 500);
   }
 
+  const { data: duplicateRows, error: duplicateRowsError } = toolIds.length
+    ? await supabaseAdmin
+        .from("discovery_duplicate_candidates")
+        .select("discovered_tool_id, is_blocking")
+        .in("discovered_tool_id", toolIds)
+    : { data: [], error: null };
+
+  if (duplicateRowsError) {
+    console.error("Failed to fetch Discovery Engine queue duplicate summaries.", {
+      message: duplicateRowsError.message,
+    });
+
+    return jsonResponse({ error: "Failed to fetch duplicate summaries." }, 500);
+  }
+
   const sourceRows = (sources || []) as unknown as DiscoverySourceSummary[];
   const runRows = (runs || []) as unknown as DiscoveryRunSummary[];
+  const duplicateSummaryRows = (duplicateRows || []) as Array<{
+    discovered_tool_id: string;
+    is_blocking: boolean | null;
+  }>;
+
+  const duplicateSummaryByTool = new Map<
+    string,
+    { duplicate_count: number; blocking_duplicate_count: number }
+  >();
+
+  duplicateSummaryRows.forEach((duplicateRow) => {
+    const current = duplicateSummaryByTool.get(duplicateRow.discovered_tool_id) || {
+      duplicate_count: 0,
+      blocking_duplicate_count: 0,
+    };
+
+    current.duplicate_count += 1;
+
+    if (duplicateRow.is_blocking) {
+      current.blocking_duplicate_count += 1;
+    }
+
+    duplicateSummaryByTool.set(duplicateRow.discovered_tool_id, current);
+  });
+
 
   const sourceById = new Map(sourceRows.map((source) => [source.id, source]));
   const runById = new Map(runRows.map((run) => [run.id, run]));
@@ -211,6 +252,9 @@ export async function GET(request: Request) {
           : null,
       run:
         typeof tool.run_id === "string" ? runById.get(tool.run_id) || null : null,
+      duplicate_count: duplicateSummaryByTool.get(tool.id)?.duplicate_count || 0,
+      blocking_duplicate_count:
+        duplicateSummaryByTool.get(tool.id)?.blocking_duplicate_count || 0,
     })),
     pagination: {
       total: count || 0,

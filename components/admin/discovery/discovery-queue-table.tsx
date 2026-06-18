@@ -36,10 +36,13 @@ type DiscoveredTool = {
   description: string | null;
   website: string | null;
   category: string | null;
+  pricing: string | null;
   status: string | null;
   discovery_score: number | null;
   source_id: string | null;
   run_id: string | null;
+  duplicate_count: number | null;
+  blocking_duplicate_count: number | null;
   source: DiscoverySourceSummary | null;
   run: DiscoveryRunSummary | null;
   created_at: string | null;
@@ -101,6 +104,78 @@ function getStatusStyle(status: string | null) {
   };
 
   return styles[status || "new"] || styles.new;
+}
+
+function formatStatusLabel(status: string | null) {
+  return (status || "new").replaceAll("_", " ");
+}
+
+function getRunStatusStyle(status: string | null) {
+  const styles: Record<string, string> = {
+    completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    running: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    failed: "border-red-200 bg-red-50 text-red-700",
+    queued: "border-amber-200 bg-amber-50 text-amber-700",
+  };
+
+  return styles[status || ""] || "border-slate-200 bg-slate-50 text-slate-600";
+}
+
+function pluralize(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
+}
+
+function getReviewSignal(tool: DiscoveredTool) {
+  const duplicateCount = tool.duplicate_count || 0;
+  const blockingDuplicateCount = tool.blocking_duplicate_count || 0;
+
+  if (blockingDuplicateCount > 0) {
+    return {
+      label: `${blockingDuplicateCount} blocking ${pluralize(
+        blockingDuplicateCount,
+        "duplicate",
+        "duplicates"
+      )}`,
+      className: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+
+  if (duplicateCount > 0) {
+    return {
+      label: `${duplicateCount} duplicate ${pluralize(
+        duplicateCount,
+        "warning",
+        "warnings"
+      )}`,
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (tool.status === "approved") {
+    return {
+      label: "Approved",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (tool.status === "pending_review") {
+    return {
+      label: "Needs review",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (tool.status === "ignored" || tool.status === "rejected") {
+    return {
+      label: "Closed",
+      className: "border-slate-200 bg-slate-50 text-slate-600",
+    };
+  }
+
+  return {
+    label: "New candidate",
+    className: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  };
 }
 
 async function fetchCsrfToken() {
@@ -314,10 +389,10 @@ export function DiscoveryQueueTable() {
       <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h2 className="text-lg font-black text-slate-950">
-            Discovered Tools Queue
+            Discovery Queue
           </h2>
           <p className="text-sm text-slate-500">
-            Review candidates found by the Discovery Engine.
+            Scan candidates, spot duplicate warnings, and route safe tools into review.
           </p>
         </div>
 
@@ -462,18 +537,25 @@ export function DiscoveryQueueTable() {
             </button>
           </div>
         ) : tools.length === 0 ? (
-          <div className="flex min-h-64 items-center justify-center px-4 text-center text-sm font-semibold text-slate-500">
-            No discovered tools found for this filter.
-          </div>
+            <div className="flex min-h-64 flex-col items-center justify-center gap-2 px-4 text-center">
+              <p className="text-sm font-black text-slate-700">
+                No candidates found
+              </p>
+              <p className="max-w-md text-sm font-semibold text-slate-500">
+                Try a different source or status filter, or run a new discovery intake.
+              </p>
+            </div>
         ) : (
           <div className="divide-y divide-slate-100">
             {tools.map((tool) => {
               const isSelected = selectedIds.includes(tool.id);
+                const reviewSignal = getReviewSignal(tool);
+                const runStatus = tool.run?.status || null;
 
               return (
                 <article
                   key={tool.id}
-                  className="grid gap-3 px-5 py-4 text-sm xl:grid-cols-[32px_1.2fr_0.85fr_0.95fr_90px_120px_120px] xl:items-center"
+                  className="grid gap-3 px-5 py-4 text-sm transition hover:bg-slate-50 xl:grid-cols-[32px_1.2fr_0.85fr_0.95fr_90px_120px_120px] xl:items-center"
                 >
                   <div>
                     <input
@@ -514,27 +596,43 @@ export function DiscoveryQueueTable() {
                         {tool.description}
                       </p>
                     )}
+
+                      <span
+                        className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[11px] font-black uppercase tracking-wide ${reviewSignal.className}`}
+                      >
+                        {reviewSignal.label}
+                      </span>
                   </div>
 
-                  <div>
+                    <div className="space-y-1">
                     <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
                       {tool.category || "Uncategorized"}
                     </span>
+                      <p className="text-xs font-semibold text-slate-400">
+                        {tool.pricing || "Pricing unknown"}
+                      </p>
                   </div>
 
-                  <div className="space-y-1 text-xs text-slate-500">
-                    <p className="font-bold text-slate-700">
-                      {tool.source?.name || "Manual / unknown"}
-                    </p>
-                    <p>
-                      {tool.source?.source_type
-                        ? `Source: ${tool.source.source_type}`
-                        : "Source: —"}
-                    </p>
-                    <p className="font-mono">
-                      Run: {formatShortId(tool.run?.id || tool.run_id)}
-                    </p>
-                  </div>
+                    <div className="space-y-1 text-xs text-slate-500">
+                      <p className="font-bold text-slate-700">
+                        {tool.source?.name || "Manual / unknown"}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                          {tool.source?.source_type || "source unknown"}
+                        </span>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${getRunStatusStyle(
+                            runStatus
+                          )}`}
+                        >
+                          {runStatus || "run unknown"}
+                        </span>
+                      </div>
+                      <p className="font-mono">
+                        Run: {formatShortId(tool.run?.id || tool.run_id)}
+                      </p>
+                    </div>
 
                   <div className="font-mono text-xs font-bold text-slate-600">
                     {formatScore(tool.discovery_score)}
@@ -546,7 +644,7 @@ export function DiscoveryQueueTable() {
                         tool.status
                       )}`}
                     >
-                      {(tool.status || "new").replace("_", " ")}
+                        {formatStatusLabel(tool.status)}
                     </span>
                   </div>
 
