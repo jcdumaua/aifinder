@@ -90,6 +90,21 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonResponse({ error: "Failed to fetch duplicate candidates." }, 500);
   }
 
+    const { data: auditEvents, error: auditError } = await supabaseAdmin
+      .from("discovery_audit_events")
+      .select("id, action, actor_id, actor_label, message, metadata, created_at")
+      .eq("discovered_tool_id", id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (auditError) {
+      console.error("Failed to fetch Discovery Engine audit events.", {
+        message: auditError.message,
+      });
+
+      return jsonResponse({ error: "Failed to fetch audit events." }, 500);
+    }
+
   const { data: source, error: sourceError } =
     typeof tool.source_id === "string"
       ? await supabaseAdmin
@@ -131,6 +146,7 @@ export async function GET(request: Request, context: RouteContext) {
       run,
       evidence: evidence || [],
       duplicateCandidates: duplicateCandidates || [],
+        auditEvents: auditEvents || [],
     },
   });
 }

@@ -20,6 +20,7 @@ type DetailPayload = {
   run?: Record<string, unknown> | null;
   evidence?: Record<string, unknown>[];
   duplicateCandidates?: Record<string, unknown>[];
+  auditEvents?: Record<string, unknown>[];
 };
 
 type TriageStatus = "pending_review" | "ignored" | "rejected";
@@ -88,6 +89,29 @@ function SafeJsonBlock({ value }: { value: unknown }) {
       {JSON.stringify(value, null, 2)}
     </pre>
   );
+}
+
+function formatAuditAction(value: unknown) {
+  if (typeof value !== "string" || !value) {
+    return "unknown";
+  }
+
+  return value.replaceAll("-", " ").replaceAll("_", " ");
+}
+
+function getAuditActionStyle(value: unknown) {
+  const action = typeof value === "string" ? value : "";
+
+  const styles: Record<string, string> = {
+    approve: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    reject: "border-red-200 bg-red-50 text-red-700",
+    ignore: "border-slate-200 bg-slate-50 text-slate-700",
+    flag: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    "mark-duplicate": "border-violet-200 bg-violet-50 text-violet-700",
+    intake: "border-blue-200 bg-blue-50 text-blue-700",
+  };
+
+  return styles[action] || "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 function DetailRow({ label, value }: { label: string; value: unknown }) {
@@ -396,6 +420,9 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
   const duplicateCandidates = Array.isArray(data?.duplicateCandidates)
     ? data.duplicateCandidates
     : [];
+  const auditEvents = Array.isArray(data?.auditEvents)
+    ? data.auditEvents
+    : [];
 
   if (!tool) {
     return (
@@ -634,6 +661,55 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
             <SafeJsonBlock value={{ run: run || null }} />
           </div>
         </section>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <h3 className="text-lg font-black text-slate-950">Audit Trail</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Recent admin and system actions for this discovered candidate.
+        </p>
+
+        {auditEvents.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-500">
+            No audit events recorded.
+          </div>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {auditEvents.map((event, index) => (
+              <article
+                key={String(event.id || `${event.action || "audit"}-${index}`)}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide ${getAuditActionStyle(
+                        event.action
+                      )}`}
+                    >
+                      {formatAuditAction(event.action)}
+                    </span>
+                    <p className="mt-2 text-sm font-bold text-slate-900">
+                      {formatValue(event.message)}
+                    </p>
+                  </div>
+
+                  <p className="text-xs font-semibold text-slate-500">
+                    {formatDate(event.created_at)}
+                  </p>
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <DetailRow
+                    label="Actor"
+                    value={event.actor_label || event.actor_id}
+                  />
+                  <DetailRow label="Metadata" value={event.metadata} />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <h3 className="text-lg font-black text-slate-950">
