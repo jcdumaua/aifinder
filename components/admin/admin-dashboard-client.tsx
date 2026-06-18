@@ -807,6 +807,7 @@ export default function AdminDashboardClient({
   const [manualIntakeScore, setManualIntakeScore] = useState("0.75");
   const [isSubmittingManualIntake, setIsSubmittingManualIntake] =
     useState(false);
+  const [discoveryRunsRefreshKey, setDiscoveryRunsRefreshKey] = useState(0);
 
   const [isUploadingAddLogo, setIsUploadingAddLogo] = useState(false);
   const [isUploadingEditLogo, setIsUploadingEditLogo] = useState(false);
@@ -1359,6 +1360,7 @@ export default function AdminDashboardClient({
         "Discovery Intake Saved"
       );
 
+      setDiscoveryRunsRefreshKey((current) => current + 1);
       resetManualDiscoveryIntakeForm();
     } catch (error) {
       showError(
@@ -4242,7 +4244,9 @@ export default function AdminDashboardClient({
             </section>
           )}
 
-          {view === "discovery" && <DiscoveryRunsTable />}
+          {view === "discovery" && (
+            <DiscoveryRunsTable refreshKey={discoveryRunsRefreshKey} />
+          )}
 
           {view === "discovery" && (
             <section

@@ -75,7 +75,7 @@ function getStatValue(run: DiscoveryRun, key: string) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-export function DiscoveryRunsTable() {
+export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) {
   const [runs, setRuns] = useState<DiscoveryRun[]>([]);
   const [status, setStatus] = useState("all");
   const [pagination, setPagination] = useState<PaginationState>({
@@ -144,7 +144,7 @@ export function DiscoveryRunsTable() {
 
     return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString]);
+  }, [queryString, refreshKey]);
 
   function updateStatus(nextStatus: string) {
     setStatus(nextStatus);

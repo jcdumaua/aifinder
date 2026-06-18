@@ -141,7 +141,10 @@ function getOptionalUrl(value: unknown, fieldName: string) {
   return validateHttpsUrl(value, fieldName, { required: true });
 }
 
-async function cleanupDiscoveredTool(discoveredToolId: string) {
+async function cleanupDiscoveredTool(
+  discoveredToolId: string,
+  discoveryRunId?: string | null
+) {
   await supabaseAdmin
     .from("discovery_audit_events")
     .delete()
@@ -161,6 +164,13 @@ async function cleanupDiscoveredTool(discoveredToolId: string) {
     .from("discovered_tools")
     .delete()
     .eq("id", discoveredToolId);
+
+  if (discoveryRunId) {
+    await supabaseAdmin
+      .from("discovery_runs")
+      .delete()
+      .eq("id", discoveryRunId);
+  }
 }
 
 export async function POST(request: Request) {
@@ -338,6 +348,36 @@ export async function POST(request: Request) {
   }
 
   const intakeStatus = duplicateWarnings.length > 0 ? "duplicate" : "new";
+  const runTimestamp = new Date().toISOString();
+
+  const { data: discoveryRun, error: discoveryRunError } = await supabaseAdmin
+    .from("discovery_runs")
+    .insert({
+      source_id: null,
+      status: "completed",
+      stats: {
+        tools_found: 1,
+        tools_new: intakeStatus === "new" ? 1 : 0,
+        tools_duplicates: duplicateWarnings.length > 0 ? 1 : 0,
+        errors: 0,
+        source: "manual-intake",
+      },
+      error_log: null,
+      started_at: runTimestamp,
+      finished_at: runTimestamp,
+    })
+    .select("id")
+    .single();
+
+  if (discoveryRunError) {
+    console.error("Failed to create manual discovery run.", {
+      message: discoveryRunError.message,
+    });
+
+    return jsonResponse({ error: "Failed to create discovery run." }, 500);
+  }
+
+  const discoveryRunId = discoveryRun.id as string;
 
   const { data: discoveredTool, error: discoveredInsertError } =
     await supabaseAdmin
@@ -356,20 +396,26 @@ export async function POST(request: Request) {
         logo_url: logoUrl || null,
         raw_payload: {
           source: "manual-intake",
+          run_id: discoveryRunId,
           raw_payload: rawPayload,
           duplicate_warnings: duplicateWarnings,
         },
         discovery_score: discoveryScore,
         source_id: null,
-        run_id: null,
+        run_id: discoveryRunId,
       })
-      .select("id, name, slug, status, normalized_domain")
+      .select("id, name, slug, status, normalized_domain, run_id")
       .single();
 
   if (discoveredInsertError) {
     console.error("Failed to create manual discovery intake candidate.", {
       message: discoveredInsertError.message,
     });
+
+    await supabaseAdmin
+      .from("discovery_runs")
+      .delete()
+      .eq("id", discoveryRunId);
 
     return jsonResponse(
       { error: "Failed to create discovery intake candidate." },
@@ -391,6 +437,7 @@ export async function POST(request: Request) {
       pricing_text: pricing,
       extracted_json: {
         source: "manual-intake",
+        run_id: discoveryRunId,
         name,
         category,
         platforms,
@@ -407,7 +454,7 @@ export async function POST(request: Request) {
       message: evidenceError.message,
     });
 
-    await cleanupDiscoveredTool(discoveredToolId);
+    await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
     return jsonResponse(
       { error: "Intake candidate created, but evidence creation failed." },
@@ -448,7 +495,7 @@ export async function POST(request: Request) {
         message: duplicateError.message,
       });
 
-      await cleanupDiscoveredTool(discoveredToolId);
+      await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
       return jsonResponse(
         { error: "Intake candidate created, but duplicate recording failed." },
@@ -475,6 +522,7 @@ export async function POST(request: Request) {
       metadata: {
         source: "manual-intake",
         status: intakeStatus,
+        run_id: discoveryRunId,
         normalized_domain: normalizedDomain,
         slug,
         evidence_id: evidence.id,
@@ -488,7 +536,7 @@ export async function POST(request: Request) {
       message: auditError.message,
     });
 
-    await cleanupDiscoveredTool(discoveredToolId);
+    await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
     return jsonResponse(
       { error: "Intake candidate created, but audit logging failed." },
@@ -505,6 +553,7 @@ export async function POST(request: Request) {
           : "Discovery intake candidate created.",
       data: {
         discoveredTool,
+        runId: discoveryRunId,
         evidenceId: evidence.id,
         duplicateCandidateId,
         duplicateWarnings,
