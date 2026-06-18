@@ -17,6 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_SIZE_BYTES = 24 * 1024;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_RAW_PAYLOAD_SIZE_BYTES = 10 * 1024;
 const DEFAULT_PLATFORM = "Web";
 
@@ -30,6 +31,18 @@ type DuplicateWarning = {
   matchScore: number;
   reason: string;
 };
+
+function getOptionalUuid(value: unknown, fieldName: string) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  if (typeof value !== "string" || !UUID_PATTERN.test(value)) {
+    throw new Error(`${fieldName} must be a valid ID.`);
+  }
+
+  return value;
+}
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -347,13 +360,49 @@ export async function POST(request: Request) {
     });
   }
 
+  let sourceId: string | null = null;
+
+  try {
+    sourceId = getOptionalUuid(body.source_id, "Discovery source ID");
+  } catch (error) {
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : "Invalid source ID." },
+      400
+    );
+  }
+
+  if (sourceId) {
+    const { data: discoverySource, error: discoverySourceError } =
+      await supabaseAdmin
+        .from("discovery_sources")
+        .select("id, name, is_active")
+        .eq("id", sourceId)
+        .maybeSingle();
+
+    if (discoverySourceError) {
+      console.error("Failed to validate manual intake discovery source.", {
+        message: discoverySourceError.message,
+      });
+
+      return jsonResponse({ error: "Failed to validate discovery source." }, 500);
+    }
+
+    if (!discoverySource) {
+      return jsonResponse({ error: "Discovery source not found." }, 400);
+    }
+
+    if (!discoverySource.is_active) {
+      return jsonResponse({ error: "Discovery source must be active." }, 400);
+    }
+  }
+
   const intakeStatus = duplicateWarnings.length > 0 ? "duplicate" : "new";
   const runTimestamp = new Date().toISOString();
 
   const { data: discoveryRun, error: discoveryRunError } = await supabaseAdmin
     .from("discovery_runs")
     .insert({
-      source_id: null,
+      source_id: sourceId,
       status: "completed",
       stats: {
         tools_found: 1,
@@ -396,12 +445,13 @@ export async function POST(request: Request) {
         logo_url: logoUrl || null,
         raw_payload: {
           source: "manual-intake",
+          source_id: sourceId,
           run_id: discoveryRunId,
           raw_payload: rawPayload,
           duplicate_warnings: duplicateWarnings,
         },
         discovery_score: discoveryScore,
-        source_id: null,
+        source_id: sourceId,
         run_id: discoveryRunId,
       })
       .select("id, name, slug, status, normalized_domain, run_id")
@@ -437,6 +487,7 @@ export async function POST(request: Request) {
       pricing_text: pricing,
       extracted_json: {
         source: "manual-intake",
+        source_id: sourceId,
         run_id: discoveryRunId,
         name,
         category,
@@ -522,6 +573,7 @@ export async function POST(request: Request) {
       metadata: {
         source: "manual-intake",
         status: intakeStatus,
+        source_id: sourceId,
         run_id: discoveryRunId,
         normalized_domain: normalizedDomain,
         slug,
@@ -544,6 +596,19 @@ export async function POST(request: Request) {
     );
   }
 
+  if (sourceId) {
+    const { error: sourceUpdateError } = await supabaseAdmin
+      .from("discovery_sources")
+      .update({ last_run_at: runTimestamp })
+      .eq("id", sourceId);
+
+    if (sourceUpdateError) {
+      console.error("Failed to update discovery source last_run_at.", {
+        message: sourceUpdateError.message,
+      });
+    }
+  }
+
   return jsonResponse(
     {
       success: true,
@@ -554,6 +619,7 @@ export async function POST(request: Request) {
       data: {
         discoveredTool,
         runId: discoveryRunId,
+        sourceId,
         evidenceId: evidence.id,
         duplicateCandidateId,
         duplicateWarnings,

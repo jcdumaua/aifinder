@@ -806,6 +806,12 @@ export default function AdminDashboardClient({
   const [manualIntakeCategory, setManualIntakeCategory] = useState("");
   const [manualIntakePricing, setManualIntakePricing] = useState("Free + Paid");
   const [manualIntakeScore, setManualIntakeScore] = useState("0.75");
+  const [manualIntakeSourceId, setManualIntakeSourceId] = useState("");
+  const [manualIntakeSources, setManualIntakeSources] = useState<
+    { id: string; name: string; source_type: string; is_active: boolean }[]
+  >([]);
+  const [isLoadingManualIntakeSources, setIsLoadingManualIntakeSources] =
+    useState(false);
   const [isSubmittingManualIntake, setIsSubmittingManualIntake] =
     useState(false);
   const [discoveryRunsRefreshKey, setDiscoveryRunsRefreshKey] = useState(0);
@@ -1278,7 +1284,54 @@ export default function AdminDashboardClient({
     setManualIntakeCategory("");
     setManualIntakePricing("Free + Paid");
     setManualIntakeScore("0.75");
+    setManualIntakeSourceId("");
   }
+
+
+  async function loadManualIntakeSources() {
+    setIsLoadingManualIntakeSources(true);
+
+    try {
+      const response = await fetch(
+        "/api/admin/discovery/sources?is_active=true&limit=100",
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            accept: "application/json",
+          },
+        }
+      );
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        data?: { id: string; name: string; source_type: string; is_active: boolean }[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to load discovery sources.");
+      }
+
+      setManualIntakeSources(Array.isArray(payload.data) ? payload.data : []);
+    } catch {
+      setManualIntakeSources([]);
+    } finally {
+      setIsLoadingManualIntakeSources(false);
+    }
+  }
+
+  useEffect(() => {
+    if (view !== "discovery") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadManualIntakeSources();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [view]);
 
   async function submitManualDiscoveryIntake(
     event: React.FormEvent<HTMLFormElement>
@@ -1329,6 +1382,7 @@ export default function AdminDashboardClient({
           pricing: manualIntakePricing,
           platforms: ["Web"],
           discovery_score: Number(manualIntakeScore),
+          source_id: manualIntakeSourceId || null,
           source_url: manualIntakeWebsite,
           raw_payload: {
             source: "admin-manual-intake-form",
@@ -1616,7 +1670,7 @@ export default function AdminDashboardClient({
       confirmLabel: "Delete",
       confirmTone: "red",
       onConfirm: async () => {
-        const secureToken = await getCsrfToken();
+        const secureToken = await fetchCsrfToken();
 
         if (!secureToken) return;
 
@@ -4144,6 +4198,43 @@ export default function AdminDashboardClient({
                       HTTPS only. Localhost, private IPs, and risky downloads are blocked.
                     </p>
                   </div>
+                    <div className={adminFormFieldClass}>
+                      <Label htmlFor="manual-intake-source" className={adminFormLabelClass}>
+                        Discovery source
+                      </Label>
+                      <select
+                        id="manual-intake-source"
+                        value={manualIntakeSourceId}
+                        onChange={(event) =>
+                          setManualIntakeSourceId(event.target.value)
+                        }
+                        onFocus={() => void loadManualIntakeSources()}
+                        className={`${adminFormControlClass} w-full`}
+                      >
+                        <option value="">Manual / no source selected</option>
+                        {manualIntakeSources.map((source) => (
+                          <option key={source.id} value={source.id}>
+                            {source.name} ({source.source_type})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className={adminFormHelpClass}>
+                          Attach this candidate to a source registry record.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void loadManualIntakeSources()}
+                          disabled={isLoadingManualIntakeSources}
+                          className="text-xs font-bold text-cyan-700 hover:text-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isLoadingManualIntakeSources
+                            ? "Loading..."
+                            : "Refresh sources"}
+                        </button>
+                      </div>
+                    </div>
+
 
                   <div className={adminFormFieldClass}>
                     <Label htmlFor="manual-intake-category" className={adminFormLabelClass}>
