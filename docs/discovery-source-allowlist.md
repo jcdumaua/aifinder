@@ -40,9 +40,33 @@ Each proposed source should have:
 - Reason for inclusion
 - Expected data collected
 - Crawl frequency recommendation
+- robots.txt review result
+- Terms of Service review result
+- Crawling permission notes
+- Politeness requirements, if any
 - Risk level: low, medium, high
 - Approval status: proposed, approved, paused, rejected
 - Last reviewed date
+- Last policy review date
+
+## Robots.txt and Terms Review
+
+- Every source must be reviewed before approval.
+- Check robots.txt when available.
+- Check Terms of Service or usage policy when available.
+- If automated access is disallowed, the source must be rejected or paused.
+- If access rules are unclear, mark the source medium/high risk and require review before crawling.
+- Record the review result in the source approval notes.
+- Re-review policies periodically because source rules may change.
+
+## Crawler Politeness Requirements
+
+- Respect source-specific crawl limits.
+- Use conservative request frequency.
+- Back off after errors or rate-limit responses.
+- Avoid repeated fetches from the same domain.
+- Scheduled automation must define per-domain frequency rules before it is enabled.
+- Manual prototype should remain low-volume.
 
 ## MVP Allowlist Recommendation
 
@@ -77,6 +101,9 @@ Recommended initial source categories:
 - Retention cleanup job designed.
 - Fetch timeout and response size limits defined.
 - Storage safety reviewed.
+- robots.txt review process documented.
+- Terms of Service review process documented.
+- crawler politeness requirements documented.
 - Gemini review completed before crawler implementation.
 
 ## Future Admin UI Idea
