@@ -133,11 +133,19 @@ function isBlockedIpv6Address(segments: number[]) {
   const isIpv4Mapped =
     segments.slice(0, 5).every((segment) => segment === 0) && segments[5] === 0xffff;
 
+  if (isIpv4Mapped) {
+    return isBlockedIpv4Address([
+      segments[6] >> 8,
+      segments[6] & 0xff,
+      segments[7] >> 8,
+      segments[7] & 0xff,
+    ]);
+  }
+
   return (
     segments.every((segment) => segment === 0) ||
     (segments.slice(0, 7).every((segment) => segment === 0) && segments[7] === 1) ||
     isIpv4Compatible ||
-    isIpv4Mapped ||
     (first & 0xfe00) === 0xfc00 ||
     (first & 0xffc0) === 0xfe80 ||
     (first & 0xffc0) === 0xfec0 ||
@@ -155,14 +163,26 @@ function isBlockedHostname(hostname: string) {
   );
 }
 
-function isBlockedIpAddress(hostname: string) {
-  const ipv4 = parseIpv4Address(hostname);
+export function getDiscoveryIpAddressFamily(value: string) {
+  if (parseIpv4Address(value)) {
+    return 4 as const;
+  }
+
+  if (parseIpv6Address(value)) {
+    return 6 as const;
+  }
+
+  return null;
+}
+
+export function isBlockedDiscoveryIpAddress(value: string) {
+  const ipv4 = parseIpv4Address(value);
 
   if (ipv4) {
     return isBlockedIpv4Address(ipv4);
   }
 
-  const ipv6 = parseIpv6Address(hostname);
+  const ipv6 = parseIpv6Address(value);
 
   return ipv6 ? isBlockedIpv6Address(ipv6) : false;
 }
@@ -194,7 +214,7 @@ export function validateDiscoveryUrlSafety(value: unknown): DiscoveryUrlSafetyRe
     return { ok: false, reason: "blocked_hostname" };
   }
 
-  if (isBlockedIpAddress(hostname)) {
+  if (isBlockedDiscoveryIpAddress(hostname)) {
     return { ok: false, reason: "blocked_ip_address" };
   }
 
