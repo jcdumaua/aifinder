@@ -6,6 +6,7 @@ export const ADMIN_RATE_LIMIT_ACTIONS = {
   discoverySourceCreate: "discovery-source-create",
   discoverySourceUpdate: "discovery-source-update",
   discoveryManualIntake: "discovery-manual-intake",
+  discoveryManualCrawlerRun: "discovery-manual-crawler-run",
   discoveryToolStatus: "discovery-tool-status",
   discoveryToolApprove: "discovery-tool-approve",
   discoveryToolDuplicate: "discovery-tool-duplicate",
@@ -81,6 +82,10 @@ const ADMIN_RATE_LIMIT_POLICIES: Record<
   },
   [ADMIN_RATE_LIMIT_ACTIONS.discoveryManualIntake]: {
     limit: 30,
+    windowMs: ADMIN_RATE_LIMIT_WINDOW_MS,
+  },
+  [ADMIN_RATE_LIMIT_ACTIONS.discoveryManualCrawlerRun]: {
+    limit: 10,
     windowMs: ADMIN_RATE_LIMIT_WINDOW_MS,
   },
   [ADMIN_RATE_LIMIT_ACTIONS.discoveryToolStatus]: {
