@@ -14,6 +14,10 @@ import {
   validateManualCrawlerSource,
   type ManualCrawlerSource,
 } from "../../../../../../../lib/discovery-manual-crawler";
+import {
+  buildDiscoveryRequestPlans,
+  type DiscoveryRequestPlan,
+} from "../../../../../../../lib/discovery-request-plan";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -58,7 +62,10 @@ type AuditEventType =
   | "manual_crawler_executor_claim_rejected"
   | "manual_crawler_stale_run_recovered"
   | "manual_crawler_executor_dry_run_completed"
-  | "manual_crawler_executor_failed";
+  | "manual_crawler_executor_failed"
+  | "request_plan_preflight_started"
+  | "request_plan_preflight_passed"
+  | "request_plan_preflight_rejected";
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -137,8 +144,11 @@ function createDrySafetyMetadata() {
   return {
     source_kind: MANUAL_CRAWLER_SOURCE_KIND,
     executor_mode: "dry_run",
+    dry_run: true,
     execution_enabled: false,
     no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
     no_candidates_inserted: true,
     no_public_tools_inserted: true,
   };
@@ -207,14 +217,44 @@ function isStaleRunningRun(run: RunningDiscoveryRunRecord, nowMs: number) {
   return Number.isFinite(parsed) && nowMs - parsed > STALE_RUNNING_TIMEOUT_MS;
 }
 
+function getManualCuratedUrlValues(stats: JsonRecord) {
+  if (!Array.isArray(stats.policy_reviews) || stats.policy_reviews.length === 0) {
+    return null;
+  }
+
+  return stats.policy_reviews.map((policyReview) =>
+    isRecord(policyReview) ? policyReview.url : undefined
+  );
+}
+
+function buildManualCuratedRequestPlans({
+  stats,
+  createdAt,
+}: {
+  stats: JsonRecord;
+  createdAt: string;
+}):
+  | { ok: true; plans: DiscoveryRequestPlan[] }
+  | { ok: false; reason: string } {
+  const urls = getManualCuratedUrlValues(stats);
+
+  if (!urls) {
+    return { ok: false, reason: "missing_manual_curated_urls" };
+  }
+
+  return buildDiscoveryRequestPlans(urls, createdAt);
+}
+
 function createClaimStats({
   stats,
   claimedAt,
   actor,
+  requestPlans,
 }: {
   stats: JsonRecord;
   claimedAt: string;
   actor: VerifiedAdminActor;
+  requestPlans: DiscoveryRequestPlan[];
 }) {
   return {
     ...stats,
@@ -225,8 +265,14 @@ function createClaimStats({
     claimed_at: claimedAt,
     claimed_by: getActorLabel(actor),
     no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
     no_candidates_inserted: true,
     no_public_tools_inserted: true,
+    request_plan_preflight: {
+      status: "passed",
+      plans: requestPlans,
+    },
   };
 }
 
@@ -251,10 +297,41 @@ function createCompletedDryRunStats({
     inserted_discovered_tools: 0,
     inserted_public_tools: 0,
     no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
     no_candidates_inserted: true,
     no_public_tools_inserted: true,
     completed_at: completedAt,
     completed_by: getActorLabel(actor),
+  };
+}
+
+function createRejectedPreflightStats({
+  stats,
+  rejectedAt,
+  actor,
+  preflightFailureCode,
+}: {
+  stats: JsonRecord;
+  rejectedAt: string;
+  actor: VerifiedAdminActor;
+  preflightFailureCode: string;
+}) {
+  return {
+    ...stats,
+    executor_mode: "dry_run",
+    dry_run: true,
+    execution_enabled: false,
+    execution_status: "rejected_preflight",
+    reason: "rejected_preflight",
+    preflight_failure_code: preflightFailureCode,
+    no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    rejected_at: rejectedAt,
+    rejected_by: getActorLabel(actor),
   };
 }
 
@@ -269,6 +346,7 @@ function createRecoveredRunStats({
 
   return {
     ...safeStats,
+    dry_run: true,
     execution_enabled: false,
     execution_status: "stale_running_recovered",
     recovered_from_stale_running: true,
@@ -276,6 +354,8 @@ function createRecoveredRunStats({
     timeout_minutes: STALE_RUNNING_TIMEOUT_MINUTES,
     recovered_at: recoveredAt,
     no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
     no_candidates_inserted: true,
     no_public_tools_inserted: true,
   };
@@ -492,6 +572,128 @@ export async function POST(request: Request) {
     );
   }
 
+  const preflightStartedAt = new Date().toISOString();
+  const preflightStarted = await writeAuditEvent({
+    actor: adminSession.actor,
+    eventType: "request_plan_preflight_started",
+    runId: runRecord.id,
+    sourceId: runRecord.source_id,
+    message: "Manual crawler dry executor request-plan preflight started.",
+    metadata: {
+      requested_url_count: Array.isArray(runRecord.stats.policy_reviews)
+        ? runRecord.stats.policy_reviews.length
+        : 0,
+      preflight_started_at: preflightStartedAt,
+    },
+  });
+
+  if (!preflightStarted) {
+    return jsonResponse(
+      { error: "Failed to audit request-plan preflight start." },
+      500
+    );
+  }
+
+  const requestPlanPreflight = buildManualCuratedRequestPlans({
+    stats: runRecord.stats,
+    createdAt: preflightStartedAt,
+  });
+
+  if (!requestPlanPreflight.ok) {
+    const rejectedAt = new Date().toISOString();
+    const rejectedStats = createRejectedPreflightStats({
+      stats: runRecord.stats,
+      rejectedAt,
+      actor: adminSession.actor,
+      preflightFailureCode: requestPlanPreflight.reason,
+    });
+    const { data: rejectedRun, error: rejectError } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "failed",
+        finished_at: rejectedAt,
+        updated_at: rejectedAt,
+        error_log: "Manual crawler request-plan preflight rejected the run.",
+        stats: rejectedStats,
+      })
+      .eq("id", runRecord.id)
+      .eq("status", "pending")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (rejectError) {
+      console.error("Failed to record manual crawler request-plan rejection.", {
+        message: rejectError.message,
+        runId: runRecord.id,
+        sourceId: runRecord.source_id,
+        preflightFailureCode: requestPlanPreflight.reason,
+      });
+
+      return jsonResponse({ error: "Failed to record request-plan preflight rejection." }, 500);
+    }
+
+    if (!rejectedRun) {
+      return jsonResponse(
+        { error: "Discovery run was already claimed or is no longer pending." },
+        409
+      );
+    }
+
+    const rejectedRunRecord = coerceRunRecord(rejectedRun);
+    const preflightRejected = await writeAuditEvent({
+      actor: adminSession.actor,
+      eventType: "request_plan_preflight_rejected",
+      runId: rejectedRunRecord.id,
+      sourceId: runRecord.source_id,
+      message: "Manual crawler request-plan preflight rejected the run without network activity.",
+      metadata: {
+        reason: "rejected_preflight",
+        preflight_failure_code: requestPlanPreflight.reason,
+        rejected_at: rejectedAt,
+      },
+    });
+
+    if (!preflightRejected) {
+      return jsonResponse(
+        { error: "Request-plan preflight was rejected but could not be audited." },
+        500
+      );
+    }
+
+    return jsonResponse(
+      {
+        error: "Discovery run request-plan preflight was rejected.",
+        data: {
+          run: {
+            id: rejectedRunRecord.id,
+            status: rejectedRunRecord.status,
+            finished_at: rejectedRunRecord.finished_at,
+          },
+          reason: "rejected_preflight",
+        },
+      },
+      422
+    );
+  }
+
+  const preflightPassed = await writeAuditEvent({
+    actor: adminSession.actor,
+    eventType: "request_plan_preflight_passed",
+    runId: runRecord.id,
+    sourceId: runRecord.source_id,
+    message: "Manual crawler dry executor request-plan preflight passed without network activity.",
+    metadata: {
+      request_plans: requestPlanPreflight.plans,
+    },
+  });
+
+  if (!preflightPassed) {
+    return jsonResponse(
+      { error: "Failed to audit request-plan preflight pass." },
+      500
+    );
+  }
+
   let activeRunningRuns: RunningDiscoveryRunRecord[] = [];
 
   try {
@@ -572,6 +774,7 @@ export async function POST(request: Request) {
     stats: runRecord.stats,
     claimedAt,
     actor: adminSession.actor,
+    requestPlans: requestPlanPreflight.plans,
   });
 
   const { data: claimedRun, error: claimError } = await supabaseAdmin
