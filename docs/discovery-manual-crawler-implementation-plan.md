@@ -59,11 +59,32 @@ Possible future implementation files include:
 
 Do not create these files until implementation is explicitly approved.
 
+## Async Execution Requirement
+
+Manual crawler implementation must not run the entire crawl inside one long-running synchronous API request.
+
+The future manual run endpoint should:
+
+- Validate admin auth.
+- Verify CSRF.
+- Apply rate limiting.
+- Confirm source eligibility.
+- Create a `discovery_runs` row.
+- Return a run ID quickly after the run is safely queued or started.
+
+The actual fetch, extract, validate, duplicate-check, and insert work should run asynchronously outside the request lifecycle.
+
+The admin UI should poll or refresh run status from `discovery_runs`.
+
+This prevents serverless timeout failures and reduces the risk of permanently stuck `running` runs.
+
 ## Future API Design
 
 A possible future endpoint:
 
 `POST /api/admin/discovery/runs/manual`
+
+This endpoint should be a trigger endpoint, not the full crawler executor. It should return a safe run summary immediately after the run is created or queued. Long-running crawler work should happen outside the request lifecycle.
 
 Requirements:
 
@@ -81,7 +102,9 @@ Requirements:
 
 ## Future Manual Run Flow
 
-A future manual run should:
+A future manual run should be split into three phases.
+
+### Trigger Phase
 
 1. Validate admin session.
 2. Verify CSRF.
@@ -90,18 +113,39 @@ A future manual run should:
 5. Load source.
 6. Confirm source is active and approved.
 7. Confirm robots.txt/ToS review fields are present once implemented.
-8. Create run record with status `running`.
-9. Fetch source with strict limits.
-10. Extract candidate metadata.
-11. Validate candidates.
-12. Apply max candidate limit.
-13. Run duplicate checks.
-14. Insert discovered tool candidates.
-15. Insert evidence.
-16. Insert duplicate candidate rows when needed.
-17. Mark run completed or failed.
-18. Write audit events.
-19. Return safe summary.
+8. Create `discovery_runs` row with status `running`.
+9. Start or queue async execution.
+10. Return run ID and safe run summary.
+
+### Async Execution Phase
+
+1. Fetch source with strict limits.
+2. Extract candidate metadata.
+3. Validate candidates.
+4. Apply max candidate limit.
+5. Run duplicate checks.
+6. Insert discovered tool candidates.
+7. Insert evidence.
+8. Insert duplicate candidate rows when needed.
+9. Mark run completed or failed.
+10. Write audit events.
+
+### UI Status Phase
+
+1. Admin UI shows run status.
+2. Admin UI can refresh or poll `discovery_runs`.
+3. Admin UI shows candidate count safely.
+4. Admin UI shows failure reason safely.
+
+## Stuck-Run Recovery Requirement
+
+Future implementation must define what happens if a run remains `running` too long.
+
+Suggested rule:
+
+- Mark stale `running` runs as `failed` after an approved timeout threshold, or expose an admin-safe recovery action.
+- Audit stuck-run recovery actions.
+- Never leave stale `running` runs indefinitely.
 
 ## Fetch Limits
 
@@ -170,6 +214,9 @@ Manual crawler implementation must not begin until:
 - Source policy review process is accepted.
 - Fetch limits are finalized.
 - Cleanup/retention dependency is accepted.
+- Async execution model is approved.
+- Stuck-run recovery behavior is approved.
+- UI status/polling behavior is approved.
 - Admin UI behavior is approved.
 
 ## Scheduled Automation Lock
