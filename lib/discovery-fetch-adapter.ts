@@ -421,7 +421,9 @@ export function createDiscoveryFetchMetadataOnlyAdapter(
       });
     }
 
-    const selectedAddress = validatedAddresses[0];
+    const selectedAddress =
+      validatedAddresses.find((record) => record.family === 4) ||
+      validatedAddresses.find((record) => record.family === 6);
 
     if (!selectedAddress || selectedAddress.family === null) {
       return finish("fetch_failed_dns_resolution", "dns_resolution_failed", {
@@ -477,8 +479,24 @@ export function createDiscoveryFetchMetadataOnlyAdapter(
               accept: DISCOVERY_FETCH_ACCEPTED_CONTENT_TYPES.join(", "),
             },
             servername: validated.urlSafety.hostname,
-            lookup: (_hostname, _options, callback) =>
-              callback(null, selectedAddress.address, selectedAddressFamily),
+            lookup: (_hostname, options, callback) => {
+              if (
+                options &&
+                typeof options === "object" &&
+                "all" in options &&
+                options.all === true
+              ) {
+                callback(null, [
+                  {
+                    address: selectedAddress.address,
+                    family: selectedAddressFamily,
+                  },
+                ]);
+                return;
+              }
+
+              callback(null, selectedAddress.address, selectedAddressFamily);
+            },
             agent: false,
             rejectUnauthorized: true,
           },

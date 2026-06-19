@@ -177,6 +177,40 @@ test("pins a public resolved IP while preserving hostname TLS and Host behavior"
       resolve();
     })
   );
+
+  await new Promise((resolve, reject) =>
+    options.lookup("ignored.example", { all: true }, (error, addresses) => {
+      if (error) return reject(error);
+      assert.deepEqual(addresses, [{ address: "93.184.216.34", family: 4 }]);
+      resolve();
+    })
+  );
+});
+
+test("prefers a public IPv4 address when DNS returns IPv6 first", async () => {
+  const ipv4 = { address: "93.184.216.34", family: 4 };
+  const { adapter, transport } = createAdapter({
+    resolvedAddresses: [
+      { address: "2606:4700:10::ac42:93f3", family: 6 },
+      ipv4,
+    ],
+  });
+  const result = await adapter(createPlan());
+
+  assert.equal(result.status, "fetch_completed_metadata_only");
+  assert.equal(result.metadata.resolvedIp, ipv4.address);
+  assert.equal(result.metadata.resolvedIpFamily, 4);
+
+  const [{ options }] = transport.requests;
+
+  await new Promise((resolve, reject) =>
+    options.lookup("ignored.example", {}, (error, address, family) => {
+      if (error) return reject(error);
+      assert.equal(address, ipv4.address);
+      assert.equal(family, 4);
+      resolve();
+    })
+  );
 });
 
 test("does not follow redirects and records a sanitized Location", async () => {

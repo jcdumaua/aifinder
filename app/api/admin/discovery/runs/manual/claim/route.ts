@@ -18,6 +18,12 @@ import {
   buildDiscoveryRequestPlans,
   type DiscoveryRequestPlan,
 } from "../../../../../../../lib/discovery-request-plan";
+import {
+  DISCOVERY_FETCH_ACCEPTED_CONTENT_TYPES,
+  executeDiscoveryFetchMetadataOnly,
+  type DiscoveryFetchPlan,
+  type DiscoveryFetchResult,
+} from "../../../../../../../lib/discovery-fetch-adapter";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -28,6 +34,7 @@ const STALE_RUNNING_TIMEOUT_MINUTES = 30;
 const STALE_RUNNING_TIMEOUT_MS = STALE_RUNNING_TIMEOUT_MINUTES * 60 * 1000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const METADATA_FETCH_SMOKE_EXECUTION_MODE = "metadata_fetch_smoke";
 const RUN_SELECT = [
   "id",
   "source_id",
@@ -65,7 +72,12 @@ type AuditEventType =
   | "manual_crawler_executor_failed"
   | "request_plan_preflight_started"
   | "request_plan_preflight_passed"
-  | "request_plan_preflight_rejected";
+  | "request_plan_preflight_rejected"
+  | "metadata_fetch_smoke_started"
+  | "metadata_fetch_smoke_completed"
+  | "metadata_fetch_smoke_failed";
+
+type ClaimExecutionMode = "dry_run" | "metadata_fetch_smoke";
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -112,6 +124,18 @@ function getRequiredUuid(value: unknown, fieldName: string) {
   return value;
 }
 
+function getClaimExecutionMode(value: unknown): ClaimExecutionMode {
+  if (typeof value === "undefined") {
+    return "dry_run";
+  }
+
+  if (value === METADATA_FETCH_SMOKE_EXECUTION_MODE) {
+    return METADATA_FETCH_SMOKE_EXECUTION_MODE;
+  }
+
+  throw new Error("Invalid execution mode.");
+}
+
 function validateDryRunStats(value: unknown) {
   if (!isRecord(value)) {
     throw new Error("Discovery run stats must be valid.");
@@ -154,6 +178,20 @@ function createDrySafetyMetadata() {
   };
 }
 
+function createMetadataFetchSmokeSafetyMetadata(noFetchPerformed: boolean) {
+  return {
+    source_kind: MANUAL_CRAWLER_SOURCE_KIND,
+    executor_mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    no_fetch_performed: noFetchPerformed,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+  };
+}
+
 async function writeAuditEvent({
   actor,
   eventType,
@@ -161,6 +199,7 @@ async function writeAuditEvent({
   sourceId,
   message,
   metadata = {},
+  safetyMetadata = createDrySafetyMetadata(),
 }: {
   actor: VerifiedAdminActor;
   eventType: AuditEventType;
@@ -168,6 +207,7 @@ async function writeAuditEvent({
   sourceId: string;
   message: string;
   metadata?: JsonRecord;
+  safetyMetadata?: JsonRecord;
 }) {
   const { error } = await supabaseAdmin.from("discovery_audit_events").insert({
     discovered_tool_id: null,
@@ -180,7 +220,7 @@ async function writeAuditEvent({
       event_type: eventType,
       run_id: runId,
       source_id: sourceId,
-      ...createDrySafetyMetadata(),
+      ...safetyMetadata,
     },
   });
 
@@ -303,6 +343,131 @@ function createCompletedDryRunStats({
     no_public_tools_inserted: true,
     completed_at: completedAt,
     completed_by: getActorLabel(actor),
+  };
+}
+
+function createMetadataFetchSmokeClaimStats({
+  stats,
+  claimedAt,
+  actor,
+  requestPlans,
+}: {
+  stats: JsonRecord;
+  claimedAt: string;
+  actor: VerifiedAdminActor;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  return {
+    ...stats,
+    executor_mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: "metadata_fetch_smoke_claimed",
+    claimed_at: claimedAt,
+    claimed_by: getActorLabel(actor),
+    no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    request_plan_preflight: {
+      status: "passed",
+      plans: requestPlans,
+    },
+  };
+}
+
+function createMetadataFetchSmokeCompletedStats({
+  stats,
+  completedAt,
+  actor,
+  fetchResult,
+}: {
+  stats: JsonRecord;
+  completedAt: string;
+  actor: VerifiedAdminActor;
+  fetchResult: Extract<DiscoveryFetchResult, { ok: true }>;
+}) {
+  return {
+    ...stats,
+    executor_mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: "metadata_fetch_smoke_completed",
+    processed_urls: 1,
+    fetched_urls: 1,
+    extracted_candidates: 0,
+    inserted_discovered_tools: 0,
+    inserted_public_tools: 0,
+    no_fetch_performed: false,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    fetch_adapter_status: fetchResult.status,
+    fetch_metadata: fetchResult.metadata,
+    completed_at: completedAt,
+    completed_by: getActorLabel(actor),
+  };
+}
+
+function createMetadataFetchSmokeFailedStats({
+  stats,
+  failedAt,
+  actor,
+  reason,
+  fetchResult,
+}: {
+  stats: JsonRecord;
+  failedAt: string;
+  actor: VerifiedAdminActor;
+  reason: string;
+  fetchResult?: Exclude<DiscoveryFetchResult, { ok: true }>;
+}) {
+  const reachedFetchPhase =
+    fetchResult?.metadata.connectionPinnedToResolvedIp === true;
+
+  return {
+    ...stats,
+    executor_mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: "metadata_fetch_smoke_failed",
+    reason,
+    processed_urls: fetchResult ? 1 : 0,
+    fetched_urls: 0,
+    extracted_candidates: 0,
+    inserted_discovered_tools: 0,
+    inserted_public_tools: 0,
+    no_fetch_performed: !reachedFetchPhase,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    ...(fetchResult
+      ? {
+          fetch_adapter_status: fetchResult.status,
+          fetch_error_code: fetchResult.metadata.errorCode,
+          fetch_metadata: fetchResult.metadata,
+        }
+      : {}),
+    failed_at: failedAt,
+    failed_by: getActorLabel(actor),
+  };
+}
+
+function createMetadataFetchPlan(requestPlan: DiscoveryRequestPlan): DiscoveryFetchPlan {
+  return {
+    normalizedUrl: requestPlan.normalizedUrl,
+    hostname: requestPlan.hostname,
+    protocol: requestPlan.protocol,
+    method: requestPlan.method,
+    timeoutMs: requestPlan.timeoutMs,
+    redirectLimit: 0,
+    responseSizeLimitBytes: requestPlan.responseSizeLimitBytes,
+    userAgent: requestPlan.userAgent,
+    acceptedContentTypes: DISCOVERY_FETCH_ACCEPTED_CONTENT_TYPES,
+    createdAt: requestPlan.createdAt,
   };
 }
 
@@ -452,6 +617,237 @@ async function recoverStaleRunningRuns({
   return activeRuns;
 }
 
+async function completeMetadataFetchSmokeRun({
+  actor,
+  claimedRun,
+  sourceId,
+  requestPlans,
+}: {
+  actor: VerifiedAdminActor;
+  claimedRun: DiscoveryRunRecord;
+  sourceId: string;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  if (requestPlans.length !== 1) {
+    const failedAt = new Date().toISOString();
+    const failedStats = createMetadataFetchSmokeFailedStats({
+      stats: claimedRun.stats,
+      failedAt,
+      actor,
+      reason: "metadata_fetch_smoke_requires_single_url",
+    });
+    const { data: failedRun, error } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "failed",
+        finished_at: failedAt,
+        updated_at: failedAt,
+        error_log: "Metadata-fetch smoke mode requires exactly one request plan.",
+        stats: failedStats,
+      })
+      .eq("id", claimedRun.id)
+      .eq("status", "running")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to reject metadata-fetch smoke run plan count.", {
+        message: error.message,
+        runId: claimedRun.id,
+        sourceId,
+      });
+
+      return jsonResponse({ error: "Failed to reject metadata-fetch smoke run." }, 500);
+    }
+
+    if (!failedRun) {
+      return jsonResponse({ error: "Discovery run changed state before fetch." }, 409);
+    }
+
+    await writeAuditEvent({
+      actor,
+      eventType: "metadata_fetch_smoke_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message: "Metadata-fetch smoke mode rejected a run without exactly one request plan.",
+      metadata: {
+        fetch_adapter_status: "metadata_fetch_smoke_requires_single_url",
+      },
+      safetyMetadata: createMetadataFetchSmokeSafetyMetadata(true),
+    });
+
+    return jsonResponse(
+      {
+        error: "Metadata-fetch smoke mode requires exactly one URL.",
+        data: { reason: "metadata_fetch_smoke_requires_single_url" },
+      },
+      422
+    );
+  }
+
+  const requestPlan = requestPlans[0];
+
+  if (!requestPlan) {
+    return jsonResponse({ error: "Metadata-fetch plan was unavailable." }, 500);
+  }
+
+  const started = await writeAuditEvent({
+    actor,
+    eventType: "metadata_fetch_smoke_started",
+    runId: claimedRun.id,
+    sourceId,
+    message: "Metadata-fetch smoke adapter started after validated request-plan preflight.",
+    metadata: {
+      fetch_adapter_status: "metadata_fetch_smoke_started",
+    },
+    safetyMetadata: createMetadataFetchSmokeSafetyMetadata(true),
+  });
+
+  if (!started) {
+    return jsonResponse({ error: "Failed to audit metadata-fetch smoke start." }, 500);
+  }
+
+  const fetchResult = await executeDiscoveryFetchMetadataOnly(
+    createMetadataFetchPlan(requestPlan)
+  );
+
+  if (fetchResult.ok) {
+    const completedAt = new Date().toISOString();
+    const completedStats = createMetadataFetchSmokeCompletedStats({
+      stats: claimedRun.stats,
+      completedAt,
+      actor,
+      fetchResult,
+    });
+    const { data: completedRun, error } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "completed",
+        finished_at: completedAt,
+        updated_at: completedAt,
+        error_log: null,
+        stats: completedStats,
+      })
+      .eq("id", claimedRun.id)
+      .eq("status", "running")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to complete metadata-fetch smoke run.", {
+        message: error.message,
+        runId: claimedRun.id,
+        sourceId,
+      });
+
+      return jsonResponse({ error: "Failed to complete metadata-fetch smoke run." }, 500);
+    }
+
+    if (!completedRun) {
+      return jsonResponse({ error: "Discovery run changed state before completion." }, 409);
+    }
+
+    const completedRunRecord = coerceRunRecord(completedRun);
+    const completedAudit = await writeAuditEvent({
+      actor,
+      eventType: "metadata_fetch_smoke_completed",
+      runId: completedRunRecord.id,
+      sourceId,
+      message: "Metadata-fetch smoke adapter completed without extraction or inserts.",
+      metadata: {
+        fetch_adapter_status: fetchResult.status,
+      },
+      safetyMetadata: createMetadataFetchSmokeSafetyMetadata(false),
+    });
+
+    if (!completedAudit) {
+      return jsonResponse(
+        { error: "Metadata-fetch smoke completed but could not be audited." },
+        500
+      );
+    }
+
+    return jsonResponse({
+      data: {
+        run: completedRunRecord,
+        execution: {
+          enabled: true,
+          mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+          status: "metadata_fetch_smoke_completed",
+          message: "Metadata-only fetch completed without extraction or inserts.",
+        },
+      },
+    });
+  }
+
+  const failedAt = new Date().toISOString();
+  const failedStats = createMetadataFetchSmokeFailedStats({
+    stats: claimedRun.stats,
+    failedAt,
+    actor,
+    reason: fetchResult.status,
+    fetchResult,
+  });
+  const { data: failedRun, error } = await supabaseAdmin
+    .from("discovery_runs")
+    .update({
+      status: "failed",
+      finished_at: failedAt,
+      updated_at: failedAt,
+      error_log: "Metadata-fetch smoke adapter failed safely.",
+      stats: failedStats,
+    })
+    .eq("id", claimedRun.id)
+    .eq("status", "running")
+    .select(RUN_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to record metadata-fetch smoke adapter failure.", {
+      message: error.message,
+      runId: claimedRun.id,
+      sourceId,
+      adapterStatus: fetchResult.status,
+    });
+
+    return jsonResponse({ error: "Failed to record metadata-fetch smoke failure." }, 500);
+  }
+
+  if (!failedRun) {
+    return jsonResponse({ error: "Discovery run changed state before fetch failure." }, 409);
+  }
+
+  const failedAudit = await writeAuditEvent({
+    actor,
+    eventType: "metadata_fetch_smoke_failed",
+    runId: claimedRun.id,
+    sourceId,
+    message: "Metadata-fetch smoke adapter failed without extraction or inserts.",
+    metadata: {
+      fetch_adapter_status: fetchResult.status,
+      error_code: fetchResult.metadata.errorCode,
+    },
+    safetyMetadata: createMetadataFetchSmokeSafetyMetadata(
+      fetchResult.metadata.connectionPinnedToResolvedIp === false
+    ),
+  });
+
+  if (!failedAudit) {
+    return jsonResponse(
+      { error: "Metadata-fetch smoke failed but could not be audited." },
+      500
+    );
+  }
+
+  return jsonResponse(
+    {
+      error: "Metadata-fetch smoke adapter failed safely.",
+      data: { reason: fetchResult.status },
+    },
+    422
+  );
+}
+
 export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
@@ -492,12 +888,17 @@ export async function POST(request: Request) {
   }
 
   let runId = "";
+  let executionMode: ClaimExecutionMode;
 
   try {
     runId = getRequiredUuid(body.run_id, "Discovery run ID");
+    executionMode = getClaimExecutionMode(body.execution_mode);
   } catch (error) {
     return jsonResponse(
-      { error: error instanceof Error ? error.message : "Invalid discovery run ID." },
+      {
+        error:
+          error instanceof Error ? error.message : "Invalid discovery run request.",
+      },
       400
     );
   }
@@ -770,12 +1171,20 @@ export async function POST(request: Request) {
   }
 
   const claimedAt = new Date().toISOString();
-  const claimStats = createClaimStats({
-    stats: runRecord.stats,
-    claimedAt,
-    actor: adminSession.actor,
-    requestPlans: requestPlanPreflight.plans,
-  });
+  const claimStats =
+    executionMode === METADATA_FETCH_SMOKE_EXECUTION_MODE
+      ? createMetadataFetchSmokeClaimStats({
+          stats: runRecord.stats,
+          claimedAt,
+          actor: adminSession.actor,
+          requestPlans: requestPlanPreflight.plans,
+        })
+      : createClaimStats({
+          stats: runRecord.stats,
+          claimedAt,
+          actor: adminSession.actor,
+          requestPlans: requestPlanPreflight.plans,
+        });
 
   const { data: claimedRun, error: claimError } = await supabaseAdmin
     .from("discovery_runs")
@@ -837,7 +1246,20 @@ export async function POST(request: Request) {
     runId: claimedRunRecord.id,
     sourceId: runRecord.source_id,
     message: "Manual crawler dry executor claim succeeded.",
+    safetyMetadata:
+      executionMode === METADATA_FETCH_SMOKE_EXECUTION_MODE
+        ? createMetadataFetchSmokeSafetyMetadata(true)
+        : undefined,
   });
+
+  if (executionMode === METADATA_FETCH_SMOKE_EXECUTION_MODE) {
+    return completeMetadataFetchSmokeRun({
+      actor: adminSession.actor,
+      claimedRun: claimedRunRecord,
+      sourceId: runRecord.source_id,
+      requestPlans: requestPlanPreflight.plans,
+    });
+  }
 
   const completedAt = new Date().toISOString();
   const completedStats = createCompletedDryRunStats({
