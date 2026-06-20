@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
 import { Button } from "@/components/ui/button";
+import { normalizeManualMetadataFetchStats } from "@/lib/discovery-run-results-review";
 
 type DiscoveryRunStatus = "pending" | "running" | "completed" | "failed";
 
@@ -21,6 +23,8 @@ type DiscoveryRun = {
   finished_at: string | null;
   created_at: string;
   updated_at: string;
+  audit_events?: unknown;
+  audit_warning?: unknown;
 };
 
 type PaginationState = {
@@ -86,6 +90,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
   });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({
@@ -120,6 +125,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
       }
 
       setRuns(Array.isArray(result?.data) ? result.data : []);
+      setExpandedRunId(null);
       setPagination((current) => ({
         ...current,
         total: result?.pagination?.total || 0,
@@ -213,12 +219,13 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200">
-        <div className="hidden grid-cols-[1fr_110px_1fr_1fr_110px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 xl:grid">
+        <div className="hidden grid-cols-[1fr_110px_1fr_1fr_110px_128px] gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-600 xl:grid">
           <span>Run</span>
           <span>Status</span>
           <span>Stats</span>
           <span>Time</span>
           <span>Errors</span>
+          <span>Review</span>
         </div>
 
         {isLoading ? (
@@ -249,45 +256,92 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
           </div>
         ) : (
           <div className="divide-y divide-slate-200">
-            {runs.map((run) => (
-              <div
-                key={run.id}
-                className="grid gap-3 px-4 py-4 text-sm xl:grid-cols-[1fr_110px_1fr_1fr_110px] xl:items-center"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-black text-slate-950">
-                    {run.id}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-slate-500">
-                    Source: {run.source_id || "Manual / unknown"}
-                  </p>
+            {runs.map((run) => {
+              const manualMetadataFetchReview = normalizeManualMetadataFetchStats(
+                run.stats
+              );
+              const reviewPanelId = `manual-metadata-fetch-review-${run.id}`;
+              const isExpanded = expandedRunId === run.id;
+
+              return (
+                <div key={run.id}>
+                  <div className="grid gap-3 px-4 py-4 text-sm xl:grid-cols-[1fr_110px_1fr_1fr_110px_128px] xl:items-center">
+                    <div className="min-w-0">
+                      <p className="truncate font-black text-slate-950">
+                        {run.id}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        Source: {run.source_id || "Manual / unknown"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${getStatusStyle(
+                        run.status
+                      )}`}
+                    >
+                      {run.status}
+                    </span>
+
+                    {manualMetadataFetchReview ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4 xl:grid-cols-2">
+                        <span>Total: {manualMetadataFetchReview.counts.totalUrls}</span>
+                        <span>Fetched: {manualMetadataFetchReview.counts.fetchedUrls}</span>
+                        <span>Failed: {manualMetadataFetchReview.counts.failedUrls}</span>
+                        <span>Skipped: {manualMetadataFetchReview.counts.skippedUrls}</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4 xl:grid-cols-2">
+                        <span>Found: {getStatValue(run, "tools_found")}</span>
+                        <span>New: {getStatValue(run, "tools_new")}</span>
+                        <span>Dupes: {getStatValue(run, "tools_duplicates")}</span>
+                        <span>Errors: {getStatValue(run, "errors")}</span>
+                      </div>
+                    )}
+
+                    <div className="text-xs leading-5 text-slate-600">
+                      <p>Started: {formatDate(run.started_at)}</p>
+                      <p>Finished: {formatDate(run.finished_at)}</p>
+                    </div>
+
+                    <p className="line-clamp-3 text-xs leading-5 text-slate-500">
+                      {manualMetadataFetchReview
+                        ? manualMetadataFetchReview.counts.failedUrls > 0
+                          ? "Metadata fetch failure recorded."
+                          : "—"
+                        : run.error_log || "—"}
+                    </p>
+
+                    {manualMetadataFetchReview ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setExpandedRunId((current) =>
+                            current === run.id ? null : run.id
+                          )
+                        }
+                        aria-expanded={isExpanded}
+                        aria-controls={reviewPanelId}
+                        className="w-full rounded-xl"
+                      >
+                        {isExpanded ? "Hide results" : "Review results"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-400">—</span>
+                    )}
+                  </div>
+
+                  {manualMetadataFetchReview && isExpanded ? (
+                    <ManualMetadataFetchResultsReview
+                      panelId={reviewPanelId}
+                      run={run}
+                      review={manualMetadataFetchReview}
+                    />
+                  ) : null}
                 </div>
-
-                <span
-                  className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${getStatusStyle(
-                    run.status
-                  )}`}
-                >
-                  {run.status}
-                </span>
-
-                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4 xl:grid-cols-2">
-                  <span>Found: {getStatValue(run, "tools_found")}</span>
-                  <span>New: {getStatValue(run, "tools_new")}</span>
-                  <span>Dupes: {getStatValue(run, "tools_duplicates")}</span>
-                  <span>Errors: {getStatValue(run, "errors")}</span>
-                </div>
-
-                <div className="text-xs leading-5 text-slate-600">
-                  <p>Started: {formatDate(run.started_at)}</p>
-                  <p>Finished: {formatDate(run.finished_at)}</p>
-                </div>
-
-                <p className="line-clamp-3 text-xs leading-5 text-slate-500">
-                  {run.error_log || "—"}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
