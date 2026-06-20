@@ -24,6 +24,13 @@ import {
   type DiscoveryFetchPlan,
   type DiscoveryFetchResult,
 } from "../../../../../../../lib/discovery-fetch-adapter";
+import {
+  createManualMetadataFetchAdapterFailureResult,
+  createManualMetadataFetchResult,
+  summarizeManualMetadataFetchResults,
+  type ManualMetadataFetchResult,
+  type ManualMetadataFetchSummary,
+} from "../../../../../../../lib/discovery-manual-metadata-fetch";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -35,6 +42,8 @@ const STALE_RUNNING_TIMEOUT_MS = STALE_RUNNING_TIMEOUT_MINUTES * 60 * 1000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const METADATA_FETCH_SMOKE_EXECUTION_MODE = "metadata_fetch_smoke";
+const MANUAL_METADATA_FETCH_EXECUTION_MODE = "manual_metadata_fetch";
+const MANUAL_METADATA_FETCH_MAX_URLS = 3;
 const RUN_SELECT = [
   "id",
   "source_id",
@@ -75,9 +84,17 @@ type AuditEventType =
   | "request_plan_preflight_rejected"
   | "metadata_fetch_smoke_started"
   | "metadata_fetch_smoke_completed"
-  | "metadata_fetch_smoke_failed";
+  | "metadata_fetch_smoke_failed"
+  | "manual_metadata_fetch_started"
+  | "manual_metadata_fetch_url_completed"
+  | "manual_metadata_fetch_url_failed"
+  | "manual_metadata_fetch_completed"
+  | "manual_metadata_fetch_failed";
 
-type ClaimExecutionMode = "dry_run" | "metadata_fetch_smoke";
+type ClaimExecutionMode =
+  | "dry_run"
+  | "metadata_fetch_smoke"
+  | "manual_metadata_fetch";
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -133,6 +150,10 @@ function getClaimExecutionMode(value: unknown): ClaimExecutionMode {
     return METADATA_FETCH_SMOKE_EXECUTION_MODE;
   }
 
+  if (value === MANUAL_METADATA_FETCH_EXECUTION_MODE) {
+    return MANUAL_METADATA_FETCH_EXECUTION_MODE;
+  }
+
   throw new Error("Invalid execution mode.");
 }
 
@@ -182,6 +203,20 @@ function createMetadataFetchSmokeSafetyMetadata(noFetchPerformed: boolean) {
   return {
     source_kind: MANUAL_CRAWLER_SOURCE_KIND,
     executor_mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    no_fetch_performed: noFetchPerformed,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+  };
+}
+
+function createManualMetadataFetchSafetyMetadata(noFetchPerformed: boolean) {
+  return {
+    source_kind: MANUAL_CRAWLER_SOURCE_KIND,
+    executor_mode: MANUAL_METADATA_FETCH_EXECUTION_MODE,
     dry_run: false,
     execution_enabled: true,
     no_fetch_performed: noFetchPerformed,
@@ -453,6 +488,118 @@ function createMetadataFetchSmokeFailedStats({
       : {}),
     failed_at: failedAt,
     failed_by: getActorLabel(actor),
+  };
+}
+
+function createManualMetadataFetchClaimStats({
+  stats,
+  claimedAt,
+  actor,
+  requestPlans,
+}: {
+  stats: JsonRecord;
+  claimedAt: string;
+  actor: VerifiedAdminActor;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  return {
+    ...stats,
+    executor_mode: MANUAL_METADATA_FETCH_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: "manual_metadata_fetch_claimed",
+    claimed_at: claimedAt,
+    claimed_by: getActorLabel(actor),
+    no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    total_urls: requestPlans.length,
+    fetched_urls: 0,
+    failed_urls: 0,
+    skipped_urls: 0,
+    fetch_results: [],
+    request_plan_preflight: {
+      status: "passed",
+      plans: requestPlans,
+    },
+  };
+}
+
+function createManualMetadataFetchFinalStats({
+  stats,
+  finishedAt,
+  actor,
+  executionStatus,
+  reason,
+  summary,
+  fetchResults,
+}: {
+  stats: JsonRecord;
+  finishedAt: string;
+  actor: VerifiedAdminActor;
+  executionStatus: "manual_metadata_fetch_completed" | "manual_metadata_fetch_failed";
+  reason?: string;
+  summary: ManualMetadataFetchSummary;
+  fetchResults: ManualMetadataFetchResult[];
+}) {
+  const noFetchPerformed = fetchResults.length === 0;
+
+  return {
+    ...stats,
+    executor_mode: MANUAL_METADATA_FETCH_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: executionStatus,
+    ...(reason ? { reason } : {}),
+    processed_urls: summary.totalUrls,
+    fetched_urls: summary.fetchedUrls,
+    failed_urls: summary.failedUrls,
+    skipped_urls: summary.skippedUrls,
+    extracted_candidates: 0,
+    inserted_discovered_tools: 0,
+    inserted_public_tools: 0,
+    no_fetch_performed: noFetchPerformed,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    total_urls: summary.totalUrls,
+    fetch_results: fetchResults,
+    ...(executionStatus === "manual_metadata_fetch_completed"
+      ? {
+          completed_at: finishedAt,
+          completed_by: getActorLabel(actor),
+        }
+      : {
+          failed_at: finishedAt,
+          failed_by: getActorLabel(actor),
+        }),
+  };
+}
+
+function createManualMetadataFetchAuditMetadata({
+  fetchResult,
+  urlIndex,
+}: {
+  fetchResult: ManualMetadataFetchResult;
+  urlIndex: number;
+}) {
+  return {
+    url_index: urlIndex,
+    normalized_url: fetchResult.normalized_url,
+    hostname: fetchResult.hostname,
+    status: fetchResult.status,
+    http_status: fetchResult.http_status,
+    content_type: fetchResult.content_type,
+    content_length_header: fetchResult.content_length_header,
+    resolved_ip_family: fetchResult.resolved_ip_family,
+    bytes_read: fetchResult.bytes_read,
+    response_truncated: fetchResult.response_truncated,
+    duration_ms: fetchResult.duration_ms,
+    error_code: fetchResult.error_code,
+    failure_reason: fetchResult.failure_reason,
   };
 }
 
@@ -848,6 +995,254 @@ async function completeMetadataFetchSmokeRun({
   );
 }
 
+async function completeManualMetadataFetchRun({
+  actor,
+  claimedRun,
+  sourceId,
+  requestPlans,
+}: {
+  actor: VerifiedAdminActor;
+  claimedRun: DiscoveryRunRecord;
+  sourceId: string;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  if (
+    requestPlans.length < 1 ||
+    requestPlans.length > MANUAL_METADATA_FETCH_MAX_URLS
+  ) {
+    const failedAt = new Date().toISOString();
+    const reason =
+      requestPlans.length < 1
+        ? "manual_metadata_fetch_requires_at_least_one_url"
+        : "manual_metadata_fetch_url_cap_exceeded";
+    const summary: ManualMetadataFetchSummary = {
+      totalUrls: requestPlans.length,
+      fetchedUrls: 0,
+      failedUrls: 0,
+      skippedUrls: requestPlans.length,
+    };
+    const failedStats = createManualMetadataFetchFinalStats({
+      stats: claimedRun.stats,
+      finishedAt: failedAt,
+      actor,
+      executionStatus: "manual_metadata_fetch_failed",
+      reason,
+      summary,
+      fetchResults: [],
+    });
+    const { data: failedRun, error } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "failed",
+        finished_at: failedAt,
+        updated_at: failedAt,
+        error_log: "Manual metadata fetch mode rejected the request-plan count.",
+        stats: failedStats,
+      })
+      .eq("id", claimedRun.id)
+      .eq("status", "running")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to reject manual metadata fetch run plan count.", {
+        message: error.message,
+        runId: claimedRun.id,
+        sourceId,
+      });
+
+      return jsonResponse(
+        { error: "Failed to reject manual metadata fetch run." },
+        500
+      );
+    }
+
+    if (!failedRun) {
+      return jsonResponse({ error: "Discovery run changed state before fetch." }, 409);
+    }
+
+    await writeAuditEvent({
+      actor,
+      eventType: "manual_metadata_fetch_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message: "Manual metadata fetch mode rejected a request-plan count outside its cap.",
+      metadata: {
+        reason,
+        total_urls: requestPlans.length,
+      },
+      safetyMetadata: createManualMetadataFetchSafetyMetadata(true),
+    });
+
+    return jsonResponse(
+      {
+        error: "Manual metadata fetch mode supports between one and three URLs.",
+        data: { reason },
+      },
+      422
+    );
+  }
+
+  const started = await writeAuditEvent({
+    actor,
+    eventType: "manual_metadata_fetch_started",
+    runId: claimedRun.id,
+    sourceId,
+    message: "Manual metadata fetch executor started after validated request-plan preflight.",
+    metadata: {
+      total_urls: requestPlans.length,
+    },
+    safetyMetadata: createManualMetadataFetchSafetyMetadata(true),
+  });
+
+  if (!started) {
+    return jsonResponse({ error: "Failed to audit manual metadata fetch start." }, 500);
+  }
+
+  const fetchResults: ManualMetadataFetchResult[] = [];
+  let urlAuditFailed = false;
+
+  for (const [urlIndex, requestPlan] of requestPlans.entries()) {
+    let safeFetchResult: ManualMetadataFetchResult;
+
+    try {
+      const fetchResult = await executeDiscoveryFetchMetadataOnly(
+        createMetadataFetchPlan(requestPlan)
+      );
+      safeFetchResult = createManualMetadataFetchResult(fetchResult);
+    } catch {
+      safeFetchResult = createManualMetadataFetchAdapterFailureResult({
+        normalizedUrl: requestPlan.normalizedUrl,
+        hostname: requestPlan.hostname,
+      });
+    }
+
+    fetchResults.push(safeFetchResult);
+
+    const urlAudit = await writeAuditEvent({
+      actor,
+      eventType:
+        safeFetchResult.status === "fetch_completed_metadata_only"
+          ? "manual_metadata_fetch_url_completed"
+          : "manual_metadata_fetch_url_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message:
+        safeFetchResult.status === "fetch_completed_metadata_only"
+          ? "Manual metadata fetch completed without extraction or inserts."
+          : "Manual metadata fetch failed safely without extraction or inserts.",
+      metadata: createManualMetadataFetchAuditMetadata({
+        fetchResult: safeFetchResult,
+        urlIndex: urlIndex + 1,
+      }),
+      safetyMetadata: createManualMetadataFetchSafetyMetadata(false),
+    });
+
+    if (!urlAudit) {
+      urlAuditFailed = true;
+    }
+  }
+
+  const summary = summarizeManualMetadataFetchResults(fetchResults);
+  const completedAt = new Date().toISOString();
+  const hasSuccessfulFetch = summary.fetchedUrls > 0;
+  const reason = hasSuccessfulFetch ? undefined : "manual_metadata_fetch_all_failed";
+  const finalStats = createManualMetadataFetchFinalStats({
+    stats: claimedRun.stats,
+    finishedAt: completedAt,
+    actor,
+    executionStatus: hasSuccessfulFetch
+      ? "manual_metadata_fetch_completed"
+      : "manual_metadata_fetch_failed",
+    reason,
+    summary,
+    fetchResults,
+  });
+  const { data: finalRun, error } = await supabaseAdmin
+    .from("discovery_runs")
+    .update({
+      status: hasSuccessfulFetch ? "completed" : "failed",
+      finished_at: completedAt,
+      updated_at: completedAt,
+      error_log: hasSuccessfulFetch
+        ? null
+        : "Manual metadata fetch executor completed without successful fetches.",
+      stats: finalStats,
+    })
+    .eq("id", claimedRun.id)
+    .eq("status", "running")
+    .select(RUN_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to finalize manual metadata fetch run.", {
+      message: error.message,
+      runId: claimedRun.id,
+      sourceId,
+    });
+
+    return jsonResponse({ error: "Failed to finalize manual metadata fetch run." }, 500);
+  }
+
+  if (!finalRun) {
+    return jsonResponse({ error: "Discovery run changed state before completion." }, 409);
+  }
+
+  const finalRunRecord = coerceRunRecord(finalRun);
+  const terminalAudit = await writeAuditEvent({
+    actor,
+    eventType: hasSuccessfulFetch
+      ? "manual_metadata_fetch_completed"
+      : "manual_metadata_fetch_failed",
+    runId: finalRunRecord.id,
+    sourceId,
+    message: hasSuccessfulFetch
+      ? "Manual metadata fetch executor completed without extraction or inserts."
+      : "Manual metadata fetch executor failed without successful fetches.",
+    metadata: {
+      ...(reason ? { reason } : {}),
+      total_urls: summary.totalUrls,
+      fetched_urls: summary.fetchedUrls,
+      failed_urls: summary.failedUrls,
+      skipped_urls: summary.skippedUrls,
+    },
+    safetyMetadata: createManualMetadataFetchSafetyMetadata(false),
+  });
+
+  if (!terminalAudit || urlAuditFailed) {
+    return jsonResponse(
+      {
+        error: hasSuccessfulFetch
+          ? "Manual metadata fetch completed but could not be fully audited."
+          : "Manual metadata fetch failed but could not be fully audited.",
+      },
+      500
+    );
+  }
+
+  if (!hasSuccessfulFetch) {
+    return jsonResponse(
+      {
+        error: "Manual metadata fetch completed without successful fetches.",
+        data: { reason },
+      },
+      422
+    );
+  }
+
+  return jsonResponse({
+    data: {
+      run: finalRunRecord,
+      execution: {
+        enabled: true,
+        mode: MANUAL_METADATA_FETCH_EXECUTION_MODE,
+        status: "manual_metadata_fetch_completed",
+        message: "Manual metadata fetch completed without extraction or inserts.",
+      },
+    },
+  });
+}
+
 export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
@@ -1179,6 +1574,13 @@ export async function POST(request: Request) {
           actor: adminSession.actor,
           requestPlans: requestPlanPreflight.plans,
         })
+      : executionMode === MANUAL_METADATA_FETCH_EXECUTION_MODE
+        ? createManualMetadataFetchClaimStats({
+            stats: runRecord.stats,
+            claimedAt,
+            actor: adminSession.actor,
+            requestPlans: requestPlanPreflight.plans,
+          })
       : createClaimStats({
           stats: runRecord.stats,
           claimedAt,
@@ -1249,11 +1651,22 @@ export async function POST(request: Request) {
     safetyMetadata:
       executionMode === METADATA_FETCH_SMOKE_EXECUTION_MODE
         ? createMetadataFetchSmokeSafetyMetadata(true)
+        : executionMode === MANUAL_METADATA_FETCH_EXECUTION_MODE
+          ? createManualMetadataFetchSafetyMetadata(true)
         : undefined,
   });
 
   if (executionMode === METADATA_FETCH_SMOKE_EXECUTION_MODE) {
     return completeMetadataFetchSmokeRun({
+      actor: adminSession.actor,
+      claimedRun: claimedRunRecord,
+      sourceId: runRecord.source_id,
+      requestPlans: requestPlanPreflight.plans,
+    });
+  }
+
+  if (executionMode === MANUAL_METADATA_FETCH_EXECUTION_MODE) {
+    return completeManualMetadataFetchRun({
       actor: adminSession.actor,
       claimedRun: claimedRunRecord,
       sourceId: runRecord.source_id,
