@@ -31,6 +31,14 @@ import {
   type ManualMetadataFetchResult,
   type ManualMetadataFetchSummary,
 } from "../../../../../../../lib/discovery-manual-metadata-fetch";
+import {
+  executeManualStaticHtmlEvidence,
+  getManualStaticHtmlEvidenceTerminalState,
+  isManualStaticHtmlEvidencePlanCountAllowed,
+  type ManualStaticHtmlEvidenceExecution,
+  type ManualStaticHtmlEvidenceResult,
+  type ManualStaticHtmlEvidenceSummary,
+} from "../../../../../../../lib/discovery-static-html-evidence-executor";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -44,6 +52,8 @@ const UUID_PATTERN =
 const METADATA_FETCH_SMOKE_EXECUTION_MODE = "metadata_fetch_smoke";
 const MANUAL_METADATA_FETCH_EXECUTION_MODE = "manual_metadata_fetch";
 const MANUAL_METADATA_FETCH_MAX_URLS = 3;
+const MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE =
+  "manual_static_html_derived_evidence";
 const RUN_SELECT = [
   "id",
   "source_id",
@@ -89,12 +99,18 @@ type AuditEventType =
   | "manual_metadata_fetch_url_completed"
   | "manual_metadata_fetch_url_failed"
   | "manual_metadata_fetch_completed"
-  | "manual_metadata_fetch_failed";
+  | "manual_metadata_fetch_failed"
+  | "manual_static_html_derived_evidence_started"
+  | "manual_static_html_derived_evidence_url_completed"
+  | "manual_static_html_derived_evidence_url_failed"
+  | "manual_static_html_derived_evidence_completed"
+  | "manual_static_html_derived_evidence_failed";
 
 type ClaimExecutionMode =
   | "dry_run"
   | "metadata_fetch_smoke"
-  | "manual_metadata_fetch";
+  | "manual_metadata_fetch"
+  | "manual_static_html_derived_evidence";
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -152,6 +168,10 @@ function getClaimExecutionMode(value: unknown): ClaimExecutionMode {
 
   if (value === MANUAL_METADATA_FETCH_EXECUTION_MODE) {
     return MANUAL_METADATA_FETCH_EXECUTION_MODE;
+  }
+
+  if (value === MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE) {
+    return MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE;
   }
 
   throw new Error("Invalid execution mode.");
@@ -224,6 +244,28 @@ function createManualMetadataFetchSafetyMetadata(noFetchPerformed: boolean) {
     no_llm_analysis_performed: true,
     no_candidates_inserted: true,
     no_public_tools_inserted: true,
+  };
+}
+
+function createManualStaticHtmlEvidenceSafetyMetadata({
+  noFetchPerformed,
+  noExtractionPerformed,
+}: {
+  noFetchPerformed: boolean;
+  noExtractionPerformed: boolean;
+}) {
+  return {
+    source_kind: MANUAL_CRAWLER_SOURCE_KIND,
+    executor_mode: MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    no_fetch_performed: noFetchPerformed,
+    no_extraction_performed: noExtractionPerformed,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    raw_html_persisted: false,
+    candidates_created: false,
   };
 }
 
@@ -579,6 +621,106 @@ function createManualMetadataFetchFinalStats({
   };
 }
 
+function createManualStaticHtmlEvidenceClaimStats({
+  stats,
+  claimedAt,
+  actor,
+  requestPlans,
+}: {
+  stats: JsonRecord;
+  claimedAt: string;
+  actor: VerifiedAdminActor;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  return {
+    ...stats,
+    executor_mode: MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: "manual_static_html_derived_evidence_claimed",
+    claimed_at: claimedAt,
+    claimed_by: getActorLabel(actor),
+    total_urls: requestPlans.length,
+    attempted_urls: 0,
+    acquired_urls: 0,
+    evidence_attempted_urls: 0,
+    evidence_produced_urls: 0,
+    failed_urls: 0,
+    skipped_urls: 0,
+    evidence_results: [],
+    no_fetch_performed: true,
+    no_extraction_performed: true,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    raw_html_persisted: false,
+    candidates_created: false,
+    request_plan_preflight: {
+      status: "passed",
+      plans: requestPlans,
+    },
+  };
+}
+
+function createManualStaticHtmlEvidenceFinalStats({
+  stats,
+  finishedAt,
+  actor,
+  executionStatus,
+  reason,
+  execution,
+}: {
+  stats: JsonRecord;
+  finishedAt: string;
+  actor: VerifiedAdminActor;
+  executionStatus:
+    | "manual_static_html_derived_evidence_completed"
+    | "manual_static_html_derived_evidence_failed";
+  reason?: string;
+  execution: ManualStaticHtmlEvidenceExecution;
+}) {
+  const summary = execution.summary;
+  const noFetchPerformed = summary.attemptedUrls === 0;
+  const noExtractionPerformed = summary.evidenceAttemptedUrls === 0;
+
+  return {
+    ...stats,
+    executor_mode: MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE,
+    dry_run: false,
+    execution_enabled: true,
+    execution_status: executionStatus,
+    ...(reason ? { reason } : {}),
+    total_urls: summary.totalUrls,
+    attempted_urls: summary.attemptedUrls,
+    acquired_urls: summary.acquiredUrls,
+    evidence_attempted_urls: summary.evidenceAttemptedUrls,
+    evidence_produced_urls: summary.evidenceProducedUrls,
+    failed_urls: summary.failedUrls,
+    skipped_urls: summary.skippedUrls,
+    all_failed: summary.allFailed,
+    no_fetch_performed: noFetchPerformed,
+    no_extraction_performed: noExtractionPerformed,
+    no_llm_analysis_performed: true,
+    no_candidates_inserted: true,
+    no_public_tools_inserted: true,
+    raw_html_persisted: false,
+    candidates_created: false,
+    extracted_candidates: 0,
+    inserted_discovered_tools: 0,
+    inserted_public_tools: 0,
+    evidence_results: execution.results,
+    ...(executionStatus === "manual_static_html_derived_evidence_completed"
+      ? {
+          completed_at: finishedAt,
+          completed_by: getActorLabel(actor),
+        }
+      : {
+          failed_at: finishedAt,
+          failed_by: getActorLabel(actor),
+        }),
+  };
+}
+
 function createManualMetadataFetchAuditMetadata({
   fetchResult,
   urlIndex,
@@ -600,6 +742,35 @@ function createManualMetadataFetchAuditMetadata({
     duration_ms: fetchResult.duration_ms,
     error_code: fetchResult.error_code,
     failure_reason: fetchResult.failure_reason,
+  };
+}
+
+function createManualStaticHtmlEvidenceAuditMetadata({
+  evidenceResult,
+  urlIndex,
+}: {
+  evidenceResult: ManualStaticHtmlEvidenceResult;
+  urlIndex: number;
+}) {
+  return {
+    url_index: urlIndex,
+    normalized_url: evidenceResult.normalized_url,
+    hostname: evidenceResult.hostname,
+    status: evidenceResult.status,
+    acquisition_status: evidenceResult.acquisition_status,
+    http_status: evidenceResult.http_status,
+    content_type: evidenceResult.content_type,
+    content_length_header: evidenceResult.content_length_header,
+    resolved_ip_family: evidenceResult.resolved_ip_family,
+    bytes_read: evidenceResult.bytes_read,
+    response_truncated: evidenceResult.response_truncated,
+    duration_ms: evidenceResult.duration_ms,
+    error_code: evidenceResult.error_code,
+    failure_reason: evidenceResult.failure_reason,
+    extraction_status: evidenceResult.extraction_status,
+    extraction_version: evidenceResult.extraction_version,
+    evidence_attempted: evidenceResult.evidence_attempted,
+    raw_html_persisted: false,
   };
 }
 
@@ -1243,6 +1414,309 @@ async function completeManualMetadataFetchRun({
   });
 }
 
+function createEmptyManualStaticHtmlEvidenceExecution(
+  totalUrls: number
+): ManualStaticHtmlEvidenceExecution {
+  const safeTotalUrls = Number.isSafeInteger(totalUrls) && totalUrls >= 0
+    ? totalUrls
+    : 0;
+  const summary: ManualStaticHtmlEvidenceSummary = {
+    totalUrls: safeTotalUrls,
+    attemptedUrls: 0,
+    acquiredUrls: 0,
+    evidenceAttemptedUrls: 0,
+    evidenceProducedUrls: 0,
+    failedUrls: 0,
+    skippedUrls: safeTotalUrls,
+    allFailed: false,
+  };
+
+  return {
+    results: [],
+    summary,
+    raw_html_persisted: false,
+    candidates_created: false,
+  };
+}
+
+async function completeManualStaticHtmlEvidenceRun({
+  actor,
+  claimedRun,
+  sourceId,
+  requestPlans,
+}: {
+  actor: VerifiedAdminActor;
+  claimedRun: DiscoveryRunRecord;
+  sourceId: string;
+  requestPlans: DiscoveryRequestPlan[];
+}) {
+  if (!isManualStaticHtmlEvidencePlanCountAllowed(requestPlans.length)) {
+    const failedAt = new Date().toISOString();
+    const reason =
+      requestPlans.length < 1
+        ? "manual_static_html_derived_evidence_requires_at_least_one_url"
+        : "manual_static_html_derived_evidence_url_cap_exceeded";
+    const failedStats = createManualStaticHtmlEvidenceFinalStats({
+      stats: claimedRun.stats,
+      finishedAt: failedAt,
+      actor,
+      executionStatus: "manual_static_html_derived_evidence_failed",
+      reason,
+      execution: createEmptyManualStaticHtmlEvidenceExecution(requestPlans.length),
+    });
+    const { data: failedRun, error } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "failed",
+        finished_at: failedAt,
+        updated_at: failedAt,
+        error_log: "Static HTML evidence mode rejected the request-plan count.",
+        stats: failedStats,
+      })
+      .eq("id", claimedRun.id)
+      .eq("status", "running")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to reject static HTML evidence run plan count.", {
+        message: error.message,
+        runId: claimedRun.id,
+        sourceId,
+      });
+
+      return jsonResponse(
+        { error: "Failed to reject static HTML evidence run." },
+        500
+      );
+    }
+
+    if (!failedRun) {
+      return jsonResponse({ error: "Discovery run changed state before execution." }, 409);
+    }
+
+    await writeAuditEvent({
+      actor,
+      eventType: "manual_static_html_derived_evidence_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message: "Static HTML evidence mode rejected a request-plan count outside its cap.",
+      metadata: {
+        reason,
+        total_urls: requestPlans.length,
+      },
+      safetyMetadata: createManualStaticHtmlEvidenceSafetyMetadata({
+        noFetchPerformed: true,
+        noExtractionPerformed: true,
+      }),
+    });
+
+    return jsonResponse(
+      {
+        error: "Static HTML evidence mode supports between one and three URLs.",
+        data: { reason },
+      },
+      422
+    );
+  }
+
+  const started = await writeAuditEvent({
+    actor,
+    eventType: "manual_static_html_derived_evidence_started",
+    runId: claimedRun.id,
+    sourceId,
+    message: "Static HTML evidence executor started after validated request-plan preflight.",
+    metadata: {
+      total_urls: requestPlans.length,
+    },
+    safetyMetadata: createManualStaticHtmlEvidenceSafetyMetadata({
+      noFetchPerformed: true,
+      noExtractionPerformed: true,
+    }),
+  });
+
+  if (!started) {
+    return jsonResponse({ error: "Failed to audit static HTML evidence start." }, 500);
+  }
+
+  let execution: ManualStaticHtmlEvidenceExecution;
+
+  try {
+    execution = await executeManualStaticHtmlEvidence(requestPlans);
+  } catch {
+    const failedAt = new Date().toISOString();
+    const failedStats = createManualStaticHtmlEvidenceFinalStats({
+      stats: claimedRun.stats,
+      finishedAt: failedAt,
+      actor,
+      executionStatus: "manual_static_html_derived_evidence_failed",
+      reason: "static_html_evidence_executor_internal_failure",
+      execution: createEmptyManualStaticHtmlEvidenceExecution(requestPlans.length),
+    });
+    const { data: failedRun, error } = await supabaseAdmin
+      .from("discovery_runs")
+      .update({
+        status: "failed",
+        finished_at: failedAt,
+        updated_at: failedAt,
+        error_log: "Static HTML evidence executor failed safely.",
+        stats: failedStats,
+      })
+      .eq("id", claimedRun.id)
+      .eq("status", "running")
+      .select(RUN_SELECT)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to record static HTML evidence executor failure.", {
+        message: error.message,
+        runId: claimedRun.id,
+        sourceId,
+      });
+
+      return jsonResponse(
+        { error: "Failed to record static HTML evidence executor failure." },
+        500
+      );
+    }
+
+    if (!failedRun) {
+      return jsonResponse({ error: "Discovery run changed state before failure." }, 409);
+    }
+
+    await writeAuditEvent({
+      actor,
+      eventType: "manual_static_html_derived_evidence_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message: "Static HTML evidence executor failed before a safe result summary.",
+      metadata: {
+        reason: "static_html_evidence_executor_internal_failure",
+      },
+      safetyMetadata: createManualStaticHtmlEvidenceSafetyMetadata({
+        noFetchPerformed: true,
+        noExtractionPerformed: true,
+      }),
+    });
+
+    return jsonResponse({ error: "Static HTML evidence executor failed safely." }, 500);
+  }
+
+  let urlAuditFailed = false;
+
+  for (const [urlIndex, evidenceResult] of execution.results.entries()) {
+    const completed = evidenceResult.status === "evidence_derived";
+    const urlAudit = await writeAuditEvent({
+      actor,
+      eventType: completed
+        ? "manual_static_html_derived_evidence_url_completed"
+        : "manual_static_html_derived_evidence_url_failed",
+      runId: claimedRun.id,
+      sourceId,
+      message: completed
+        ? "Static HTML derived evidence completed without candidate or public-tool inserts."
+        : "Static HTML evidence processing failed safely without candidate or public-tool inserts.",
+      metadata: createManualStaticHtmlEvidenceAuditMetadata({
+        evidenceResult,
+        urlIndex: urlIndex + 1,
+      }),
+      safetyMetadata: createManualStaticHtmlEvidenceSafetyMetadata({
+        noFetchPerformed: false,
+        noExtractionPerformed: evidenceResult.extraction_status === null,
+      }),
+    });
+
+    if (!urlAudit) {
+      urlAuditFailed = true;
+    }
+  }
+
+  const completedAt = new Date().toISOString();
+  const terminalState = getManualStaticHtmlEvidenceTerminalState(execution.summary);
+  const finalStats = createManualStaticHtmlEvidenceFinalStats({
+    stats: claimedRun.stats,
+    finishedAt: completedAt,
+    actor,
+    executionStatus: terminalState.executionStatus,
+    reason: terminalState.reason,
+    execution,
+  });
+  const { data: completedRun, error } = await supabaseAdmin
+    .from("discovery_runs")
+    .update({
+      status: terminalState.runStatus,
+      finished_at: completedAt,
+      updated_at: completedAt,
+      error_log: null,
+      stats: finalStats,
+    })
+    .eq("id", claimedRun.id)
+    .eq("status", "running")
+    .select(RUN_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to finalize static HTML evidence run.", {
+      message: error.message,
+      runId: claimedRun.id,
+      sourceId,
+    });
+
+    return jsonResponse({ error: "Failed to finalize static HTML evidence run." }, 500);
+  }
+
+  if (!completedRun) {
+    return jsonResponse({ error: "Discovery run changed state before completion." }, 409);
+  }
+
+  const completedRunRecord = coerceRunRecord(completedRun);
+  const terminalAudit = await writeAuditEvent({
+    actor,
+    eventType: "manual_static_html_derived_evidence_completed",
+    runId: completedRunRecord.id,
+    sourceId,
+    message: execution.summary.allFailed
+      ? "Static HTML evidence executor completed with safe all-failed results."
+      : "Static HTML evidence executor completed without candidate or public-tool inserts.",
+    metadata: {
+      ...(terminalState.reason ? { reason: terminalState.reason } : {}),
+      total_urls: execution.summary.totalUrls,
+      attempted_urls: execution.summary.attemptedUrls,
+      acquired_urls: execution.summary.acquiredUrls,
+      evidence_produced_urls: execution.summary.evidenceProducedUrls,
+      failed_urls: execution.summary.failedUrls,
+      skipped_urls: execution.summary.skippedUrls,
+      all_failed: execution.summary.allFailed,
+    },
+    safetyMetadata: createManualStaticHtmlEvidenceSafetyMetadata({
+      noFetchPerformed: execution.summary.attemptedUrls === 0,
+      noExtractionPerformed: execution.summary.evidenceAttemptedUrls === 0,
+    }),
+  });
+
+  if (!terminalAudit || urlAuditFailed) {
+    return jsonResponse(
+      { error: "Static HTML evidence run completed but could not be fully audited." },
+      500
+    );
+  }
+
+  return jsonResponse({
+    data: {
+      run: completedRunRecord,
+      execution: {
+        enabled: true,
+        mode: MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE,
+        status: "manual_static_html_derived_evidence_completed",
+        all_failed: execution.summary.allFailed,
+        message: execution.summary.allFailed
+          ? "Static HTML evidence completed with safe all-failed results."
+          : "Static HTML derived evidence completed without candidate or public-tool inserts.",
+      },
+    },
+  });
+}
+
 export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
@@ -1581,7 +2055,14 @@ export async function POST(request: Request) {
             actor: adminSession.actor,
             requestPlans: requestPlanPreflight.plans,
           })
-      : createClaimStats({
+        : executionMode === MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE
+          ? createManualStaticHtmlEvidenceClaimStats({
+              stats: runRecord.stats,
+              claimedAt,
+              actor: adminSession.actor,
+              requestPlans: requestPlanPreflight.plans,
+            })
+        : createClaimStats({
           stats: runRecord.stats,
           claimedAt,
           actor: adminSession.actor,
@@ -1653,6 +2134,11 @@ export async function POST(request: Request) {
         ? createMetadataFetchSmokeSafetyMetadata(true)
         : executionMode === MANUAL_METADATA_FETCH_EXECUTION_MODE
           ? createManualMetadataFetchSafetyMetadata(true)
+          : executionMode === MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE
+            ? createManualStaticHtmlEvidenceSafetyMetadata({
+                noFetchPerformed: true,
+                noExtractionPerformed: true,
+              })
         : undefined,
   });
 
@@ -1667,6 +2153,15 @@ export async function POST(request: Request) {
 
   if (executionMode === MANUAL_METADATA_FETCH_EXECUTION_MODE) {
     return completeManualMetadataFetchRun({
+      actor: adminSession.actor,
+      claimedRun: claimedRunRecord,
+      sourceId: runRecord.source_id,
+      requestPlans: requestPlanPreflight.plans,
+    });
+  }
+
+  if (executionMode === MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE) {
+    return completeManualStaticHtmlEvidenceRun({
       actor: adminSession.actor,
       claimedRun: claimedRunRecord,
       sourceId: runRecord.source_id,
