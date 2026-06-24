@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
+import { ManualStaticHtmlEvidenceResultsReview } from "@/components/admin/discovery/manual-static-html-evidence-results-review";
 import { Button } from "@/components/ui/button";
 import { normalizeManualMetadataFetchStats } from "@/lib/discovery-run-results-review";
+import { normalizeManualStaticHtmlEvidenceStats } from "@/lib/discovery-static-html-evidence-results-review";
 
 type DiscoveryRunStatus = "pending" | "running" | "completed" | "failed";
 
@@ -260,7 +262,16 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
               const manualMetadataFetchReview = normalizeManualMetadataFetchStats(
                 run.stats
               );
-              const reviewPanelId = `manual-metadata-fetch-review-${run.id}`;
+              const manualStaticHtmlEvidenceReview = normalizeManualStaticHtmlEvidenceStats(
+                run.stats
+              );
+              const manualMetadataFetchPanelId = `manual-metadata-fetch-review-${run.id}`;
+              const manualStaticHtmlEvidencePanelId = `manual-static-html-evidence-review-${run.id}`;
+              const reviewPanelId = manualMetadataFetchReview
+                ? manualMetadataFetchPanelId
+                : manualStaticHtmlEvidenceReview
+                  ? manualStaticHtmlEvidencePanelId
+                  : null;
               const isExpanded = expandedRunId === run.id;
 
               return (
@@ -290,6 +301,13 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         <span>Failed: {manualMetadataFetchReview.counts.failedUrls}</span>
                         <span>Skipped: {manualMetadataFetchReview.counts.skippedUrls}</span>
                       </div>
+                    ) : manualStaticHtmlEvidenceReview ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4 xl:grid-cols-2">
+                        <span>Total: {manualStaticHtmlEvidenceReview.counts.totalUrls}</span>
+                        <span>Derived: {manualStaticHtmlEvidenceReview.counts.evidenceProducedUrls}</span>
+                        <span>Failed: {manualStaticHtmlEvidenceReview.counts.failedUrls}</span>
+                        <span>Skipped: {manualStaticHtmlEvidenceReview.counts.skippedUrls}</span>
+                      </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4 xl:grid-cols-2">
                         <span>Found: {getStatValue(run, "tools_found")}</span>
@@ -309,10 +327,16 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         ? manualMetadataFetchReview.counts.failedUrls > 0
                           ? "Metadata fetch failure recorded."
                           : "—"
+                        : manualStaticHtmlEvidenceReview
+                          ? manualStaticHtmlEvidenceReview.counts.allFailed
+                            ? "Completed with safe all-failed results."
+                            : manualStaticHtmlEvidenceReview.counts.failedUrls > 0
+                              ? "Static evidence failure recorded safely."
+                              : "—"
                         : run.error_log || "—"}
                     </p>
 
-                    {manualMetadataFetchReview ? (
+                    {reviewPanelId ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -334,9 +358,15 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
 
                   {manualMetadataFetchReview && isExpanded ? (
                     <ManualMetadataFetchResultsReview
-                      panelId={reviewPanelId}
+                      panelId={manualMetadataFetchPanelId}
                       run={run}
                       review={manualMetadataFetchReview}
+                    />
+                  ) : manualStaticHtmlEvidenceReview && isExpanded ? (
+                    <ManualStaticHtmlEvidenceResultsReview
+                      panelId={manualStaticHtmlEvidencePanelId}
+                      run={run}
+                      review={manualStaticHtmlEvidenceReview}
                     />
                   ) : null}
                 </div>
