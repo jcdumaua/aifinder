@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
+import { ManualStaticHtmlEvidenceAuditTimeline } from "@/components/admin/discovery/manual-static-html-evidence-audit-timeline";
 import { ManualStaticHtmlEvidenceResultsReview } from "@/components/admin/discovery/manual-static-html-evidence-results-review";
 import { Button } from "@/components/ui/button";
 import { normalizeManualMetadataFetchStats } from "@/lib/discovery-run-results-review";
+import type {
+  ManualStaticHtmlEvidenceAuditEvent,
+  ManualStaticHtmlEvidenceAuditEventType,
+} from "@/lib/discovery-static-html-evidence-audit-review";
 import { normalizeManualStaticHtmlEvidenceStats } from "@/lib/discovery-static-html-evidence-results-review";
 
 type DiscoveryRunStatus = "pending" | "running" | "completed" | "failed";
@@ -27,6 +32,8 @@ type DiscoveryRun = {
   updated_at: string;
   audit_events?: unknown;
   audit_warning?: unknown;
+  static_evidence_audit_events?: unknown;
+  static_evidence_audit_warning?: unknown;
 };
 
 type PaginationState = {
@@ -43,6 +50,106 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Completed" },
   { value: "failed", label: "Failed" },
 ];
+const STATIC_AUDIT_EVENT_TYPES = new Set([
+  "manual_static_html_derived_evidence_started",
+  "manual_static_html_derived_evidence_url_completed",
+  "manual_static_html_derived_evidence_url_failed",
+  "manual_static_html_derived_evidence_completed",
+  "manual_static_html_derived_evidence_failed",
+]);
+const MAX_STATIC_EVIDENCE_URLS = 3;
+
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isStaticAuditEventType(
+  value: unknown
+): value is ManualStaticHtmlEvidenceAuditEventType {
+  return typeof value === "string" && STATIC_AUDIT_EVENT_TYPES.has(value);
+}
+
+function normalizeSafeTimelineText(value: unknown, maximum: number) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > maximum ||
+    /[\u0000-\u001F\u007F<>{}\[\]]/.test(value)
+  ) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/\s+/g, " ");
+
+  return normalized || null;
+}
+
+function normalizeTimelineTimestamp(value: unknown) {
+  if (typeof value !== "string" || value.length > 64) return null;
+
+  const parsed = new Date(value);
+
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+}
+
+function normalizeStaticTimelineCount(value: unknown) {
+  return typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 1 &&
+    value <= MAX_STATIC_EVIDENCE_URLS
+    ? value
+    : null;
+}
+
+function normalizeTimelineBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
+function normalizeStaticAuditEvent(value: unknown): ManualStaticHtmlEvidenceAuditEvent | null {
+  if (!isRecord(value) || !isStaticAuditEventType(value.event_type)) return null;
+
+  const label = normalizeSafeTimelineText(value.label, 80);
+  const createdAt = normalizeTimelineTimestamp(value.created_at);
+  const statusLabel = normalizeSafeTimelineText(value.status_label, 80);
+
+  if (!label || !createdAt || !statusLabel) return null;
+
+  return {
+    eventType: value.event_type,
+    label,
+    createdAt,
+    statusLabel,
+    urlIndex: normalizeStaticTimelineCount(value.url_index),
+    urlCount: normalizeStaticTimelineCount(value.url_count),
+    acquisitionStatus: normalizeSafeTimelineText(value.acquisition_status, 120),
+    evidenceStatus: normalizeSafeTimelineText(value.evidence_status, 120),
+    failureCode: normalizeSafeTimelineText(value.failure_code, 80),
+    failureReason: normalizeSafeTimelineText(value.failure_reason, 120),
+    rawHtmlPersisted: normalizeTimelineBoolean(value.raw_html_persisted),
+    candidatesCreated: normalizeTimelineBoolean(value.candidates_created),
+    publicToolsInserted: normalizeTimelineBoolean(value.public_tools_inserted),
+    llmAnalysisPerformed: normalizeTimelineBoolean(value.llm_analysis_performed),
+  };
+}
+
+function normalizeStaticAuditEvents(value: unknown): ManualStaticHtmlEvidenceAuditEvent[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map(normalizeStaticAuditEvent)
+    .filter((event): event is ManualStaticHtmlEvidenceAuditEvent => Boolean(event));
+}
+
+function normalizeStaticAuditWarning(value: unknown) {
+  const warning = normalizeSafeTimelineText(value, 120);
+
+  return warning === "Static evidence audit timeline is unavailable." ||
+    warning === "Some static evidence audit records could not be displayed safely."
+    ? warning
+    : null;
+}
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -267,6 +374,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
               );
               const manualMetadataFetchPanelId = `manual-metadata-fetch-review-${run.id}`;
               const manualStaticHtmlEvidencePanelId = `manual-static-html-evidence-review-${run.id}`;
+              const manualStaticHtmlEvidenceResultsPanelId = `${manualStaticHtmlEvidencePanelId}-results`;
               const reviewPanelId = manualMetadataFetchReview
                 ? manualMetadataFetchPanelId
                 : manualStaticHtmlEvidenceReview
@@ -363,11 +471,24 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                       review={manualMetadataFetchReview}
                     />
                   ) : manualStaticHtmlEvidenceReview && isExpanded ? (
-                    <ManualStaticHtmlEvidenceResultsReview
-                      panelId={manualStaticHtmlEvidencePanelId}
-                      run={run}
-                      review={manualStaticHtmlEvidenceReview}
-                    />
+                    <div
+                      id={manualStaticHtmlEvidencePanelId}
+                      aria-label="Static HTML evidence review and audit timeline"
+                    >
+                      <ManualStaticHtmlEvidenceResultsReview
+                        panelId={manualStaticHtmlEvidenceResultsPanelId}
+                        run={run}
+                        review={manualStaticHtmlEvidenceReview}
+                      />
+                      <ManualStaticHtmlEvidenceAuditTimeline
+                        events={normalizeStaticAuditEvents(
+                          run.static_evidence_audit_events
+                        )}
+                        warning={normalizeStaticAuditWarning(
+                          run.static_evidence_audit_warning
+                        )}
+                      />
+                    </div>
                   ) : null}
                 </div>
               );

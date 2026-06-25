@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "../../../../../lib/admin-auth";
 import { normalizeManualMetadataFetchAuditEvents } from "../../../../../lib/discovery-run-results-review";
+import { normalizeManualStaticHtmlEvidenceAuditEvents } from "../../../../../lib/discovery-static-html-evidence-audit-review";
+import { normalizeManualStaticHtmlEvidenceStats } from "../../../../../lib/discovery-static-html-evidence-results-review";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -144,6 +146,25 @@ export async function GET(request: Request) {
       failure_reason: string | null;
     }>
   >();
+  const staticEvidenceAuditEventsByRunId = new Map<
+    string,
+    Array<{
+      event_type: string;
+      label: string;
+      created_at: string;
+      status_label: string;
+      url_index: number | null;
+      url_count: number | null;
+      acquisition_status: string | null;
+      evidence_status: string | null;
+      failure_code: string | null;
+      failure_reason: string | null;
+      raw_html_persisted: boolean | null;
+      candidates_created: boolean | null;
+      public_tools_inserted: boolean | null;
+      llm_analysis_performed: boolean | null;
+    }>
+  >();
   let auditWarning: string | null = null;
 
   if (runIds.length > 0) {
@@ -166,7 +187,49 @@ export async function GET(request: Request) {
         const runId = auditRow.metadata.run_id;
         const message = getManualMetadataFetchAuditMessage(auditRow.metadata.event_type);
 
-        if (typeof runId !== "string" || !message) continue;
+        if (typeof runId !== "string") continue;
+
+        const staticEvidenceAudit = normalizeManualStaticHtmlEvidenceAuditEvents([
+          {
+            event_type: auditRow.metadata.event_type,
+            created_at: auditRow.created_at,
+            status: auditRow.metadata.status,
+            url_index: auditRow.metadata.url_index,
+            total_urls: auditRow.metadata.total_urls,
+            acquisition_status: auditRow.metadata.acquisition_status,
+            extraction_status: auditRow.metadata.extraction_status,
+            error_code: auditRow.metadata.error_code,
+            failure_reason: auditRow.metadata.failure_reason,
+            reason: auditRow.metadata.reason,
+            raw_html_persisted: auditRow.metadata.raw_html_persisted,
+            candidates_created: auditRow.metadata.candidates_created,
+            no_public_tools_inserted: auditRow.metadata.no_public_tools_inserted,
+            no_llm_analysis_performed: auditRow.metadata.no_llm_analysis_performed,
+          },
+        ])[0];
+
+        if (staticEvidenceAudit) {
+          const events = staticEvidenceAuditEventsByRunId.get(runId) || [];
+          events.push({
+            event_type: staticEvidenceAudit.eventType,
+            label: staticEvidenceAudit.label,
+            created_at: staticEvidenceAudit.createdAt,
+            status_label: staticEvidenceAudit.statusLabel,
+            url_index: staticEvidenceAudit.urlIndex,
+            url_count: staticEvidenceAudit.urlCount,
+            acquisition_status: staticEvidenceAudit.acquisitionStatus,
+            evidence_status: staticEvidenceAudit.evidenceStatus,
+            failure_code: staticEvidenceAudit.failureCode,
+            failure_reason: staticEvidenceAudit.failureReason,
+            raw_html_persisted: staticEvidenceAudit.rawHtmlPersisted,
+            candidates_created: staticEvidenceAudit.candidatesCreated,
+            public_tools_inserted: staticEvidenceAudit.publicToolsInserted,
+            llm_analysis_performed: staticEvidenceAudit.llmAnalysisPerformed,
+          });
+          staticEvidenceAuditEventsByRunId.set(runId, events);
+        }
+
+        if (!message) continue;
 
         const normalized = normalizeManualMetadataFetchAuditEvents([
           {
@@ -198,11 +261,27 @@ export async function GET(request: Request) {
   }
 
   return jsonResponse({
-    data: runs.map((run) => ({
-      ...run,
-      audit_events: auditEventsByRunId.get(run.id) || [],
-      ...(auditWarning ? { audit_warning: auditWarning } : {}),
-    })),
+    data: runs.map((run) => {
+      const staticEvidenceReview = normalizeManualStaticHtmlEvidenceStats(run.stats);
+
+      return {
+        ...run,
+        audit_events: auditEventsByRunId.get(run.id) || [],
+        ...(staticEvidenceReview
+          ? {
+              static_evidence_audit_events:
+                staticEvidenceAuditEventsByRunId.get(run.id) || [],
+              ...(auditWarning
+                ? {
+                    static_evidence_audit_warning:
+                      "Static evidence audit timeline is unavailable.",
+                  }
+                : {}),
+            }
+          : {}),
+        ...(auditWarning ? { audit_warning: auditWarning } : {}),
+      };
+    }),
     pagination: {
       total: count || 0,
       page,
