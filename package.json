@@ -11,7 +11,8 @@
     "qa:accessibility": "playwright test -c playwright.accessibility.config.ts",
     "check": "npm run lint -- --quiet && npm run build",
     "smoke:discovery": "node scripts/smoke-discovery-flow.mjs",
-    "smoke:discovery-candidate-staging:live": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-live-smoke.mjs"
+    "smoke:discovery-candidate-staging:live": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-live-smoke.mjs",
+    "smoke:discovery-candidate-staging:rls": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-rls-smoke.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
