@@ -10,7 +10,8 @@
     "qa:responsive": "playwright test testing/responsive-qa.spec.ts",
     "qa:accessibility": "playwright test -c playwright.accessibility.config.ts",
     "check": "npm run lint -- --quiet && npm run build",
-    "smoke:discovery": "node scripts/smoke-discovery-flow.mjs"
+    "smoke:discovery": "node scripts/smoke-discovery-flow.mjs",
+    "smoke:discovery-candidate-staging:live": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-live-smoke.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
