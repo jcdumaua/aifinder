@@ -11,6 +11,8 @@ const REQUIRED_ENV_NAMES = [
 
 const PHASE = "Phase 9E";
 const MARKER_PREFIX = "phase-9e-rls-smoke";
+const SERVICE_ROLE_SELECTED_CANDIDATE_COLUMNS =
+  "id,candidate_status,discovery_run_id,discovery_source_id,audit_correlation_id,source_evidence_locator,created_at,updated_at";
 const SELECTED_CANDIDATE_COLUMNS =
   "id,candidate_status,discovery_run_id,audit_correlation_id,source_evidence_locator,created_at,updated_at";
 
@@ -278,12 +280,12 @@ function assertUnauthorizedResultDenied(testName, { data, error }) {
   fail(`${testName}: unauthorized client received a candidate row.`);
 }
 
-async function verifyServiceRoleControlRead(client, candidateId) {
+async function verifyServiceRoleControlRead(client, candidateId, sourceId) {
   logStep("Test 1 — Service-role control read.");
 
   const { data, error } = await client
     .from("discovery_candidate_tools")
-    .select(SELECTED_CANDIDATE_COLUMNS)
+    .select(SERVICE_ROLE_SELECTED_CANDIDATE_COLUMNS)
     .eq("id", candidateId)
     .single();
 
@@ -295,6 +297,10 @@ async function verifyServiceRoleControlRead(client, candidateId) {
   assert(
     data.candidate_status === "staged",
     "Service-role control read status mismatch.",
+  );
+  assert(
+    data.discovery_source_id === sourceId,
+    "Service-role control read source ID mismatch.",
   );
   assert(Boolean(data.created_at), "Service-role control read missing created_at.");
   assert(Boolean(data.updated_at), "Service-role control read missing updated_at.");
@@ -476,7 +482,11 @@ async function main() {
       discoverySourceId,
     });
 
-    await verifyServiceRoleControlRead(adminClient, stagedCandidate.candidateId);
+    await verifyServiceRoleControlRead(
+      adminClient,
+      stagedCandidate.candidateId,
+      discoverySourceId,
+    );
     const exactIdDenial = await verifyAnonymousExactIdDenied(
       anonClient,
       stagedCandidate.candidateId,
