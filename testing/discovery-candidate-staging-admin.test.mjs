@@ -130,9 +130,27 @@ test("stages a normalized candidate through a mocked insert and returns a safe s
   assert.equal(calls.selectColumns, "id,candidate_status,discovery_run_id,audit_correlation_id");
   assert.equal(calls.singleCalled, true);
   assert.equal(calls.insertPayload.discovery_run_id, RUN_ID);
+  assert.equal(calls.insertPayload.discovery_source_id, SOURCE_ID);
   assert.equal(calls.insertPayload.audit_correlation_id, AUDIT_ID);
   assert.equal(calls.insertPayload.candidate_status, "staged");
-  assert.equal(Object.hasOwn(calls.insertPayload, "discovery_source_id"), false);
+});
+
+test("trims discoverySourceId before persisting discovery_source_id", async () => {
+  const normalizedCandidate = createNormalizedCandidate();
+  const { calls, createClient } = createMockClient();
+
+  const result = await stageNormalizedDiscoveryCandidateWithClientFactory(
+    {
+      discoveryRunId: RUN_ID,
+      discoverySourceId: ` ${SOURCE_ID} `,
+      normalizedCandidate,
+    },
+    createClient,
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.discoverySourceId, SOURCE_ID);
+  assert.equal(calls.insertPayload.discovery_source_id, SOURCE_ID);
 });
 
 test("forces candidate_status to staged in the insert payload", async () => {

@@ -176,6 +176,7 @@ function toDiscoveryCandidateToolInsert(
     cleanup_status: "active",
     confidence_bucket: candidate.confidence_bucket,
     discovery_run_id: input.discoveryRunId.trim(),
+    discovery_source_id: input.discoverySourceId.trim(),
     duplicate_blocking: candidate.duplicate_blocking,
     duplicate_check_status: candidate.duplicate_check_status,
     duplicate_checked_at: candidate.duplicate_checked_at,
