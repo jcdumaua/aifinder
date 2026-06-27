@@ -277,6 +277,7 @@ export type Database = {
           confidence_bucket: string | null
           created_at: string
           discovery_run_id: string
+          discovery_source_id: string | null
           duplicate_blocking: boolean
           duplicate_check_status: string
           duplicate_checked_at: string | null
@@ -319,6 +320,7 @@ export type Database = {
           confidence_bucket?: string | null
           created_at?: string
           discovery_run_id: string
+          discovery_source_id?: string | null
           duplicate_blocking?: boolean
           duplicate_check_status?: string
           duplicate_checked_at?: string | null
@@ -361,6 +363,7 @@ export type Database = {
           confidence_bucket?: string | null
           created_at?: string
           discovery_run_id?: string
+          discovery_source_id?: string | null
           duplicate_blocking?: boolean
           duplicate_check_status?: string
           duplicate_checked_at?: string | null
@@ -391,6 +394,13 @@ export type Database = {
             columns: ["discovery_run_id"]
             isOneToOne: false
             referencedRelation: "discovery_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_candidate_tools_discovery_source_id_fkey"
+            columns: ["discovery_source_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_sources"
             referencedColumns: ["id"]
           },
           {
