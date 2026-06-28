@@ -1,7 +1,15 @@
+import type { CandidateExtractionMapperInput } from "./discovery-candidate-extraction-mapper";
+import {
+  stageMappedExtractionCandidate,
+  type CandidateExtractionStageCandidate,
+  type CandidateExtractionStagingPipelineItemResult,
+} from "./discovery-candidate-extraction-staging-pipeline";
+
 export const CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION =
   "candidate_extraction_invocation.v1";
 
 export const CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES = 25;
+export const CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES = 1;
 
 export type CandidateExtractionInvocationSourceScope =
   | "single_source"
@@ -20,6 +28,9 @@ export type CandidateExtractionInvocationRejectionCode =
   | "missing_dry_run"
   | "invalid_dry_run"
   | "live_invocation_not_enabled"
+  | "live_staging_not_configured"
+  | "live_staging_input_unavailable"
+  | "live_staging_failed"
   | "missing_max_candidates"
   | "invalid_max_candidates"
   | "max_candidates_out_of_bounds"
@@ -62,6 +73,37 @@ export type CandidateExtractionInvocationResult = {
   error_summary: string | null;
 };
 
+export type CandidateExtractionLiveStagingGate = {
+  enabled: boolean;
+  mode: "test_only_mocked_staging";
+};
+
+export type CandidateExtractionLiveStagingCandidateProviderInput = {
+  discoverySourceId: string;
+  discoveryRunId: string;
+  auditCorrelationId: string;
+  invocationReason: string;
+  invokedByAdminUserId: string;
+  dryRun: false;
+  maxCandidates: typeof CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES;
+  sourceScope: "single_run";
+  schemaVersion: typeof CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION;
+};
+
+export type CandidateExtractionLiveStagingCandidateProvider = (
+  input: CandidateExtractionLiveStagingCandidateProviderInput,
+) =>
+  | CandidateExtractionMapperInput
+  | null
+  | Promise<CandidateExtractionMapperInput | null>;
+
+// Server-created options only. Client request bodies must never activate live staging.
+export type CandidateExtractionInvocationOptions = {
+  liveStagingGate?: CandidateExtractionLiveStagingGate;
+  getLiveStagingCandidate?: CandidateExtractionLiveStagingCandidateProvider;
+  stageCandidate?: CandidateExtractionStageCandidate;
+};
+
 type InvocationContext = {
   discoverySourceId?: string;
   discoveryRunId?: string;
@@ -75,7 +117,7 @@ type NormalizedInvocationInput = {
   auditCorrelationId: string;
   invocationReason: string;
   invokedByAdminUserId: string;
-  dryRun: true;
+  dryRun: boolean;
   maxCandidates: number;
   sourceScope: CandidateExtractionInvocationSourceScope;
   schemaVersion: typeof CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION;
@@ -103,6 +145,9 @@ const REJECTION_MESSAGES: Record<
   missing_dry_run: "Missing dry-run flag.",
   invalid_dry_run: "Invalid dry-run flag.",
   live_invocation_not_enabled: "Live invocation is not enabled.",
+  live_staging_not_configured: "Live staging is not configured.",
+  live_staging_input_unavailable: "Live staging input is unavailable.",
+  live_staging_failed: "Live candidate staging failed.",
   missing_max_candidates: "Missing max candidates.",
   invalid_max_candidates: "Invalid max candidates.",
   max_candidates_out_of_bounds: "Max candidates is outside the allowed bound.",
@@ -217,6 +262,147 @@ function acceptDryRun(
   };
 }
 
+function toProviderInput(
+  input: NormalizedInvocationInput,
+): CandidateExtractionLiveStagingCandidateProviderInput {
+  return {
+    discoverySourceId: input.discoverySourceId,
+    discoveryRunId: input.discoveryRunId,
+    auditCorrelationId: input.auditCorrelationId,
+    invocationReason: input.invocationReason,
+    invokedByAdminUserId: input.invokedByAdminUserId,
+    dryRun: false,
+    maxCandidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+    sourceScope: "single_run",
+    schemaVersion: input.schemaVersion,
+  };
+}
+
+function toScopedMapperInput(
+  input: NormalizedInvocationInput,
+  candidateInput: CandidateExtractionMapperInput,
+): CandidateExtractionMapperInput {
+  return {
+    ...candidateInput,
+    discoverySourceId: input.discoverySourceId,
+    discoveryRunId: input.discoveryRunId,
+    auditCorrelationId: input.auditCorrelationId,
+  };
+}
+
+function acceptLiveStaging(
+  input: NormalizedInvocationInput,
+): CandidateExtractionInvocationResult {
+  return {
+    accepted: true,
+    rejected: false,
+    rejection_code: null,
+    dry_run: false,
+    discovery_source_id: input.discoverySourceId,
+    discovery_run_id: input.discoveryRunId,
+    candidates_considered_count: 1,
+    candidates_staged_count: 1,
+    candidates_skipped_count: 0,
+    validation_failures: [],
+    duplicate_or_eligibility_rejections: [],
+    audit_correlation_id: input.auditCorrelationId,
+    safety_flags: [
+      "live_staging_gate_enabled",
+      "staging_executed",
+      "bounded_max_candidates",
+      "candidate_status_staged",
+      "no_public_write",
+      "no_discovered_write",
+    ],
+    no_public_write_confirmed: true,
+    no_discovered_write_confirmed: true,
+    error_summary: null,
+  };
+}
+
+function rejectLiveStagingResult(
+  input: NormalizedInvocationInput,
+  result: Extract<CandidateExtractionStagingPipelineItemResult, { ok: false }>,
+): CandidateExtractionInvocationResult {
+  return {
+    accepted: false,
+    rejected: true,
+    rejection_code: "live_staging_failed",
+    dry_run: false,
+    discovery_source_id: input.discoverySourceId,
+    discovery_run_id: input.discoveryRunId,
+    candidates_considered_count: 1,
+    candidates_staged_count: 0,
+    candidates_skipped_count: 1,
+    validation_failures: ["live_staging_failed"],
+    duplicate_or_eligibility_rejections: [result.error.code],
+    audit_correlation_id: input.auditCorrelationId,
+    safety_flags: [
+      "invocation_rejected",
+      "staging_not_executed",
+      "no_public_write",
+      "no_discovered_write",
+    ],
+    no_public_write_confirmed: true,
+    no_discovered_write_confirmed: true,
+    error_summary: result.error.message,
+  };
+}
+
+async function invokeLiveStaging(
+  input: NormalizedInvocationInput,
+  options: CandidateExtractionInvocationOptions,
+): Promise<CandidateExtractionInvocationResult> {
+  const context: InvocationContext = {
+    discoverySourceId: input.discoverySourceId,
+    discoveryRunId: input.discoveryRunId,
+    auditCorrelationId: input.auditCorrelationId,
+    dryRun: false,
+  };
+
+  if (!options.liveStagingGate?.enabled) {
+    return reject("live_invocation_not_enabled", context);
+  }
+
+  if (input.maxCandidates !== CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES) {
+    return reject("max_candidates_out_of_bounds", context);
+  }
+
+  if (input.sourceScope !== "single_run") {
+    return reject("invalid_source_scope", context);
+  }
+
+  if (!options.getLiveStagingCandidate || !options.stageCandidate) {
+    return reject("live_staging_not_configured", context);
+  }
+
+  let candidateInput: CandidateExtractionMapperInput | null;
+
+  try {
+    candidateInput = await options.getLiveStagingCandidate(toProviderInput(input));
+  } catch {
+    return reject("live_staging_input_unavailable", context);
+  }
+
+  if (!candidateInput) {
+    return reject("live_staging_input_unavailable", context);
+  }
+
+  const stagingResult = await stageMappedExtractionCandidate(
+    {
+      item: toScopedMapperInput(input, candidateInput),
+      actorId: input.invokedByAdminUserId,
+    },
+    { stageCandidate: options.stageCandidate },
+  );
+
+  if (!stagingResult.ok) {
+    return rejectLiveStagingResult(input, stagingResult);
+  }
+
+  return acceptLiveStaging(input);
+}
+
 function validateInvocationInput(
   input: CandidateExtractionInvocationInput,
 ):
@@ -316,13 +502,6 @@ function validateInvocationInput(
 
   context.dryRun = input.dry_run;
 
-  if (!input.dry_run) {
-    return {
-      ok: false,
-      result: reject("live_invocation_not_enabled", context),
-    };
-  }
-
   if (!("max_candidates" in input)) {
     return { ok: false, result: reject("missing_max_candidates", context) };
   }
@@ -373,7 +552,7 @@ function validateInvocationInput(
       auditCorrelationId,
       invocationReason,
       invokedByAdminUserId,
-      dryRun: true,
+      dryRun: input.dry_run,
       maxCandidates: input.max_candidates,
       sourceScope,
       schemaVersion,
@@ -383,10 +562,15 @@ function validateInvocationInput(
 
 export function invokeCandidateExtractionStagingPipeline(
   input: CandidateExtractionInvocationInput,
-): CandidateExtractionInvocationResult {
+  options: CandidateExtractionInvocationOptions = {},
+): Promise<CandidateExtractionInvocationResult> {
   const validation = validateInvocationInput(input);
 
-  if (!validation.ok) return validation.result;
+  if (!validation.ok) return Promise.resolve(validation.result);
 
-  return acceptDryRun(validation.value);
+  if (validation.value.dryRun) {
+    return Promise.resolve(acceptDryRun(validation.value));
+  }
+
+  return invokeLiveStaging(validation.value, options);
 }

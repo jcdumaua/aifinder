@@ -191,6 +191,39 @@ test("dry_run false is rejected with live_invocation_not_enabled", async () => {
   assertNoRawPayloadLeak(data);
 });
 
+test("placeholder live staging approval phrase remains inactive at route boundary", async () => {
+  const { response, data } = await invokeRoute({
+    body: createBody({
+      dry_run: false,
+      invocation_reason: "Approve run candidate extraction live staging write",
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(data.accepted, false);
+  assert.equal(data.rejection_code, "live_invocation_not_enabled");
+  assert.equal(data.dry_run, false);
+  assert.equal(data.candidates_staged_count, 0);
+  assert.equal(data.no_public_write_confirmed, true);
+  assert.equal(data.no_discovered_write_confirmed, true);
+  assertNoRawPayloadLeak(data);
+});
+
+test("client body cannot activate a live staging gate", async () => {
+  const { response, data } = await invokeRoute({
+    body: createBody({
+      dry_run: false,
+      liveStagingGate: {
+        enabled: true,
+      },
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(data.code, "unsupported_request_field");
+  assertNoRawPayloadLeak(data);
+});
+
 test("invalid source and run IDs are rejected", async () => {
   const sourceResult = await invokeRoute({
     body: createBody({ discovery_source_id: "not-a-uuid" }),

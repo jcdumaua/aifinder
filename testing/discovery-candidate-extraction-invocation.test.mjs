@@ -5,6 +5,7 @@ import test from "node:test";
 await import("./register-typescript-test-loader.mjs");
 
 const {
+  CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION,
   invokeCandidateExtractionStagingPipeline,
@@ -13,6 +14,7 @@ const {
 const SOURCE_ID = "22222222-2222-4222-8222-222222222222";
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const AUDIT_ID = "33333333-3333-4333-8333-333333333333";
+const STAGED_CANDIDATE_ID = "44444444-4444-4444-8444-444444444444";
 
 function createInput(overrides = {}) {
   return {
@@ -39,8 +41,8 @@ function assertNoRawPayloadLeak(result) {
   assert.equal(serialized.includes("discovered_tool_payload"), false);
 }
 
-test("valid dry-run input returns accepted safe result", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("valid dry-run input returns accepted safe result", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({
       discovery_source_id: `  ${SOURCE_ID.toUpperCase()}  `,
       discovery_run_id: `  ${RUN_ID.toUpperCase()}  `,
@@ -68,8 +70,8 @@ test("valid dry-run input returns accepted safe result", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("missing admin identity is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("missing admin identity is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ invoked_by_admin_user_id: "   " }),
   );
 
@@ -83,8 +85,8 @@ test("missing admin identity is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("missing audit correlation ID is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("missing audit correlation ID is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ audit_correlation_id: "" }),
   );
 
@@ -94,8 +96,8 @@ test("missing audit correlation ID is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("invalid schema version is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("invalid schema version is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ schema_version: "candidate_extraction_invocation.v0" }),
   );
 
@@ -105,8 +107,8 @@ test("invalid schema version is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("invalid source scope is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("invalid source scope is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ source_scope: "source_and_run" }),
   );
 
@@ -115,8 +117,8 @@ test("invalid source scope is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("ambiguous source scope is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("ambiguous source scope is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ source_scope: "all_sources" }),
   );
 
@@ -125,8 +127,8 @@ test("ambiguous source scope is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("max candidates above bound is rejected", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("max candidates above bound is rejected", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({
       max_candidates: CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES + 1,
     }),
@@ -138,8 +140,8 @@ test("max candidates above bound is rejected", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("dry_run false is rejected because live invocation is not enabled", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("dry_run false is rejected because live invocation is not enabled", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({ dry_run: false }),
   );
 
@@ -152,8 +154,25 @@ test("dry_run false is rejected because live invocation is not enabled", () => {
   assertNoRawPayloadLeak(result);
 });
 
-test("unsafe payload is rejected without echoing raw input", () => {
-  const result = invokeCandidateExtractionStagingPipeline(
+test("placeholder live staging approval phrase remains inactive", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      invocation_reason: "Approve run candidate extraction live staging write",
+    }),
+  );
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.rejection_code, "live_invocation_not_enabled");
+  assert.equal(result.dry_run, false);
+  assert.equal(result.candidates_staged_count, 0);
+  assert.equal(result.no_public_write_confirmed, true);
+  assert.equal(result.no_discovered_write_confirmed, true);
+  assertNoRawPayloadLeak(result);
+});
+
+test("unsafe payload is rejected without echoing raw input", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
     createInput({
       invocation_reason: "<script>secret=value</script>",
     }),
@@ -161,6 +180,137 @@ test("unsafe payload is rejected without echoing raw input", () => {
 
   assert.equal(result.accepted, false);
   assert.equal(result.rejection_code, "unsafe_payload");
+  assertNoRawPayloadLeak(result);
+});
+
+test("test-only live gate stages one candidate through mocked staging dependency", async () => {
+  const calls = [];
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      max_candidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+      source_scope: "single_run",
+    }),
+    {
+      liveStagingGate: {
+        enabled: true,
+        mode: "test_only_mocked_staging",
+      },
+      getLiveStagingCandidate(providerInput) {
+        assert.equal(providerInput.discoverySourceId, SOURCE_ID);
+        assert.equal(providerInput.discoveryRunId, RUN_ID);
+        assert.equal(providerInput.auditCorrelationId, AUDIT_ID);
+        assert.equal(providerInput.dryRun, false);
+        assert.equal(providerInput.maxCandidates, 1);
+        assert.equal(providerInput.sourceScope, "single_run");
+
+        return {
+          discoverySourceId: "99999999-9999-4999-8999-999999999999",
+          discoveryRunId: "88888888-8888-4888-8888-888888888888",
+          sourceUrl: "https://example.com/source",
+          sourceEvidenceLocator: "phase-11c-test-only",
+          candidateName: "Phase 11C Mock Candidate",
+          candidateWebsiteUrl: "https://phase-11c.example.com",
+          candidateDescription: "A safe mocked candidate for guarded live staging tests.",
+          candidateCategoryHint: "Productivity",
+          candidatePricingHint: "Free + Paid",
+          evidenceSummary: "Mocked server-created candidate input.",
+          confidenceBucket: "medium",
+          auditCorrelationId: "77777777-7777-4777-8777-777777777777",
+        };
+      },
+      stageCandidate(input) {
+        calls.push(input);
+
+        return {
+          ok: true,
+          candidateId: STAGED_CANDIDATE_ID,
+          candidateStatus: "staged",
+          discoveryRunId: input.discoveryRunId,
+          discoverySourceId: input.discoverySourceId,
+          auditCorrelationId: input.normalizedCandidate.audit_correlation_id ?? null,
+        };
+      },
+    },
+  );
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.rejected, false);
+  assert.equal(result.dry_run, false);
+  assert.equal(result.candidates_considered_count, 1);
+  assert.equal(result.candidates_staged_count, 1);
+  assert.equal(result.candidates_skipped_count, 0);
+  assert.equal(result.discovery_source_id, SOURCE_ID);
+  assert.equal(result.discovery_run_id, RUN_ID);
+  assert.equal(result.audit_correlation_id, AUDIT_ID);
+  assert.equal(result.no_public_write_confirmed, true);
+  assert.equal(result.no_discovered_write_confirmed, true);
+  assert.equal(result.safety_flags.includes("live_staging_gate_enabled"), true);
+  assert.equal(result.safety_flags.includes("candidate_status_staged"), true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].discoverySourceId, SOURCE_ID);
+  assert.equal(calls[0].discoveryRunId, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.discovery_run_id, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.audit_correlation_id, AUDIT_ID);
+  assert.equal(calls[0].normalizedCandidate.candidate_status, "staged");
+  assertNoRawPayloadLeak(result);
+});
+
+test("test-only live gate still enforces max_candidates one", async () => {
+  let providerCalled = false;
+  let stageCalled = false;
+
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      max_candidates: 2,
+      source_scope: "single_run",
+    }),
+    {
+      liveStagingGate: {
+        enabled: true,
+        mode: "test_only_mocked_staging",
+      },
+      getLiveStagingCandidate() {
+        providerCalled = true;
+        return null;
+      },
+      stageCandidate() {
+        stageCalled = true;
+
+        throw new Error("stage should not be called");
+      },
+    },
+  );
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.rejection_code, "max_candidates_out_of_bounds");
+  assert.equal(result.candidates_staged_count, 0);
+  assert.equal(providerCalled, false);
+  assert.equal(stageCalled, false);
+  assertNoRawPayloadLeak(result);
+});
+
+test("enabled gate without server-created staging dependencies fails closed", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      max_candidates: 1,
+      source_scope: "single_run",
+    }),
+    {
+      liveStagingGate: {
+        enabled: true,
+        mode: "test_only_mocked_staging",
+      },
+    },
+  );
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.rejection_code, "live_staging_not_configured");
+  assert.equal(result.candidates_staged_count, 0);
+  assert.equal(result.no_public_write_confirmed, true);
+  assert.equal(result.no_discovered_write_confirmed, true);
   assertNoRawPayloadLeak(result);
 });
 
@@ -185,11 +335,12 @@ test("invocation source stays internal and free of direct persistence hooks", ()
     ["public", ".tools"].join(""),
     ["discovered", "_tools"].join(""),
     ["audit", "_events"].join(""),
-    ["stageMapped", "ExtractionCandidate"].join(""),
-    ["stageNormalized", "DiscoveryCandidate"].join(""),
   ];
 
   for (const token of forbiddenTokens) {
     assert.equal(source.includes(token), false);
   }
+
+  assert.equal(source.includes("liveStagingGate"), true);
+  assert.equal(source.includes("stageMappedExtractionCandidate"), true);
 });

@@ -153,7 +153,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = invokeCandidateExtractionStagingPipeline({
+    const result = await invokeCandidateExtractionStagingPipeline({
       discovery_source_id: body.discovery_source_id,
       discovery_run_id: body.discovery_run_id,
       audit_correlation_id: body.audit_correlation_id,
