@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DiscoveryCandidateExtractionDryRunPanel } from "@/components/admin/discovery/discovery-candidate-extraction-dry-run-panel";
+import { DiscoveryCandidateExtractionLiveStagingPanel } from "@/components/admin/discovery/discovery-candidate-extraction-live-staging-panel";
 import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
 import { ManualStaticHtmlEvidenceAuditTimeline } from "@/components/admin/discovery/manual-static-html-evidence-audit-timeline";
 import { ManualStaticHtmlEvidenceResultsReview } from "@/components/admin/discovery/manual-static-html-evidence-results-review";
@@ -476,6 +477,12 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
                       />
+                      <DiscoveryCandidateExtractionLiveStagingPanel
+                        discoveryRunId={run.id}
+                        discoverySourceId={run.source_id}
+                        candidatePreview={null}
+                        isLiveStagingAvailable={false}
+                      />
                     </>
                   ) : manualStaticHtmlEvidenceReview && isExpanded ? (
                     <div
@@ -498,6 +505,12 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                       <DiscoveryCandidateExtractionDryRunPanel
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
+                      />
+                      <DiscoveryCandidateExtractionLiveStagingPanel
+                        discoveryRunId={run.id}
+                        discoverySourceId={run.source_id}
+                        candidatePreview={null}
+                        isLiveStagingAvailable={false}
                       />
                     </div>
                   ) : null}
