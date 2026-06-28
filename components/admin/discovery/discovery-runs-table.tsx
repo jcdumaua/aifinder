@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DiscoveryCandidateExtractionDryRunPanel } from "@/components/admin/discovery/discovery-candidate-extraction-dry-run-panel";
 import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
 import { ManualStaticHtmlEvidenceAuditTimeline } from "@/components/admin/discovery/manual-static-html-evidence-audit-timeline";
 import { ManualStaticHtmlEvidenceResultsReview } from "@/components/admin/discovery/manual-static-html-evidence-results-review";
@@ -465,11 +466,17 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                   </div>
 
                   {manualMetadataFetchReview && isExpanded ? (
-                    <ManualMetadataFetchResultsReview
-                      panelId={manualMetadataFetchPanelId}
-                      run={run}
-                      review={manualMetadataFetchReview}
-                    />
+                    <>
+                      <ManualMetadataFetchResultsReview
+                        panelId={manualMetadataFetchPanelId}
+                        run={run}
+                        review={manualMetadataFetchReview}
+                      />
+                      <DiscoveryCandidateExtractionDryRunPanel
+                        discoveryRunId={run.id}
+                        discoverySourceId={run.source_id}
+                      />
+                    </>
                   ) : manualStaticHtmlEvidenceReview && isExpanded ? (
                     <div
                       id={manualStaticHtmlEvidencePanelId}
@@ -487,6 +494,10 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         warning={normalizeStaticAuditWarning(
                           run.static_evidence_audit_warning
                         )}
+                      />
+                      <DiscoveryCandidateExtractionDryRunPanel
+                        discoveryRunId={run.id}
+                        discoverySourceId={run.source_id}
                       />
                     </div>
                   ) : null}
