@@ -6,6 +6,7 @@ await import("./register-typescript-test-loader.mjs");
 
 const {
   CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+  CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
   CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION,
   invokeCandidateExtractionStagingPipeline,
@@ -314,6 +315,118 @@ test("enabled gate without server-created staging dependencies fails closed", as
   assertNoRawPayloadLeak(result);
 });
 
+
+test("manual API live gate requires server-scoped metadata", async () => {
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      max_candidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+      source_scope: "single_run",
+    }),
+    {
+      liveStagingGate: {
+        enabled: true,
+        mode: CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
+      },
+      getLiveStagingCandidate() {
+        throw new Error("provider should not be called");
+      },
+      stageCandidate() {
+        throw new Error("stage should not be called");
+      },
+    },
+  );
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.rejection_code, "live_staging_not_configured");
+  assert.equal(result.candidates_staged_count, 0);
+  assert.equal(result.no_public_write_confirmed, true);
+  assert.equal(result.no_discovered_write_confirmed, true);
+  assertNoRawPayloadLeak(result);
+});
+
+test("manual API live gate stages one candidate through server-created dependencies", async () => {
+  const calls = [];
+  const result = await invokeCandidateExtractionStagingPipeline(
+    createInput({
+      dry_run: false,
+      max_candidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+      source_scope: "single_run",
+    }),
+    {
+      liveStagingGate: {
+        enabled: true,
+        mode: CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
+        phase: "phase-12c-helper-test",
+        maxCandidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+        sourceScope: "single_run",
+        createdByServer: true,
+        approvedExecutionRequired: true,
+        auditCorrelationId: AUDIT_ID,
+        discoverySourceId: SOURCE_ID,
+        discoveryRunId: RUN_ID,
+        actorId: "admin-user-123",
+      },
+      getLiveStagingCandidate(providerInput) {
+        assert.equal(providerInput.discoverySourceId, SOURCE_ID);
+        assert.equal(providerInput.discoveryRunId, RUN_ID);
+        assert.equal(providerInput.auditCorrelationId, AUDIT_ID);
+        assert.equal(providerInput.dryRun, false);
+        assert.equal(providerInput.maxCandidates, 1);
+        assert.equal(providerInput.sourceScope, "single_run");
+
+        return {
+          discoverySourceId: "99999999-9999-4999-8999-999999999999",
+          discoveryRunId: "88888888-8888-4888-8888-888888888888",
+          sourceUrl: "https://example.com/source",
+          sourceEvidenceLocator: "phase-12c-manual-api-test",
+          candidateName: "Phase 12C Manual API Candidate",
+          candidateWebsiteUrl: "https://phase-12c.example.com",
+          candidateDescription: "A safe mocked candidate for manual API gate tests.",
+          candidateCategoryHint: "Productivity",
+          candidatePricingHint: "Free + Paid",
+          evidenceSummary: "Mocked server-created manual API candidate input.",
+          confidenceBucket: "medium",
+          auditCorrelationId: "77777777-7777-4777-8777-777777777777",
+        };
+      },
+      stageCandidate(input) {
+        calls.push(input);
+
+        return {
+          ok: true,
+          candidateId: STAGED_CANDIDATE_ID,
+          candidateStatus: "staged",
+          discoveryRunId: input.discoveryRunId,
+          discoverySourceId: input.discoverySourceId,
+          auditCorrelationId: input.normalizedCandidate.audit_correlation_id ?? null,
+        };
+      },
+    },
+  );
+
+  assert.equal(result.accepted, true);
+  assert.equal(result.rejected, false);
+  assert.equal(result.dry_run, false);
+  assert.equal(result.candidates_considered_count, 1);
+  assert.equal(result.candidates_staged_count, 1);
+  assert.equal(result.candidates_skipped_count, 0);
+  assert.equal(result.discovery_source_id, SOURCE_ID);
+  assert.equal(result.discovery_run_id, RUN_ID);
+  assert.equal(result.audit_correlation_id, AUDIT_ID);
+  assert.equal(result.no_public_write_confirmed, true);
+  assert.equal(result.no_discovered_write_confirmed, true);
+  assert.equal(result.safety_flags.includes("live_staging_gate_enabled"), true);
+  assert.equal(result.safety_flags.includes("candidate_status_staged"), true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].discoverySourceId, SOURCE_ID);
+  assert.equal(calls[0].discoveryRunId, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.discovery_run_id, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.audit_correlation_id, AUDIT_ID);
+  assert.equal(calls[0].normalizedCandidate.candidate_status, "staged");
+  assertNoRawPayloadLeak(result);
+});
+
 test("invocation source stays internal and free of direct persistence hooks", () => {
   const source = readFileSync(
     new URL(
@@ -343,4 +456,5 @@ test("invocation source stays internal and free of direct persistence hooks", ()
 
   assert.equal(source.includes("liveStagingGate"), true);
   assert.equal(source.includes("stageMappedExtractionCandidate"), true);
+  assert.equal(source.includes("manual_api_single_candidate_staging"), true);
 });

@@ -10,6 +10,8 @@ export const CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION =
 
 export const CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES = 25;
 export const CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES = 1;
+export const CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE =
+  "manual_api_single_candidate_staging";
 
 export type CandidateExtractionInvocationSourceScope =
   | "single_source"
@@ -73,9 +75,22 @@ export type CandidateExtractionInvocationResult = {
   error_summary: string | null;
 };
 
+export type CandidateExtractionLiveStagingGateMode =
+  | "test_only_mocked_staging"
+  | typeof CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE;
+
 export type CandidateExtractionLiveStagingGate = {
   enabled: boolean;
-  mode: "test_only_mocked_staging";
+  mode: CandidateExtractionLiveStagingGateMode;
+  phase?: string;
+  maxCandidates?: typeof CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES;
+  sourceScope?: "single_run";
+  createdByServer?: true;
+  approvedExecutionRequired?: true;
+  auditCorrelationId?: string;
+  discoverySourceId?: string;
+  discoveryRunId?: string;
+  actorId?: string;
 };
 
 export type CandidateExtractionLiveStagingCandidateProviderInput = {
@@ -320,6 +335,34 @@ function acceptLiveStaging(
   };
 }
 
+function isSupportedLiveStagingGateMode(
+  mode: string,
+): mode is CandidateExtractionLiveStagingGateMode {
+  return (
+    mode === "test_only_mocked_staging" ||
+    mode === CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE
+  );
+}
+
+function isManualApiLiveGateScopedToInput(
+  gate: CandidateExtractionLiveStagingGate,
+  input: NormalizedInvocationInput,
+) {
+  return (
+    gate.mode === CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE &&
+    typeof gate.phase === "string" &&
+    gate.phase.trim().length > 0 &&
+    gate.maxCandidates === CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES &&
+    gate.sourceScope === "single_run" &&
+    gate.createdByServer === true &&
+    gate.approvedExecutionRequired === true &&
+    gate.auditCorrelationId === input.auditCorrelationId &&
+    gate.discoverySourceId === input.discoverySourceId &&
+    gate.discoveryRunId === input.discoveryRunId &&
+    gate.actorId === input.invokedByAdminUserId
+  );
+}
+
 function rejectLiveStagingResult(
   input: NormalizedInvocationInput,
   result: Extract<CandidateExtractionStagingPipelineItemResult, { ok: false }>,
@@ -360,8 +403,14 @@ async function invokeLiveStaging(
     dryRun: false,
   };
 
-  if (!options.liveStagingGate?.enabled) {
+  const liveGate = options.liveStagingGate;
+
+  if (!liveGate?.enabled) {
     return reject("live_invocation_not_enabled", context);
+  }
+
+  if (!isSupportedLiveStagingGateMode(liveGate.mode)) {
+    return reject("live_staging_not_configured", context);
   }
 
   if (input.maxCandidates !== CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES) {
@@ -370,6 +419,13 @@ async function invokeLiveStaging(
 
   if (input.sourceScope !== "single_run") {
     return reject("invalid_source_scope", context);
+  }
+
+  if (
+    liveGate.mode === CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE &&
+    !isManualApiLiveGateScopedToInput(liveGate, input)
+  ) {
+    return reject("live_staging_not_configured", context);
   }
 
   if (!options.getLiveStagingCandidate || !options.stageCandidate) {

@@ -11,7 +11,11 @@ import {
 import {
   invokeCandidateExtractionStagingPipeline,
   type CandidateExtractionInvocationInput,
+  type CandidateExtractionInvocationOptions,
 } from "../../../../../../lib/discovery/discovery-candidate-extraction-invocation";
+import type {
+  AdminRateLimitResult,
+} from "../../../../../../lib/admin-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,7 +82,34 @@ function hasUnsupportedBodyField(body: Record<string, unknown>) {
   return Object.keys(body).some((key) => !ALLOWED_BODY_FIELDS.has(key));
 }
 
-export async function POST(request: Request) {
+type CandidateExtractionRouteLiveStagingResolverInput = {
+  request: Request;
+  body: Record<string, unknown>;
+  invocationInput: CandidateExtractionInvocationInput;
+  invokedByAdminUserId: string;
+};
+
+type CandidateExtractionRouteRateLimitInput = {
+  request: Request;
+  action: typeof ADMIN_RATE_LIMIT_ACTIONS.discoveryCandidateExtractionInvocation;
+  actor: NonNullable<ReturnType<typeof verifyAdminSession>["actor"]>;
+};
+
+export type CandidateExtractionRouteDependencies = {
+  resolveLiveStagingOptions?: (
+    input: CandidateExtractionRouteLiveStagingResolverInput,
+  ) =>
+    | CandidateExtractionInvocationOptions
+    | Promise<CandidateExtractionInvocationOptions>;
+  checkRateLimit?: (
+    input: CandidateExtractionRouteRateLimitInput,
+  ) => AdminRateLimitResult;
+};
+
+export function createCandidateExtractionInvokeHandler(
+  dependencies: CandidateExtractionRouteDependencies = {},
+) {
+  return async function candidateExtractionInvokeHandler(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
@@ -96,11 +127,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimitInput = {
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoveryCandidateExtractionInvocation,
     actor: adminSession.actor,
-  });
+  };
+
+  const rateLimit = dependencies.checkRateLimit
+    ? dependencies.checkRateLimit(rateLimitInput)
+    : checkAdminRateLimit(rateLimitInput);
 
   if (!rateLimit.allowed) {
     return jsonResponse(
@@ -153,7 +188,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await invokeCandidateExtractionStagingPipeline({
+    const invocationInput = {
       discovery_source_id: body.discovery_source_id,
       discovery_run_id: body.discovery_run_id,
       audit_correlation_id: body.audit_correlation_id,
@@ -163,10 +198,27 @@ export async function POST(request: Request) {
       max_candidates: body.max_candidates,
       source_scope: body.source_scope,
       schema_version: body.schema_version,
-    } as CandidateExtractionInvocationInput);
+    } as CandidateExtractionInvocationInput;
+
+    const liveStagingOptions = dependencies.resolveLiveStagingOptions
+      ? await dependencies.resolveLiveStagingOptions({
+          request,
+          body,
+          invocationInput,
+          invokedByAdminUserId,
+        })
+      : {};
+
+    const result = await invokeCandidateExtractionStagingPipeline(
+      invocationInput,
+      liveStagingOptions,
+    );
 
     return jsonResponse(result, result.accepted ? 200 : 400);
   } catch {
     return jsonResponse({ error: "Candidate extraction invocation failed." }, 500);
   }
+  };
 }
+
+export const POST = createCandidateExtractionInvokeHandler();

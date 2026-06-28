@@ -27,12 +27,22 @@ const {
   ADMIN_SESSION_COOKIE_NAME,
 } = await import("../lib/admin-auth.ts");
 const {
+  CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+  CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
   CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION,
 } = await import("../lib/discovery/discovery-candidate-extraction-invocation.ts");
-const { POST } = await import(
+const { POST, createCandidateExtractionInvokeHandler } = await import(
   "../app/api/admin/discovery/candidate-extraction/invoke/route.ts"
 );
+
+const ALLOWED_RATE_LIMIT = {
+  allowed: true,
+  limit: 10,
+  remaining: 9,
+  resetAt: Date.now() + 10 * 60 * 1000,
+  windowSeconds: 600,
+};
 
 const ADMIN_SESSION_SECRET = "phase-10q-test-admin-session-secret";
 const CSRF_TOKEN =
@@ -40,6 +50,7 @@ const CSRF_TOKEN =
 const SOURCE_ID = "22222222-2222-4222-8222-222222222222";
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const AUDIT_ID = "33333333-3333-4333-8333-333333333333";
+let routeRequestCounter = 1;
 
 process.env.ADMIN_SESSION_SECRET = ADMIN_SESSION_SECRET;
 
@@ -94,6 +105,7 @@ function createRequest({
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "x-forwarded-for": `203.0.113.${routeRequestCounter++}`,
         cookie: createCookieHeader({ includeSession, includeCsrf }),
         ...(csrfHeader ? { "x-csrf-token": csrfHeader } : {}),
         ...headers,
@@ -110,6 +122,18 @@ async function invokeRoute(options = {}) {
   return { response, data };
 }
 
+async function invokeIsolatedRoute(options = {}) {
+  const isolatedPost = createCandidateExtractionInvokeHandler({
+    checkRateLimit() {
+      return ALLOWED_RATE_LIMIT;
+    },
+  });
+  const response = await isolatedPost(createRequest(options));
+  const data = await response.json();
+
+  return { response, data };
+}
+
 function assertNoRawPayloadLeak(value) {
   const serialized = JSON.stringify(value);
 
@@ -120,6 +144,109 @@ function assertNoRawPayloadLeak(value) {
   assert.equal(serialized.includes("stack"), false);
   assert.equal(serialized.includes("SUPABASE"), false);
 }
+
+test("server-created route dependency can stage one mocked manual API candidate", async () => {
+  const stagedCandidateId = "44444444-4444-4444-8444-444444444444";
+  const calls = [];
+
+  const livePost = createCandidateExtractionInvokeHandler({
+    checkRateLimit() {
+      return ALLOWED_RATE_LIMIT;
+    },
+    resolveLiveStagingOptions({ invocationInput, invokedByAdminUserId }) {
+      assert.equal(invocationInput.dry_run, false);
+      assert.equal(invocationInput.max_candidates, 1);
+      assert.equal(invocationInput.source_scope, "single_run");
+      assert.equal(invocationInput.discovery_source_id, SOURCE_ID);
+      assert.equal(invocationInput.discovery_run_id, RUN_ID);
+      assert.equal(invocationInput.audit_correlation_id, AUDIT_ID);
+
+      return {
+        liveStagingGate: {
+          enabled: true,
+          mode: CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
+          phase: "phase-12c-route-test",
+          maxCandidates: CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
+          sourceScope: "single_run",
+          createdByServer: true,
+          approvedExecutionRequired: true,
+          auditCorrelationId: AUDIT_ID,
+          discoverySourceId: SOURCE_ID,
+          discoveryRunId: RUN_ID,
+          actorId: invokedByAdminUserId,
+        },
+        getLiveStagingCandidate(providerInput) {
+          assert.equal(providerInput.discoverySourceId, SOURCE_ID);
+          assert.equal(providerInput.discoveryRunId, RUN_ID);
+          assert.equal(providerInput.auditCorrelationId, AUDIT_ID);
+          assert.equal(providerInput.dryRun, false);
+          assert.equal(providerInput.maxCandidates, 1);
+          assert.equal(providerInput.sourceScope, "single_run");
+
+          return {
+            discoverySourceId: "99999999-9999-4999-8999-999999999999",
+            discoveryRunId: "88888888-8888-4888-8888-888888888888",
+            sourceUrl: "https://example.com/source",
+            sourceEvidenceLocator: "phase-12c-route-test",
+            candidateName: "Phase 12C Route Candidate",
+            candidateWebsiteUrl: "https://phase-12c-route.example.com",
+            candidateDescription: "A safe mocked candidate for route live gate tests.",
+            candidateCategoryHint: "Productivity",
+            candidatePricingHint: "Free + Paid",
+            evidenceSummary: "Mocked server-created route candidate input.",
+            confidenceBucket: "medium",
+            auditCorrelationId: "77777777-7777-4777-8777-777777777777",
+          };
+        },
+        stageCandidate(input) {
+          calls.push(input);
+
+          return {
+            ok: true,
+            candidateId: stagedCandidateId,
+            candidateStatus: "staged",
+            discoveryRunId: input.discoveryRunId,
+            discoverySourceId: input.discoverySourceId,
+            auditCorrelationId: input.normalizedCandidate.audit_correlation_id ?? null,
+          };
+        },
+      };
+    },
+  });
+
+  const response = await livePost(
+    createRequest({
+      body: createBody({
+        dry_run: false,
+        max_candidates: 1,
+        source_scope: "single_run",
+      }),
+    }),
+  );
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(data.accepted, true);
+  assert.equal(data.rejected, false);
+  assert.equal(data.dry_run, false);
+  assert.equal(data.candidates_considered_count, 1);
+  assert.equal(data.candidates_staged_count, 1);
+  assert.equal(data.candidates_skipped_count, 0);
+  assert.equal(data.discovery_source_id, SOURCE_ID);
+  assert.equal(data.discovery_run_id, RUN_ID);
+  assert.equal(data.audit_correlation_id, AUDIT_ID);
+  assert.equal(data.no_public_write_confirmed, true);
+  assert.equal(data.no_discovered_write_confirmed, true);
+  assert.equal(data.safety_flags.includes("live_staging_gate_enabled"), true);
+  assert.equal(data.safety_flags.includes("candidate_status_staged"), true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].discoverySourceId, SOURCE_ID);
+  assert.equal(calls[0].discoveryRunId, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.discovery_run_id, RUN_ID);
+  assert.equal(calls[0].normalizedCandidate.audit_correlation_id, AUDIT_ID);
+  assert.equal(calls[0].normalizedCandidate.candidate_status, "staged");
+  assertNoRawPayloadLeak(data);
+});
 
 test("anonymous request is rejected", async () => {
   const { response, data } = await invokeRoute({ includeSession: false });
@@ -152,7 +279,7 @@ test("invalid CSRF request is rejected", async () => {
 });
 
 test("valid dry-run admin request is accepted", async () => {
-  const { response, data } = await invokeRoute();
+  const { response, data } = await invokeIsolatedRoute();
 
   assert.equal(response.status, 200);
   assert.equal(data.accepted, true);
@@ -169,7 +296,7 @@ test("valid dry-run admin request is accepted", async () => {
 });
 
 test("client-supplied admin identity is rejected", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({ invoked_by_admin_user_id: "client-spoofed-admin" }),
   });
 
@@ -179,7 +306,7 @@ test("client-supplied admin identity is rejected", async () => {
 });
 
 test("dry_run false is rejected with live_invocation_not_enabled", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({ dry_run: false }),
   });
 
@@ -192,7 +319,7 @@ test("dry_run false is rejected with live_invocation_not_enabled", async () => {
 });
 
 test("placeholder live staging approval phrase remains inactive at route boundary", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({
       dry_run: false,
       invocation_reason: "Approve run candidate extraction live staging write",
@@ -210,7 +337,7 @@ test("placeholder live staging approval phrase remains inactive at route boundar
 });
 
 test("client body cannot activate a live staging gate", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({
       dry_run: false,
       liveStagingGate: {
@@ -225,14 +352,14 @@ test("client body cannot activate a live staging gate", async () => {
 });
 
 test("invalid source and run IDs are rejected", async () => {
-  const sourceResult = await invokeRoute({
+  const sourceResult = await invokeIsolatedRoute({
     body: createBody({ discovery_source_id: "not-a-uuid" }),
   });
   assert.equal(sourceResult.response.status, 400);
   assert.equal(sourceResult.data.rejection_code, "invalid_discovery_source_id");
   assertNoRawPayloadLeak(sourceResult.data);
 
-  const runResult = await invokeRoute({
+  const runResult = await invokeIsolatedRoute({
     body: createBody({ discovery_run_id: "not-a-uuid" }),
   });
   assert.equal(runResult.response.status, 400);
@@ -241,7 +368,7 @@ test("invalid source and run IDs are rejected", async () => {
 });
 
 test("invalid schema version is rejected", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({ schema_version: "candidate_extraction_invocation.v0" }),
   });
 
@@ -251,7 +378,7 @@ test("invalid schema version is rejected", async () => {
 });
 
 test("max candidate bound is rejected", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({
       max_candidates: CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES + 1,
     }),
@@ -263,7 +390,7 @@ test("max candidate bound is rejected", async () => {
 });
 
 test("unsupported raw payload fields are rejected without echoing payload", async () => {
-  const { response, data } = await invokeRoute({
+  const { response, data } = await invokeIsolatedRoute({
     body: createBody({ raw_payload: "<script>secret=value</script>" }),
   });
 
@@ -281,6 +408,9 @@ test("rate-limit rejection returns a safe response", async () => {
       body: createBody({
         invocation_reason: `Manual admin rate-limit route test ${index}.`,
       }),
+      headers: {
+        "x-forwarded-for": "198.51.100.10",
+      },
     });
 
     lastResponse = response;
@@ -293,6 +423,7 @@ test("rate-limit rejection returns a safe response", async () => {
   assert.equal(lastData.error, "Too many admin requests. Please wait and try again.");
   assertNoRawPayloadLeak(lastData);
 });
+
 
 test("route source stays free of direct DB writes and audit writes", () => {
   const source = readFileSync(
@@ -320,4 +451,6 @@ test("route source stays free of direct DB writes and audit writes", () => {
   for (const token of forbiddenTokens) {
     assert.equal(source.includes(token), false);
   }
+
+  assert.equal(source.includes("createCandidateExtractionInvokeHandler"), true);
 });
