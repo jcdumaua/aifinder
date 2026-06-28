@@ -101,6 +101,89 @@ export function normalizeCandidateExtractionLiveStagingPreview(
   };
 }
 
+export type CandidateExtractionPreviewRouteStatus =
+  | "unavailable"
+  | "pending_review"
+  | "reviewable"
+  | "blocked"
+  | "stale";
+
+export type CandidateExtractionPreviewRouteResult = {
+  accepted: boolean | null;
+  rejected: boolean | null;
+  rejectionCode: string | null;
+  previewStatus: CandidateExtractionPreviewRouteStatus | null;
+  preview: CandidateExtractionLiveStagingPreview | null;
+  safetyFlags: string[];
+  auditCorrelationId: string | null;
+  noPublicWriteConfirmed: boolean;
+  noDiscoveredWriteConfirmed: boolean;
+};
+
+const ALLOWED_CANDIDATE_PREVIEW_ROUTE_STATUSES = new Set([
+  "unavailable",
+  "pending_review",
+  "reviewable",
+  "blocked",
+  "stale",
+]);
+
+function getSafePreviewRouteStatus(
+  value: unknown,
+): CandidateExtractionPreviewRouteStatus | null {
+  return typeof value === "string" &&
+    ALLOWED_CANDIDATE_PREVIEW_ROUTE_STATUSES.has(value)
+    ? (value as CandidateExtractionPreviewRouteStatus)
+    : null;
+}
+
+export function normalizeCandidateExtractionPreviewRouteResult(
+  value: unknown,
+): CandidateExtractionPreviewRouteResult | null {
+  const container = isRecord(value) ? value : {};
+  const payload = isRecord(container.data) ? container.data : container;
+  const previewStatus = getSafePreviewRouteStatus(payload.previewStatus);
+
+  if (!previewStatus) return null;
+
+  const accepted = getSafeBoolean(payload.accepted);
+  const rejected = getSafeBoolean(payload.rejected);
+  const preview =
+    accepted === true && previewStatus === "reviewable"
+      ? normalizeCandidateExtractionLiveStagingPreview(payload.preview)
+      : null;
+
+  return {
+    accepted,
+    rejected,
+    rejectionCode: getSafeDisplayText(payload.rejectionCode, 120),
+    previewStatus,
+    preview,
+    safetyFlags: getSafeStringList(payload.safetyFlags),
+    auditCorrelationId: getSafeDisplayText(payload.auditCorrelationId, 80),
+    noPublicWriteConfirmed: payload.noPublicWriteConfirmed === true,
+    noDiscoveredWriteConfirmed: payload.noDiscoveredWriteConfirmed === true,
+  };
+}
+
+export function getCandidatePreviewForLiveStagingScaffold(
+  value: unknown,
+): CandidateExtractionLiveStagingPreview | null {
+  const result = normalizeCandidateExtractionPreviewRouteResult(value);
+
+  if (
+    !result ||
+    result.accepted !== true ||
+    result.previewStatus !== "reviewable" ||
+    result.noPublicWriteConfirmed !== true ||
+    result.noDiscoveredWriteConfirmed !== true
+  ) {
+    return null;
+  }
+
+  return result.preview;
+}
+
 export function hasCandidateExtractionLiveStagingContext(input: {
   discoverySourceId: string | null | undefined;
   discoveryRunId: string | null | undefined;

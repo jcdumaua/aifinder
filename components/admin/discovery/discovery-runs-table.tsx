@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { DiscoveryCandidateExtractionDryRunPanel } from "@/components/admin/discovery/discovery-candidate-extraction-dry-run-panel";
 import { DiscoveryCandidateExtractionLiveStagingPanel } from "@/components/admin/discovery/discovery-candidate-extraction-live-staging-panel";
+import {
+  getCandidatePreviewForLiveStagingScaffold,
+  normalizeCandidateExtractionPreviewRouteResult,
+  type CandidateExtractionPreviewRouteResult,
+} from "@/components/admin/discovery/discovery-candidate-extraction-live-staging-utils";
 import { ManualMetadataFetchResultsReview } from "@/components/admin/discovery/manual-metadata-fetch-results-review";
 import { ManualStaticHtmlEvidenceAuditTimeline } from "@/components/admin/discovery/manual-static-html-evidence-audit-timeline";
 import { ManualStaticHtmlEvidenceResultsReview } from "@/components/admin/discovery/manual-static-html-evidence-results-review";
@@ -43,6 +48,12 @@ type PaginationState = {
   page: number;
   limit: number;
   totalPages: number;
+};
+
+type CandidatePreviewUiState = {
+  isLoading: boolean;
+  errorMessage: string;
+  result: CandidateExtractionPreviewRouteResult | null;
 };
 
 const STATUS_OPTIONS = [
@@ -190,6 +201,51 @@ function getStatValue(run: DiscoveryRun, key: string) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function getCandidatePreviewStatusMessage(input: {
+  sourceId: string | null;
+  state?: CandidatePreviewUiState;
+}) {
+  if (!input.sourceId?.trim()) {
+    return "Candidate preview requires trusted source context.";
+  }
+
+  if (!input.state) {
+    return "Candidate preview has not been requested yet.";
+  }
+
+  if (input.state.isLoading) {
+    return "Loading read-only candidate preview.";
+  }
+
+  if (input.state.errorMessage) {
+    return input.state.errorMessage;
+  }
+
+  const result = input.state.result;
+
+  if (!result) {
+    return "Candidate preview is unavailable.";
+  }
+
+  if (result.accepted === true && result.previewStatus === "reviewable") {
+    return "Read-only candidate preview loaded. Live staging remains unavailable.";
+  }
+
+  if (result.previewStatus === "pending_review") {
+    return "Candidate preview is pending review. Live staging remains unavailable.";
+  }
+
+  if (result.previewStatus === "blocked") {
+    return "Candidate preview is blocked. Live staging remains unavailable.";
+  }
+
+  if (result.previewStatus === "stale") {
+    return "Candidate preview is stale. Live staging remains unavailable.";
+  }
+
+  return "Candidate preview is unavailable. Live staging remains unavailable.";
+}
+
 export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) {
   const [runs, setRuns] = useState<DiscoveryRun[]>([]);
   const [status, setStatus] = useState("all");
@@ -202,6 +258,9 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [candidatePreviewByRunId, setCandidatePreviewByRunId] = useState<
+    Record<string, CandidatePreviewUiState>
+  >({});
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams({
@@ -237,6 +296,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
 
       setRuns(Array.isArray(result?.data) ? result.data : []);
       setExpandedRunId(null);
+      setCandidatePreviewByRunId({});
       setPagination((current) => ({
         ...current,
         total: result?.pagination?.total || 0,
@@ -251,6 +311,86 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
       );
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function fetchCandidatePreviewForRun(run: DiscoveryRun) {
+    const runId = run.id.trim();
+    const sourceId = run.source_id?.trim() || "";
+
+    if (!runId) return;
+
+    if (!sourceId) {
+      setCandidatePreviewByRunId((current) => ({
+        ...current,
+        [runId]: {
+          isLoading: false,
+          errorMessage: "Candidate preview requires trusted source context.",
+          result: null,
+        },
+      }));
+      return;
+    }
+
+    setCandidatePreviewByRunId((current) => ({
+      ...current,
+      [runId]: {
+        isLoading: true,
+        errorMessage: "",
+        result: current[runId]?.result ?? null,
+      },
+    }));
+
+    try {
+      const response = await fetch(
+        `/api/admin/discovery/runs/${encodeURIComponent(
+          runId,
+        )}/candidate-preview?source_id=${encodeURIComponent(sourceId)}`,
+        {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        },
+      );
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error("Candidate preview is unavailable.");
+      }
+
+      const normalized = normalizeCandidateExtractionPreviewRouteResult(result);
+
+      if (!normalized) {
+        throw new Error("Candidate preview is unavailable.");
+      }
+
+      setCandidatePreviewByRunId((current) => ({
+        ...current,
+        [runId]: {
+          isLoading: false,
+          errorMessage: "",
+          result: normalized,
+        },
+      }));
+    } catch {
+      setCandidatePreviewByRunId((current) => ({
+        ...current,
+        [runId]: {
+          isLoading: false,
+          errorMessage: "Candidate preview is unavailable.",
+          result: null,
+        },
+      }));
+    }
+  }
+
+  function toggleRunReview(run: DiscoveryRun) {
+    const shouldExpand = expandedRunId !== run.id;
+
+    setExpandedRunId(shouldExpand ? run.id : null);
+
+    if (shouldExpand) {
+      void fetchCandidatePreviewForRun(run);
     }
   }
 
@@ -383,6 +523,15 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                   ? manualStaticHtmlEvidencePanelId
                   : null;
               const isExpanded = expandedRunId === run.id;
+              const candidatePreviewState = candidatePreviewByRunId[run.id];
+              const candidatePreview = getCandidatePreviewForLiveStagingScaffold(
+                candidatePreviewState?.result,
+              );
+              const candidatePreviewStatusMessage =
+                getCandidatePreviewStatusMessage({
+                  sourceId: run.source_id,
+                  state: candidatePreviewState,
+                });
 
               return (
                 <div key={run.id}>
@@ -450,11 +599,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() =>
-                          setExpandedRunId((current) =>
-                            current === run.id ? null : run.id
-                          )
-                        }
+                        onClick={() => toggleRunReview(run)}
                         aria-expanded={isExpanded}
                         aria-controls={reviewPanelId}
                         className="w-full rounded-xl"
@@ -477,10 +622,16 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
                       />
+                      <div
+                        role="status"
+                        className="border-t border-slate-200 bg-slate-50 px-4 pt-4 text-sm font-bold text-slate-600"
+                      >
+                        {candidatePreviewStatusMessage}
+                      </div>
                       <DiscoveryCandidateExtractionLiveStagingPanel
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
-                        candidatePreview={null}
+                        candidatePreview={candidatePreview}
                         isLiveStagingAvailable={false}
                       />
                     </>
@@ -506,10 +657,16 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
                       />
+                      <div
+                        role="status"
+                        className="border-t border-slate-200 bg-slate-50 px-4 pt-4 text-sm font-bold text-slate-600"
+                      >
+                        {candidatePreviewStatusMessage}
+                      </div>
                       <DiscoveryCandidateExtractionLiveStagingPanel
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
-                        candidatePreview={null}
+                        candidatePreview={candidatePreview}
                         isLiveStagingAvailable={false}
                       />
                     </div>

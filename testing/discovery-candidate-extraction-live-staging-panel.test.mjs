@@ -8,9 +8,11 @@ const {
   CANDIDATE_EXTRACTION_LIVE_STAGING_CONFIRMATION_PHRASE,
   CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_LIVE_STAGING_SOURCE_SCOPE,
+  getCandidatePreviewForLiveStagingScaffold,
   hasCandidateExtractionLiveStagingContext,
   normalizeCandidateExtractionLiveStagingPreview,
   normalizeCandidateExtractionLiveStagingResponseSummary,
+  normalizeCandidateExtractionPreviewRouteResult,
 } = await import(
   "../components/admin/discovery/discovery-candidate-extraction-live-staging-utils.ts"
 );
@@ -138,6 +140,94 @@ test("live staging preview and response summary omit unsafe display values", () 
   assert.equal(serialized.includes("service-role"), false);
 });
 
+test("candidate preview route result normalizes accepted preview for scaffold", () => {
+  const routeResult = {
+    data: {
+      accepted: true,
+      rejected: false,
+      rejectionCode: null,
+      previewStatus: "reviewable",
+      preview: {
+        candidateName: "Safe Candidate",
+        candidateWebsiteUrl: "https://example.com",
+        categoryHint: "Productivity",
+        pricingHint: "Free",
+        confidenceBucket: "review",
+        evidenceSummary: "Safe bounded evidence summary.",
+        sourceEvidenceLocator: "manual-static-evidence:0",
+        discoverySourceId: SOURCE_ID,
+        discoveryRunId: RUN_ID,
+        auditCorrelationId: AUDIT_ID,
+      },
+      safetyFlags: ["server_sanitized", "no_public_write"],
+      auditCorrelationId: AUDIT_ID,
+      noPublicWriteConfirmed: true,
+      noDiscoveredWriteConfirmed: true,
+    },
+  };
+
+  const normalized = normalizeCandidateExtractionPreviewRouteResult(routeResult);
+  const scaffoldPreview = getCandidatePreviewForLiveStagingScaffold(routeResult);
+
+  assert.notEqual(normalized, null);
+  assert.equal(normalized?.accepted, true);
+  assert.equal(normalized?.previewStatus, "reviewable");
+  assert.equal(scaffoldPreview?.candidateName, "Safe Candidate");
+  assert.equal(scaffoldPreview?.discoverySourceId, SOURCE_ID);
+  assert.equal(scaffoldPreview?.discoveryRunId, RUN_ID);
+});
+
+test("candidate preview route result keeps rejected or unsafe preview out of scaffold", () => {
+  const blockedRouteResult = {
+    data: {
+      accepted: false,
+      rejected: true,
+      rejectionCode: "preview_artifact_blocked",
+      previewStatus: "blocked",
+      preview: {
+        candidateName: "<script>secret=value</script>",
+        candidateWebsiteUrl: "https://example.com",
+        discoverySourceId: SOURCE_ID,
+        discoveryRunId: RUN_ID,
+      },
+      safetyFlags: ["no_public_write"],
+      auditCorrelationId: AUDIT_ID,
+      noPublicWriteConfirmed: true,
+      noDiscoveredWriteConfirmed: true,
+    },
+  };
+
+  const unsafeAcceptedRouteResult = {
+    data: {
+      accepted: true,
+      rejected: false,
+      rejectionCode: null,
+      previewStatus: "reviewable",
+      preview: {
+        candidateName: "<script>secret=value</script>",
+        candidateWebsiteUrl: "https://example.com",
+        discoverySourceId: SOURCE_ID,
+        discoveryRunId: RUN_ID,
+        auditCorrelationId: AUDIT_ID,
+      },
+      safetyFlags: ["server_sanitized", "<script>secret=value</script>"],
+      auditCorrelationId: AUDIT_ID,
+      noPublicWriteConfirmed: true,
+      noDiscoveredWriteConfirmed: true,
+    },
+  };
+
+  const blocked = normalizeCandidateExtractionPreviewRouteResult(blockedRouteResult);
+  const unsafeAccepted = normalizeCandidateExtractionPreviewRouteResult(
+    unsafeAcceptedRouteResult,
+  );
+
+  assert.equal(getCandidatePreviewForLiveStagingScaffold(blockedRouteResult), null);
+  assert.equal(blocked?.preview, null);
+  assert.equal(unsafeAccepted?.preview?.candidateName, null);
+  assert.deepEqual(unsafeAccepted?.safetyFlags, ["server_sanitized"]);
+});
+
 test("disabled scaffold source is inert and performs no network or backend activation", () => {
   const source = `${readPanelSource()}\n${readUtilsSource()}`;
 
@@ -165,7 +255,7 @@ test("disabled scaffold source is inert and performs no network or backend activ
   assert.equal(source.includes("createClient"), false);
 });
 
-test("runs table wires disabled scaffold with explicit null preview and false availability", () => {
+test("runs table fetches read-only preview while keeping live staging disabled", () => {
   const source = readFileSync(
     new URL(
       "../components/admin/discovery/discovery-runs-table.tsx",
@@ -180,6 +270,25 @@ test("runs table wires disabled scaffold with explicit null preview and false av
   );
   assert.equal(source.includes("discoveryRunId={run.id}"), true);
   assert.equal(source.includes("discoverySourceId={run.source_id}"), true);
-  assert.equal(source.includes("candidatePreview={null}"), true);
+  assert.equal(source.includes("candidatePreview={candidatePreview}"), true);
   assert.equal(source.includes("isLiveStagingAvailable={false}"), true);
+  assert.equal(source.includes("candidate-preview?source_id="), true);
+  assert.equal(source.includes('method: "GET"'), true);
+  assert.equal(source.includes('credentials: "same-origin"'), true);
+  assert.equal(source.includes('cache: "no-store"'), true);
+  assert.equal(source.includes("candidatePreviewByRunId"), true);
+  assert.equal(source.includes("normalizeCandidateExtractionPreviewRouteResult"), true);
+  assert.equal(source.includes("getCandidatePreviewForLiveStagingScaffold"), true);
+  assert.equal(source.includes("/api/admin/csrf"), false);
+  assert.equal(
+    source.includes("/api/admin/discovery/candidate-extraction/invoke"),
+    false,
+  );
+  assert.equal(source.includes('method: "POST"'), false);
+  assert.equal(source.includes("dry_run: false"), false);
+  assert.equal(source.includes("stageNormalizedDiscoveryCandidate"), false);
+  assert.equal(source.includes(".insert("), false);
+  assert.equal(source.includes(".upsert("), false);
+  assert.equal(source.includes(".update("), false);
+  assert.equal(source.includes(".delete("), false);
 });
