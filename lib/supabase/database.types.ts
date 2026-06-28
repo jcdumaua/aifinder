@@ -258,6 +258,81 @@ export type Database = {
           },
         ]
       }
+      discovery_candidate_preview_artifacts: {
+        Row: {
+          audit_correlation_id: string
+          candidate_name: string | null
+          candidate_website_url: string | null
+          category_hint: string | null
+          confidence_bucket: string | null
+          created_at: string
+          discovery_run_id: string
+          discovery_source_id: string
+          evidence_summary: string | null
+          id: string
+          preview_generated_at: string | null
+          preview_schema_version: string
+          preview_status: string
+          pricing_hint: string | null
+          safety_flags: string[]
+          source_evidence_locator: string | null
+          updated_at: string
+        }
+        Insert: {
+          audit_correlation_id?: string
+          candidate_name?: string | null
+          candidate_website_url?: string | null
+          category_hint?: string | null
+          confidence_bucket?: string | null
+          created_at?: string
+          discovery_run_id: string
+          discovery_source_id: string
+          evidence_summary?: string | null
+          id?: string
+          preview_generated_at?: string | null
+          preview_schema_version?: string
+          preview_status?: string
+          pricing_hint?: string | null
+          safety_flags?: string[]
+          source_evidence_locator?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audit_correlation_id?: string
+          candidate_name?: string | null
+          candidate_website_url?: string | null
+          category_hint?: string | null
+          confidence_bucket?: string | null
+          created_at?: string
+          discovery_run_id?: string
+          discovery_source_id?: string
+          evidence_summary?: string | null
+          id?: string
+          preview_generated_at?: string | null
+          preview_schema_version?: string
+          preview_status?: string
+          pricing_hint?: string | null
+          safety_flags?: string[]
+          source_evidence_locator?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_candidate_preview_artifacts_discovery_run_id_fkey"
+            columns: ["discovery_run_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_candidate_preview_artifacts_discovery_source_id_fkey"
+            columns: ["discovery_source_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discovery_candidate_tools: {
         Row: {
           archived_at: string | null
