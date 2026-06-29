@@ -276,6 +276,7 @@ export type Database = {
           pricing_hint: string | null
           safety_flags: string[]
           source_evidence_locator: string | null
+          source_url_snapshot: string | null
           updated_at: string
         }
         Insert: {
@@ -295,6 +296,7 @@ export type Database = {
           pricing_hint?: string | null
           safety_flags?: string[]
           source_evidence_locator?: string | null
+          source_url_snapshot?: string | null
           updated_at?: string
         }
         Update: {
@@ -314,6 +316,7 @@ export type Database = {
           pricing_hint?: string | null
           safety_flags?: string[]
           source_evidence_locator?: string | null
+          source_url_snapshot?: string | null
           updated_at?: string
         }
         Relationships: [
