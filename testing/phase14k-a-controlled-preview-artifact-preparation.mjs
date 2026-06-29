@@ -474,7 +474,7 @@ async function createPreviewArtifact(supabase, sourceId, runId, sourceUrl) {
     candidate_name: CANDIDATE_NAME,
     candidate_website_url: candidateWebsiteUrl,
     category_hint: "Productivity",
-    pricing_hint: "unknown",
+    pricing_hint: "Free",
     confidence_bucket: "medium",
     evidence_summary: EVIDENCE_SUMMARY,
     source_evidence_locator: SOURCE_EVIDENCE_LOCATOR,

@@ -32,6 +32,8 @@ test("controlled preparation script uses reviewable v2 preview artifact contract
   assert.equal(source.includes('"source_url_snapshot_validated"'), true);
   assert.equal(source.includes("source_url_snapshot"), true);
   assert.equal(source.includes("candidate_website_url"), true);
+  assert.equal(source.includes('pricing_hint: "Free"'), true);
+  assert.equal(source.includes('pricing_hint: "unknown"'), false);
 });
 
 test("controlled preparation script keeps live staging and publishing out of scope", () => {
