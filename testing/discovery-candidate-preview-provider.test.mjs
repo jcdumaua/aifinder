@@ -21,6 +21,13 @@ const BASE_RUN = {
   updated_at: "2026-06-28T20:00:00.000Z",
 };
 
+const BASE_SOURCE = {
+  id: SOURCE_ID,
+  url: "https://source.example.com/review",
+  source_type: "manual",
+  updated_at: "2026-06-28T19:50:00.000Z",
+};
+
 const BASE_ARTIFACT = {
   id: ARTIFACT_ID,
   audit_correlation_id: AUDIT_ID,
@@ -46,6 +53,7 @@ const BASE_ARTIFACT = {
     "no_llm_output",
   ],
   source_evidence_locator: "url_index:0",
+  source_url_snapshot: "https://source.example.com/review",
   updated_at: "2026-06-28T20:10:00.000Z",
 };
 
@@ -66,12 +74,17 @@ function createArtifact(overrides = {}) {
   };
 }
 
-function createDependencies({ run = BASE_RUN, artifacts = [BASE_ARTIFACT] } = {}) {
+function createDependencies({ run = BASE_RUN, source = BASE_SOURCE, artifacts = [BASE_ARTIFACT] } = {}) {
   return {
     async loadDiscoveryRun(discoveryRunId) {
       assert.equal(discoveryRunId, RUN_ID);
 
       return run;
+    },
+    async loadDiscoverySource(discoverySourceId) {
+      assert.equal(discoverySourceId, SOURCE_ID);
+
+      return source;
     },
     async loadPreviewArtifacts({ discoveryRunId, discoverySourceId }) {
       assert.equal(discoveryRunId, RUN_ID);
@@ -237,6 +250,73 @@ test("unsafe candidate website is rejected", async () => {
   assertNoRawPayloadLeak(result);
 });
 
+test("missing source URL snapshot is blocked", async () => {
+  const result = await runProvider(
+    {},
+    {
+      artifacts: [
+        createArtifact({
+          source_url_snapshot: null,
+        }),
+      ],
+    },
+  );
+
+  assertRejected(result, "preview_source_url_missing");
+  assert.equal(result.previewStatus, "blocked");
+  assertNoRawPayloadLeak(result);
+});
+
+test("unsafe source URL snapshot is blocked", async () => {
+  const result = await runProvider(
+    {},
+    {
+      artifacts: [
+        createArtifact({
+          source_url_snapshot: "http://source.example.com/review",
+        }),
+      ],
+    },
+  );
+
+  assertRejected(result, "preview_source_url_unsafe");
+  assert.equal(result.previewStatus, "blocked");
+  assertNoRawPayloadLeak(result);
+});
+
+test("candidate website copied as source URL snapshot is blocked", async () => {
+  const result = await runProvider(
+    {},
+    {
+      artifacts: [
+        createArtifact({
+          source_url_snapshot: "https://tool.example.com",
+        }),
+      ],
+    },
+  );
+
+  assertRejected(result, "preview_source_url_unsafe");
+  assert.equal(result.previewStatus, "blocked");
+  assertNoRawPayloadLeak(result);
+});
+
+test("source URL snapshot drift is stale", async () => {
+  const result = await runProvider(
+    {},
+    {
+      source: {
+        ...BASE_SOURCE,
+        url: "https://different-source.example.com/review",
+      },
+    },
+  );
+
+  assertRejected(result, "preview_source_url_drift");
+  assert.equal(result.previewStatus, "stale");
+  assertNoRawPayloadLeak(result);
+});
+
 test("missing source evidence locator is stale", async () => {
   const result = await runProvider(
     {},
@@ -316,6 +396,7 @@ test("reviewable artifact returns sanitized preview only", async () => {
   assert.equal(result.preview.discoverySourceId, SOURCE_ID);
   assert.equal(result.preview.auditCorrelationId, AUDIT_ID);
   assert.equal(result.preview.sourceEvidenceLocator, "url_index:0");
+  assert.equal(result.preview.sourceUrlSnapshot, "https://source.example.com/review");
   assert.equal(result.noPublicWriteConfirmed, true);
   assert.equal(result.noDiscoveredWriteConfirmed, true);
   assert.equal(result.safetyFlags.includes("server_sanitized"), true);
@@ -336,4 +417,6 @@ test("provider source does not contain mutation operations", () => {
   assert.equal(source.includes(".delete("), false);
   assert.equal(source.includes("public.tools"), false);
   assert.equal(source.includes("discovered_tools"), false);
+  assert.equal(source.includes("sourceUrlSnapshot: artifact.candidate_website_url"), false);
+  assert.equal(source.includes("sourceUrlSnapshot: candidateWebsiteUrl"), false);
 });

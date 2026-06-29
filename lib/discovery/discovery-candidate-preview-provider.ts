@@ -4,7 +4,7 @@ import type { Database } from "../supabase/database.types";
 import type { DiscoverySupabaseAdminClient } from "./discovery-supabase-admin";
 
 export const CANDIDATE_PREVIEW_ARTIFACT_SCHEMA_VERSION =
-  "candidate_preview_artifact.v1";
+  "candidate_preview_artifact.v2";
 
 export type CandidateExtractionPreviewStatus =
   | "unavailable"
@@ -27,7 +27,10 @@ export type CandidateExtractionPreviewRejectionCode =
   | "preview_artifact_ambiguous"
   | "preview_candidate_missing_name"
   | "preview_candidate_missing_website"
-  | "preview_candidate_unsafe_website";
+  | "preview_candidate_unsafe_website"
+  | "preview_source_url_missing"
+  | "preview_source_url_unsafe"
+  | "preview_source_url_drift";
 
 export type CandidateExtractionPreviewInput = {
   discoveryRunId: string;
@@ -44,6 +47,7 @@ export type CandidateExtractionPreview = {
   confidenceBucket: string | null;
   evidenceSummary: string | null;
   sourceEvidenceLocator: string;
+  sourceUrlSnapshot: string;
   discoverySourceId: string;
   discoveryRunId: string;
   auditCorrelationId: string;
@@ -78,6 +82,11 @@ type DiscoveryRunRow = Pick<
   "id" | "source_id" | "status" | "updated_at"
 >;
 
+type DiscoverySourceRow = Pick<
+  Database["public"]["Tables"]["discovery_sources"]["Row"],
+  "id" | "url" | "source_type" | "updated_at"
+>;
+
 type CandidatePreviewArtifactRow = Pick<
   Database["public"]["Tables"]["discovery_candidate_preview_artifacts"]["Row"],
   | "id"
@@ -96,6 +105,7 @@ type CandidatePreviewArtifactRow = Pick<
   | "pricing_hint"
   | "safety_flags"
   | "source_evidence_locator"
+  | "source_url_snapshot"
   | "updated_at"
 >;
 
@@ -103,6 +113,9 @@ export type CandidatePreviewProviderDependencies = {
   loadDiscoveryRun: (
     discoveryRunId: string,
   ) => DiscoveryRunRow | null | Promise<DiscoveryRunRow | null>;
+  loadDiscoverySource?: (
+    discoverySourceId: string,
+  ) => DiscoverySourceRow | null | Promise<DiscoverySourceRow | null>;
   loadPreviewArtifacts: (
     input: Pick<CandidateExtractionPreviewInput, "discoveryRunId" | "discoverySourceId">,
   ) =>
@@ -166,12 +179,19 @@ const ALLOWED_SAFETY_FLAGS = new Set([
   "unsafe_url_blocked",
   "stale_schema_blocked",
   "ambiguous_preview_blocked",
+  "source_url_snapshot_validated",
+  "source_url_snapshot_missing_blocked",
+  "source_url_snapshot_unsafe_blocked",
+  "source_url_drift_blocked",
 ]);
 
 const BLOCKING_SAFETY_FLAGS = new Set([
   "unsafe_url_blocked",
   "stale_schema_blocked",
   "ambiguous_preview_blocked",
+  "source_url_snapshot_missing_blocked",
+  "source_url_snapshot_unsafe_blocked",
+  "source_url_drift_blocked",
 ]);
 
 const DEFAULT_REJECTION_FLAGS = [
@@ -198,6 +218,7 @@ const PREVIEW_ARTIFACT_SELECT_COLUMNS = [
   "pricing_hint",
   "safety_flags",
   "source_evidence_locator",
+  "source_url_snapshot",
   "updated_at",
 ].join(",");
 
@@ -435,6 +456,7 @@ function validateReviewableArtifact(
   artifact: CandidatePreviewArtifactRow,
   run: DiscoveryRunRow,
   input: Required<CandidateExtractionPreviewInput>,
+  source: DiscoverySourceRow | null = null,
 ): CandidateExtractionPreviewResult {
   if (artifact.preview_schema_version !== input.expectedSchemaVersion) {
     return rejectPreview("preview_artifact_schema_unsupported", {
@@ -513,6 +535,31 @@ function validateReviewableArtifact(
     });
   }
 
+  const sourceUrlSnapshot = getSafeHttpsUrl(artifact.source_url_snapshot);
+
+  if (!artifact.source_url_snapshot) {
+    return rejectPreview("preview_source_url_missing", {
+      previewStatus: "blocked",
+      auditCorrelationId: artifact.audit_correlation_id,
+    });
+  }
+
+  if (!sourceUrlSnapshot || sourceUrlSnapshot === candidateWebsiteUrl) {
+    return rejectPreview("preview_source_url_unsafe", {
+      previewStatus: "blocked",
+      auditCorrelationId: artifact.audit_correlation_id,
+    });
+  }
+
+  const parentSourceUrl = getSafeHttpsUrl(source?.url ?? null);
+
+  if (parentSourceUrl && parentSourceUrl !== sourceUrlSnapshot) {
+    return rejectPreview("preview_source_url_drift", {
+      previewStatus: "stale",
+      auditCorrelationId: artifact.audit_correlation_id,
+    });
+  }
+
   const sourceEvidenceLocator = getSafeRequiredText(
     artifact.source_evidence_locator,
     160,
@@ -560,6 +607,7 @@ function validateReviewableArtifact(
       confidenceBucket,
       evidenceSummary,
       sourceEvidenceLocator,
+      sourceUrlSnapshot,
       discoverySourceId: input.discoverySourceId,
       discoveryRunId: input.discoveryRunId,
       auditCorrelationId: artifact.audit_correlation_id,
@@ -586,6 +634,17 @@ async function createDefaultCandidatePreviewDependencies(): Promise<CandidatePre
       if (error || !data) return null;
 
       return data as DiscoveryRunRow;
+    },
+    async loadDiscoverySource(discoverySourceId) {
+      const { data, error } = await client
+        .from("discovery_sources")
+        .select("id,url,source_type,updated_at")
+        .eq("id", discoverySourceId)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return data as DiscoverySourceRow;
     },
     async loadPreviewArtifacts({ discoveryRunId, discoverySourceId }) {
       const { data, error } = await client
@@ -662,6 +721,19 @@ export async function getCandidateExtractionPreviewForRunWithDependencies(
       });
     }
 
+    let source: DiscoverySourceRow | null = null;
+
+    if (dependencies.loadDiscoverySource) {
+      source = await dependencies.loadDiscoverySource(discoverySourceId);
+
+      if (!source || source.id !== discoverySourceId) {
+        return rejectPreview("discovery_run_source_mismatch", {
+          discoveryRunId,
+          discoverySourceId,
+        });
+      }
+    }
+
     const artifacts = await dependencies.loadPreviewArtifacts({
       discoveryRunId,
       discoverySourceId,
@@ -672,12 +744,17 @@ export async function getCandidateExtractionPreviewForRunWithDependencies(
       return artifactResult;
     }
 
-    return validateReviewableArtifact(artifactResult, run, {
-      discoveryRunId,
-      discoverySourceId,
-      requestingAdminActorId,
-      expectedSchemaVersion,
-    });
+    return validateReviewableArtifact(
+      artifactResult,
+      run,
+      {
+        discoveryRunId,
+        discoverySourceId,
+        requestingAdminActorId,
+        expectedSchemaVersion,
+      },
+      source,
+    );
   } catch {
     return rejectPreview("preview_artifact_unavailable", {
       discoveryRunId,

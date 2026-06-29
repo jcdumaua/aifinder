@@ -79,6 +79,7 @@ function createAcceptedProviderResult(overrides = {}) {
       confidenceBucket: "medium",
       evidenceSummary: "Safe bounded preview summary.",
       sourceEvidenceLocator: "url_index:0",
+      sourceUrlSnapshot: "https://source.example.com/review",
       discoverySourceId: SOURCE_ID,
       discoveryRunId: RUN_ID,
       auditCorrelationId: AUDIT_ID,
@@ -305,6 +306,7 @@ test("accepted provider result returns 200 with safe data wrapper", async () => 
   assert.equal(body.data.rejected, false);
   assert.equal(body.data.previewStatus, "reviewable");
   assert.equal(body.data.preview.candidateName, "Example AI Tool");
+  assert.equal(body.data.preview.sourceUrlSnapshot, "https://source.example.com/review");
   assert.equal(body.data.noPublicWriteConfirmed, true);
   assert.equal(body.data.noDiscoveredWriteConfirmed, true);
   assertNoStoreNosniff(response);
