@@ -632,7 +632,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
                         candidatePreview={candidatePreview}
-                        isLiveStagingAvailable={false}
+                        isLiveStagingAvailable={Boolean(candidatePreview)}
                       />
                     </>
                   ) : manualStaticHtmlEvidenceReview && isExpanded ? (
@@ -667,7 +667,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
                         discoveryRunId={run.id}
                         discoverySourceId={run.source_id}
                         candidatePreview={candidatePreview}
-                        isLiveStagingAvailable={false}
+                        isLiveStagingAvailable={Boolean(candidatePreview)}
                       />
                     </div>
                   ) : null}
