@@ -92,6 +92,65 @@ function createBody(overrides = {}) {
   };
 }
 
+function createAcceptedPreview(overrides = {}) {
+  return {
+    accepted: true,
+    rejected: false,
+    rejectionCode: null,
+    previewStatus: "reviewable",
+    preview: {
+      candidateName: "Phase 14G Preview Candidate",
+      candidateWebsiteUrl: "https://tool.example.com",
+      categoryHint: "Productivity",
+      pricingHint: "Free + Paid",
+      confidenceBucket: "medium",
+      evidenceSummary: "Server-revalidated route preview evidence.",
+      sourceEvidenceLocator: "url_index:0",
+      sourceUrlSnapshot: "https://source.example.com/review",
+      discoverySourceId: SOURCE_ID,
+      discoveryRunId: RUN_ID,
+      auditCorrelationId: AUDIT_ID,
+      ...(overrides.preview ?? {}),
+    },
+    safetyFlags: [
+      "bounded_preview",
+      "server_sanitized",
+      "source_run_matched",
+      "source_url_snapshot_validated",
+      "no_public_write",
+      "no_discovered_write",
+      "no_raw_html",
+      "no_llm_output",
+    ],
+    auditCorrelationId: AUDIT_ID,
+    noPublicWriteConfirmed: true,
+    noDiscoveredWriteConfirmed: true,
+    ...Object.fromEntries(
+      Object.entries(overrides).filter(([key]) => key !== "preview"),
+    ),
+  };
+}
+
+function createRejectedPreview(overrides = {}) {
+  return {
+    accepted: false,
+    rejected: true,
+    rejectionCode: "preview_artifact_unavailable",
+    previewStatus: "unavailable",
+    preview: null,
+    safetyFlags: [
+      "no_public_write",
+      "no_discovered_write",
+      "no_raw_html",
+      "no_llm_output",
+    ],
+    auditCorrelationId: null,
+    noPublicWriteConfirmed: true,
+    noDiscoveredWriteConfirmed: true,
+    ...overrides,
+  };
+}
+
 function createRequest({
   body = createBody(),
   includeSession = true,
@@ -126,6 +185,9 @@ async function invokeIsolatedRoute(options = {}) {
   const isolatedPost = createCandidateExtractionInvokeHandler({
     checkRateLimit() {
       return ALLOWED_RATE_LIMIT;
+    },
+    resolveLiveStagingOptions() {
+      return {};
     },
   });
   const response = await isolatedPost(createRequest(options));
@@ -246,6 +308,154 @@ test("server-created route dependency can stage one mocked manual API candidate"
   assert.equal(calls[0].normalizedCandidate.audit_correlation_id, AUDIT_ID);
   assert.equal(calls[0].normalizedCandidate.candidate_status, "staged");
   assertNoRawPayloadLeak(data);
+});
+
+test("default route resolver stages accepted preview through mocked preview dependencies", async () => {
+  const stagedCandidateId = "55555555-5555-4555-8555-555555555555";
+  const previewCalls = [];
+  const stageCalls = [];
+
+  const defaultWiredPost = createCandidateExtractionInvokeHandler({
+    checkRateLimit() {
+      return ALLOWED_RATE_LIMIT;
+    },
+    getCandidatePreview(input) {
+      previewCalls.push(input);
+      return createAcceptedPreview();
+    },
+    stageCandidate(input) {
+      stageCalls.push(input);
+
+      return {
+        ok: true,
+        candidateId: stagedCandidateId,
+        candidateStatus: "staged",
+        discoveryRunId: input.discoveryRunId,
+        discoverySourceId: input.discoverySourceId,
+        auditCorrelationId: input.normalizedCandidate.audit_correlation_id ?? null,
+      };
+    },
+  });
+
+  const response = await defaultWiredPost(
+    createRequest({
+      body: createBody({
+        invocation_reason: "Admin requested staged candidate from reviewable preview.",
+        dry_run: false,
+        max_candidates: 1,
+        source_scope: "single_run",
+      }),
+    }),
+  );
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(data.accepted, true);
+  assert.equal(data.rejected, false);
+  assert.equal(data.dry_run, false);
+  assert.equal(data.candidates_considered_count, 1);
+  assert.equal(data.candidates_staged_count, 1);
+  assert.equal(data.candidates_skipped_count, 0);
+  assert.equal(data.discovery_source_id, SOURCE_ID);
+  assert.equal(data.discovery_run_id, RUN_ID);
+  assert.equal(data.audit_correlation_id, AUDIT_ID);
+  assert.equal(data.no_public_write_confirmed, true);
+  assert.equal(data.no_discovered_write_confirmed, true);
+  assert.equal(data.safety_flags.includes("live_staging_gate_enabled"), true);
+  assert.equal(data.safety_flags.includes("candidate_status_staged"), true);
+  assert.equal(previewCalls.length, 1);
+  assert.equal(previewCalls[0].discoverySourceId, SOURCE_ID);
+  assert.equal(previewCalls[0].discoveryRunId, RUN_ID);
+  assert.equal(typeof previewCalls[0].requestingAdminActorId, "string");
+  assert.equal(previewCalls[0].requestingAdminActorId.length > 0, true);
+  assert.equal(stageCalls.length, 1);
+  assert.equal(stageCalls[0].discoverySourceId, SOURCE_ID);
+  assert.equal(stageCalls[0].discoveryRunId, RUN_ID);
+  assert.equal(stageCalls[0].normalizedCandidate.discovery_run_id, RUN_ID);
+  assert.equal(stageCalls[0].normalizedCandidate.audit_correlation_id, AUDIT_ID);
+  assert.equal(stageCalls[0].normalizedCandidate.candidate_status, "staged");
+  assert.equal(stageCalls[0].normalizedCandidate.source_url, "https://source.example.com/review");
+  assert.equal(stageCalls[0].normalizedCandidate.candidate_website_url, "https://tool.example.com/");
+  assertNoRawPayloadLeak(data);
+});
+
+test("default route resolver fails closed when preview is rejected", async () => {
+  let previewCalled = false;
+  let stageCalled = false;
+
+  const defaultWiredPost = createCandidateExtractionInvokeHandler({
+    checkRateLimit() {
+      return ALLOWED_RATE_LIMIT;
+    },
+    getCandidatePreview() {
+      previewCalled = true;
+      return createRejectedPreview({
+        rejectionCode: "preview_source_url_drift",
+        previewStatus: "stale",
+        auditCorrelationId: AUDIT_ID,
+      });
+    },
+    stageCandidate() {
+      stageCalled = true;
+      throw new Error("stage should not be called");
+    },
+  });
+
+  const response = await defaultWiredPost(
+    createRequest({
+      body: createBody({
+        dry_run: false,
+        max_candidates: 1,
+        source_scope: "single_run",
+      }),
+    }),
+  );
+  const data = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(data.accepted, false);
+  assert.equal(data.rejection_code, "live_invocation_not_enabled");
+  assert.equal(data.candidates_staged_count, 0);
+  assert.equal(previewCalled, true);
+  assert.equal(stageCalled, false);
+  assertNoRawPayloadLeak(data);
+});
+
+test("client URL override fields are rejected before resolver execution", async () => {
+  const forbiddenFields = [
+    "sourceUrl",
+    "source_url",
+    "sourceUrlSnapshot",
+    "candidateWebsiteUrl",
+  ];
+
+  for (const field of forbiddenFields) {
+    let resolverCalled = false;
+    const isolatedPost = createCandidateExtractionInvokeHandler({
+      checkRateLimit() {
+        return ALLOWED_RATE_LIMIT;
+      },
+      resolveLiveStagingOptions() {
+        resolverCalled = true;
+        return {};
+      },
+    });
+
+    const response = await isolatedPost(
+      createRequest({
+        body: createBody({
+          dry_run: false,
+          [field]: "https://client-override.example.com",
+        }),
+      }),
+    );
+    const data = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(data.code, "unsupported_request_field");
+    assert.equal(resolverCalled, false);
+    assertNoRawPayloadLeak(data);
+  }
 });
 
 test("anonymous request is rejected", async () => {
@@ -453,4 +663,9 @@ test("route source stays free of direct DB writes and audit writes", () => {
   }
 
   assert.equal(source.includes("createCandidateExtractionInvokeHandler"), true);
+  assert.equal(source.includes("resolveCandidatePreviewLiveStagingOptions"), true);
+  assert.equal(
+    source.includes("discovery-candidate-preview-live-staging-resolver"),
+    true,
+  );
 });

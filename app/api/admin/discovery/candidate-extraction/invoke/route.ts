@@ -13,6 +13,10 @@ import {
   type CandidateExtractionInvocationInput,
   type CandidateExtractionInvocationOptions,
 } from "../../../../../../lib/discovery/discovery-candidate-extraction-invocation";
+import {
+  resolveCandidatePreviewLiveStagingOptions,
+  type CandidatePreviewLiveStagingResolverDependencies,
+} from "../../../../../../lib/discovery/discovery-candidate-preview-live-staging-resolver";
 import type {
   AdminRateLimitResult,
 } from "../../../../../../lib/admin-rate-limit";
@@ -101,6 +105,8 @@ export type CandidateExtractionRouteDependencies = {
   ) =>
     | CandidateExtractionInvocationOptions
     | Promise<CandidateExtractionInvocationOptions>;
+  getCandidatePreview?: CandidatePreviewLiveStagingResolverDependencies["getCandidatePreview"];
+  stageCandidate?: CandidatePreviewLiveStagingResolverDependencies["stageCandidate"];
   checkRateLimit?: (
     input: CandidateExtractionRouteRateLimitInput,
   ) => AdminRateLimitResult;
@@ -207,7 +213,20 @@ export function createCandidateExtractionInvokeHandler(
           invocationInput,
           invokedByAdminUserId,
         })
-      : {};
+      : await resolveCandidatePreviewLiveStagingOptions(
+          {
+            invocationInput,
+            invokedByAdminUserId,
+          },
+          {
+            ...(dependencies.getCandidatePreview
+              ? { getCandidatePreview: dependencies.getCandidatePreview }
+              : {}),
+            ...(dependencies.stageCandidate
+              ? { stageCandidate: dependencies.stageCandidate }
+              : {}),
+          },
+        );
 
     const result = await invokeCandidateExtractionStagingPipeline(
       invocationInput,
