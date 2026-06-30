@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CandidateStagingQueueDetailDrawer } from "./candidate-staging-queue-detail-drawer";
+
 const CANDIDATE_STAGING_QUEUE_API_PATH =
   "/api/admin/discovery/candidate-staging-queue";
 
@@ -33,11 +35,11 @@ const SAFE_ERROR_CODES = new Set([
   "forbidden",
 ]);
 
-type CandidateStatus = (typeof ACTIVE_STATUSES)[number];
+export type CandidateStatus = (typeof ACTIVE_STATUSES)[number];
 type QueueSortKey = (typeof SORT_KEYS)[number];
 type QueueSortDirection = (typeof SORT_DIRECTIONS)[number];
 
-type CandidateQueueItem = {
+export type CandidateStagingQueueItem = {
   candidateId: string;
   candidateName: string;
   candidateStatus: CandidateStatus;
@@ -62,7 +64,7 @@ type CandidateQueueItem = {
 
 type CandidateQueueSuccessResponse = {
   ok: true;
-  items: CandidateQueueItem[];
+  items: CandidateStagingQueueItem[];
   appliedStatuses: CandidateStatus[];
   totalCount?: number;
 };
@@ -200,8 +202,10 @@ function MetadataPill({
 }
 
 export function CandidateStagingQueuePanel() {
-  const [items, setItems] = useState<CandidateQueueItem[]>([]);
+  const [items, setItems] = useState<CandidateStagingQueueItem[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateStagingQueueItem | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<CandidateStatus[]>([
     ...ACTIVE_STATUSES,
   ]);
@@ -345,6 +349,14 @@ export function CandidateStagingQueuePanel() {
     setLimit(25);
     setSortKey("created_at");
     setSortDirection("desc");
+  }
+
+  function closeDetailDrawer() {
+    setSelectedCandidate(null);
+  }
+
+  function openDetailDrawer(candidate: CandidateStagingQueueItem) {
+    setSelectedCandidate(candidate);
   }
 
   return (
@@ -613,6 +625,13 @@ export function CandidateStagingQueuePanel() {
                       label="Open website"
                     />
                     <SafeExternalLink value={item.sourceUrl} label="Open source" />
+                    <button
+                      type="button"
+                      onClick={() => openDetailDrawer(item)}
+                      className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      View details
+                    </button>
                   </div>
                 </div>
 
@@ -696,6 +715,13 @@ export function CandidateStagingQueuePanel() {
           ))}
         </div>
       )}
+      <CandidateStagingQueueDetailDrawer
+        candidate={selectedCandidate}
+        open={selectedCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDetailDrawer();
+        }}
+      />
     </section>
   );
 }
