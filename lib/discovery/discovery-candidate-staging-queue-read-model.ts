@@ -1,3 +1,10 @@
+import {
+  createCandidateStagingQueueFiltersHash,
+  createCandidateStagingQueueNextCursor,
+  decodeCandidateStagingQueueCursor,
+  type CandidateStagingQueueCursorPayload,
+} from "./discovery-candidate-staging-queue-cursor";
+
 export const DISCOVERY_CANDIDATE_STAGING_QUEUE_ACTIVE_STATUSES = [
   "staged",
   "needs_review",
@@ -59,7 +66,9 @@ export type CandidateStagingQueueSortDirection = "asc" | "desc";
 export type CandidateStagingQueueReadErrorCode =
   | "invalid_status_filter"
   | "invalid_limit"
-  | "invalid_cursor"
+  | "candidate_queue_invalid_cursor"
+  | "candidate_queue_cursor_mismatch"
+  | "candidate_queue_cursor_version_unsupported"
   | "invalid_sort_key"
   | "invalid_sort_direction"
   | "invalid_uuid_filter"
@@ -105,6 +114,10 @@ export type DiscoveryCandidateStagingQueueItem = {
 export type ListDiscoveryCandidateStagingQueueItemsResult = {
   items: DiscoveryCandidateStagingQueueItem[];
   nextCursor: string | null;
+  hasNextPage: boolean;
+  limit: number;
+  sortKey: CandidateStagingQueueSortKey;
+  sortDirection: CandidateStagingQueueSortDirection;
   totalCount?: number;
   appliedStatuses: CandidateStagingQueueStatusFilter[];
 };
@@ -155,7 +168,7 @@ export type CandidateStagingQueueQueryBuilder =
     ): CandidateStagingQueueQueryBuilder;
     eq(column: string, value: string): CandidateStagingQueueQueryBuilder;
     order(
-      column: CandidateStagingQueueSortKey,
+      column: CandidateStagingQueueSortKey | "id",
       options: { ascending: boolean },
     ): CandidateStagingQueueQueryBuilder;
     limit(limit: number): CandidateStagingQueueQueryBuilder;
@@ -272,17 +285,6 @@ function assertUuidFilter(value: string | undefined, label: string): void {
   }
 }
 
-function resolveCursor(cursor: string | undefined): null {
-  if (cursor === undefined || cursor.trim() === "") {
-    return null;
-  }
-
-  fail(
-    "invalid_cursor",
-    "Cursor pagination is reserved for a later candidate queue phase.",
-  );
-}
-
 function normalizeOptionalFilter(value: string | undefined): string | null {
   if (value === undefined) {
     return null;
@@ -298,6 +300,107 @@ function normalizeOptionalFilter(value: string | undefined): string | null {
   }
 
   return trimmed;
+}
+
+function getCursorFiltersHash(input: {
+  statuses: CandidateStagingQueueStatusFilter[];
+  search: string | null;
+  duplicateCheckStatus: string | null;
+  confidenceBucket: string | null;
+  discoverySourceId: string | undefined;
+  discoveryRunId: string | undefined;
+  auditCorrelationId: string | undefined;
+  limit: number;
+  sortKey: CandidateStagingQueueSortKey;
+  sortDirection: CandidateStagingQueueSortDirection;
+}) {
+  return createCandidateStagingQueueFiltersHash({
+    statuses: input.statuses,
+    search: input.search,
+    duplicateCheckStatus: input.duplicateCheckStatus,
+    confidenceBucket: input.confidenceBucket,
+    discoverySourceId: input.discoverySourceId ?? null,
+    discoveryRunId: input.discoveryRunId ?? null,
+    auditCorrelationId: input.auditCorrelationId ?? null,
+    limit: input.limit,
+    sortKey: input.sortKey,
+    sortDirection: input.sortDirection,
+  });
+}
+
+function resolveCursor(
+  cursor: string | undefined,
+  context: {
+    filtersHash: string;
+    sortKey: CandidateStagingQueueSortKey;
+    sortDirection: CandidateStagingQueueSortDirection;
+  },
+): CandidateStagingQueueCursorPayload | null {
+  if (cursor === undefined || cursor.trim() === "") {
+    return null;
+  }
+
+  const decoded = decodeCandidateStagingQueueCursor(cursor);
+
+  if (!decoded.ok) {
+    fail(
+      decoded.errorCode === "cursor_version_unsupported"
+        ? "candidate_queue_cursor_version_unsupported"
+        : "candidate_queue_invalid_cursor",
+      "Candidate staging queue cursor is invalid.",
+    );
+  }
+
+  if (
+    decoded.payload.filtersHash !== context.filtersHash ||
+    decoded.payload.sortKey !== context.sortKey ||
+    decoded.payload.sortDirection !== context.sortDirection
+  ) {
+    fail(
+      "candidate_queue_cursor_mismatch",
+      "Candidate staging queue cursor does not match the current filters.",
+    );
+  }
+
+  if (decoded.payload.sortKey === "confidence_bucket") {
+    fail(
+      "candidate_queue_invalid_cursor",
+      "Confidence cursor pagination is not enabled for this queue phase.",
+    );
+  }
+
+  return decoded.payload;
+}
+
+function applyCursorFilter(
+  query: CandidateStagingQueueQueryBuilder,
+  cursor: CandidateStagingQueueCursorPayload | null,
+) {
+  if (cursor === null) {
+    return query;
+  }
+
+  if (cursor.sortKey === "confidence_bucket") {
+    fail(
+      "candidate_queue_invalid_cursor",
+      "Confidence cursor pagination is not enabled for this queue phase.",
+    );
+  }
+
+  if (typeof cursor.lastValue !== "string" || cursor.lastValue.trim() === "") {
+    fail("candidate_queue_invalid_cursor", "Candidate staging cursor value is invalid.");
+  }
+
+  const operator = cursor.sortDirection === "asc" ? "gt" : "lt";
+  const lastValue = cursor.lastValue.trim();
+  const lastCandidateId = cursor.lastCandidateId.trim().toLowerCase();
+
+  return query.or(
+    [
+      `${cursor.sortKey}.${operator}.${lastValue}`,
+      `and(${cursor.sortKey}.eq.${lastValue},id.${operator}.${lastCandidateId})`,
+    ].join(","),
+  );
 }
 
 function normalizeSearch(search: string | undefined): string | null {
@@ -384,7 +487,6 @@ export async function listDiscoveryCandidateStagingQueueItems(
   const limit = resolveLimit(input.limit);
   const sortKey = resolveSortKey(input.sortKey);
   const sortDirection = resolveSortDirection(input.sortDirection);
-  resolveCursor(input.cursor);
 
   assertUuidFilter(input.discoverySourceId, "discoverySourceId");
   assertUuidFilter(input.discoveryRunId, "discoveryRunId");
@@ -395,6 +497,23 @@ export async function listDiscoveryCandidateStagingQueueItems(
   );
   const confidenceBucket = normalizeOptionalFilter(input.confidenceBucket);
   const search = normalizeSearch(input.search);
+  const filtersHash = getCursorFiltersHash({
+    statuses,
+    search,
+    duplicateCheckStatus,
+    confidenceBucket,
+    discoverySourceId: input.discoverySourceId,
+    discoveryRunId: input.discoveryRunId,
+    auditCorrelationId: input.auditCorrelationId,
+    limit,
+    sortKey,
+    sortDirection,
+  });
+  const cursor = resolveCursor(input.cursor, {
+    filtersHash,
+    sortKey,
+    sortDirection,
+  });
 
   if (!options.client) {
     fail(
@@ -410,7 +529,10 @@ export async function listDiscoveryCandidateStagingQueueItems(
     })
     .in("candidate_status", statuses)
     .order(sortKey, { ascending: sortDirection === "asc" })
-    .limit(limit);
+    .order("id", { ascending: sortDirection === "asc" })
+    .limit(limit + 1);
+
+  query = applyCursorFilter(query, cursor);
 
   if (input.discoverySourceId !== undefined) {
     query = query.eq("discovery_source_id", input.discoverySourceId);
@@ -452,13 +574,32 @@ export async function listDiscoveryCandidateStagingQueueItems(
     );
   }
 
-  const items = (data ?? [])
+  const mappedItems = (data ?? [])
     .map(mapQueueRow)
     .filter((item): item is DiscoveryCandidateStagingQueueItem => item !== null);
+  const hasNextPage =
+    sortKey !== "confidence_bucket" && mappedItems.length > limit;
+  const items = mappedItems.slice(0, limit);
+  const lastItem = items.at(-1) ?? null;
+  const nextCursor =
+    hasNextPage && lastItem
+      ? createCandidateStagingQueueNextCursor({
+          sortKey,
+          sortDirection,
+          lastValue:
+            sortKey === "created_at" ? lastItem.createdAt : lastItem.updatedAt,
+          lastCandidateId: lastItem.candidateId,
+          filtersHash,
+        })
+      : null;
 
   const result = {
     items,
-    nextCursor: null,
+    nextCursor,
+    hasNextPage: Boolean(nextCursor),
+    limit,
+    sortKey,
+    sortDirection,
     appliedStatuses: statuses,
   } satisfies ListDiscoveryCandidateStagingQueueItemsResult;
 

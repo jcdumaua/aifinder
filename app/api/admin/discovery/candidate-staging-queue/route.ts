@@ -28,6 +28,10 @@ export type CandidateStagingQueueApiReadResponse = {
   ok: true;
   items: DiscoveryCandidateStagingQueueItem[];
   nextCursor: string | null;
+  hasNextPage: boolean;
+  limit: number;
+  sortKey: CandidateStagingQueueSortKey;
+  sortDirection: CandidateStagingQueueSortDirection;
   totalCount?: number;
   appliedStatuses: CandidateStagingQueueStatusFilter[];
 };
@@ -51,7 +55,9 @@ type CandidateStagingQueueReadRouteDependencies = {
 const CANDIDATE_QUEUE_READ_ERROR_CODES = new Set<CandidateStagingQueueReadErrorCode>([
   "invalid_status_filter",
   "invalid_limit",
-  "invalid_cursor",
+  "candidate_queue_invalid_cursor",
+  "candidate_queue_cursor_mismatch",
+  "candidate_queue_cursor_version_unsupported",
   "invalid_sort_key",
   "invalid_sort_direction",
   "invalid_uuid_filter",
@@ -64,7 +70,9 @@ const CANDIDATE_QUEUE_READ_ERROR_STATUS: Record<
 > = {
   invalid_status_filter: 400,
   invalid_limit: 400,
-  invalid_cursor: 400,
+  candidate_queue_invalid_cursor: 400,
+  candidate_queue_cursor_mismatch: 400,
+  candidate_queue_cursor_version_unsupported: 400,
   invalid_sort_key: 400,
   invalid_sort_direction: 400,
   invalid_uuid_filter: 400,
@@ -77,7 +85,12 @@ const CANDIDATE_QUEUE_READ_ERROR_MESSAGES: Record<
 > = {
   invalid_status_filter: "Invalid candidate staging queue status filter.",
   invalid_limit: "Invalid candidate staging queue limit.",
-  invalid_cursor: "Invalid candidate staging queue cursor.",
+  candidate_queue_invalid_cursor:
+    "This page token is no longer valid. Return to the first page and try again.",
+  candidate_queue_cursor_mismatch:
+    "This page token no longer matches the selected filters. Return to the first page and try again.",
+  candidate_queue_cursor_version_unsupported:
+    "This page token version is no longer supported. Return to the first page and try again.",
   invalid_sort_key: "Invalid candidate staging queue sort key.",
   invalid_sort_direction: "Invalid candidate staging queue sort direction.",
   invalid_uuid_filter: "Invalid candidate staging queue UUID filter.",

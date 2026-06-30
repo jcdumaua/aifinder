@@ -1,45 +1,26 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
-const require = createRequire(import.meta.url);
-const ts = require("typescript");
+await import("./register-typescript-test-loader.mjs");
 
-const sourcePath = path.resolve(
-  "lib/discovery/discovery-candidate-staging-queue-read-model.ts",
-);
+const sourcePath = "lib/discovery/discovery-candidate-staging-queue-read-model.ts";
 const source = readFileSync(sourcePath, "utf8");
-
-const transpiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ES2022,
-    target: ts.ScriptTarget.ES2022,
-    strict: true,
-  },
-}).outputText;
-
-const tempModulePath = path.join(
-  tmpdir(),
-  `aifinder-phase-14v-read-model-${process.pid}-${Date.now()}.mjs`,
+const moduleUnderTest = await import(
+  "../lib/discovery/discovery-candidate-staging-queue-read-model.ts"
 );
-
-writeFileSync(tempModulePath, transpiled);
-
-let moduleUnderTest;
-try {
-  moduleUnderTest = await import(pathToFileURL(tempModulePath).href);
-} finally {
-  unlinkSync(tempModulePath);
-}
+const cursorModule = await import(
+  "../lib/discovery/discovery-candidate-staging-queue-cursor.ts"
+);
 
 const {
   DISCOVERY_CANDIDATE_STAGING_QUEUE_ACTIVE_STATUSES,
   DISCOVERY_CANDIDATE_STAGING_QUEUE_SAFE_COLUMNS,
   listDiscoveryCandidateStagingQueueItems,
 } = moduleUnderTest;
+const {
+  createCandidateStagingQueueFiltersHash,
+  encodeCandidateStagingQueueCursor,
+} = cursorModule;
 
 const ACTIVE_STATUSES = ["staged", "needs_review", "duplicate_suspected"];
 
@@ -61,7 +42,7 @@ const baseRow = {
   source_url: "https://example.com/",
   source_domain: "example.com",
   source_evidence_kind: "preview_artifact",
-  source_evidence_locator: "phase14v-test",
+  source_evidence_locator: "phase16c-test",
   created_at: "2026-06-29T00:00:00.000Z",
   updated_at: "2026-06-29T00:00:00.000Z",
 };
@@ -75,6 +56,30 @@ const archivedSmokeRow = {
   audit_correlation_id: "b5f334b2-b22a-4144-8655-6da1e34e3961",
 };
 
+const paginatedRows = [
+  {
+    ...baseRow,
+    id: "33333333-3333-4333-8333-333333333333",
+    candidate_name: "Newest Active Tool",
+    created_at: "2026-06-30T00:00:00.000Z",
+    updated_at: "2026-06-30T00:00:00.000Z",
+  },
+  {
+    ...baseRow,
+    id: "22222222-2222-4222-8222-222222222222",
+    candidate_name: "Tie Breaker Active Tool",
+    created_at: "2026-06-29T00:00:00.000Z",
+    updated_at: "2026-06-29T00:00:00.000Z",
+  },
+  {
+    ...baseRow,
+    id: "11111111-1111-4111-8111-111111111111",
+    candidate_name: "Oldest Active Tool",
+    created_at: "2026-06-29T00:00:00.000Z",
+    updated_at: "2026-06-29T00:00:00.000Z",
+  },
+];
+
 class FakeQueryBuilder {
   constructor(rows, recorder) {
     this.rows = rows;
@@ -82,6 +87,7 @@ class FakeQueryBuilder {
     this.statusFilter = null;
     this.eqFilters = [];
     this.limitValue = null;
+    this.cursorFilters = [];
   }
 
   select(columns, options) {
@@ -117,6 +123,9 @@ class FakeQueryBuilder {
 
   or(filter) {
     this.recorder.orCalls.push(filter);
+    if (/^(created_at|updated_at)\.(lt|gt)\./.test(filter)) {
+      this.cursorFilters.push(filter);
+    }
     return this;
   }
 
@@ -149,6 +158,26 @@ class FakeQueryBuilder {
     return Promise.resolve(this.execute()).then(resolve, reject);
   }
 
+  applyCursorFilter(rows, filter) {
+    const match = filter.match(
+      /^(created_at|updated_at)\.(lt|gt)\.([^,]+),and\(\1\.eq\.\3,id\.\2\.([0-9a-f-]+)\)$/i,
+    );
+
+    if (!match) return rows;
+
+    const [, column, operator, lastValue, lastCandidateId] = match;
+
+    return rows.filter((row) => {
+      const value = row[column];
+
+      if (operator === "gt") {
+        return value > lastValue || (value === lastValue && row.id > lastCandidateId);
+      }
+
+      return value < lastValue || (value === lastValue && row.id < lastCandidateId);
+    });
+  }
+
   execute() {
     let rows = [...this.rows];
 
@@ -159,6 +188,24 @@ class FakeQueryBuilder {
     for (const filter of this.eqFilters) {
       rows = rows.filter((row) => row[filter.column] === filter.value);
     }
+
+    for (const filter of this.cursorFilters) {
+      rows = this.applyCursorFilter(rows, filter);
+    }
+
+    rows.sort((first, second) => {
+      for (const { column, options } of this.recorder.orderCalls) {
+        const firstValue = first[column] ?? "";
+        const secondValue = second[column] ?? "";
+
+        if (firstValue === secondValue) continue;
+
+        const comparison = firstValue > secondValue ? 1 : -1;
+        return options.ascending ? comparison : -comparison;
+      }
+
+      return 0;
+    });
 
     if (typeof this.limitValue === "number") {
       rows = rows.slice(0, this.limitValue);
@@ -193,6 +240,34 @@ function createFakeClient(rows = [baseRow, archivedSmokeRow]) {
   };
 
   return { client, recorder };
+}
+
+function defaultFiltersHash(overrides = {}) {
+  return createCandidateStagingQueueFiltersHash({
+    statuses: ACTIVE_STATUSES,
+    search: null,
+    duplicateCheckStatus: null,
+    confidenceBucket: null,
+    discoverySourceId: null,
+    discoveryRunId: null,
+    auditCorrelationId: null,
+    limit: 2,
+    sortKey: "created_at",
+    sortDirection: "desc",
+    ...overrides,
+  });
+}
+
+function createCursor(payloadOverrides = {}) {
+  return encodeCandidateStagingQueueCursor({
+    version: 1,
+    sortKey: "created_at",
+    sortDirection: "desc",
+    lastValue: "2026-06-29T00:00:00.000Z",
+    lastCandidateId: "22222222-2222-4222-8222-222222222222",
+    filtersHash: defaultFiltersHash(),
+    ...payloadOverrides,
+  });
 }
 
 async function expectCode(promiseFactory, expectedCode) {
@@ -234,9 +309,15 @@ test("defaults to active statuses, safe projection, created_at desc, and limit 2
   ]);
   assert.deepEqual(recorder.orderCalls, [
     { column: "created_at", options: { ascending: false } },
+    { column: "id", options: { ascending: false } },
   ]);
-  assert.deepEqual(recorder.limitCalls, [25]);
+  assert.deepEqual(recorder.limitCalls, [26]);
   assert.deepEqual(result.appliedStatuses, ACTIVE_STATUSES);
+  assert.equal(result.hasNextPage, false);
+  assert.equal(result.nextCursor, null);
+  assert.equal(result.limit, 25);
+  assert.equal(result.sortKey, "created_at");
+  assert.equal(result.sortDirection, "desc");
   assert.equal(result.totalCount, 1);
 });
 
@@ -322,14 +403,18 @@ test("validates bounded limits", async () => {
 
   for (const limit of invalidLimits) {
     await expectCode(
-      () => listDiscoveryCandidateStagingQueueItems({ limit }, { client: createFakeClient().client }),
+      () =>
+        listDiscoveryCandidateStagingQueueItems(
+          { limit },
+          { client: createFakeClient().client },
+        ),
       "invalid_limit",
     );
   }
 
   const { recorder, client } = createFakeClient();
   await listDiscoveryCandidateStagingQueueItems({ limit: 50 }, { client });
-  assert.deepEqual(recorder.limitCalls, [50]);
+  assert.deepEqual(recorder.limitCalls, [51]);
 });
 
 test("validates sort key and sort direction allowlists", async () => {
@@ -359,6 +444,7 @@ test("validates sort key and sort direction allowlists", async () => {
 
   assert.deepEqual(recorder.orderCalls, [
     { column: "updated_at", options: { ascending: true } },
+    { column: "id", options: { ascending: true } },
   ]);
 });
 
@@ -420,15 +506,107 @@ test("applies optional duplicate, confidence, and search filters safely", async 
   assert.match(recorder.orCalls[0], /source_domain\.ilike\.%Example  Tool%/);
 });
 
-test("rejects cursor input until cursor pagination is implemented", async () => {
+test("returns next cursor for timestamp first page when an extra row exists", async () => {
+  const { client, recorder } = createFakeClient(paginatedRows);
+
+  const result = await listDiscoveryCandidateStagingQueueItems(
+    { limit: 2 },
+    { client },
+  );
+
+  assert.deepEqual(recorder.limitCalls, [3]);
+  assert.deepEqual(
+    result.items.map((item) => item.candidateName),
+    ["Newest Active Tool", "Tie Breaker Active Tool"],
+  );
+  assert.equal(result.hasNextPage, true);
+  assert.equal(typeof result.nextCursor, "string");
+  assert.equal(result.items.length, 2);
+});
+
+test("uses a valid timestamp cursor to fetch the next page without duplicates", async () => {
+  const { client: firstClient } = createFakeClient(paginatedRows);
+  const firstPage = await listDiscoveryCandidateStagingQueueItems(
+    { limit: 2 },
+    { client: firstClient },
+  );
+
+  const { client: nextClient, recorder } = createFakeClient(paginatedRows);
+  const nextPage = await listDiscoveryCandidateStagingQueueItems(
+    { limit: 2, cursor: firstPage.nextCursor },
+    { client: nextClient },
+  );
+
+  assert.equal(recorder.orCalls.some((filter) => filter.includes("created_at.lt.")), true);
+  assert.deepEqual(
+    nextPage.items.map((item) => item.candidateName),
+    ["Oldest Active Tool"],
+  );
+  assert.equal(nextPage.hasNextPage, false);
+  assert.equal(nextPage.nextCursor, null);
+});
+
+test("rejects malformed and tampered cursors safely", async () => {
   await expectCode(
     () =>
       listDiscoveryCandidateStagingQueueItems(
-        { cursor: "future-cursor" },
-        { client: createFakeClient().client },
+        { limit: 2, cursor: "future-cursor" },
+        { client: createFakeClient(paginatedRows).client },
       ),
-    "invalid_cursor",
+    "candidate_queue_invalid_cursor",
   );
+
+  const token = createCursor();
+  const tamperedToken = `${token.slice(0, -1)}${token.endsWith("A") ? "B" : "A"}`;
+  await expectCode(
+    () =>
+      listDiscoveryCandidateStagingQueueItems(
+        { limit: 2, cursor: tamperedToken },
+        { client: createFakeClient(paginatedRows).client },
+      ),
+    "candidate_queue_invalid_cursor",
+  );
+});
+
+test("rejects cursor mismatches and unsupported cursor versions safely", async () => {
+  await expectCode(
+    () =>
+      listDiscoveryCandidateStagingQueueItems(
+        { limit: 25, cursor: createCursor() },
+        { client: createFakeClient(paginatedRows).client },
+      ),
+    "candidate_queue_cursor_mismatch",
+  );
+
+  const unsupportedVersionCursor = encodeCandidateStagingQueueCursor({
+    version: 999,
+    sortKey: "created_at",
+    sortDirection: "desc",
+    lastValue: "2026-06-29T00:00:00.000Z",
+    lastCandidateId: "22222222-2222-4222-8222-222222222222",
+    filtersHash: defaultFiltersHash(),
+  });
+
+  await expectCode(
+    () =>
+      listDiscoveryCandidateStagingQueueItems(
+        { limit: 2, cursor: unsupportedVersionCursor },
+        { client: createFakeClient(paginatedRows).client },
+      ),
+    "candidate_queue_cursor_version_unsupported",
+  );
+});
+
+test("keeps confidence_bucket first-page sorting cursor-free in this phase", async () => {
+  const { client } = createFakeClient(paginatedRows);
+
+  const result = await listDiscoveryCandidateStagingQueueItems(
+    { limit: 2, sortKey: "confidence_bucket", sortDirection: "asc" },
+    { client },
+  );
+
+  assert.equal(result.hasNextPage, false);
+  assert.equal(result.nextCursor, null);
 });
 
 test("requires an injected read client in the helper-only phase", async () => {
@@ -476,4 +654,4 @@ for (const { name, fn } of tests) {
   console.log(`ok - ${name}`);
 }
 
-console.log(`\nPhase 14V read model helper tests passed: ${tests.length}/${tests.length}`);
+console.log(`\nPhase 16C read model helper tests passed: ${tests.length}/${tests.length}`);

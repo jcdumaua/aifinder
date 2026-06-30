@@ -152,6 +152,10 @@ function createHandler({
         return {
           items: [baseItem],
           nextCursor: null,
+          hasNextPage: false,
+          limit: 25,
+          sortKey: "created_at",
+          sortDirection: "desc",
           appliedStatuses: ["staged", "needs_review", "duplicate_suspected"],
           totalCount: 1,
         };
@@ -244,6 +248,10 @@ test("GET admin request calls listDiscoveryCandidateStagingQueueItems with defau
   ]);
   assert.equal(response.body.totalCount, 1);
   assert.equal(response.body.nextCursor, null);
+  assert.equal(response.body.hasNextPage, false);
+  assert.equal(response.body.limit, 25);
+  assert.equal(response.body.sortKey, "created_at");
+  assert.equal(response.body.sortDirection, "desc");
   assert.equal(response.cacheControl, "no-store");
   assert.equal(response.contentTypeOptions, "nosniff");
   assert.equal(calls.length, 1);
@@ -273,7 +281,7 @@ test("GET optional filters are passed through to the helper", async () => {
 
   const response = await callHandler(
     handler,
-    "?search=Example&discoverySourceId=22222222-2222-4222-8222-222222222222&discoveryRunId=33333333-3333-4333-8333-333333333333&auditCorrelationId=44444444-4444-4444-8444-444444444444&duplicateCheckStatus=unchecked&confidenceBucket=medium&limit=25&sortKey=updated_at&sortDirection=asc",
+    "?search=Example&discoverySourceId=22222222-2222-4222-8222-222222222222&discoveryRunId=33333333-3333-4333-8333-333333333333&auditCorrelationId=44444444-4444-4444-8444-444444444444&duplicateCheckStatus=unchecked&confidenceBucket=medium&limit=25&cursor=safe-page-token&sortKey=updated_at&sortDirection=asc",
   );
 
   assert.equal(response.status, 200);
@@ -285,6 +293,7 @@ test("GET optional filters are passed through to the helper", async () => {
     duplicateCheckStatus: "unchecked",
     confidenceBucket: "medium",
     limit: 25,
+    cursor: "safe-page-token",
     sortKey: "updated_at",
     sortDirection: "asc",
   });
@@ -326,8 +335,22 @@ test("GET invalid UUID maps helper invalid_uuid_filter to 400", async () => {
   await expectRouteError("?discoveryRunId=not-a-uuid", "invalid_uuid_filter", 400);
 });
 
-test("GET cursor maps helper invalid_cursor to 400", async () => {
-  await expectRouteError("?cursor=future-cursor", "invalid_cursor", 400);
+test("GET cursor maps helper cursor errors to 400 safely", async () => {
+  await expectRouteError(
+    "?cursor=future-cursor",
+    "candidate_queue_invalid_cursor",
+    400,
+  );
+  await expectRouteError(
+    "?cursor=mismatch",
+    "candidate_queue_cursor_mismatch",
+    400,
+  );
+  await expectRouteError(
+    "?cursor=unsupported",
+    "candidate_queue_cursor_version_unsupported",
+    400,
+  );
 });
 
 test("GET helper failure maps to 500 candidate_queue_read_failed safely", async () => {

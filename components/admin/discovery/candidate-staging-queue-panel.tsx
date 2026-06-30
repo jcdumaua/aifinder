@@ -26,7 +26,9 @@ const SORT_DIRECTIONS = ["desc", "asc"] as const;
 const SAFE_ERROR_CODES = new Set([
   "invalid_status_filter",
   "invalid_limit",
-  "invalid_cursor",
+  "candidate_queue_invalid_cursor",
+  "candidate_queue_cursor_mismatch",
+  "candidate_queue_cursor_version_unsupported",
   "invalid_sort_key",
   "invalid_sort_direction",
   "invalid_uuid_filter",
@@ -66,6 +68,11 @@ type CandidateQueueSuccessResponse = {
   ok: true;
   items: CandidateStagingQueueItem[];
   appliedStatuses: CandidateStatus[];
+  nextCursor: string | null;
+  hasNextPage: boolean;
+  limit: number;
+  sortKey: QueueSortKey;
+  sortDirection: QueueSortDirection;
   totalCount?: number;
 };
 
@@ -219,6 +226,10 @@ export function CandidateStagingQueuePanel() {
   const [sortKey, setSortKey] = useState<QueueSortKey>("created_at");
   const [sortDirection, setSortDirection] =
     useState<QueueSortDirection>("desc");
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
@@ -258,11 +269,15 @@ export function CandidateStagingQueuePanel() {
     if (trimmedAuditCorrelationId) {
       params.set("auditCorrelationId", trimmedAuditCorrelationId);
     }
+    if (currentCursor) {
+      params.set("cursor", currentCursor);
+    }
 
     return `${CANDIDATE_STAGING_QUEUE_API_PATH}?${params.toString()}`;
   }, [
     auditCorrelationId,
     confidenceBucket,
+    currentCursor,
     discoveryRunId,
     discoverySourceId,
     duplicateCheckStatus,
@@ -300,16 +315,26 @@ export function CandidateStagingQueuePanel() {
         );
         setItems([]);
         setTotalCount(null);
+        setNextCursor(null);
+        setHasNextPage(false);
         return;
       }
 
       setItems(Array.isArray(payload.items) ? payload.items : []);
+      setNextCursor(
+        typeof payload.nextCursor === "string" && payload.nextCursor.length > 0
+          ? payload.nextCursor
+          : null,
+      );
+      setHasNextPage(Boolean(payload.hasNextPage && payload.nextCursor));
       setTotalCount(
         typeof payload.totalCount === "number" ? payload.totalCount : null,
       );
     } catch {
       setItems([]);
       setTotalCount(null);
+      setNextCursor(null);
+      setHasNextPage(false);
       setErrorCode("candidate_queue_read_failed");
     } finally {
       setIsLoading(false);
@@ -324,7 +349,15 @@ export function CandidateStagingQueuePanel() {
     return () => window.clearTimeout(timeoutId);
   }, [loadQueue]);
 
+  function resetPagination() {
+    setCurrentCursor(null);
+    setNextCursor(null);
+    setHasNextPage(false);
+    setPageIndex(0);
+  }
+
   function toggleStatus(status: CandidateStatus, checked: boolean) {
+    resetPagination();
     setSelectedStatuses((current) => {
       if (checked) {
         return current.includes(status) ? current : [...current, status];
@@ -339,6 +372,7 @@ export function CandidateStagingQueuePanel() {
   }
 
   function resetFilters() {
+    resetPagination();
     setSelectedStatuses([...ACTIVE_STATUSES]);
     setSearch("");
     setDuplicateCheckStatus("");
@@ -357,6 +391,25 @@ export function CandidateStagingQueuePanel() {
 
   function openDetailDrawer(candidate: CandidateStagingQueueItem) {
     setSelectedCandidate(candidate);
+  }
+
+  function goToNextPage() {
+    if (isLoading || !hasNextPage || !nextCursor) {
+      return;
+    }
+
+    setCurrentCursor(nextCursor);
+    setNextCursor(null);
+    setHasNextPage(false);
+    setPageIndex((current) => current + 1);
+  }
+
+  function goBackToFirstPage() {
+    if (isLoading || pageIndex === 0) {
+      return;
+    }
+
+    resetPagination();
   }
 
   return (
@@ -390,7 +443,10 @@ export function CandidateStagingQueuePanel() {
           <span className="text-sm font-bold text-slate-900">Search</span>
           <input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              resetPagination();
+              setSearch(event.target.value);
+            }}
             maxLength={120}
             placeholder="Name, URL, or source domain"
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -403,7 +459,10 @@ export function CandidateStagingQueuePanel() {
           </span>
           <input
             value={duplicateCheckStatus}
-            onChange={(event) => setDuplicateCheckStatus(event.target.value)}
+            onChange={(event) => {
+              resetPagination();
+              setDuplicateCheckStatus(event.target.value);
+            }}
             maxLength={120}
             placeholder="Optional status"
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -416,7 +475,10 @@ export function CandidateStagingQueuePanel() {
           </span>
           <input
             value={confidenceBucket}
-            onChange={(event) => setConfidenceBucket(event.target.value)}
+            onChange={(event) => {
+              resetPagination();
+              setConfidenceBucket(event.target.value);
+            }}
             maxLength={120}
             placeholder="Optional bucket"
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -427,9 +489,10 @@ export function CandidateStagingQueuePanel() {
           <span className="text-sm font-bold text-slate-900">Limit</span>
           <select
             value={limit}
-            onChange={(event) =>
-              setLimit(Number(event.target.value) as typeof limit)
-            }
+            onChange={(event) => {
+              resetPagination();
+              setLimit(Number(event.target.value) as typeof limit);
+            }}
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500"
           >
             {LIMIT_OPTIONS.map((option) => (
@@ -473,7 +536,10 @@ export function CandidateStagingQueuePanel() {
           <span className="text-sm font-bold text-slate-900">Sort key</span>
           <select
             value={sortKey}
-            onChange={(event) => setSortKey(event.target.value as QueueSortKey)}
+            onChange={(event) => {
+              resetPagination();
+              setSortKey(event.target.value as QueueSortKey);
+            }}
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500"
           >
             {SORT_KEYS.map((option) => (
@@ -490,9 +556,10 @@ export function CandidateStagingQueuePanel() {
           </span>
           <select
             value={sortDirection}
-            onChange={(event) =>
-              setSortDirection(event.target.value as QueueSortDirection)
-            }
+            onChange={(event) => {
+              resetPagination();
+              setSortDirection(event.target.value as QueueSortDirection);
+            }}
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500"
           >
             {SORT_DIRECTIONS.map((option) => (
@@ -515,7 +582,10 @@ export function CandidateStagingQueuePanel() {
             </span>
             <input
               value={discoverySourceId}
-              onChange={(event) => setDiscoverySourceId(event.target.value)}
+              onChange={(event) => {
+                resetPagination();
+                setDiscoverySourceId(event.target.value);
+              }}
               maxLength={120}
               placeholder="UUID"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -528,7 +598,10 @@ export function CandidateStagingQueuePanel() {
             </span>
             <input
               value={discoveryRunId}
-              onChange={(event) => setDiscoveryRunId(event.target.value)}
+              onChange={(event) => {
+                resetPagination();
+                setDiscoveryRunId(event.target.value);
+              }}
               maxLength={120}
               placeholder="UUID"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -541,7 +614,10 @@ export function CandidateStagingQueuePanel() {
             </span>
             <input
               value={auditCorrelationId}
-              onChange={(event) => setAuditCorrelationId(event.target.value)}
+              onChange={(event) => {
+                resetPagination();
+                setAuditCorrelationId(event.target.value);
+              }}
               maxLength={120}
               placeholder="UUID"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none placeholder:text-slate-400 transition focus:border-cyan-500"
@@ -562,6 +638,25 @@ export function CandidateStagingQueuePanel() {
           Showing {items.length}
           {totalCount !== null ? ` of ${totalCount}` : ""} candidates
         </span>
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
+          Page {pageIndex + 1}
+        </span>
+        <button
+          type="button"
+          onClick={goBackToFirstPage}
+          disabled={isLoading || pageIndex === 0}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Back to first page
+        </button>
+        <button
+          type="button"
+          onClick={goToNextPage}
+          disabled={isLoading || !hasNextPage || !nextCursor}
+          className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2.5 text-sm font-black text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Next page
+        </button>
       </div>
 
       {isLoading ? (

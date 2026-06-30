@@ -126,9 +126,68 @@ assert.equal(
 );
 
 assert.equal(
-  /params\.set\(["']cursor["']|name=["']cursor["']|id=["'].*cursor|htmlFor=["'].*cursor/i.test(panelSource),
+  panelSource.includes("currentCursor"),
+  true,
+  "panel must track the current forward cursor",
+);
+assert.equal(
+  panelSource.includes("nextCursor"),
+  true,
+  "panel must track the next forward cursor",
+);
+assert.equal(
+  panelSource.includes("hasNextPage"),
+  true,
+  "panel must track whether another page exists",
+);
+assert.equal(
+  panelSource.includes("pageIndex"),
+  true,
+  "panel must track a safe page index instead of rendering raw cursors",
+);
+assert.equal(
+  /if\s*\(\s*currentCursor\s*\)[\s\S]*params\.set\(["']cursor["'],\s*currentCursor\)/.test(
+    panelSource,
+  ),
+  true,
+  "panel must include cursor query parameter only when a current cursor exists",
+);
+assert.equal(
+  panelSource.includes("Next page"),
+  true,
+  "panel must include a forward-only Next page control",
+);
+assert.equal(
+  panelSource.includes("Back to first page"),
+  true,
+  "panel must include a safe reset-to-first-page control",
+);
+assert.equal(
+  /value=\{currentCursor\}|name=["']cursor["']|id=["'].*cursor|htmlFor=["'].*cursor|placeholder=["'][^"']*cursor/i.test(
+    panelSource,
+  ),
   false,
-  "panel must not expose cursor query construction or cursor UI in Phase 15C",
+  "panel must not render raw cursor values or expose cursor inputs",
+);
+assert.equal(
+  panelSource.includes("candidate_queue_invalid_cursor"),
+  true,
+  "panel must handle safe invalid cursor error codes",
+);
+assert.equal(
+  panelSource.includes("candidate_queue_cursor_mismatch"),
+  true,
+  "panel must handle safe cursor mismatch error codes",
+);
+assert.equal(
+  panelSource.includes("candidate_queue_cursor_version_unsupported"),
+  true,
+  "panel must handle safe unsupported cursor version error codes",
+);
+assert.equal(
+  panelSource.includes("CandidateStagingQueueDetailDrawer"),
+  true,
+  "panel must preserve detail drawer rendering",
 );
 
 assert.equal(
