@@ -214,6 +214,35 @@ async function findDuplicateToolSlug(
   return data?.[0] || null;
 }
 
+export async function GET(request: Request) {
+  try {
+    const securityError = requireAdminSecurity(request);
+
+    if (securityError) {
+      return securityError;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("tools")
+      .select("id, name, category, description, website, pricing, logo_url, status, deleted_at")
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error("Admin tools load error:", error.message);
+
+      return jsonResponse({ error: "Failed to load live tools." }, 500);
+    }
+
+    return jsonResponse({
+      tools: data || [],
+    });
+  } catch (error) {
+    console.error("Admin tools GET error:", error);
+
+    return jsonResponse({ error: "Failed to load live tools." }, 500);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const securityError = requireAdminSecurity(request);

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "../../lib/supabase";
 import { DiscoveryToolDetail } from "./discovery/discovery-tool-detail";
 import { DiscoveryQueueTable } from "./discovery/discovery-queue-table";
 import { DiscoveryRunsTable } from "./discovery/discovery-runs-table";
@@ -1583,17 +1582,29 @@ export default function AdminDashboardClient({
     setIsLoadingTools(true);
 
     try {
-      const { data, error } = await supabase
-        .from("tools")
-        .select("*")
-        .order("id", { ascending: false });
+      const response = await fetch("/api/admin/tools", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          accept: "application/json",
+        },
+      });
 
-      if (error) {
-        showError("Failed to load live tools.");
+      const result = await response.json().catch(() => null);
+
+      if (handleSecurityFailure(response.status)) {
         return;
       }
 
-      setTools(data || []);
+      if (!response.ok) {
+        showError(result?.error || "Failed to load live tools.");
+        return;
+      }
+
+      setTools(Array.isArray(result?.tools) ? result.tools : []);
+    } catch {
+      showError("Failed to load live tools.");
     } finally {
       setIsLoadingTools(false);
     }
