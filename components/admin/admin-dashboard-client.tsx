@@ -733,9 +733,11 @@ function formatBytes(value: number) {
 export default function AdminDashboardClient({
   view = "dashboard",
   discoveryToolId,
+  children,
 }: {
   view?: AdminView;
   discoveryToolId?: string;
+  children?: ReactNode;
 }) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -4335,6 +4337,8 @@ export default function AdminDashboardClient({
               </form>
             </section>
           )}
+
+          {view === "discovery" && children}
 
           {view === "discovery" && <DiscoverySourcesPanel />}
 
