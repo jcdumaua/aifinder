@@ -44,7 +44,7 @@ ALTER TABLE public.discovery_candidate_tools
   ADD COLUMN IF NOT EXISTS decided_at timestamptz,
   ADD COLUMN IF NOT EXISTS decided_by text,
   ADD COLUMN IF NOT EXISTS duplicate_of_candidate_id uuid,
-  ADD COLUMN IF NOT EXISTS duplicate_of_tool_id uuid;
+  ADD COLUMN IF NOT EXISTS duplicate_of_tool_id bigint;
 
 DO $$
 BEGIN
