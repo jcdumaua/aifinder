@@ -45,19 +45,16 @@ ALTER TABLE public.discovery_candidate_tools
   ADD COLUMN IF NOT EXISTS decided_by text,
   ADD COLUMN IF NOT EXISTS duplicate_of_candidate_id uuid,
   ADD COLUMN IF NOT EXISTS duplicate_of_tool_id bigint;
-
+-- Phase 19K-R2 recovery patch: explicitly replace the existing candidate status CHECK.
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conrelid = 'public.discovery_candidate_tools'::regclass
-      AND conname = 'discovery_candidate_tools_candidate_status_check'
-  ) THEN
-    ALTER TABLE public.discovery_candidate_tools
-      ADD CONSTRAINT discovery_candidate_tools_candidate_status_check
-      CHECK (
-        candidate_status IN (
+  ALTER TABLE public.discovery_candidate_tools
+    DROP CONSTRAINT IF EXISTS discovery_candidate_tools_candidate_status_check;
+
+  ALTER TABLE public.discovery_candidate_tools
+    ADD CONSTRAINT discovery_candidate_tools_candidate_status_check
+    CHECK (
+      candidate_status IN (
         'staged',
         'under_review',
         'approved_for_draft',
@@ -65,10 +62,9 @@ BEGIN
         'archived',
         'duplicate',
         'needs_more_evidence'
-        )
       )
-      NOT VALID;
-  END IF;
+    )
+    NOT VALID;
 END $$;
 
 ALTER TABLE public.discovery_candidate_tools
@@ -161,35 +157,23 @@ END $$;
 
 ALTER TABLE public.discovery_candidate_tools
   VALIDATE CONSTRAINT discovery_candidate_tools_duplicate_of_tool_id_fkey;
-
+-- Phase 19K-R2 recovery patch: explicitly replace the existing audit action CHECK.
 DO $$
-DECLARE
-  existing_action_constraint record;
 BEGIN
-  FOR existing_action_constraint IN
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'public.discovery_audit_events'::regclass
-      AND contype = 'c'
-      AND pg_get_constraintdef(oid) ILIKE '%action%'
-  LOOP
-    EXECUTE format(
-      'ALTER TABLE public.discovery_audit_events DROP CONSTRAINT %I',
-      existing_action_constraint.conname
-    );
-  END LOOP;
+  ALTER TABLE public.discovery_audit_events
+    DROP CONSTRAINT IF EXISTS discovery_audit_events_action_check;
 
   ALTER TABLE public.discovery_audit_events
     ADD CONSTRAINT discovery_audit_events_action_check
     CHECK (
       action IN (
-          'approve',
-          'reject',
-          'flag',
-          'ignore',
-          'batch-action',
-          'mark-duplicate',
-          'candidate_decision'
+        'approve',
+        'reject',
+        'flag',
+        'ignore',
+        'batch-action',
+        'mark-duplicate',
+        'candidate_decision'
       )
     )
     NOT VALID;
