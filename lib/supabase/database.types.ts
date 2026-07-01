@@ -354,11 +354,18 @@ export type Database = {
           cleanup_status: string
           confidence_bucket: string | null
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_action: string | null
+          decision_notes: string | null
+          decision_reason: string | null
           discovery_run_id: string
           discovery_source_id: string | null
           duplicate_blocking: boolean
           duplicate_check_status: string
           duplicate_checked_at: string | null
+          duplicate_of_candidate_id: string | null
+          duplicate_of_tool_id: number | null
           duplicate_signal_types: string[]
           eligible_for_cleanup_at: string | null
           evidence_summary: string | null
@@ -397,11 +404,18 @@ export type Database = {
           cleanup_status?: string
           confidence_bucket?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_action?: string | null
+          decision_notes?: string | null
+          decision_reason?: string | null
           discovery_run_id: string
           discovery_source_id?: string | null
           duplicate_blocking?: boolean
           duplicate_check_status?: string
           duplicate_checked_at?: string | null
+          duplicate_of_candidate_id?: string | null
+          duplicate_of_tool_id?: number | null
           duplicate_signal_types?: string[]
           eligible_for_cleanup_at?: string | null
           evidence_summary?: string | null
@@ -440,11 +454,18 @@ export type Database = {
           cleanup_status?: string
           confidence_bucket?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_action?: string | null
+          decision_notes?: string | null
+          decision_reason?: string | null
           discovery_run_id?: string
           discovery_source_id?: string | null
           duplicate_blocking?: boolean
           duplicate_check_status?: string
           duplicate_checked_at?: string | null
+          duplicate_of_candidate_id?: string | null
+          duplicate_of_tool_id?: number | null
           duplicate_signal_types?: string[]
           eligible_for_cleanup_at?: string | null
           evidence_summary?: string | null
@@ -479,6 +500,27 @@ export type Database = {
             columns: ["discovery_source_id"]
             isOneToOne: false
             referencedRelation: "discovery_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_candidate_tools_duplicate_of_candidate_id_fkey"
+            columns: ["duplicate_of_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "discovery_candidate_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_candidate_tools_duplicate_of_tool_id_fkey"
+            columns: ["duplicate_of_tool_id"]
+            isOneToOne: false
+            referencedRelation: "public_safe_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_candidate_tools_duplicate_of_tool_id_fkey"
+            columns: ["duplicate_of_tool_id"]
+            isOneToOne: false
+            referencedRelation: "tools"
             referencedColumns: ["id"]
           },
           {
