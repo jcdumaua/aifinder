@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CandidateStagingQueueDecisionDialog } from "./candidate-staging-queue-decision-dialog";
 import { CandidateStagingQueueDetailDrawer } from "./candidate-staging-queue-detail-drawer";
 
 const CANDIDATE_STAGING_QUEUE_API_PATH =
@@ -213,6 +214,8 @@ export function CandidateStagingQueuePanel() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateStagingQueueItem | null>(null);
+  const [decisionCandidate, setDecisionCandidate] =
+    useState<CandidateStagingQueueItem | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<CandidateStatus[]>([
     ...ACTIVE_STATUSES,
   ]);
@@ -238,7 +241,7 @@ export function CandidateStagingQueuePanel() {
     [selectedStatuses],
   );
 
-  const buildQueueUrl = useCallback(() => {
+  const buildQueueUrl = useCallback((cursorOverride?: string | null) => {
     const params = new URLSearchParams();
 
     params.set("statuses", selectedStatuses.join(","));
@@ -269,8 +272,10 @@ export function CandidateStagingQueuePanel() {
     if (trimmedAuditCorrelationId) {
       params.set("auditCorrelationId", trimmedAuditCorrelationId);
     }
-    if (currentCursor) {
-      params.set("cursor", currentCursor);
+    const cursor = cursorOverride === undefined ? currentCursor : cursorOverride;
+
+    if (cursor) {
+      params.set("cursor", cursor);
     }
 
     return `${CANDIDATE_STAGING_QUEUE_API_PATH}?${params.toString()}`;
@@ -288,12 +293,12 @@ export function CandidateStagingQueuePanel() {
     sortKey,
   ]);
 
-  const loadQueue = useCallback(async () => {
+  const loadQueue = useCallback(async (useFirstPage = false) => {
     setIsLoading(true);
     setErrorCode(null);
 
     try {
-      const response = await fetch(buildQueueUrl(), {
+      const response = await fetch(buildQueueUrl(useFirstPage ? null : undefined), {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store",
@@ -393,6 +398,24 @@ export function CandidateStagingQueuePanel() {
     setSelectedCandidate(candidate);
   }
 
+  function closeDecisionDialog() {
+    setDecisionCandidate(null);
+  }
+
+  function openDecisionDialog(candidate: CandidateStagingQueueItem) {
+    setDecisionCandidate(candidate);
+  }
+
+  function canReviewCandidateDecision(candidate: CandidateStagingQueueItem) {
+    return candidate.candidateStatus === "staged";
+  }
+
+  async function handleDecisionApplied() {
+    closeDecisionDialog();
+    resetPagination();
+    await loadQueue(true);
+  }
+
   function goToNextPage() {
     if (isLoading || !hasNextPage || !nextCursor) {
       return;
@@ -423,8 +446,8 @@ export function CandidateStagingQueuePanel() {
             Active staged candidates
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Read-only queue view for candidates waiting in the staging pipeline.
-            Queue changes are intentionally unavailable in this phase.
+            Candidate decisions are available only for staged rows and use a
+            guarded review dialog.
           </p>
         </div>
 
@@ -727,6 +750,19 @@ export function CandidateStagingQueuePanel() {
                     >
                       View details
                     </button>
+                    {canReviewCandidateDecision(item) ? (
+                      <button
+                        type="button"
+                        onClick={() => openDecisionDialog(item)}
+                        className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-800 transition hover:bg-cyan-100"
+                      >
+                        Review decision
+                      </button>
+                    ) : (
+                      <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
+                        Decision unavailable for this status.
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -810,6 +846,14 @@ export function CandidateStagingQueuePanel() {
           ))}
         </div>
       )}
+      <CandidateStagingQueueDecisionDialog
+        candidate={decisionCandidate}
+        open={decisionCandidate !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDecisionDialog();
+        }}
+        onDecisionApplied={handleDecisionApplied}
+      />
       <CandidateStagingQueueDetailDrawer
         candidate={selectedCandidate}
         open={selectedCandidate !== null}

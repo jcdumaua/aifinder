@@ -146,11 +146,11 @@ assert.equal(
   "panel must track a safe page index instead of rendering raw cursors",
 );
 assert.equal(
-  /if\s*\(\s*currentCursor\s*\)[\s\S]*params\.set\(["']cursor["'],\s*currentCursor\)/.test(
+  /const\s+cursor\s*=\s*cursorOverride\s*===\s*undefined\s*\?\s*currentCursor\s*:\s*cursorOverride[\s\S]*if\s*\(\s*cursor\s*\)[\s\S]*params\.set\(["']cursor["'],\s*cursor\)/.test(
     panelSource,
   ),
   true,
-  "panel must include cursor query parameter only when a current cursor exists",
+  "panel must include cursor query parameter only when a safe cursor exists",
 );
 assert.equal(
   panelSource.includes("Next page"),
@@ -188,6 +188,26 @@ assert.equal(
   panelSource.includes("CandidateStagingQueueDetailDrawer"),
   true,
   "panel must preserve detail drawer rendering",
+);
+assert.equal(
+  panelSource.includes("CandidateStagingQueueDecisionDialog"),
+  true,
+  "panel must render the candidate decision dialog",
+);
+assert.equal(
+  panelSource.includes("Review decision"),
+  true,
+  "panel must expose the guarded Review decision entry point",
+);
+assert.equal(
+  panelSource.includes("Decision unavailable for this status."),
+  true,
+  "panel must explain non-decisionable statuses",
+);
+assert.equal(
+  panelSource.includes('candidate.candidateStatus === "staged"'),
+  true,
+  "panel must gate active decision controls to staged candidates",
 );
 
 assert.equal(
