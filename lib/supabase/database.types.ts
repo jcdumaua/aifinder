@@ -1116,6 +1116,29 @@ export type Database = {
       }
     }
     Functions: {
+      admin_apply_discovery_candidate_decision: {
+        Args: {
+          p_action: string
+          p_actor_label?: string
+          p_candidate_id: string
+          p_duplicate_of_candidate_id?: string
+          p_duplicate_of_tool_id?: number
+          p_notes?: string
+          p_reason: string
+          p_request_correlation_id?: string
+        }
+        Returns: {
+          candidate_status: string
+          decided_at: string
+          decided_by: string
+          decision_action: string
+          decision_notes: string
+          decision_reason: string
+          duplicate_of_candidate_id: string
+          duplicate_of_tool_id: number
+          id: string
+        }[]
+      }
       aifinder_tool_slug: { Args: { name_value: string }; Returns: string }
       approve_discovered_tool: {
         Args: {
