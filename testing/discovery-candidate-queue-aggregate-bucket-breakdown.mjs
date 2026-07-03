@@ -89,6 +89,40 @@ const FAILURE_CLASSIFICATIONS = new Set([
   "AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT",
 ]);
 
+const DIAGNOSTIC_STAGES = new Set([
+  "script_start",
+  "repo_guard",
+  "env_guard",
+  "build_count_request",
+  "validate_filter_expression",
+  "request_public_tools_before_count",
+  "request_discovered_tools_before_count",
+  "request_candidate_total_count",
+  "request_candidate_status_bucket_count",
+  "request_candidate_cleanup_bucket_count",
+  "request_candidate_decision_action_bucket_count",
+  "request_public_tools_after_count",
+  "request_discovered_tools_after_count",
+  "parse_exact_count",
+  "aggregate_accumulation",
+  "output_guard",
+  "complete",
+]);
+
+const SAFE_FILTER_TOKEN_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+const SAFE_CANDIDATE_FILTER_VALUES = new Map([
+  [
+    "candidate_status",
+    new Set([
+      ...ACTIVE_CANDIDATE_STATUSES,
+      ...Object.values(STATUS_BUCKETS),
+    ]),
+  ],
+  ["cleanup_status", new Set(Object.values(CLEANUP_BUCKETS))],
+  ["decision_action", new Set(Object.values(DECISION_ACTION_BUCKETS))],
+]);
+
 const outputLines = [];
 const aggregateLines = [];
 const logPath = join(
@@ -100,6 +134,14 @@ function emit(line = "") {
   const text = String(line);
   outputLines.push(text);
   console.log(text);
+}
+
+function emitDiagnosticStage(stage) {
+  if (!DIAGNOSTIC_STAGES.has(stage)) {
+    failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNSAFE_OUTPUT");
+  }
+
+  emit(`diagnostic_stage=${stage}`);
 }
 
 function copyToClipboard(text) {
@@ -194,18 +236,59 @@ function assertSafeTable(table) {
   }
 }
 
+function assertSafeFilterToken(token) {
+  return SAFE_FILTER_TOKEN_PATTERN.test(token);
+}
+
+function assertAllowedCandidateFilterValue(column, value) {
+  const allowedValues = SAFE_CANDIDATE_FILTER_VALUES.get(column);
+
+  if (!allowedValues || !allowedValues.has(value)) {
+    failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
+  }
+}
+
 function assertSafeCandidateFilter(filter) {
   if (filter.table !== CANDIDATE_TABLE) {
     return;
   }
 
+  emitDiagnosticStage("validate_filter_expression");
+
   if (!SAFE_CANDIDATE_FILTER_COLUMNS.has(filter.column)) {
     failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
   }
 
-  if (!/^[a-z_]+(?:\.[a-z_]+)?(?:\([a-z_,]+\))?$/.test(filter.expression)) {
-    failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
+  if (filter.expression === "is.null" || filter.expression === "not.is.null") {
+    return;
   }
+
+  const eqMatch = filter.expression.match(/^eq\.([a-z][a-z0-9_]*)$/);
+  if (eqMatch) {
+    assertAllowedCandidateFilterValue(filter.column, eqMatch[1]);
+    return;
+  }
+
+  const inMatch = filter.expression.match(/^in\.\(([a-z][a-z0-9_]*(?:,[a-z][a-z0-9_]*)*)\)$/);
+  if (inMatch) {
+    const values = inMatch[1].split(",");
+
+    if (values.length === 0) {
+      failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
+    }
+
+    for (const value of values) {
+      if (!assertSafeFilterToken(value)) {
+        failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
+      }
+
+      assertAllowedCandidateFilterValue(filter.column, value);
+    }
+
+    return;
+  }
+
+  failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
 }
 
 function eq(column, value) {
@@ -255,7 +338,7 @@ function parseExactCount(contentRange) {
     return null;
   }
 
-  const match = contentRange.match(/\/(\d+)$/);
+  const match = contentRange.match(/^(?:\d+-\d+|\*)\/(\d+)$/);
   if (!match) {
     return null;
   }
@@ -264,12 +347,21 @@ function parseExactCount(contentRange) {
   return Number.isSafeInteger(count) && count >= 0 ? count : null;
 }
 
-async function readOnlyExactCount({ config, table, filters = [] }) {
+async function readOnlyExactCount({
+  config,
+  table,
+  filters = [],
+  diagnosticStage = "request_candidate_total_count",
+}) {
+  emitDiagnosticStage("build_count_request");
+
   const url = buildCountUrl({
     supabaseUrl: config.url,
     table,
     filters,
   });
+
+  emitDiagnosticStage(diagnosticStage);
 
   const response = await fetch(url, {
     method: "HEAD",
@@ -283,6 +375,8 @@ async function readOnlyExactCount({ config, table, filters = [] }) {
   if (!response.ok) {
     failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_QUERY_ERROR");
   }
+
+  emitDiagnosticStage("parse_exact_count");
 
   const count = parseExactCount(response.headers.get("content-range"));
 
@@ -353,32 +447,42 @@ function printAggregateOutput() {
 }
 
 async function runAggregateBreakdown() {
+  emitDiagnosticStage("script_start");
+
   if (process.env[OPT_IN_ENV] !== "1") {
     failLocked("AGGREGATE_BUCKET_BREAKDOWN_SKIPPED_OPT_IN_REQUIRED", 0);
   }
 
+  emitDiagnosticStage("repo_guard");
   assertCleanRepository();
 
   if (typeof fetch !== "function") {
     failLocked("AGGREGATE_BUCKET_BREAKDOWN_BLOCKED_UNEXPECTED_RESULT");
   }
 
+  emitDiagnosticStage("env_guard");
   const config = getSupabaseConfig();
 
-  const countCandidates = (filters = []) =>
+  const countCandidates = (
+    filters = [],
+    diagnosticStage = "request_candidate_total_count",
+  ) =>
     readOnlyExactCount({
       config,
       table: CANDIDATE_TABLE,
       filters,
+      diagnosticStage,
     });
 
   const publicToolsBefore = await readOnlyExactCount({
     config,
     table: PUBLIC_TOOLS_TABLE,
+    diagnosticStage: "request_public_tools_before_count",
   });
   const discoveredToolsBefore = await readOnlyExactCount({
     config,
     table: DISCOVERED_TOOLS_TABLE,
+    diagnosticStage: "request_discovered_tools_before_count",
   });
 
   const totalCandidateCount = await countCandidates();
@@ -387,7 +491,10 @@ async function runAggregateBreakdown() {
 
   const statusCounts = {};
   for (const [label, status] of Object.entries(STATUS_BUCKETS)) {
-    statusCounts[label] = await countCandidates([eq("candidate_status", status)]);
+    statusCounts[label] = await countCandidates(
+      [eq("candidate_status", status)],
+      "request_candidate_status_bucket_count",
+    );
     addAggregateLine(label, statusCounts[label]);
   }
 
@@ -398,7 +505,10 @@ async function runAggregateBreakdown() {
 
   const cleanupCounts = {};
   for (const [label, cleanupStatus] of Object.entries(CLEANUP_BUCKETS)) {
-    cleanupCounts[label] = await countCandidates([eq("cleanup_status", cleanupStatus)]);
+    cleanupCounts[label] = await countCandidates(
+      [eq("cleanup_status", cleanupStatus)],
+      "request_candidate_cleanup_bucket_count",
+    );
     addAggregateLine(label, cleanupCounts[label]);
   }
 
@@ -409,33 +519,46 @@ async function runAggregateBreakdown() {
 
   addAggregateLine(
     "active_non_cleanup_candidate_count",
-    await countCandidates([eq("cleanup_status", "active")]),
+    await countCandidates(
+      [eq("cleanup_status", "active")],
+      "request_candidate_cleanup_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "active_staged_candidate_count",
-    await countCandidates([
-      eq("candidate_status", "staged"),
-      eq("cleanup_status", "active"),
-    ]),
+    await countCandidates(
+      [
+        eq("candidate_status", "staged"),
+        eq("cleanup_status", "active"),
+      ],
+      "request_candidate_status_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "staged_candidate_count",
-    await countCandidates([eq("candidate_status", "staged")]),
+    await countCandidates(
+      [eq("candidate_status", "staged")],
+      "request_candidate_status_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "decision_ready_candidate_count",
-    await countCandidates([
-      inList("candidate_status", ACTIVE_CANDIDATE_STATUSES),
-      eq("cleanup_status", "active"),
-    ]),
+    await countCandidates(
+      [
+        inList("candidate_status", ACTIVE_CANDIDATE_STATUSES),
+        eq("cleanup_status", "active"),
+      ],
+      "request_candidate_status_bucket_count",
+    ),
   );
 
-  const anyDecisionActionSetCount = await countCandidates([
-    notNull("decision_action"),
-  ]);
+  const anyDecisionActionSetCount = await countCandidates(
+    [notNull("decision_action")],
+    "request_candidate_decision_action_bucket_count",
+  );
 
   addAggregateLine(
     "any_decision_action_set_candidate_count",
@@ -444,7 +567,10 @@ async function runAggregateBreakdown() {
 
   const decisionActionCounts = {};
   for (const [label, action] of Object.entries(DECISION_ACTION_BUCKETS)) {
-    decisionActionCounts[label] = await countCandidates([eq("decision_action", action)]);
+    decisionActionCounts[label] = await countCandidates(
+      [eq("decision_action", action)],
+      "request_candidate_decision_action_bucket_count",
+    );
     addAggregateLine(label, decisionActionCounts[label]);
   }
 
@@ -455,32 +581,44 @@ async function runAggregateBreakdown() {
 
   addAggregateLine(
     "needs_more_evidence_any_status_candidate_count",
-    await countCandidates([eq("decision_action", "needs_more_evidence")]),
+    await countCandidates(
+      [eq("decision_action", "needs_more_evidence")],
+      "request_candidate_decision_action_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "needs_more_evidence_active_any_status_candidate_count",
-    await countCandidates([
-      eq("decision_action", "needs_more_evidence"),
-      eq("cleanup_status", "active"),
-    ]),
+    await countCandidates(
+      [
+        eq("decision_action", "needs_more_evidence"),
+        eq("cleanup_status", "active"),
+      ],
+      "request_candidate_decision_action_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "needs_more_evidence_staged_any_cleanup_candidate_count",
-    await countCandidates([
-      eq("decision_action", "needs_more_evidence"),
-      eq("candidate_status", "staged"),
-    ]),
+    await countCandidates(
+      [
+        eq("decision_action", "needs_more_evidence"),
+        eq("candidate_status", "staged"),
+      ],
+      "request_candidate_decision_action_bucket_count",
+    ),
   );
 
   addAggregateLine(
     "needs_more_evidence_active_staged_candidate_count",
-    await countCandidates([
-      eq("decision_action", "needs_more_evidence"),
-      eq("candidate_status", "staged"),
-      eq("cleanup_status", "active"),
-    ]),
+    await countCandidates(
+      [
+        eq("decision_action", "needs_more_evidence"),
+        eq("candidate_status", "staged"),
+        eq("cleanup_status", "active"),
+      ],
+      "request_candidate_decision_action_bucket_count",
+    ),
   );
 
   addAggregateLine("public_tools_count_query_before", publicToolsBefore);
@@ -489,6 +627,7 @@ async function runAggregateBreakdown() {
     await readOnlyExactCount({
       config,
       table: PUBLIC_TOOLS_TABLE,
+      diagnosticStage: "request_public_tools_after_count",
     }),
   );
 
@@ -498,10 +637,14 @@ async function runAggregateBreakdown() {
     await readOnlyExactCount({
       config,
       table: DISCOVERED_TOOLS_TABLE,
+      diagnosticStage: "request_discovered_tools_after_count",
     }),
   );
 
+  emitDiagnosticStage("aggregate_accumulation");
+  emitDiagnosticStage("output_guard");
   printAggregateOutput();
+  emitDiagnosticStage("complete");
   emit(SUCCESS_CLASSIFICATION);
   finalize(0);
 }
