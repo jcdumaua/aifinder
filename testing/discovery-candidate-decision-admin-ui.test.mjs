@@ -29,7 +29,7 @@ for (const marker of [
   "DialogHeader",
   "DialogTitle",
   "Review candidate decision",
-  "Apply a staging decision",
+  "Apply a safe staging classification decision",
   "/api/admin/csrf",
   "/api/admin/discovery/candidate-staging-queue/",
   "x-csrf-token",
@@ -41,11 +41,11 @@ for (const marker of [
   "duplicate",
   "needs_more_evidence",
   "archive",
-  "Approve for draft",
+  "Approve for Draft — Locked",
   "Reject candidate",
   "Mark duplicate",
   "Request more evidence",
-  "Archive candidate",
+  "Archive candidate — Locked",
   "Reason must be 3-200 characters.",
   "Notes must be 1000 characters or fewer.",
   "duplicate_of_candidate_id",
@@ -136,6 +136,92 @@ assert.equal(
   ),
   false,
   "queue panel must not include direct mutation methods",
+);
+
+
+assert.equal(
+  dialogSource.includes(
+    'const LOCKED_CANDIDATE_DECISION_ACTIONS = new Set<CandidateDecisionAction>',
+  ),
+  true,
+  "decision dialog must define locked candidate decision actions",
+);
+
+assert.equal(
+  dialogSource.includes('"approve_for_draft",'),
+  true,
+  "decision dialog must keep approve_for_draft represented only as a locked action",
+);
+
+assert.equal(
+  dialogSource.includes('"archive",'),
+  true,
+  "decision dialog must keep archive represented only as a locked action",
+);
+
+assert.equal(
+  dialogSource.includes(
+    'const DEFAULT_CANDIDATE_DECISION_ACTION: CandidateDecisionAction =',
+  ) && dialogSource.includes('"needs_more_evidence";'),
+  true,
+  "decision dialog must default to needs_more_evidence, not approve_for_draft",
+);
+
+assert.equal(
+  dialogSource.includes(
+    'useState<CandidateDecisionAction>(DEFAULT_CANDIDATE_DECISION_ACTION)',
+  ),
+  true,
+  "decision dialog must use the safe default action constant",
+);
+
+assert.equal(
+  dialogSource.includes('useState<CandidateDecisionAction>("approve_for_draft")'),
+  false,
+  "decision dialog must not default to approve_for_draft",
+);
+
+assert.equal(
+  dialogSource.includes('setAction("approve_for_draft");'),
+  false,
+  "decision dialog must not reset to approve_for_draft",
+);
+
+assert.equal(
+  dialogSource.includes('approve_for_draft: "Approve for Draft — Locked"'),
+  true,
+  "decision dialog must label approve_for_draft as locked",
+);
+
+assert.equal(
+  dialogSource.includes('archive: "Archive candidate — Locked"'),
+  true,
+  "decision dialog must label archive as locked",
+);
+
+assert.equal(
+  dialogSource.includes('disabled={isCandidateDecisionActionLocked(item)}'),
+  true,
+  "decision dialog must disable locked options in the select",
+);
+
+assert.equal(
+  dialogSource.includes('if (isCandidateDecisionActionLocked(action))'),
+  true,
+  "decision dialog must guard locked actions before requests",
+);
+
+assert.equal(
+  dialogSource.indexOf('if (isCandidateDecisionActionLocked(action))') <
+    dialogSource.indexOf('const csrfResponse = await fetch(ADMIN_CSRF_API_PATH'),
+  true,
+  "decision dialog must block locked actions before the CSRF fetch",
+);
+
+assert.equal(
+  dialogSource.includes('setSafeErrorCode("invalid_action");'),
+  true,
+  "decision dialog must fail closed with invalid_action for locked actions",
 );
 
 console.log("Phase 19Y candidate decision admin UI static tests passed.");

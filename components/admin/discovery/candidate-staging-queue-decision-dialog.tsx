@@ -55,6 +55,18 @@ const SAFE_DECISION_ERROR_CODES = new Set([
 type CandidateDecisionAction =
   (typeof DISCOVERY_CANDIDATE_DECISION_ACTIONS)[number];
 
+const LOCKED_CANDIDATE_DECISION_ACTIONS = new Set<CandidateDecisionAction>([
+  "approve_for_draft",
+  "archive",
+]);
+
+const DEFAULT_CANDIDATE_DECISION_ACTION: CandidateDecisionAction =
+  "needs_more_evidence";
+
+function isCandidateDecisionActionLocked(action: CandidateDecisionAction) {
+  return LOCKED_CANDIDATE_DECISION_ACTIONS.has(action);
+}
+
 type SubmitPhase = "idle" | "initializing" | "applying";
 
 type AdminCsrfResponse = {
@@ -90,11 +102,11 @@ export type CandidateStagingQueueDecisionDialogProps = {
 };
 
 const DECISION_ACTION_LABELS: Record<CandidateDecisionAction, string> = {
-  approve_for_draft: "Approve for draft",
+  approve_for_draft: "Approve for Draft — Locked",
   reject: "Reject candidate",
   duplicate: "Mark duplicate",
   needs_more_evidence: "Request more evidence",
-  archive: "Archive candidate",
+  archive: "Archive candidate — Locked",
 };
 
 function formatValue(value: string | null | undefined) {
@@ -135,6 +147,8 @@ function getDecisionErrorMessage(errorCode: string) {
   switch (errorCode) {
     case "forbidden":
       return "Security token missing or expired. Please refresh and try again.";
+    case "invalid_action":
+      return "This decision action is locked and cannot be submitted from this UI.";
     case "invalid_reason":
       return "Decision reason must be 3-200 characters.";
     case "invalid_notes":
@@ -198,7 +212,7 @@ export function CandidateStagingQueueDecisionDialog({
   onDecisionApplied,
 }: CandidateStagingQueueDecisionDialogProps) {
   const [action, setAction] =
-    useState<CandidateDecisionAction>("approve_for_draft");
+    useState<CandidateDecisionAction>(DEFAULT_CANDIDATE_DECISION_ACTION);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [duplicateCandidateId, setDuplicateCandidateId] = useState("");
@@ -221,7 +235,7 @@ export function CandidateStagingQueueDecisionDialog({
     if (open) return;
 
     const timeoutId = window.setTimeout(() => {
-      setAction("approve_for_draft");
+      setAction(DEFAULT_CANDIDATE_DECISION_ACTION);
       setReason("");
       setNotes("");
       setDuplicateCandidateId("");
@@ -246,6 +260,11 @@ export function CandidateStagingQueueDecisionDialog({
 
     setSafeErrorCode(null);
     setSuccessMessage(null);
+
+    if (isCandidateDecisionActionLocked(action)) {
+      setSafeErrorCode("invalid_action");
+      return;
+    }
 
     const validationError = validateDecisionForm({
       action,
@@ -351,8 +370,8 @@ export function CandidateStagingQueueDecisionDialog({
         <DialogHeader>
           <DialogTitle>Review candidate decision</DialogTitle>
           <DialogDescription>
-            Apply a staging decision. Approve for draft does not publish or
-            write to public tools.
+            Apply a safe staging classification decision. Approve for Draft
+            and Archive are locked. Public publishing remains separate.
           </DialogDescription>
         </DialogHeader>
 
@@ -411,11 +430,19 @@ export function CandidateStagingQueueDecisionDialog({
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {DISCOVERY_CANDIDATE_DECISION_ACTIONS.map((item) => (
-                  <option key={item} value={item}>
+                  <option
+                    key={item}
+                    value={item}
+                    disabled={isCandidateDecisionActionLocked(item)}
+                  >
                     {DECISION_ACTION_LABELS[item]}
                   </option>
                 ))}
               </select>
+              <p className="text-xs font-semibold text-slate-600">
+                Approve for Draft and Archive are locked. Public publishing,
+                cleanup, and deletion remain separate future gates.
+              </p>
             </label>
 
             {(action === "reject" || action === "archive") && (
