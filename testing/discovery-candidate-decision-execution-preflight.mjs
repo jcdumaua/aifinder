@@ -66,6 +66,13 @@ function validateIdentifier(label, value) {
   }
 }
 
+function validatePhaseToken(value) {
+  if (!/^(?:Phase)?[0-9]{1,3}[A-Z]{1,3}$/.test(value)) {
+    lock("Phase must be a canonical AiFinder phase token such as 22N or Phase22N.");
+  }
+}
+
+
 function validateStatus(label, value) {
   if (!/^[a-zA-Z][a-zA-Z0-9_:-]{0,79}$/.test(value)) {
     lock(`${label} must be a safe status identifier using letters, numbers, underscore, colon, or dash, starting with a letter.`);
@@ -129,7 +136,7 @@ function main() {
   section("Candidate Target");
   const phase = requireEnv("AIFINDER_CANDIDATE_DECISION_PREFLIGHT_PHASE");
   const candidateId = requireEnv("AIFINDER_CANDIDATE_DECISION_ID");
-  validateIdentifier("Phase", phase);
+  validatePhaseToken(phase);
   validateUuid(candidateId);
   console.log(`Phase: ${phase}`);
   console.log(`Candidate id: ${candidateId}`);
