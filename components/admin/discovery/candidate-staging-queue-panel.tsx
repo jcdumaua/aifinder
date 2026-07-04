@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CandidateStagingQueueDecisionDialog } from "./candidate-staging-queue-decision-dialog";
+import { getCandidateQueueFailClosedPresentation } from "../../../lib/discovery/discovery-candidate-queue-fail-closed-presentation";
+
 import { CandidateStagingQueueDetailDrawer } from "./candidate-staging-queue-detail-drawer";
 
 const CANDIDATE_STAGING_QUEUE_API_PATH =
@@ -177,20 +178,39 @@ function SafeExternalLink({
   );
 }
 
-function StatusBadge({ status }: { status: CandidateStatus }) {
+function StatusBadge({ item }: { item: CandidateStagingQueueItem }) {
+  const presentation = getCandidateQueueFailClosedPresentation({
+    candidate_status: item.candidateStatus,
+  });
+
   const badgeClass =
-    status === "duplicate_suspected"
-      ? "border-violet-200 bg-violet-50 text-violet-700"
-      : status === "needs_review"
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-cyan-200 bg-cyan-50 text-cyan-700";
+    presentation.statusPresentationSeverity === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : presentation.statusPresentationSeverity === "blocked"
+        ? "border-red-200 bg-red-50 text-red-800"
+        : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
-    <span
-      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-bold ${badgeClass}`}
+    <div
+      className="max-w-sm rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700"
+      data-phase="22ao-e-fail-closed-status-presentation"
     >
-      {formatStatusLabel(status)}
-    </span>
+      <span
+        className={`inline-flex w-fit rounded-full border px-2.5 py-1 font-bold ${badgeClass}`}
+        aria-label={`Candidate queue status: ${presentation.statusPresentationLabel}`}
+      >
+        {presentation.statusPresentationLabel}
+      </span>
+      <p className="mt-2 font-semibold text-slate-700">
+        {presentation.statusPresentationHelperText}
+      </p>
+      <p className="mt-2 font-bold text-slate-800" role="note">
+        {presentation.operatorWarningText}
+      </p>
+      <p className="mt-1 text-slate-600">
+        Disabled reason: {formatOptionLabel(presentation.disabledReason)}
+      </p>
+    </div>
   );
 }
 
@@ -213,8 +233,6 @@ export function CandidateStagingQueuePanel() {
   const [items, setItems] = useState<CandidateStagingQueueItem[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] =
-    useState<CandidateStagingQueueItem | null>(null);
-  const [decisionCandidate, setDecisionCandidate] =
     useState<CandidateStagingQueueItem | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<CandidateStatus[]>([
     ...ACTIVE_STATUSES,
@@ -396,24 +414,6 @@ export function CandidateStagingQueuePanel() {
 
   function openDetailDrawer(candidate: CandidateStagingQueueItem) {
     setSelectedCandidate(candidate);
-  }
-
-  function closeDecisionDialog() {
-    setDecisionCandidate(null);
-  }
-
-  function openDecisionDialog(candidate: CandidateStagingQueueItem) {
-    setDecisionCandidate(candidate);
-  }
-
-  function canReviewCandidateDecision(candidate: CandidateStagingQueueItem) {
-    return candidate.candidateStatus === "staged";
-  }
-
-  async function handleDecisionApplied() {
-    closeDecisionDialog();
-    resetPagination();
-    await loadQueue(true);
   }
 
   function goToNextPage() {
@@ -728,7 +728,7 @@ export function CandidateStagingQueuePanel() {
                         {getSafeHostname(item.candidateWebsiteUrl)}
                       </p>
                     </div>
-                    <StatusBadge status={item.candidateStatus} />
+                    <StatusBadge item={item} />
                   </div>
 
                   {item.candidateDescription && (
@@ -750,19 +750,12 @@ export function CandidateStagingQueuePanel() {
                     >
                       View details
                     </button>
-                    {canReviewCandidateDecision(item) ? (
-                      <button
-                        type="button"
-                        onClick={() => openDecisionDialog(item)}
-                        className="inline-flex w-fit rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-800 transition hover:bg-cyan-100"
-                      >
-                        Review decision
-                      </button>
-                    ) : (
-                      <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
-                        Decision unavailable for this status.
-                      </span>
-                    )}
+                    <span
+                      className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600"
+                      aria-label="Candidate decision actions disabled"
+                    >
+                      Decision actions disabled by fail-closed presentation.
+                    </span>
                   </div>
                 </div>
 
@@ -846,14 +839,7 @@ export function CandidateStagingQueuePanel() {
           ))}
         </div>
       )}
-      <CandidateStagingQueueDecisionDialog
-        candidate={decisionCandidate}
-        open={decisionCandidate !== null}
-        onOpenChange={(open) => {
-          if (!open) closeDecisionDialog();
-        }}
-        onDecisionApplied={handleDecisionApplied}
-      />
+
       <CandidateStagingQueueDetailDrawer
         candidate={selectedCandidate}
         open={selectedCandidate !== null}
