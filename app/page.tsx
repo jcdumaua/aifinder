@@ -51,8 +51,9 @@ import {
   type RankedTool,
 } from "../lib/search-relevance";
 
-const FALLBACK_HERO_TITLE = "Ask AiFinder to match you with the right AI tools.";
-const FALLBACK_HERO_SUBTITLE = "Describe what you need. AiFinder helps you search, filter, compare, and bookmark AI tools by use case.";
+const FALLBACK_HERO_TITLE = "Find The Best AI Tools";
+const PHASE_23E_APPROVED_HERO_TITLE = "Find The Best AI Tools";
+const FALLBACK_HERO_SUBTITLE = "Discover, compare, and save the best AI tools for your workflow.";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -674,7 +675,7 @@ export default function Home() {
             </p>
 
             <h1 className="mt-3 max-w-4xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl xl:text-6xl [.theme-light_&]:from-slate-950 [.theme-light_&]:via-cyan-900 [.theme-light_&]:to-slate-700">
-              {heroTitle}
+              {PHASE_23E_APPROVED_HERO_TITLE}
             </h1>
 
             <p className={`mt-4 max-w-2xl text-sm leading-7 sm:text-base ${softText}`}>

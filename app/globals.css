@@ -2186,3 +2186,108 @@ button[type="submit"]:hover {
     @apply font-sans;
   }
 }
+
+/* Phase 23E — Homepage Visual Upgrade Implementation Gate
+   Clean, simple, fast, premium, light-first visual refinement.
+   Additive overrides only; no API, DB, package, search, category, save, or compare behavior changes. */
+
+:root {
+  --phase-23e-surface: #ffffff;
+  --phase-23e-surface-soft: #f8fafc;
+  --phase-23e-border: rgba(148, 163, 184, 0.24);
+  --phase-23e-text: #0f172a;
+  --phase-23e-muted: #475569;
+  --phase-23e-accent: #0891b2;
+  --phase-23e-accent-soft: rgba(8, 145, 178, 0.10);
+  --phase-23e-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+  --phase-23e-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.phase-23e-home,
+.ai-bg {
+  background:
+    radial-gradient(circle at top left, rgba(8, 145, 178, 0.10), transparent 34rem),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 48%, #ffffff 100%) !important;
+  color: var(--phase-23e-text);
+}
+
+.phase-23e-home :where(h1, h2, h3),
+.ai-bg :where(h1, h2, h3) {
+  color: var(--phase-23e-text);
+  letter-spacing: -0.04em;
+}
+
+.phase-23e-home :where(p),
+.ai-bg :where(p) {
+  color: var(--phase-23e-muted);
+}
+
+.phase-23e-home :where(input, select, textarea),
+.ai-bg :where(input, select, textarea) {
+  border-color: var(--phase-23e-border);
+  background-color: rgba(255, 255, 255, 0.92);
+  color: var(--phase-23e-text);
+  box-shadow: var(--phase-23e-shadow-soft);
+}
+
+.phase-23e-home :where(input:focus, select:focus, textarea:focus),
+.ai-bg :where(input:focus, select:focus, textarea:focus) {
+  outline: 2px solid rgba(8, 145, 178, 0.18);
+  outline-offset: 2px;
+}
+
+.phase-23e-home :where(.ai-glass, .ai-holo-card, .ai-border),
+.ai-bg :where(.ai-glass, .ai-holo-card, .ai-border),
+.phase-23e-tool-card {
+  border: 1px solid var(--phase-23e-border) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92)) !important;
+  box-shadow: var(--phase-23e-shadow-soft) !important;
+  backdrop-filter: blur(14px);
+}
+
+.phase-23e-tool-card {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease !important;
+}
+
+.phase-23e-tool-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(8, 145, 178, 0.24) !important;
+  box-shadow: var(--phase-23e-shadow) !important;
+}
+
+.phase-23e-home :where(.ai-neon-text, .ai-glow),
+.ai-bg :where(.ai-neon-text, .ai-glow) {
+  color: var(--phase-23e-text) !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.phase-23e-home :where(.ai-product-hover),
+.ai-bg :where(.ai-product-hover) {
+  box-shadow: var(--phase-23e-shadow-soft);
+}
+
+@media (max-width: 640px) {
+  .phase-23e-home,
+  .ai-bg {
+    background:
+      radial-gradient(circle at top, rgba(8, 145, 178, 0.10), transparent 22rem),
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 56%, #ffffff 100%) !important;
+  }
+
+  .phase-23e-tool-card {
+    border-radius: 1.25rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-23e-tool-card,
+  .phase-23e-tool-card:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+}

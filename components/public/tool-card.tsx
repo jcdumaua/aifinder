@@ -81,7 +81,7 @@ export function PublicToolCard({
     <div className="relative h-full min-w-0">
       <Card
         asChild
-        className={`${useCornerSafeShell ? "ai-corner-safe-panel " : ""}group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
+        className={`${useCornerSafeShell ? "ai-corner-safe-panel " : ""}phase-23e-tool-card group relative isolate h-full min-w-0 cursor-pointer overflow-hidden rounded-3xl border bg-white p-0 shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/50 [.theme-dark_&]:bg-slate-950 ${cardBg} ai-product-hover`}
       >
         <motion.article
           onClick={openTool}
