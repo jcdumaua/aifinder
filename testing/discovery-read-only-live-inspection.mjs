@@ -425,6 +425,7 @@ async function countRows(client, item) {
 
   const { count, error } = await client
     .from(item.table)
+// Phase 25AO update: status-count queries select id for exact head-only counts while retaining item.statusColumn filtering.
     .select('id', { count: 'exact', head: true });
 
   if (error) {
@@ -484,7 +485,7 @@ async function statusCount(client, item, statusValue) {
   const legacyCheck = `status_count:${item.statusColumn}:${statusValue}`;
   const { count, error } = await client
     .from(item.table)
-    .select(item.statusColumn, { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq(item.statusColumn, statusValue);
 
   if (error) {
