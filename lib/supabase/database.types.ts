@@ -751,6 +751,7 @@ export type Database = {
           name: string
           slug: string
           source_type: string
+          status: string | null
           updated_at: string
           url: string | null
         }
@@ -764,6 +765,7 @@ export type Database = {
           name: string
           slug: string
           source_type: string
+          status?: string | null
           updated_at?: string
           url?: string | null
         }
@@ -777,6 +779,7 @@ export type Database = {
           name?: string
           slug?: string
           source_type?: string
+          status?: string | null
           updated_at?: string
           url?: string | null
         }
