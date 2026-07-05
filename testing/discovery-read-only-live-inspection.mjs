@@ -14,8 +14,11 @@
  *   candidate decision, approve_for_draft, public tools writes, or
  *   discovered_tools writes
  *
- * This script is implemented in Phase 25W but must not be executed until a
- * separate approved execution gate.
+ * Phase 25AD update:
+ * - improves safe error serialization for aggregate checks
+ * - keeps the same infrastructure-only allowlist
+ * - does not add row-level status enumeration
+ * - does not broaden inspection scope
  */
 
 import { execFileSync } from 'node:child_process';
@@ -30,6 +33,8 @@ const REQUIRED_ENV_NAMES = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
 ];
+
+const SUMMARY_LIMIT = 240;
 
 const ALLOWED_TABLES = [
   {
@@ -77,7 +82,7 @@ function printSection(title) {
 }
 
 function fail(message) {
-  console.error(`FAILED: ${message}`);
+  console.error(`FAILED: ${sanitizeSummary(message, SUMMARY_LIMIT)}`);
   process.exitCode = 1;
   throw new Error(message);
 }
@@ -87,6 +92,137 @@ function runGit(args) {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
+}
+
+function safeOneLine(value) {
+  if (value === undefined || value === null) {
+    return 'unavailable';
+  }
+
+  let text = '';
+
+  if (typeof value === 'string') {
+    text = value;
+  } else if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    text = String(value);
+  } else {
+    return 'unavailable';
+  }
+
+  const oneLine = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return oneLine.length > 0 ? oneLine : 'unavailable';
+}
+
+function redactKnownSecrets(text) {
+  let sanitized = safeOneLine(text);
+
+  for (const name of [...REQUIRED_ENV_NAMES, REQUIRED_GUARD]) {
+    const value = process.env[name];
+    if (value && value.length >= 8) {
+      sanitized = sanitized.split(value).join(`[redacted:${name}]`);
+    }
+  }
+
+  sanitized = sanitized.replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{16,}\b/gi, 'Bearer [redacted:token]');
+  sanitized = sanitized.replace(/\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g, '[redacted:jwt]');
+  sanitized = sanitized.replace(/\b[A-Za-z0-9_-]{32,}\.[A-Za-z0-9_-]{32,}\.[A-Za-z0-9_-]{32,}\b/g, '[redacted:token]');
+
+  return sanitized;
+}
+
+function sanitizeSummary(value, maxLength = SUMMARY_LIMIT) {
+  const redacted = redactKnownSecrets(value);
+
+  if (redacted === 'unavailable') {
+    return redacted;
+  }
+
+  if (redacted.length <= maxLength) {
+    return redacted;
+  }
+
+  const marker = ' [truncated]';
+  return `${redacted.slice(0, Math.max(0, maxLength - marker.length))}${marker}`;
+}
+
+function safeErrorField(error, fieldName) {
+  if (!error || typeof error !== 'object') {
+    return 'unavailable';
+  }
+
+  return sanitizeSummary(error[fieldName], SUMMARY_LIMIT);
+}
+
+function serializeSupabaseError(error) {
+  return {
+    error_present: Boolean(error),
+    error_name: safeErrorField(error, 'name'),
+    error_code: safeErrorField(error, 'code'),
+    error_message_summary: safeErrorField(error, 'message'),
+    error_details_summary: safeErrorField(error, 'details'),
+    error_hint_summary: safeErrorField(error, 'hint'),
+  };
+}
+
+function noErrorFields() {
+  return {
+    error_present: false,
+    error_name: 'unavailable',
+    error_code: 'unavailable',
+    error_message_summary: 'unavailable',
+    error_details_summary: 'unavailable',
+    error_hint_summary: 'unavailable',
+  };
+}
+
+function failedAggregateResult({ table, check, legacyCheck, statusColumn, statusValue, error }) {
+  const result = {
+    table,
+    check,
+    ok: false,
+    actual_query_succeeded: false,
+    actual_count_if_succeeded: 'unavailable',
+    ...serializeSupabaseError(error),
+  };
+
+  if (legacyCheck) {
+    result.legacy_check = legacyCheck;
+  }
+  if (statusColumn) {
+    result.status_column = statusColumn;
+  }
+  if (statusValue) {
+    result.status_value = statusValue;
+  }
+
+  return result;
+}
+
+function successfulAggregateResult({ table, check, legacyCheck, statusColumn, statusValue, count }) {
+  const result = {
+    table,
+    check,
+    ok: true,
+    actual_query_succeeded: true,
+    actual_count_if_succeeded: count,
+    ...noErrorFields(),
+  };
+
+  if (legacyCheck) {
+    result.legacy_check = legacyCheck;
+  }
+  if (statusColumn) {
+    result.status_column = statusColumn;
+  }
+  if (statusValue) {
+    result.status_value = statusValue;
+  }
+
+  return result;
 }
 
 function parseArgs(argv) {
@@ -262,28 +398,6 @@ function assertQueryTextSafe(text) {
   }
 }
 
-function redactKnownSecrets(text) {
-  let sanitized = String(text);
-
-  for (const name of REQUIRED_ENV_NAMES) {
-    const value = process.env[name];
-    if (value) {
-      sanitized = sanitized.split(value).join(`[redacted:${name}]`);
-    }
-  }
-
-  return sanitized;
-}
-
-function summarizeError(error) {
-  if (!error) {
-    return 'none';
-  }
-
-  const message = typeof error.message === 'string' ? error.message : String(error);
-  return redactKnownSecrets(message).slice(0, 240);
-}
-
 async function loadSupabaseClient() {
   const mod = await import('@supabase/supabase-js');
   const { createClient } = mod;
@@ -314,20 +428,18 @@ async function countRows(client, item) {
     .select('id', { count: 'exact', head: true });
 
   if (error) {
-    return {
+    return failedAggregateResult({
       table: item.label,
       check: 'total_count',
-      ok: false,
-      error_class: summarizeError(error),
-    };
+      error,
+    });
   }
 
-  return {
+  return successfulAggregateResult({
     table: item.label,
     check: 'total_count',
-    ok: true,
     count,
-  };
+  });
 }
 
 async function latestTimestamp(client, item, column) {
@@ -345,7 +457,9 @@ async function latestTimestamp(client, item, column) {
       table: item.label,
       check: `latest_${column}`,
       ok: false,
-      error_class: summarizeError(error),
+      actual_query_succeeded: false,
+      value_present: 'unavailable',
+      ...serializeSupabaseError(error),
     };
   }
 
@@ -353,7 +467,9 @@ async function latestTimestamp(client, item, column) {
     table: item.label,
     check: `latest_${column}`,
     ok: true,
+    actual_query_succeeded: true,
     value_present: Array.isArray(data) && data.length > 0 && Boolean(data[0]?.[column]),
+    ...noErrorFields(),
   };
 }
 
@@ -365,26 +481,31 @@ async function statusCount(client, item, statusValue) {
   const queryText = `${item.label}:status:${item.statusColumn}:${statusValue}`;
   assertQueryTextSafe(queryText);
 
+  const legacyCheck = `status_count:${item.statusColumn}:${statusValue}`;
   const { count, error } = await client
     .from(item.table)
     .select(item.statusColumn, { count: 'exact', head: true })
     .eq(item.statusColumn, statusValue);
 
   if (error) {
-    return {
+    return failedAggregateResult({
       table: item.label,
-      check: `status_count:${item.statusColumn}:${statusValue}`,
-      ok: false,
-      error_class: summarizeError(error),
-    };
+      check: 'status_count',
+      legacyCheck,
+      statusColumn: item.statusColumn,
+      statusValue,
+      error,
+    });
   }
 
-  return {
+  return successfulAggregateResult({
     table: item.label,
-    check: `status_count:${item.statusColumn}:${statusValue}`,
-    ok: true,
+    check: 'status_count',
+    legacyCheck,
+    statusColumn: item.statusColumn,
+    statusValue,
     count,
-  };
+  });
 }
 
 async function runAggregateInspection() {
@@ -416,6 +537,7 @@ async function main() {
   console.log('terminal_workflow=read_only_live_inspection');
   console.log('operational_mode=aggregate_only');
   console.log('probe_scope=infrastructure_only');
+  console.log('error_serialization=structured_safe_summaries');
   console.log('no_mutation=true');
   console.log('no_admin_api_invocation=true');
   console.log('no_local_server_startup=true');
@@ -436,6 +558,7 @@ async function main() {
   console.log('No approve_for_draft.');
   console.log('No public tools writes.');
   console.log('No discovered_tools writes.');
+  console.log('No row-level status enumeration.');
 
   printSection('Repo preflight');
   assertRepoState(args.expectedHead, args.expectedSubject);
@@ -470,5 +593,5 @@ main().catch((error) => {
   if (!process.exitCode) {
     process.exitCode = 1;
   }
-  console.error(`FAILED: ${summarizeError(error)}`);
+  console.error(`FAILED: ${sanitizeSummary(error?.message ?? error, SUMMARY_LIMIT)}`);
 });
