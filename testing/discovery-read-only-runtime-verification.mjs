@@ -7,8 +7,6 @@ import { execFileSync } from "node:child_process";
 const EXPECTED_REPO = "/Users/jamescarlodumaua/aifinder";
 const EXPECTED_ORIGIN = "https://github.com/jcdumaua/aifinder.git";
 const EXPECTED_BRANCH = "main";
-const EXPECTED_HEAD_SHORT = "c7e89af";
-const EXPECTED_HEAD_SUBJECT = "Document Phase 25E runtime verifier planning";
 const SELF_PATH = "testing/discovery-read-only-runtime-verification.mjs";
 
 function printSection(title) {
@@ -34,6 +32,78 @@ function readText(relativePath) {
 
 function exists(relativePath) {
   return fs.existsSync(path.join(EXPECTED_REPO, relativePath));
+}
+
+function parseExpectedArguments(argv) {
+  let expectedHead = null;
+  let expectedSubject = null;
+  let seenExpectedHead = false;
+  let seenExpectedSubject = false;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
+    if (arg === "--expected-head") {
+      if (seenExpectedHead) {
+        fail("Duplicate --expected-head.");
+        continue;
+      }
+
+      seenExpectedHead = true;
+      const value = argv[index + 1];
+
+      if (value === undefined || value.startsWith("--")) {
+        fail("Missing value for --expected-head.");
+        continue;
+      }
+
+      expectedHead = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--expected-subject") {
+      if (seenExpectedSubject) {
+        fail("Duplicate --expected-subject.");
+        continue;
+      }
+
+      seenExpectedSubject = true;
+      const value = argv[index + 1];
+
+      if (value === undefined || value.startsWith("--")) {
+        fail("Missing value for --expected-subject.");
+        continue;
+      }
+
+      expectedSubject = value;
+      index += 1;
+      continue;
+    }
+
+    fail(`Unknown argument: ${arg}.`);
+  }
+
+  if (!seenExpectedHead) {
+    fail("Missing required --expected-head.");
+  }
+
+  if (!seenExpectedSubject) {
+    fail("Missing required --expected-subject.");
+  }
+
+  if (expectedHead !== null && expectedHead.trim() === "") {
+    fail("--expected-head must not be empty or whitespace-only.");
+  }
+
+  if (expectedSubject !== null && expectedSubject.trim() === "") {
+    fail("--expected-subject must not be empty or whitespace-only.");
+  }
+
+  return {
+    expectedHead,
+    expectedSubject,
+  };
 }
 
 function walkFiles(relativeDir, predicate = () => true) {
@@ -99,7 +169,7 @@ function assertNoDiscoveryOptInEnvironment() {
 }
 
 function assertWorkingTreeScope(statusLines) {
-  const allowed = new Set([`?? ${SELF_PATH}`]);
+  const allowed = new Set([`?? ${SELF_PATH}`, ` M ${SELF_PATH}`, `M ${SELF_PATH}`]);
   const unexpected = statusLines.filter((line) => line && !allowed.has(line));
 
   if (unexpected.length > 0) {
@@ -112,19 +182,22 @@ function assertWorkingTreeScope(statusLines) {
   if (statusLines.length === 0) {
     console.log("working_tree_scope=clean");
   } else {
-    console.log("working_tree_scope=only_expected_untracked_verifier");
+    console.log("working_tree_scope=only_expected_verifier_change");
   }
 }
 
 function main() {
-  console.log("=== AiFinder Phase 25F — Discovery Read-Only Runtime Verification ===");
+  console.log("=== AiFinder Discovery Read-Only Runtime Verification ===");
   console.log("");
   console.log("terminal_workflow=repository_local_static_verifier");
   console.log("operational_mode=read_only");
+  console.log("expected_head_input_source=cli_flag");
   console.log("no_live_services=true");
   console.log("no_db_access=true");
   console.log("no_api_invocation=true");
   console.log("no_crawler_extraction_candidate_or_publishing_execution=true");
+
+  const { expectedHead, expectedSubject } = parseExpectedArguments(process.argv.slice(2));
 
   printSection("Boundary");
   console.log("Repository-local static inspection only.");
@@ -169,16 +242,25 @@ function main() {
   }
 
   const headShort = runGit(["rev-parse", "--short", "HEAD"]);
+  const headFull = runGit(["rev-parse", "HEAD"]);
   const headSubject = runGit(["log", "-1", "--pretty=%s"]);
-  console.log(`head_short=${headShort}`);
-  console.log(`head_subject=${headSubject}`);
 
-  if (headShort !== EXPECTED_HEAD_SHORT) {
-    fail(`Expected HEAD ${EXPECTED_HEAD_SHORT}.`);
+  console.log(`expected_head=${expectedHead ?? ""}`);
+  console.log(`expected_head_subject=${expectedSubject ?? ""}`);
+  console.log(`actual_head_short=${headShort}`);
+  console.log(`actual_head_full=${headFull}`);
+  console.log(`actual_head_subject=${headSubject}`);
+
+  if (expectedHead && (expectedHead === headShort || expectedHead === headFull)) {
+    console.log("expected_head_check=passed");
+  } else if (expectedHead) {
+    fail("Expected HEAD did not match current HEAD.");
   }
 
-  if (headSubject !== EXPECTED_HEAD_SUBJECT) {
-    fail(`Expected HEAD subject ${EXPECTED_HEAD_SUBJECT}.`);
+  if (expectedSubject && expectedSubject === headSubject) {
+    console.log("expected_head_subject_check=passed");
+  } else if (expectedSubject) {
+    fail("Expected HEAD subject did not match current HEAD subject.");
   }
 
   printSection("Branch sync");
@@ -304,10 +386,10 @@ function main() {
   console.log("risk_warning=Operational reactivation still requires a separate approved phase.");
 
   printSection("Overall Discovery Engine progress report");
-  console.log("controlled_build_sequence_status=stable; repository-local verifier executed against Phase 25E baseline");
-  console.log("current_phase_reentry_progress=Phase 25F verifier implementation can statically inspect local Discovery Engine structure");
+  console.log("controlled_build_sequence_status=stable; repository-local verifier executed with explicit expected HEAD/subject CLI inputs");
+  console.log("current_phase_reentry_progress=Phase 25M verifier implementation can statically inspect local Discovery Engine structure with configurable expected git metadata");
   console.log("operational_reactivation_progress=not reactivated; no DB/API/crawler/extraction/candidate/public-tools operations executed");
-  console.log("next_recommended_phase=Gemini review of Phase 25F implementation, then local commit gate only after approval");
+  console.log("next_recommended_phase=Gemini review of Phase 25M implementation, then local commit gate only after approval");
 
   if (process.exitCode && process.exitCode !== 0) {
     printSection("Script result");
