@@ -444,14 +444,18 @@ async function countRows(client, item) {
 }
 
 async function latestTimestamp(client, item, column) {
-  const queryText = `${item.label}:latest:${column}`;
+  const queryText = `${item.label}:latest:${column}:presence-only-count`;
   assertQueryTextSafe(queryText);
 
-  const { data, error } = await client
+  // Phase 25CV update:
+  // Use a head-only exact count for non-null timestamp presence instead of a
+  // row-returning ordered lookup. This keeps the inspection aggregate-only,
+  // avoids raw timestamp output, and preserves the latest_* readiness check as
+  // safe value-presence metadata.
+  const { count, error } = await client
     .from(item.table)
-    .select(column)
-    .order(column, { ascending: false, nullsFirst: false })
-    .limit(1);
+    .select(column, { count: 'exact', head: true })
+    .not(column, 'is', null);
 
   if (error) {
     return {
@@ -460,6 +464,7 @@ async function latestTimestamp(client, item, column) {
       ok: false,
       actual_query_succeeded: false,
       value_present: 'unavailable',
+      actual_count_if_succeeded: 'unavailable',
       ...serializeSupabaseError(error),
     };
   }
@@ -469,7 +474,8 @@ async function latestTimestamp(client, item, column) {
     check: `latest_${column}`,
     ok: true,
     actual_query_succeeded: true,
-    value_present: Array.isArray(data) && data.length > 0 && Boolean(data[0]?.[column]),
+    value_present: Number.isInteger(count) && count > 0,
+    actual_count_if_succeeded: 'redacted_presence_only',
     ...noErrorFields(),
   };
 }
