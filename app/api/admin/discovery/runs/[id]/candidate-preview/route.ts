@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdminSession } from "../../../../../../../lib/admin-auth";
+import { getReadOnlyAdminSession } from "../../../../../../../lib/admin-auth-read-only";
 import {
   getCandidateExtractionPreviewForRun,
   type CandidateExtractionPreviewInput,
@@ -9,7 +9,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type AdminSession = ReturnType<typeof verifyAdminSession>;
+type AdminSession = Awaited<ReturnType<typeof getReadOnlyAdminSession>>;
 type AdminSessionActor = NonNullable<AdminSession["actor"]>;
 
 export type CandidatePreviewRouteContext = {
@@ -73,11 +73,11 @@ export function createCandidatePreviewRouteHandler(
     request: Request,
     context: CandidatePreviewRouteContext,
   ) {
-    const verifySession = dependencies.verifySession ?? verifyAdminSession;
+    const verifySession = dependencies.verifySession ?? getReadOnlyAdminSession;
     const getCandidatePreview =
       dependencies.getCandidatePreview ?? getCandidateExtractionPreviewForRun;
 
-    const adminSession = verifySession(request);
+    const adminSession = await verifySession(request);
 
     if (!adminSession.isAdmin || !adminSession.actor) {
       console.warn("Unauthorized candidate preview request.", {
