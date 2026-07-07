@@ -1,0 +1,260 @@
+# Discovery Phase 25EW — Discovery Admin Route Read-Only Dependency Inventory Detailed Output Classification Planning Gate
+
+## Status
+
+Drafted for Gemini review.
+
+## Phase type
+
+Documentation-only detailed output classification planning gate.
+
+## Current binding
+
+```text
+phase=25EW
+base_head=dc9d975ab0db27ddfcf1291ac610469273744ae0
+base_subject=Document Phase 25EV result review
+phase_25ev_doc=docs/discovery-phase-25ev-discovery-admin-route-read-only-dependency-inventory-detailed-output-result-review-gate.md
+harness_path=testing/discovery-admin-route-read-only-dependency-inventory-source-harness.mjs
+source_change_allowed=false
+dependency_inventory_execution_allowed=false
+harness_execution_allowed=false
+runtime_validation_execution_allowed=false
+route_invocation_allowed=false
+module_import_execution_allowed=false
+local_server_startup_allowed=false
+live_db_read_allowed=false
+db_mutation_allowed=false
+candidate_pipeline_allowed=false
+publishing_allowed=false
+operational_reactivation_status=blocked
+```
+
+## Purpose
+
+Phase 25EW plans a future docs-only classification review of the detailed per-route dependency inventory output preserved in Phase 25EV.
+
+This phase does not classify individual routes yet. It only defines the classification method, buckets, evidence requirements, and fail-closed rules for the next docs-only classification review gate.
+
+This phase does not rerun the dependency inventory harness. It does not execute dependency inventory, list routes, import application modules, invoke routes, start a local server, read from a live database, mutate a database, execute any candidate pipeline, publish anything, or reactivate operations.
+
+## Prior result carried forward
+
+```text
+phase_25ev_result_review=approved_committed_and_pushed
+phase_25eu_execution_review_status=APPROVED
+phase_25eu_attempt_1_status=failed_before_harness_execution
+phase_25eu_attempt_2_status=failed_before_harness_execution
+phase_25eu_v3_status=passed
+harness_execution_count=1
+harness_status_code=0
+harness_result=passed
+detailed_output_preservation_status=committed_in_phase_25ev_document
+source_only_inventory_result=passed
+per_route_inventory_output_status=preserved_for_review
+per_route_classification_status=available_for_future_docs_only_classification_review
+runtime_route_validation_status=deferred
+live_db_validation_status=not_started
+candidate_pipeline_execution_status=not_started
+public_publishing_status=not_started
+production_readiness=false
+operational_reactivation_allowed=false
+operational_reactivation_status=blocked
+```
+
+## Classification planning status
+
+```text
+classification_planning_status=defined
+classification_execution_status=not_performed
+per_route_classification_status=planned_not_performed
+classification_source=phase_25ev_preserved_detailed_output_only
+classification_source_doc=docs/discovery-phase-25ev-discovery-admin-route-read-only-dependency-inventory-detailed-output-result-review-gate.md
+classification_requires_no_new_execution=true
+classification_requires_no_source_changes=true
+classification_requires_no_runtime_validation=true
+classification_requires_no_route_invocation=true
+classification_requires_no_live_db_read=true
+classification_requires_no_db_mutation=true
+classification_requires_no_operational_reactivation=true
+```
+
+## Planned classification buckets
+
+The future docs-only classification review should use these buckets:
+
+```text
+bucket_a=read_only_dependency_candidates
+bucket_a_definition=routes_or_dependencies_with_read_only_auth_dependency_signals_and_no_mutation_or_operational_markers_in_preserved_output
+
+bucket_b=mutating_or_operational_dependency_candidates
+bucket_b_definition=routes_or_dependencies_with_mutation_or_operational_markers_in_preserved_output
+
+bucket_c=supabase_or_service_role_dependency_candidates
+bucket_c_definition=routes_or_dependencies_with_supabase_or_service_role_markers_in_preserved_output
+
+bucket_d=manual_follow_up_review_candidates
+bucket_d_definition=routes_or_dependencies_with_ambiguous_or_mixed_signals_that_require_later_manual_source_only_review
+
+bucket_e=out_of_scope_runtime_validation_candidates
+bucket_e_definition=items_that_cannot_be_resolved_from_static_output_and_require_future_runtime_strategy_if_ever_approved
+```
+
+## Planned classification rules
+
+```text
+classification_rule_source_only=true
+classification_rule_use_only_phase_25ev_preserved_output=true
+classification_rule_no_harness_rerun=true
+classification_rule_no_route_listing_execution=true
+classification_rule_no_module_import_execution=true
+classification_rule_no_route_invocation=true
+classification_rule_no_live_db_read=true
+classification_rule_no_db_mutation=true
+classification_rule_no_network_call=true
+classification_rule_no_source_change=true
+classification_rule_no_package_or_lockfile_change=true
+classification_rule_no_schema_migration_type_change=true
+classification_rule_no_operational_reactivation=true
+classification_rule_ambiguous_items_go_to_bucket_d=true
+classification_rule_runtime_only_items_go_to_bucket_e=true
+classification_rule_no_candidate_decision_execution=true
+classification_rule_no_public_publishing=true
+```
+
+## Required future classification output
+
+The future classification review should produce:
+
+```text
+future_classification_output_requires_route_file_count=true
+future_classification_output_requires_bucket_a_list=true
+future_classification_output_requires_bucket_b_list=true
+future_classification_output_requires_bucket_c_list=true
+future_classification_output_requires_bucket_d_list=true
+future_classification_output_requires_bucket_e_list=true
+future_classification_output_requires_bucket_counts=true
+future_classification_output_requires_unclassified_count=true
+future_classification_output_requires_evidence_source_reference=true
+future_classification_output_requires_no_source_change_recommendation=true
+future_classification_output_requires_runtime_validation_status_deferred=true
+future_classification_output_requires_operational_reactivation_status_blocked=true
+```
+
+## Fail-closed requirements
+
+```text
+fail_closed_if_phase_25ev_doc_missing=true
+fail_closed_if_preserved_output_missing=true
+fail_closed_if_output_contract_missing=true
+fail_closed_if_secret_like_output_detected=true
+fail_closed_if_route_file_count_missing=true
+fail_closed_if_candidate_lists_missing=true
+fail_closed_if_git_not_clean=true
+fail_closed_if_branch_not_synced=true
+fail_closed_if_unexpected_files_changed=true
+fail_closed_if_classification_requires_runtime_knowledge=true
+fail_closed_if_classification_requires_source_changes=true
+fail_closed_if_classification_requires_db_or_network=true
+```
+
+## Recommended next phase
+
+Recommended next phase:
+
+```text
+next_phase=Phase 25EX
+next_phase_title=Discovery Admin Route Read-Only Dependency Inventory Detailed Output Classification Review Gate
+next_phase_type=docs_only_classification_review
+source_change_allowed=false
+dependency_inventory_execution_allowed=false
+harness_execution_allowed=false
+runtime_validation_execution_allowed=false
+route_invocation_allowed=false
+module_import_execution_allowed=false
+local_server_startup_allowed=false
+live_db_read_allowed=false
+db_mutation_allowed=false
+operational_reactivation_allowed=false
+```
+
+Phase 25EX should perform the docs-only classification review using only the detailed output preserved in Phase 25EV. It should not change source, rerun the harness, execute dependency inventory, invoke routes, import modules, start a local server, read the live database, mutate the database, or reactivate operations.
+
+## Explicitly blocked in Phase 25EW
+
+```text
+source_changes=false
+dependency_inventory_execution=false
+harness_execution=false
+runtime_validation_execution=false
+route_invocation=false
+route_listing_execution=false
+local_server_startup=false
+live_db_read=false
+admin_api_invocation=false
+public_route_invocation=false
+module_import_execution=false
+browser_automation=false
+network_call=false
+crawler_execution=false
+extraction_execution=false
+llm_execution=false
+candidate_staging=false
+candidate_decision_execution=false
+approve_for_draft=false
+public_publishing=false
+db_mutation=false
+schema_or_migration_change=false
+generated_type_change=false
+package_or_lockfile_change=false
+environment_value_printing=false
+operational_reactivation=false
+```
+
+## Planning result
+
+```text
+planning_result=detailed_output_classification_plan_defined
+classification_execution_status=not_performed
+per_route_classification_status=planned_not_performed
+classification_source=phase_25ev_preserved_detailed_output_only
+source_change_recommendation=none
+runtime_validation_recommendation=none
+public_publishing_recommendation=none
+operational_reactivation_recommendation=none
+runtime_route_validation_status=deferred
+live_db_validation_status=not_started
+candidate_pipeline_execution_status=not_started
+public_publishing_status=not_started
+recommended_next_phase=Phase 25EX Discovery Admin Route Read-Only Dependency Inventory Detailed Output Classification Review Gate
+operational_reactivation_status=blocked
+```
+
+## Boundaries preserved
+
+- Documentation-only detailed output classification planning.
+- No per-route classification performed.
+- No dependency inventory execution.
+- No route listing execution.
+- No harness execution.
+- No source changes.
+- No runtime validation execution.
+- No route invocation.
+- No local server startup.
+- No live database read.
+- No admin API invocation.
+- No public route invocation.
+- No module import execution.
+- No browser automation.
+- No network call.
+- No crawler execution.
+- No extraction execution.
+- No LLM execution.
+- No candidate staging.
+- No candidate decision execution.
+- No approve_for_draft.
+- No public publishing.
+- No DB mutation.
+- No schema, migration, generated type, package, or lockfile changes.
+- No environment values printed.
+
