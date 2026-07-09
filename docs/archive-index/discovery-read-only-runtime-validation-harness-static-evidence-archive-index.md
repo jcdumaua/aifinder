@@ -241,3 +241,130 @@ gemini_confirmed_activity_prevention=true
 gemini_confirmed_recovery_verification=true
 approved_commit_subject=Construct archive index static artifact
 ```
+
+## Phase 25GT documentation-only refinement
+
+```text
+refined_in_phase=25GT
+refinement_status=refined_for_gemini_review
+refinement_scope=static_markdown_artifact_only
+refinement_source=committed_documentation_only
+artifact_modification_scope=documentation_governance_clarity_only
+application_import_allowed=false
+runtime_ownership_allowed=false
+application_behavior_change_allowed=false
+per_route_archive_index_row_construction_now=false
+static_archive_index_entries_materialized_now=0
+per_route_archive_index_rows_materialized_now=0
+manifest_entries_selected_now=0
+manifest_entries_added_now=0
+runtime_validation_now=false
+route_invocation_now=false
+archive_index_creation_now=false
+archive_index_population_now=false
+cleanup_execution_now=false
+row_archive_now=false
+row_deletion_now=false
+row_removal_now=false
+row_exclusion_now=false
+row_status_change_now=false
+evidence_table_mutation_now=false
+harness_file_modified=false
+source_file_reading=false
+source_code_analysis=false
+application_source_inspection=false
+live_database_read=false
+admin_api_invocation=false
+public_route_invocation=false
+browser_automation=false
+network_call=false
+environment_values_printed=false
+operational_reactivation_status=blocked
+```
+
+### Phase 25GT committed phase pointer table
+
+| Phase | Commit | Subject | Artifact relevance |
+| --- | --- | --- | --- |
+| 25GO | `28ed668` | `Construct archive index static artifact` | Constructed the static Markdown archive-index artifact shell and source-chain index. |
+| 25GP | `7df893e` | `Document Phase 25GP archive index artifact construction review` | Reviewed and accepted the static artifact as documentation-only governance. |
+| 25GQ | `38bf57c` | `Document Phase 25GQ archive index artifact refinement plan` | Planned possible future artifact refinement using committed documentation only. |
+| 25GR | `6902f79` | `Document Phase 25GR archive index artifact refinement planning review` | Reviewed the refinement plan and allowed only a future refinement approval gate. |
+| 25GS | `f067317` | `Document Phase 25GS archive index artifact refinement approval` | Approved a later static Markdown artifact refinement phase under strict documentation-only constraints. |
+| 25GT | `pending commit` | `Refine archive index static artifact` | Adds this documentation-only clarity refinement for review; no runtime or operational authority. |
+
+### Phase 25GT non-runtime safety summary
+
+```text
+non_runtime_safety_summary_added=true
+static_markdown_only=true
+not_imported_by_application=true
+not_referenced_by_runtime=true
+not_used_for_route_invocation=true
+not_used_for_manifest_selection=true
+not_used_for_archive_index_population=true
+not_used_for_cleanup_execution=true
+not_used_for_operational_reactivation=true
+runtime_validation_still_blocked=true
+route_invocation_still_blocked=true
+live_database_access_still_blocked=true
+source_inspection_still_blocked=true
+candidate_pipeline_still_blocked=true
+public_publishing_still_blocked=true
+```
+
+### Phase 25GT known limitations
+
+```text
+known_limitations_section_added=true
+limitation_01=no_per_route_archive_index_rows_are_materialized
+limitation_02=no_manifest_entries_are_selected_or_added
+limitation_03=no_runtime_route_evidence_is_generated
+limitation_04=no_live_database_evidence_is_generated
+limitation_05=no_application_source_evidence_is_generated
+limitation_06=no_cleanup_eligibility_is_executed
+limitation_07=no_operational_reactivation_is_authorized
+```
+
+### Phase 25GT reconstruction guidance from committed docs
+
+```text
+reconstruction_guidance_added=true
+reconstruction_source_01=use_committed_phase_25go_artifact_for_static_artifact_baseline
+reconstruction_source_02=use_committed_phase_25gp_review_for_artifact_acceptance_constraints
+reconstruction_source_03=use_committed_phase_25gq_plan_for_refinement_constraints
+reconstruction_source_04=use_committed_phase_25gr_review_for_refinement_plan_acceptance
+reconstruction_source_05=use_committed_phase_25gs_approval_for_refinement_gate_authorization
+reconstruction_must_not_query_live_database=true
+reconstruction_must_not_read_application_source=true
+reconstruction_must_not_select_manifest_entries=true
+reconstruction_must_not_execute_harness=true
+reconstruction_must_not_invoke_routes=true
+reconstruction_must_not_execute_cleanup=true
+```
+
+### Phase 25GT review status
+
+```text
+phase_25gt_gemini_review_status=APPROVED
+phase_25gt_commit_status=handled_by_phase_25gt_commit_push_completion_package
+phase_25gt_push_status=handled_by_phase_25gt_commit_push_completion_package
+recommended_next_phase=Phase 25GU Read-Only Runtime Validation Harness Static Evidence Archive Index Refinement Review Gate
+```
+
+### Phase 25GT Gemini approval summary
+
+```text
+phase_25gt_gemini_decision=APPROVED
+phase_25gt_gemini_confirmed_chain_preservation=true
+phase_25gt_gemini_confirmed_targeted_refinement=true
+phase_25gt_gemini_confirmed_scope_limitation=true
+phase_25gt_gemini_confirmed_no_row_materialization=true
+phase_25gt_gemini_confirmed_no_operational_authority=true
+phase_25gt_gemini_confirmed_harness_integrity=true
+phase_25gt_gemini_confirmed_preservation_of_blocks=true
+phase_25gt_gemini_confirmed_next_phase_25gu=true
+phase_25gt_gemini_confirmed_operational_reactivation_blocked=true
+phase_25gt_gemini_confirmed_activity_prevention=true
+phase_25gt_approved_commit_subject=Refine archive index static artifact
+```
