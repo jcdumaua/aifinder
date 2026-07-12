@@ -788,9 +788,11 @@ Do not paste secrets, environment values, source lines, database rows, response 
 - Why it remains blocked: The committed documentation contains conflicting executed-state signals, so automated precedence is unsafe.
 - Allowed human choices: `PASSED`, `FAILED`, `BLOCKED`, `PENDING`
 - Assistance recommendation: `PENDING`
-- Human selection: `PENDING`
-- Selected authoritative artifact: `PENDING`
-- Non-secret rationale: `PENDING`
+- Human selection: `PASSED`
+- Selected authoritative artifact: `docs/discovery-phase-25me-revision-xlvi-sec-lr-007-exact-reference-clearance-reassessment-result.md`
+- Artifact SHA-256: `4b791536c3045df8f46cc77725c0b07e8d1b6114dd62ded47e7ea1c50e2e2364`
+- Artifact byte count: `5569`
+- Non-secret rationale: `Phase 25ME is the exact control-specific, result-bearing override artifact for SEC-LR-007 and cleared it as a false positive. Under the established precedence rule, it supersedes the broader unresolved Phase 25MK ledger entry for this control only.`
 
 ### `GAP-025` — `SEC-LR-008`
 
