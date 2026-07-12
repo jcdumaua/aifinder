@@ -1,0 +1,90 @@
+# Phase 25NF — Revision LXXIII Derived Phase 25LS Reviewed-Control Ledger
+
+## Result
+
+`PHASE_25LS_DERIVED_REVIEWED_CONTROL_LEDGER_GENERATED_PARTIAL`
+
+## Ledger
+
+| Gap ID | Control ID | Reviewed control state | Evidence disposition | Blocking | Scope |
+| --- | --- | --- | --- | --- | --- |
+| `GAP-024` | `SEC-LR-007` | `PASSED` | `INDEPENDENTLY_ACCEPTED` | `NO` | `SEC-LR-007 only` |
+| `GAP-001` | `DATA-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-001 only` |
+| `GAP-002` | `DATA-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-002 only` |
+| `GAP-003` | `DATA-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-003 only` |
+| `GAP-004` | `DATA-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-004 only` |
+| `GAP-005` | `DATA-LR-005` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-005 only` |
+| `GAP-006` | `DATA-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-006 only` |
+| `GAP-007` | `DATA-LR-007` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-007 only` |
+| `GAP-008` | `DATA-LR-009` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-009 only` |
+| `GAP-009` | `DATA-LR-010` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-010 only` |
+| `GAP-027` | `DATA-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-001 only` |
+| `GAP-028` | `DATA-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-002 only` |
+| `GAP-029` | `DATA-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-003 only` |
+| `GAP-030` | `DATA-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-004 only` |
+| `GAP-031` | `DATA-LR-005` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-005 only` |
+| `GAP-032` | `DATA-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-006 only` |
+| `GAP-033` | `DATA-LR-007` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-007 only` |
+| `GAP-034` | `DATA-LR-010` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-010 only` |
+| `GAP-035` | `DATA-LR-011` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `DATA-LR-011 only` |
+| `GAP-010` | `LEGAL-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-001 only` |
+| `GAP-011` | `LEGAL-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-002 only` |
+| `GAP-012` | `LEGAL-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-003 only` |
+| `GAP-036` | `LEGAL-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-001 only` |
+| `GAP-037` | `LEGAL-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-002 only` |
+| `GAP-038` | `LEGAL-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-003 only` |
+| `GAP-039` | `LEGAL-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-004 only` |
+| `GAP-040` | `LEGAL-LR-005` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-005 only` |
+| `GAP-041` | `LEGAL-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-006 only` |
+| `GAP-042` | `LEGAL-LR-007` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-007 only` |
+| `GAP-043` | `LEGAL-LR-008` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-008 only` |
+| `GAP-044` | `LEGAL-LR-009` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-009 only` |
+| `GAP-045` | `LEGAL-LR-010` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `LEGAL-LR-010 only` |
+| `GAP-013` | `OPS-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-004 only` |
+| `GAP-014` | `OPS-LR-005` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-005 only` |
+| `GAP-015` | `OPS-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-006 only` |
+| `GAP-016` | `OPS-LR-007` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-007 only` |
+| `GAP-017` | `OPS-LR-008` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-008 only` |
+| `GAP-018` | `OPS-LR-010` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-010 only` |
+| `GAP-046` | `OPS-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-001 only` |
+| `GAP-047` | `OPS-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-002 only` |
+| `GAP-048` | `OPS-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-003 only` |
+| `GAP-049` | `OPS-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-004 only` |
+| `GAP-050` | `OPS-LR-005` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-005 only` |
+| `GAP-051` | `OPS-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-006 only` |
+| `GAP-052` | `OPS-LR-007` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-007 only` |
+| `GAP-053` | `OPS-LR-008` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-008 only` |
+| `GAP-054` | `OPS-LR-009` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-009 only` |
+| `GAP-055` | `OPS-LR-010` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-010 only` |
+| `GAP-056` | `OPS-LR-011` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `OPS-LR-011 only` |
+| `GAP-019` | `SEC-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-001 only` |
+| `GAP-020` | `SEC-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-002 only` |
+| `GAP-021` | `SEC-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-003 only` |
+| `GAP-022` | `SEC-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-004 only` |
+| `GAP-023` | `SEC-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-006 only` |
+| `GAP-025` | `SEC-LR-008` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-008 only` |
+| `GAP-026` | `SEC-LR-011` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-011 only` |
+| `GAP-057` | `SEC-LR-001` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-001 only` |
+| `GAP-058` | `SEC-LR-002` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-002 only` |
+| `GAP-059` | `SEC-LR-003` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-003 only` |
+| `GAP-060` | `SEC-LR-004` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-004 only` |
+| `GAP-061` | `SEC-LR-006` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-006 only` |
+| `GAP-062` | `SEC-LR-008` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-008 only` |
+| `GAP-063` | `SEC-LR-011` | `PENDING` | `PENDING_HUMAN_DECISION` | `YES` | `SEC-LR-011 only` |
+
+## Ledger Summary
+
+- Total reviewed-control rows: `63`
+- Independently accepted rows: `1`
+- Pending human-decision rows: `62`
+- Blocking rows: `62`
+- New human decisions generated: `0`
+- Complete canonical control ledger possible: `NO`
+- Phase 25LS historical artifact modified: `NO`
+- Secret value printed: `NO`
+
+## Interpretation Boundary
+
+This is a derived documentation ledger only.
+
+It does not replace Phase 25LS, resolve the 62 pending controls, authorize execution, or establish readiness.
