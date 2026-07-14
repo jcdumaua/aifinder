@@ -91,6 +91,8 @@ main() {
       ;;
   esac
 
+  printf "DIAGNOSTIC_TRACE: PREFLIGHT_VALIDATION_PASSED\n"
+
   raw_file="$(mktemp)"
   normalized_file="$(mktemp)"
   header_file="$(mktemp)"
@@ -117,6 +119,8 @@ main() {
       "$request_url"
   )"
   curl_rc=$?
+
+  printf "DIAGNOSTIC_TRACE: CURL_EXIT=%d HTTP_CODE=%s\n" "$curl_rc" "$http_code"
 
   token=""
   unset AIFINDER_VERCEL_READ_ONLY_TOKEN
@@ -248,7 +252,8 @@ except ValueError as exc:
         exit_status="1",
     )
     sys.exit(1)
-except Exception:
+except Exception as e:
+    sys.stderr.write(f"DIAGNOSTIC_TRACE: PARSER_EXCEPTION={type(e).__name__}\n")
     emit(
         operation_type="VERCEL_LIST_DEPLOYMENTS",
         read_only="true",
