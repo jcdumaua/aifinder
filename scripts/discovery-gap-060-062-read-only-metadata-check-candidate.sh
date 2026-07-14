@@ -76,8 +76,6 @@ main() {
 
   git fetch origin main >/dev/null 2>&1 \
     || fail "FETCH_FAILED" || return 1
-  [[ "$(git rev-parse HEAD)" == "$APPROVED_BASELINE" ]] \
-    || fail "BASELINE_MISMATCH" || return 1
   [[ "$(git rev-parse origin/main)" == "$APPROVED_BASELINE" ]] \
     || fail "REMOTE_BASELINE_MISMATCH" || return 1
   [[ "$(git rev-list --count origin/main..HEAD)" == "0" ]] \

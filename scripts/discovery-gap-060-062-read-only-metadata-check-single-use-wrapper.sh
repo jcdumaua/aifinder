@@ -20,8 +20,8 @@ is_allowlisted_reason() {
         "ORIGIN_MISMATCH") return 0 ;;
         "BRANCH_MISMATCH") return 0 ;;
         "FETCH_FAILED") return 0 ;;
-        "BASELINE_MISMATCH") return 0 ;;
-        "REMOTE_BASELINE_MISMATCH") return 0 ;;
+        "WRAPPER_BASELINE_MISMATCH") return 0 ;;
+        "WRAPPER_REMOTE_BASELINE_MISMATCH") return 0 ;;
         "AHEAD_OF_ORIGIN") return 0 ;;
         "BEHIND_ORIGIN") return 0 ;;
         "WORKING_TREE_NOT_CLEAN") return 0 ;;
@@ -142,6 +142,12 @@ for line in lines:
     # approved-form check above.
     if deny.search(line):
         denylisted += 1
+        continue
+
+    # Admission of provenance markers
+    if line.startswith("DIAGNOSTIC_TRACE: WRAPPER_INVOCATION_PROVENANCE") or \
+       line.startswith("DIAGNOSTIC_TRACE: WRAPPER_STATUS_PROVENANCE"):
+        safe.append(line)
         continue
 
     if line.startswith("STOPPED_FAIL_CLOSED") or line.startswith("stop_reason=") or line.startswith("DIAGNOSTIC_TRACE:"):
@@ -315,8 +321,10 @@ main() {
 
   # EXACTLY ONE candidate invocation. Never retry.
   set +e
+  printf '%s\n' 'DIAGNOSTIC_TRACE: WRAPPER_INVOCATION_PROVENANCE'
   bash "$CANDIDATE_PATH" >"$raw_file" 2>&1
   candidate_rc=$?
+  printf 'DIAGNOSTIC_TRACE: WRAPPER_STATUS_PROVENANCE=%s\n' "$candidate_rc"
   set -e
 
   set +e
