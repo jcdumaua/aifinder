@@ -156,19 +156,109 @@ USAGE
       exit 84
     }
 
-    echo "FAILED: inert generator guard is active."
+    echo "FAILED: Phase 26YI activation-draft guard is active."
+    echo "Secure creation logic is present but remains unreachable."
     echo "No nonce was generated and no authorization record was created."
-    echo "A later Gemini-reviewed phase must replace only this guard with"
-    echo "the approved secure-randomness and exclusive-creation implementation."
     exit 90
 
-    # PHASE 26YH REVIEW BOUNDARY — intentionally unreachable:
-    #
-    # python3 must generate a secure nonce using the standard cryptographic secrets API,
-    # open the target using os.open(path, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW, 0o600),
-    # verify the created file is regular, mode 600, and owned by the current user,
-    # write the exact reviewed non-secret schema, fsync, close, and return only
-    # the record path plus redacted issuance metadata.
+    # PHASE 26YI REVIEW BOUNDARY — intentionally unreachable until separately authorized.
+    local issuance_output=""
+    issuance_output="$(python3 -       "${environment_class}"       "${ttl_seconds}"       "${approved_commit}"       "${sql_sha}"       "${wrapper_sha}"       "${manifest_sha}" <<'PYGEN'
+import os
+import secrets
+import stat
+import sys
+import time
+from pathlib import Path
+
+environment_class = sys.argv[1]
+ttl_seconds = int(sys.argv[2])
+approved_commit = sys.argv[3]
+sql_sha = sys.argv[4]
+wrapper_sha = sys.argv[5]
+manifest_sha = sys.argv[6]
+
+issued = int(time.time())
+expires = issued + ttl_seconds
+nonce = secrets.token_hex(32)
+random_id = secrets.token_hex(8)
+path = Path(f"/tmp/aifinder-phase-26yc-authorization-{issued}-{random_id}.txt")
+
+flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+if hasattr(os, "O_NOFOLLOW"):
+    flags |= os.O_NOFOLLOW
+
+fd = os.open(str(path), flags, 0o600)
+try:
+    st = os.fstat(fd)
+    if not stat.S_ISREG(st.st_mode):
+        raise RuntimeError("authorization target is not a regular file")
+    if stat.S_IMODE(st.st_mode) != 0o600:
+        raise RuntimeError("authorization target mode is not 600")
+    if st.st_uid != os.getuid():
+        raise RuntimeError("authorization target owner mismatch")
+
+    body = (
+        "AUTHORIZATION_VERSION=1\n"
+        f"AUTHORIZATION_NONCE={nonce}\n"
+        f"ENVIRONMENT_CLASS={environment_class}\n"
+        f"APPROVED_COMMIT={approved_commit}\n"
+        f"SQL_SHA256={sql_sha}\n"
+        f"WRAPPER_SHA256={wrapper_sha}\n"
+        f"MANIFEST_SHA256={manifest_sha}\n"
+        "EXPECTED_REPLICA_STATE=PRIMARY\n"
+        "REQUIRE_READ_ONLY_SESSION=YES\n"
+        f"ISSUED_EPOCH={issued}\n"
+        f"EXPIRES_EPOCH={expires}\n"
+        "CONSUMED=NO\n"
+        "EXECUTION_SCOPE=READ_ONLY_CATALOG_PREFLIGHT_ONLY\n"
+        "MIGRATION_EXECUTION_AUTHORIZED=NO\n"
+    ).encode("utf-8")
+
+    view = memoryview(body)
+    while view:
+        written = os.write(fd, view)
+        view = view[written:]
+    os.fsync(fd)
+finally:
+    os.close(fd)
+
+print(f"RECORD_PATH={path}")
+print(f"EXPIRES_EPOCH={expires}")
+print("SCOPE=READ_ONLY_CATALOG_PREFLIGHT_ONLY")
+PYGEN
+    )"
+
+    local record_path expires_epoch scope
+    record_path="$(printf '%s\n' "${issuance_output}" | awk -F= '$1=="RECORD_PATH"{print substr($0,index($0,"=")+1)}')"
+    expires_epoch="$(printf '%s\n' "${issuance_output}" | awk -F= '$1=="EXPIRES_EPOCH"{print substr($0,index($0,"=")+1)}')"
+    scope="$(printf '%s\n' "${issuance_output}" | awk -F= '$1=="SCOPE"{print substr($0,index($0,"=")+1)}')"
+
+    [[ "${record_path}" == /tmp/aifinder-phase-26yc-authorization-*.txt ]] || {
+      echo "FAILED: created record path is outside approved scope"
+      exit 91
+    }
+    [[ -f "${record_path}" ]] || {
+      echo "FAILED: authorization record was not created"
+      exit 92
+    }
+    [[ "$(stat -f '%Lp' "${record_path}")" == "600" ]] || {
+      echo "FAILED: authorization record mode mismatch"
+      exit 93
+    }
+    [[ "${expires_epoch}" =~ ^[0-9]+$ ]] || {
+      echo "FAILED: issuance expiration output malformed"
+      exit 94
+    }
+    [[ "${scope}" == "READ_ONLY_CATALOG_PREFLIGHT_ONLY" ]] || {
+      echo "FAILED: issuance scope mismatch"
+      exit 95
+    }
+
+    echo "PASSED: one-use authorization record created"
+    echo "Record path: ${record_path}"
+    echo "Expiration: within approved TTL"
+    echo "Scope: ${scope}"
   ) 2>&1 | tee "${log}"
 
   local rc=${PIPESTATUS[0]}
