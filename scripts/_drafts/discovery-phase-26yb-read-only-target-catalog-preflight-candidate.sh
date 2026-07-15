@@ -13,7 +13,6 @@ main() {
   local review="/tmp/aifinder-phase-26yc-live-preflight-review-${ts}.md"
 
   local repo="/Users/jamescarlodumaua/aifinder"
-  local approved_commit="b6c0c552844b2537b688f89fdd25892e25a4f4b0"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
@@ -108,19 +107,45 @@ USAGE
       echo "FAILED: authorization descriptor must not use stdin, stdout, or stderr"
       exit 71
     }
-    [[ -r "/dev/fd/${authorization_fd}" ]] || {
-      echo "FAILED: supplied authorization descriptor is not readable"
+    [[ -r "/dev/fd/${authorization_fd}" && -w "/dev/fd/${authorization_fd}" ]] || {
+      echo "FAILED: supplied authorization descriptor is not readable and writable"
       exit 72
+    }
+    [[ -f "/dev/fd/${authorization_fd}" ]] || {
+      echo "FAILED: authorization descriptor does not reference a regular file"
+      exit 73
+    }
+    [[ "$(stat -f '%u' "/dev/fd/${authorization_fd}")" == "$(id -u)" ]] || {
+      echo "FAILED: authorization record owner mismatch"
+      exit 74
     }
     [[ "$(stat -f '%Lp' "/dev/fd/${authorization_fd}")" == "600" ]] || {
       echo "FAILED: authorization record mode is not 600"
-      exit 73
+      exit 75
+    }
+    command -v flock >/dev/null 2>&1 || {
+      echo "FAILED: flock is unavailable"
+      exit 76
+    }
+    flock -n "${authorization_fd}" || {
+      echo "FAILED: authorization record is locked by another process"
+      exit 77
     }
 
-    authorization_payload="$(cat <&"${authorization_fd}")"
+    authorization_payload="$(
+      python3 - "${authorization_fd}" <<'PY_AUTH_READ'
+import os
+import sys
+
+fd = int(sys.argv[1])
+os.lseek(fd, 0, os.SEEK_SET)
+data = os.read(fd, 65536)
+sys.stdout.write(data.decode("utf-8"))
+PY_AUTH_READ
+    )"
     [[ -n "${authorization_payload}" ]] || {
       echo "FAILED: authorization record is empty"
-      exit 74
+      exit 78
     }
 
     case "${environment_class}" in
@@ -144,14 +169,6 @@ USAGE
     [[ "$(git branch --show-current)" == "main" ]] || {
       echo "FAILED: branch is not main"
       exit 76
-    }
-    [[ "$(git rev-parse HEAD)" == "${approved_commit}" ]] || {
-      echo "FAILED: repository baseline mismatch"
-      exit 77
-    }
-    [[ "$(git rev-parse origin/main)" == "${approved_commit}" ]] || {
-      echo "FAILED: origin baseline mismatch"
-      exit 78
     }
     [[ -z "$(git status --porcelain=v1 --untracked-files=all)" ]] || {
       echo "FAILED: working tree is not clean"
@@ -224,12 +241,12 @@ USAGE
       echo "FAILED: manifest file-mode contract mismatch"
       exit 92
     }
-    [[ "${manifest_exit_93_required}" == "YES" ]] || {
-      echo "FAILED: manifest does not require exit 93"
+    [[ "${manifest_exit_93_required}" == "NO" ]] || {
+      echo "FAILED: manifest still requires the inert exit-93 boundary"
       exit 93
     }
-    [[ "${manifest_live_execution_authorized}" == "NO" ]] || {
-      echo "FAILED: manifest unexpectedly authorizes live execution"
+    [[ "${manifest_live_execution_authorized}" == "YES" ]] || {
+      echo "FAILED: manifest does not authorize reviewed live execution"
       exit 94
     }
 
@@ -258,15 +275,15 @@ USAGE
       exit 99
     }
 
-    local record_nonce record_environment record_commit record_sql_sha record_expiry record_consumed
+    local record_nonce record_environment record_sql_sha record_wrapper_sha record_manifest_sha record_expiry record_consumed
     record_nonce="$(printf '%s
 ' "${authorization_payload}" | awk -F= '$1=="AUTHORIZATION_NONCE"{print substr($0,index($0,"=")+1)}')"
     record_environment="$(printf '%s
 ' "${authorization_payload}" | awk -F= '$1=="ENVIRONMENT_CLASS"{print substr($0,index($0,"=")+1)}')"
-    record_commit="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="APPROVED_COMMIT"{print substr($0,index($0,"=")+1)}')"
     record_sql_sha="$(printf '%s
 ' "${authorization_payload}" | awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}')"
+    record_wrapper_sha="$(printf '%s\n' "${authorization_payload}" | awk -F= '$1=="WRAPPER_SHA256"{print substr($0,index($0,"=")+1)}')"
+    record_manifest_sha="$(printf '%s\n' "${authorization_payload}" | awk -F= '$1=="MANIFEST_SHA256"{print substr($0,index($0,"=")+1)}')"
     record_expiry="$(printf '%s
 ' "${authorization_payload}" | awk -F= '$1=="EXPIRES_EPOCH"{print substr($0,index($0,"=")+1)}')"
     record_consumed="$(printf '%s
@@ -280,13 +297,17 @@ USAGE
       echo "FAILED: environment classification mismatch"
       exit 86
     }
-    [[ "${record_commit}" == "${approved_commit}" ]] || {
-      echo "FAILED: authorization commit mismatch"
-      exit 87
-    }
     [[ "${record_sql_sha}" == "${sql_sha}" ]] || {
       echo "FAILED: authorization SQL hash mismatch"
       exit 88
+    }
+    [[ "${record_wrapper_sha}" == "${manifest_wrapper_sha}" ]] || {
+      echo "FAILED: authorization wrapper hash mismatch"
+      exit 89
+    }
+    [[ "${record_manifest_sha}" == "$(shasum -a 256 "${identity_manifest}" | awk '{print $1}')" ]] || {
+      echo "FAILED: authorization manifest hash mismatch"
+      exit 90
     }
     [[ "${record_expiry}" =~ ^[0-9]+$ ]] || {
       echo "FAILED: authorization expiry is malformed"
@@ -301,24 +322,71 @@ USAGE
       exit 91
     }
 
+    python3 - "${authorization_fd}" <<'PY_AUTH_CONSUME'
+import os
+import sys
+
+fd = int(sys.argv[1])
+os.lseek(fd, 0, os.SEEK_SET)
+raw = os.read(fd, 65536).decode("utf-8")
+lines = raw.splitlines()
+matches = [i for i, line in enumerate(lines) if line == "CONSUMED=NO"]
+if len(matches) != 1:
+    raise SystemExit(1)
+lines[matches[0]] = "CONSUMED=YES"
+updated = ("\n".join(lines) + "\n").encode("utf-8")
+os.lseek(fd, 0, os.SEEK_SET)
+os.ftruncate(fd, 0)
+written = 0
+while written < len(updated):
+    written += os.write(fd, updated[written:])
+os.fsync(fd)
+os.lseek(fd, 0, os.SEEK_SET)
+verify = os.read(fd, 65536).decode("utf-8")
+if verify.splitlines().count("CONSUMED=YES") != 1:
+    raise SystemExit(2)
+PY_AUTH_CONSUME
+    [[ $? -eq 0 ]] || {
+      echo "FAILED: authorization consumption transition failed"
+      exit 92
+    }
+
+    authorization_payload=""
+    record_nonce=""
+    record_wrapper_sha=""
+    record_manifest_sha=""
+    record_consumed="YES"
+
     command -v psql >/dev/null 2>&1 || {
       echo "FAILED: PostgreSQL client is unavailable"
       exit 92
     }
 
-    # PHASE 26YD REVIEW BOUNDARY:
-    # A later explicitly authorized execution phase may replace only the exit-93
-    # block above with the reviewed psql invocation below.
-    #
-    # PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight"     #   psql --no-psqlrc --set=ON_ERROR_STOP=1     #     --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;"     #     --command="SET statement_timeout = '10s';"     #     --command="SET lock_timeout = '5s';"     #     --file="${sql_candidate}"
-    #
-    # The service descriptor must be supplied by the caller as a pre-opened FD.
-    # No credential value is accepted through argv, stdout, logs, or repository files.
+    local psql_output
+    psql_output="$(mktemp "/tmp/aifinder-phase-26yc-psql-redacted-${ts}.XXXXXX")"
+    chmod 600 "${psql_output}"
+
+    if ! PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight" \
+      psql --no-psqlrc --set=ON_ERROR_STOP=1 --tuples-only --no-align \
+        --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;" \
+        --command="SET statement_timeout = '10s';" \
+        --command="SET lock_timeout = '5s';" \
+        --file="${sql_candidate}" >"${psql_output}" 2>&1
+    then
+      rm -f "${psql_output}"
+      echo "FAILED: read-only catalog preflight execution failed"
+      exit 100
+    fi
+
+    local output_line_count
+    output_line_count="$(wc -l < "${psql_output}" | tr -d ' ')"
+    rm -f "${psql_output}"
 
     {
       echo "# AiFinder Phase 26YC Live Preflight Review"
       echo
       echo "- Result: execution completed"
+      echo "- Redacted output line count: ${output_line_count}"
       echo "- Environment class: ${environment_class}"
       echo "- Credential values printed: no"
       echo "- Database or role identifiers included: no"

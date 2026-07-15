@@ -12,12 +12,11 @@ main() {
   local log="/tmp/aifinder-${phase}-${task}-${ts}.log"
 
   local repo="/Users/jamescarlodumaua/aifinder"
-  local approved_commit="b67663f4502393912bb523b86e62ae04652f970c"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
-  local wrapper_sha="ec039e1cf5ec2b40261f3f8f730e2eb2d888296ef006d05c23fd0ebe6e02d10f"
-  local wrapper_blob="74a1603939b8efd63099aa4618ab8a88bbfa34cc"
+  local wrapper_sha="4547c7e5dacf96a5028f06b949ea36ed728b235c40c173db9686a863ee6cbb29"
+  local wrapper_blob="8cc72e1db3c47580ef1b0a16f3882f9c5a96b280"
   local manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
-  local manifest_sha="b694cfc0cac6bee37cc47f0d4c4f35b2653016d5676375fe09f5d4aeb9183136"
+  local manifest_sha="e231f082a440454f5b7787049454105951ac7c3ff687bff1c1ec0403fbc23b43"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
 
@@ -93,10 +92,6 @@ USAGE
       echo "FAILED: branch is not main"
       exit 70
     }
-    git merge-base --is-ancestor "${approved_commit}" HEAD || {
-      echo "FAILED: approved baseline is not an ancestor of HEAD"
-      exit 71
-    }
     [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || {
       echo "FAILED: local HEAD is not synchronized with origin/main"
       exit 72
@@ -158,7 +153,7 @@ USAGE
 
     # PHASE 26YI REVIEW BOUNDARY — intentionally unreachable until separately authorized.
     local issuance_output=""
-    issuance_output="$(python3 -       "${environment_class}"       "${ttl_seconds}"       "${approved_commit}"       "${sql_sha}"       "${wrapper_sha}"       "${manifest_sha}" <<'PYGEN'
+    issuance_output="$(python3 - "${environment_class}"       "${ttl_seconds}"        "${sql_sha}"       "${wrapper_sha}"       "${manifest_sha}" <<'PYGEN'
 import os
 import secrets
 import stat
@@ -168,11 +163,9 @@ from pathlib import Path
 
 environment_class = sys.argv[1]
 ttl_seconds = int(sys.argv[2])
-approved_commit = sys.argv[3]
-sql_sha = sys.argv[4]
-wrapper_sha = sys.argv[5]
-manifest_sha = sys.argv[6]
-
+sql_sha = sys.argv[3]
+wrapper_sha = sys.argv[4]
+manifest_sha = sys.argv[5]
 issued = int(time.time())
 expires = issued + ttl_seconds
 nonce = secrets.token_hex(32)
@@ -197,7 +190,6 @@ try:
         "AUTHORIZATION_VERSION=1\n"
         f"AUTHORIZATION_NONCE={nonce}\n"
         f"ENVIRONMENT_CLASS={environment_class}\n"
-        f"APPROVED_COMMIT={approved_commit}\n"
         f"SQL_SHA256={sql_sha}\n"
         f"WRAPPER_SHA256={wrapper_sha}\n"
         f"MANIFEST_SHA256={manifest_sha}\n"
