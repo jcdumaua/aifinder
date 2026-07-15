@@ -130,13 +130,17 @@ USAGE
       exit 80
     }
 
-    grep -Fq 'exit 93' "${wrapper}" || {
-      echo "FAILED: wrapper exit 93 guard is missing"
+    ! grep -Eq '^[[:space:]]*exit[[:space:]]+93([[:space:]]|$)' "${wrapper}" || {
+      echo "FAILED: wrapper still contains an active exit-93 stop"
       exit 81
     }
-    grep -Fq 'LIVE_EXECUTION_AUTHORIZED=NO' "${manifest}" || {
-      echo "FAILED: manifest unexpectedly authorizes live execution"
+    grep -Fq 'WRAPPER_EXIT_93_REQUIRED=NO' "${manifest}" || {
+      echo "FAILED: manifest still requires the inert exit-93 boundary"
       exit 82
+    }
+    grep -Fq 'LIVE_EXECUTION_AUTHORIZED=YES' "${manifest}" || {
+      echo "FAILED: manifest does not authorize reviewed live execution"
+      exit 83
     }
 
     local conflicting_record=""
