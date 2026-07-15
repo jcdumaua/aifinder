@@ -123,240 +123,134 @@ USAGE
       echo "FAILED: authorization record mode is not 600"
       exit 75
     }
-    command -v flock >/dev/null 2>&1 || {
-      echo "FAILED: flock is unavailable"
+    command -v python3 >/dev/null 2>&1 || {
+      echo "FAILED: Python 3 is unavailable"
       exit 76
     }
-    flock -n "${authorization_fd}" || {
-      echo "FAILED: authorization record is locked by another process"
-      exit 77
-    }
 
-    authorization_payload="$(
-      python3 - "${authorization_fd}" <<'PY_AUTH_READ'
+    python3 - \
+      "${authorization_fd}" \
+      "${environment_class}" \
+      "${sql_sha}" \
+      "${manifest_wrapper_sha}" \
+      "$(shasum -a 256 "${identity_manifest}" | awk '{print $1}')" <<'PY_AUTH_TRANSACTION'
+import fcntl
 import os
+import re
 import sys
+import time
 
 fd = int(sys.argv[1])
+expected_environment = sys.argv[2]
+expected_sql_sha = sys.argv[3]
+expected_wrapper_sha = sys.argv[4]
+expected_manifest_sha = sys.argv[5]
+
+try:
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    raise SystemExit(77)
+
 os.lseek(fd, 0, os.SEEK_SET)
-data = os.read(fd, 65536)
-sys.stdout.write(data.decode("utf-8"))
-PY_AUTH_READ
-    )"
-    [[ -n "${authorization_payload}" ]] || {
-      echo "FAILED: authorization record is empty"
-      exit 78
-    }
+raw_bytes = os.read(fd, 65536)
+try:
+    raw = raw_bytes.decode("utf-8")
+except UnicodeDecodeError:
+    raise SystemExit(78)
 
-    case "${environment_class}" in
-      local|preview|staging|production) ;;
-      *)
-        echo "FAILED: environment class is not approved"
-        exit 73
-        ;;
-    esac
-
-    [[ -d "${repo}/.git" ]] || {
-      echo "FAILED: expected repository is missing"
-      exit 74
-    }
-    cd "${repo}"
-
-    [[ "$(git rev-parse --show-toplevel)" == "${repo}" ]] || {
-      echo "FAILED: repository scope mismatch"
-      exit 75
-    }
-    [[ "$(git branch --show-current)" == "main" ]] || {
-      echo "FAILED: branch is not main"
-      exit 76
-    }
-    [[ -z "$(git status --porcelain=v1 --untracked-files=all)" ]] || {
-      echo "FAILED: working tree is not clean"
-      exit 79
-    }
-
-    [[ -f "${sql_candidate}" ]] || {
-      echo "FAILED: SQL candidate is missing"
-      exit 80
-    }
-    [[ "$(shasum -a 256 "${sql_candidate}" | awk '{print $1}')" == "${sql_sha}" ]] || {
-      echo "FAILED: SQL candidate SHA-256 mismatch"
-      exit 81
-    }
-    [[ "$(stat -f '%Lp' "${sql_candidate}")" == "644" ]] || {
-      echo "FAILED: SQL candidate mode mismatch"
-      exit 82
-    }
-
-    [[ -f "${identity_manifest}" ]] || {
-      echo "FAILED: detached identity manifest is missing"
-      exit 83
-    }
-    [[ "$(stat -f '%Lp' "${identity_manifest}")" == "644" ]] || {
-      echo "FAILED: detached identity manifest mode mismatch"
-      exit 84
-    }
-    git ls-files --error-unmatch "${identity_manifest}" >/dev/null 2>&1 || {
-      echo "FAILED: detached identity manifest is not committed"
-      exit 85
-    }
-    [[ -z "$(git diff -- "${identity_manifest}")" ]] || {
-      echo "FAILED: detached identity manifest has local modifications"
-      exit 86
-    }
-
-    manifest_version="$(awk -F= '$1=="MANIFEST_VERSION"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_baseline_commit="$(awk -F= '$1=="APPROVED_BASELINE_COMMIT"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_wrapper_path="$(awk -F= '$1=="WRAPPER_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_wrapper_sha="$(awk -F= '$1=="WRAPPER_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_wrapper_blob="$(awk -F= '$1=="WRAPPER_GIT_BLOB"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_wrapper_mode="$(awk -F= '$1=="WRAPPER_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_sql_path="$(awk -F= '$1=="SQL_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_sql_sha="$(awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_sql_mode="$(awk -F= '$1=="SQL_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_exit_93_required="$(awk -F= '$1=="WRAPPER_EXIT_93_REQUIRED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-    manifest_live_execution_authorized="$(awk -F= '$1=="LIVE_EXECUTION_AUTHORIZED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
-
-    [[ "${manifest_version}" == "1" ]] || {
-      echo "FAILED: detached identity manifest version mismatch"
-      exit 87
-    }
-    [[ "${manifest_baseline_commit}" =~ ^[0-9a-f]{40}$ ]] || {
-      echo "FAILED: manifest baseline commit is malformed"
-      exit 88
-    }
-    git merge-base --is-ancestor "${manifest_baseline_commit}" HEAD || {
-      echo "FAILED: manifest baseline commit is not an ancestor of HEAD"
-      exit 89
-    }
-    [[ "${manifest_wrapper_path}" == "${wrapper}" ]] || {
-      echo "FAILED: manifest wrapper path mismatch"
-      exit 90
-    }
-    [[ "${manifest_sql_path}" == "${sql_candidate}" ]] || {
-      echo "FAILED: manifest SQL path mismatch"
-      exit 91
-    }
-    [[ "${manifest_wrapper_mode}" == "644" && "${manifest_sql_mode}" == "644" ]] || {
-      echo "FAILED: manifest file-mode contract mismatch"
-      exit 92
-    }
-    [[ "${manifest_exit_93_required}" == "NO" ]] || {
-      echo "FAILED: manifest still requires the inert exit-93 boundary"
-      exit 93
-    }
-    [[ "${manifest_live_execution_authorized}" == "YES" ]] || {
-      echo "FAILED: manifest does not authorize reviewed live execution"
-      exit 94
-    }
-
-    local wrapper_actual_sha wrapper_actual_blob
-    wrapper_actual_sha="$(shasum -a 256 "$0" | awk '{print $1}')"
-    wrapper_actual_blob="$(git hash-object "$0")"
-
-    [[ "${wrapper_actual_sha}" == "${manifest_wrapper_sha}" ]] || {
-      echo "FAILED: wrapper SHA-256 mismatch"
-      exit 95
-    }
-    [[ "${wrapper_actual_blob}" == "${manifest_wrapper_blob}" ]] || {
-      echo "FAILED: wrapper Git blob mismatch"
-      exit 96
-    }
-    [[ "$(stat -f '%Lp' "$0")" == "${manifest_wrapper_mode}" ]] || {
-      echo "FAILED: wrapper mode mismatch"
-      exit 97
-    }
-    [[ "$(shasum -a 256 "${sql_candidate}" | awk '{print $1}')" == "${manifest_sql_sha}" ]] || {
-      echo "FAILED: SQL candidate SHA-256 mismatch against manifest"
-      exit 98
-    }
-    [[ "$(stat -f '%Lp' "${sql_candidate}")" == "${manifest_sql_mode}" ]] || {
-      echo "FAILED: SQL candidate mode mismatch against manifest"
-      exit 99
-    }
-
-    local record_nonce record_environment record_sql_sha record_wrapper_sha record_manifest_sha record_expiry record_consumed
-    record_nonce="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="AUTHORIZATION_NONCE"{print substr($0,index($0,"=")+1)}')"
-    record_environment="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="ENVIRONMENT_CLASS"{print substr($0,index($0,"=")+1)}')"
-    record_sql_sha="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}')"
-    record_wrapper_sha="$(printf '%s\n' "${authorization_payload}" | awk -F= '$1=="WRAPPER_SHA256"{print substr($0,index($0,"=")+1)}')"
-    record_manifest_sha="$(printf '%s\n' "${authorization_payload}" | awk -F= '$1=="MANIFEST_SHA256"{print substr($0,index($0,"=")+1)}')"
-    record_expiry="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="EXPIRES_EPOCH"{print substr($0,index($0,"=")+1)}')"
-    record_consumed="$(printf '%s
-' "${authorization_payload}" | awk -F= '$1=="CONSUMED"{print substr($0,index($0,"=")+1)}')"
-
-    [[ "${record_nonce}" =~ ^[0-9A-Za-z_-]{32,}$ ]] || {
-      echo "FAILED: authorization nonce is missing or malformed"
-      exit 85
-    }
-    [[ "${record_environment}" == "${environment_class}" ]] || {
-      echo "FAILED: environment classification mismatch"
-      exit 86
-    }
-    [[ "${record_sql_sha}" == "${sql_sha}" ]] || {
-      echo "FAILED: authorization SQL hash mismatch"
-      exit 88
-    }
-    [[ "${record_wrapper_sha}" == "${manifest_wrapper_sha}" ]] || {
-      echo "FAILED: authorization wrapper hash mismatch"
-      exit 89
-    }
-    [[ "${record_manifest_sha}" == "$(shasum -a 256 "${identity_manifest}" | awk '{print $1}')" ]] || {
-      echo "FAILED: authorization manifest hash mismatch"
-      exit 90
-    }
-    [[ "${record_expiry}" =~ ^[0-9]+$ ]] || {
-      echo "FAILED: authorization expiry is malformed"
-      exit 89
-    }
-    [[ "$(date +%s)" -le "${record_expiry}" ]] || {
-      echo "FAILED: authorization has expired"
-      exit 90
-    }
-    [[ "${record_consumed}" == "NO" ]] || {
-      echo "FAILED: authorization was already consumed"
-      exit 91
-    }
-
-    python3 - "${authorization_fd}" <<'PY_AUTH_CONSUME'
-import os
-import sys
-
-fd = int(sys.argv[1])
-os.lseek(fd, 0, os.SEEK_SET)
-raw = os.read(fd, 65536).decode("utf-8")
 lines = raw.splitlines()
+if not lines:
+    raise SystemExit(78)
+
+records = {}
+for line in lines:
+    if "=" not in line:
+        raise SystemExit(79)
+    key, value = line.split("=", 1)
+    if not re.fullmatch(r"[A-Z0-9_]+", key):
+        raise SystemExit(79)
+    if key in records:
+        raise SystemExit(79)
+    records[key] = value
+
+required = {
+    "AUTHORIZATION_VERSION",
+    "AUTHORIZATION_NONCE",
+    "ENVIRONMENT_CLASS",
+    "SQL_SHA256",
+    "WRAPPER_SHA256",
+    "MANIFEST_SHA256",
+    "EXPECTED_REPLICA_STATE",
+    "REQUIRE_READ_ONLY_SESSION",
+    "ISSUED_EPOCH",
+    "EXPIRES_EPOCH",
+    "CONSUMED",
+    "EXECUTION_SCOPE",
+    "MIGRATION_EXECUTION_AUTHORIZED",
+}
+if set(records) != required:
+    raise SystemExit(79)
+
+if records["AUTHORIZATION_VERSION"] != "1":
+    raise SystemExit(80)
+if not re.fullmatch(r"[0-9A-Za-z_-]{32,}", records["AUTHORIZATION_NONCE"]):
+    raise SystemExit(81)
+if records["ENVIRONMENT_CLASS"] != expected_environment or expected_environment != "staging":
+    raise SystemExit(82)
+if records["SQL_SHA256"] != expected_sql_sha:
+    raise SystemExit(83)
+if records["WRAPPER_SHA256"] != expected_wrapper_sha:
+    raise SystemExit(84)
+if records["MANIFEST_SHA256"] != expected_manifest_sha:
+    raise SystemExit(85)
+if records["EXPECTED_REPLICA_STATE"] != "PRIMARY":
+    raise SystemExit(86)
+if records["REQUIRE_READ_ONLY_SESSION"] != "YES":
+    raise SystemExit(87)
+if records["EXECUTION_SCOPE"] != "READ_ONLY_CATALOG_PREFLIGHT_ONLY":
+    raise SystemExit(88)
+if records["MIGRATION_EXECUTION_AUTHORIZED"] != "NO":
+    raise SystemExit(89)
+if not records["ISSUED_EPOCH"].isdigit() or not records["EXPIRES_EPOCH"].isdigit():
+    raise SystemExit(90)
+now = int(time.time())
+issued = int(records["ISSUED_EPOCH"])
+expires = int(records["EXPIRES_EPOCH"])
+if issued > now or expires < now or expires - issued > 300:
+    raise SystemExit(91)
+if records["CONSUMED"] != "NO":
+    raise SystemExit(92)
+
 matches = [i for i, line in enumerate(lines) if line == "CONSUMED=NO"]
 if len(matches) != 1:
-    raise SystemExit(1)
+    raise SystemExit(93)
 lines[matches[0]] = "CONSUMED=YES"
+
 updated = ("\n".join(lines) + "\n").encode("utf-8")
 os.lseek(fd, 0, os.SEEK_SET)
 os.ftruncate(fd, 0)
-written = 0
-while written < len(updated):
-    written += os.write(fd, updated[written:])
+view = memoryview(updated)
+while view:
+    written = os.write(fd, view)
+    if written <= 0:
+        raise SystemExit(94)
+    view = view[written:]
 os.fsync(fd)
+
 os.lseek(fd, 0, os.SEEK_SET)
-verify = os.read(fd, 65536).decode("utf-8")
-if verify.splitlines().count("CONSUMED=YES") != 1:
-    raise SystemExit(2)
-PY_AUTH_CONSUME
-    [[ $? -eq 0 ]] || {
-      echo "FAILED: authorization consumption transition failed"
-      exit 92
+verify = os.read(fd, 65536).decode("utf-8").splitlines()
+if verify.count("CONSUMED=YES") != 1 or "CONSUMED=NO" in verify:
+    raise SystemExit(95)
+
+fcntl.flock(fd, fcntl.LOCK_UN)
+PY_AUTH_TRANSACTION
+    auth_transaction_rc=$?
+    [[ "${auth_transaction_rc}" -eq 0 ]] || {
+      echo "FAILED: authorization lock, validation, or consumption transaction failed"
+      exit "${auth_transaction_rc}"
     }
 
     authorization_payload=""
-    record_nonce=""
-    record_wrapper_sha=""
-    record_manifest_sha=""
-    record_consumed="YES"
-
     command -v psql >/dev/null 2>&1 || {
       echo "FAILED: PostgreSQL client is unavailable"
       exit 92
