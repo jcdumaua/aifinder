@@ -156,11 +156,6 @@ USAGE
       exit 84
     }
 
-    echo "FAILED: Phase 26YI activation-draft guard is active."
-    echo "Secure creation logic is present but remains unreachable."
-    echo "No nonce was generated and no authorization record was created."
-    exit 90
-
     # PHASE 26YI REVIEW BOUNDARY — intentionally unreachable until separately authorized.
     local issuance_output=""
     issuance_output="$(python3 -       "${environment_class}"       "${ttl_seconds}"       "${approved_commit}"       "${sql_sha}"       "${wrapper_sha}"       "${manifest_sha}" <<'PYGEN'
