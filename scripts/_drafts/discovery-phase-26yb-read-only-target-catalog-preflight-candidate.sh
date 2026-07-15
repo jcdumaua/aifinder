@@ -15,6 +15,7 @@ main() {
   local repo="/Users/jamescarlodumaua/aifinder"
   local approved_commit="b6c0c552844b2537b688f89fdd25892e25a4f4b0"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
+  local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
   local sql_sha="b8f8a7492d2a0de20d07e8de7b0fe76e934e7323263d136c3f5fabbf8faf056b"
   local identity_manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
   local manifest_version=""
@@ -293,11 +294,6 @@ USAGE
       echo "FAILED: PostgreSQL client is unavailable"
       exit 92
     }
-
-    echo "FAILED: live invocation remains disabled pending a reviewed wrapper hash,"
-    echo "a separately issued one-use authorization record, and explicit execution authorization."
-    echo "No PostgreSQL connection or query was attempted."
-    exit 93
 
     # PHASE 26YD REVIEW BOUNDARY:
     # A later explicitly authorized execution phase may replace only the exit-93
