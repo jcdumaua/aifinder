@@ -1,0 +1,11 @@
+MANIFEST_VERSION=1
+APPROVED_BASELINE_COMMIT=6a31750065d3a2dbd23b0b7deb24e38a7fc0eb55
+WRAPPER_PATH=scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh
+WRAPPER_SHA256=b2c8b881603d1fab6d6bac7c959f244fbc8a147a7afb81497b6b45bec9dce15f
+WRAPPER_GIT_BLOB=dc4eca28ca4f68ccb19b5ba459c7404477493141
+WRAPPER_MODE=644
+SQL_PATH=scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql
+SQL_SHA256=b8f8a7492d2a0de20d07e8de7b0fe76e934e7323263d136c3f5fabbf8faf056b
+SQL_MODE=644
+WRAPPER_EXIT_93_REQUIRED=YES
+LIVE_EXECUTION_AUTHORIZED=NO

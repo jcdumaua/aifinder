@@ -16,7 +16,18 @@ main() {
   local approved_commit="b6c0c552844b2537b688f89fdd25892e25a4f4b0"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="b8f8a7492d2a0de20d07e8de7b0fe76e934e7323263d136c3f5fabbf8faf056b"
-  local wrapper_expected_sha="__PHASE_26YD_REVIEWED_WRAPPER_SHA256__"
+  local identity_manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
+  local manifest_version=""
+  local manifest_baseline_commit=""
+  local manifest_wrapper_path=""
+  local manifest_wrapper_sha=""
+  local manifest_wrapper_blob=""
+  local manifest_wrapper_mode=""
+  local manifest_sql_path=""
+  local manifest_sql_sha=""
+  local manifest_sql_mode=""
+  local manifest_exit_93_required=""
+  local manifest_live_execution_authorized=""
 
   local service_fd=""
   local authorization_file=""
@@ -154,15 +165,91 @@ USAGE
       exit 82
     }
 
-    local wrapper_actual_sha
-    wrapper_actual_sha="$(shasum -a 256 "$0" | awk '{print $1}')"
-    [[ "${wrapper_expected_sha}" != "__PHASE_26YD_REVIEWED_WRAPPER_SHA256__" ]] || {
-      echo "FAILED: reviewed wrapper SHA-256 has not been bound"
+    [[ -f "${identity_manifest}" ]] || {
+      echo "FAILED: detached identity manifest is missing"
       exit 83
     }
-    [[ "${wrapper_actual_sha}" == "${wrapper_expected_sha}" ]] || {
-      echo "FAILED: wrapper SHA-256 mismatch"
+    [[ "$(stat -f '%Lp' "${identity_manifest}")" == "644" ]] || {
+      echo "FAILED: detached identity manifest mode mismatch"
       exit 84
+    }
+    git ls-files --error-unmatch "${identity_manifest}" >/dev/null 2>&1 || {
+      echo "FAILED: detached identity manifest is not committed"
+      exit 85
+    }
+    [[ -z "$(git diff -- "${identity_manifest}")" ]] || {
+      echo "FAILED: detached identity manifest has local modifications"
+      exit 86
+    }
+
+    manifest_version="$(awk -F= '$1=="MANIFEST_VERSION"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_baseline_commit="$(awk -F= '$1=="APPROVED_BASELINE_COMMIT"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_path="$(awk -F= '$1=="WRAPPER_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_sha="$(awk -F= '$1=="WRAPPER_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_blob="$(awk -F= '$1=="WRAPPER_GIT_BLOB"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_mode="$(awk -F= '$1=="WRAPPER_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_path="$(awk -F= '$1=="SQL_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_sha="$(awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_mode="$(awk -F= '$1=="SQL_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_exit_93_required="$(awk -F= '$1=="WRAPPER_EXIT_93_REQUIRED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_live_execution_authorized="$(awk -F= '$1=="LIVE_EXECUTION_AUTHORIZED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+
+    [[ "${manifest_version}" == "1" ]] || {
+      echo "FAILED: detached identity manifest version mismatch"
+      exit 87
+    }
+    [[ "${manifest_baseline_commit}" =~ ^[0-9a-f]{40}$ ]] || {
+      echo "FAILED: manifest baseline commit is malformed"
+      exit 88
+    }
+    git merge-base --is-ancestor "${manifest_baseline_commit}" HEAD || {
+      echo "FAILED: manifest baseline commit is not an ancestor of HEAD"
+      exit 89
+    }
+    [[ "${manifest_wrapper_path}" == "${wrapper}" ]] || {
+      echo "FAILED: manifest wrapper path mismatch"
+      exit 90
+    }
+    [[ "${manifest_sql_path}" == "${sql_candidate}" ]] || {
+      echo "FAILED: manifest SQL path mismatch"
+      exit 91
+    }
+    [[ "${manifest_wrapper_mode}" == "644" && "${manifest_sql_mode}" == "644" ]] || {
+      echo "FAILED: manifest file-mode contract mismatch"
+      exit 92
+    }
+    [[ "${manifest_exit_93_required}" == "YES" ]] || {
+      echo "FAILED: manifest does not require exit 93"
+      exit 93
+    }
+    [[ "${manifest_live_execution_authorized}" == "NO" ]] || {
+      echo "FAILED: manifest unexpectedly authorizes live execution"
+      exit 94
+    }
+
+    local wrapper_actual_sha wrapper_actual_blob
+    wrapper_actual_sha="$(shasum -a 256 "$0" | awk '{print $1}')"
+    wrapper_actual_blob="$(git hash-object "$0")"
+
+    [[ "${wrapper_actual_sha}" == "${manifest_wrapper_sha}" ]] || {
+      echo "FAILED: wrapper SHA-256 mismatch"
+      exit 95
+    }
+    [[ "${wrapper_actual_blob}" == "${manifest_wrapper_blob}" ]] || {
+      echo "FAILED: wrapper Git blob mismatch"
+      exit 96
+    }
+    [[ "$(stat -f '%Lp' "$0")" == "${manifest_wrapper_mode}" ]] || {
+      echo "FAILED: wrapper mode mismatch"
+      exit 97
+    }
+    [[ "$(shasum -a 256 "${sql_candidate}" | awk '{print $1}')" == "${manifest_sql_sha}" ]] || {
+      echo "FAILED: SQL candidate SHA-256 mismatch against manifest"
+      exit 98
+    }
+    [[ "$(stat -f '%Lp' "${sql_candidate}")" == "${manifest_sql_mode}" ]] || {
+      echo "FAILED: SQL candidate mode mismatch against manifest"
+      exit 99
     }
 
     local record_nonce record_environment record_commit record_sql_sha record_expiry record_consumed
