@@ -163,9 +163,7 @@ run_catalog_queries() {
 
 verify_output_safety() {
   if grep -Eiq \
-    '(BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY|authorization:[[:space:]]*bearer|'
-    'sk-[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9._-]{20,}|postgres(ql)?://|'
-    'password[[:space:]]*=|service[_-]?role[[:space:]]*=)' \
+    '(BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY|authorization:[[:space:]]*bearer|sk-[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9._-]{20,}|postgres(ql)?://|password[[:space:]]*=|service[_-]?role[[:space:]]*=)' \
     "$RAW_OUTPUT"; then
     fail "Potential secret-like output detected"
     return 1
