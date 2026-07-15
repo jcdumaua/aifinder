@@ -11,7 +11,7 @@ set -u
 set -o pipefail
 
 readonly REPO="/Users/jamescarlodumaua/aifinder"
-readonly EXPECTED_BASELINE="d117f9fe24e7de85ffdf92c631b7547b64bbfac2"
+readonly PACKAGE_BASELINE="bcdc55495061592e1d60af6ed3f16ca0256db0ae"
 readonly QUERY_FILE="$REPO/scripts/discovery-live-rls-metadata-catalog-query.sql"
 readonly EXPECTED_QUERY_SHA256="759d285ffa9f84eb5f996a80625a94342c77ca69e423b6aefc7bfcdae6d99bde"
 readonly CONNECTION_ENV_NAME="AIFINDER_RLS_METADATA_DATABASE_URL"
@@ -38,13 +38,14 @@ verify_repo() {
   }
 
   head="$(git -C "$REPO" rev-parse HEAD)"
-  [[ "$head" == "$EXPECTED_BASELINE" ]] || {
-    fail "Baseline mismatch"
+
+  [[ "$(git -C "$REPO" rev-parse origin/main)" == "$head" ]] || {
+    fail "HEAD and origin/main differ"
     return 1
   }
 
-  [[ "$(git -C "$REPO" rev-parse origin/main)" == "$EXPECTED_BASELINE" ]] || {
-    fail "origin/main mismatch"
+  git -C "$REPO" merge-base --is-ancestor "$PACKAGE_BASELINE" "$head" || {
+    fail "Approved package baseline is not an ancestor of HEAD"
     return 1
   }
 
