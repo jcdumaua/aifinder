@@ -31,17 +31,17 @@ main() {
   local manifest_live_execution_authorized=""
 
   local service_fd=""
-  local authorization_file=""
-  local authorization_nonce=""
+  local authorization_fd=""
+  local authorization_payload=""
   local environment_class=""
 
   usage() {
     cat <<'USAGE'
 Usage:
-  discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh     --service-fd <open-fd-number>     --authorization-file <non-secret-record-path>     --authorization-nonce <one-use-nonce>     --environment-class <local|preview|staging|production>
+  discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh     --service-fd <open-fd-number>     --authorization-fd <open-fd-number>     --environment-class <local|preview|staging|production>
 
-The service descriptor must already be open and readable by this process.
-Its contents are never printed, copied, persisted, or accepted as a command argument.
+Both descriptors must already be open and readable by this process.
+Their contents are never printed, copied, persisted, or accepted as command arguments.
 USAGE
   }
 
@@ -52,14 +52,9 @@ USAGE
         service_fd="$2"
         shift 2
         ;;
-      --authorization-file)
-        [[ $# -ge 2 ]] || { echo "FAILED: missing --authorization-file value"; return 64; }
-        authorization_file="$2"
-        shift 2
-        ;;
-      --authorization-nonce)
-        [[ $# -ge 2 ]] || { echo "FAILED: missing --authorization-nonce value"; return 64; }
-        authorization_nonce="$2"
+      --authorization-fd)
+        [[ $# -ge 2 ]] || { echo "FAILED: missing --authorization-fd value"; return 64; }
+        authorization_fd="$2"
         shift 2
         ;;
       --environment-class)
@@ -101,21 +96,31 @@ USAGE
       exit 68
     }
 
-    [[ -n "${authorization_file}" && -f "${authorization_file}" ]] || {
-      echo "FAILED: non-secret authorization record is missing"
+    [[ -n "${authorization_fd}" ]] || {
+      echo "FAILED: authorization descriptor was not supplied"
       exit 69
     }
-    [[ "${authorization_file}" == /tmp/aifinder-phase-26yc-authorization-*.txt ]] || {
-      echo "FAILED: authorization record path is outside the approved temporary scope"
+    [[ "${authorization_fd}" =~ ^[0-9]+$ ]] || {
+      echo "FAILED: authorization descriptor must be numeric"
       exit 70
     }
-    [[ "$(stat -f '%Lp' "${authorization_file}")" == "600" ]] || {
-      echo "FAILED: authorization record mode is not 600"
+    [[ "${authorization_fd}" -ge 3 ]] || {
+      echo "FAILED: authorization descriptor must not use stdin, stdout, or stderr"
       exit 71
     }
-    [[ -n "${authorization_nonce}" ]] || {
-      echo "FAILED: authorization nonce is missing"
+    [[ -r "/dev/fd/${authorization_fd}" ]] || {
+      echo "FAILED: supplied authorization descriptor is not readable"
       exit 72
+    }
+    [[ "$(stat -f '%Lp' "/dev/fd/${authorization_fd}")" == "600" ]] || {
+      echo "FAILED: authorization record mode is not 600"
+      exit 73
+    }
+
+    authorization_payload="$(cat <&"${authorization_fd}")"
+    [[ -n "${authorization_payload}" ]] || {
+      echo "FAILED: authorization record is empty"
+      exit 74
     }
 
     case "${environment_class}" in
@@ -254,15 +259,21 @@ USAGE
     }
 
     local record_nonce record_environment record_commit record_sql_sha record_expiry record_consumed
-    record_nonce="$(awk -F= '$1=="AUTHORIZATION_NONCE"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
-    record_environment="$(awk -F= '$1=="ENVIRONMENT_CLASS"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
-    record_commit="$(awk -F= '$1=="APPROVED_COMMIT"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
-    record_sql_sha="$(awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
-    record_expiry="$(awk -F= '$1=="EXPIRES_EPOCH"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
-    record_consumed="$(awk -F= '$1=="CONSUMED"{print substr($0,index($0,"=")+1)}' "${authorization_file}")"
+    record_nonce="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="AUTHORIZATION_NONCE"{print substr($0,index($0,"=")+1)}')"
+    record_environment="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="ENVIRONMENT_CLASS"{print substr($0,index($0,"=")+1)}')"
+    record_commit="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="APPROVED_COMMIT"{print substr($0,index($0,"=")+1)}')"
+    record_sql_sha="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}')"
+    record_expiry="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="EXPIRES_EPOCH"{print substr($0,index($0,"=")+1)}')"
+    record_consumed="$(printf '%s
+' "${authorization_payload}" | awk -F= '$1=="CONSUMED"{print substr($0,index($0,"=")+1)}')"
 
-    [[ "${record_nonce}" == "${authorization_nonce}" ]] || {
-      echo "FAILED: authorization nonce mismatch"
+    [[ "${record_nonce}" =~ ^[0-9A-Za-z_-]{32,}$ ]] || {
+      echo "FAILED: authorization nonce is missing or malformed"
       exit 85
     }
     [[ "${record_environment}" == "${environment_class}" ]] || {
@@ -299,7 +310,7 @@ USAGE
     # A later explicitly authorized execution phase may replace only the exit-93
     # block above with the reviewed psql invocation below.
     #
-    # PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight"     #   psql --no-psqlrc --set=ON_ERROR_STOP=1 --file="${sql_candidate}"
+    # PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight"     #   psql --no-psqlrc --set=ON_ERROR_STOP=1     #     --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;"     #     --command="SET statement_timeout = '10s';"     #     --command="SET lock_timeout = '5s';"     #     --file="${sql_candidate}"
     #
     # The service descriptor must be supplied by the caller as a pre-opened FD.
     # No credential value is accepted through argv, stdout, logs, or repository files.
@@ -336,7 +347,9 @@ USAGE
   fi
 
   service_fd=""
-  authorization_nonce=""
+  authorization_fd=""
+  authorization_payload=""
+  record_nonce=""
 
   return "${rc}"
 }
