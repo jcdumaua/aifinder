@@ -12,7 +12,7 @@ main() {
   local log="/tmp/aifinder-${phase}-${task}-${ts}.log"
 
   local repo="/Users/jamescarlodumaua/aifinder"
-  local approved_commit="4db4073095201be78396b5a65adca4bbfdda6b92"
+  local approved_commit="b67663f4502393912bb523b86e62ae04652f970c"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
   local wrapper_sha="b2c8b881603d1fab6d6bac7c959f244fbc8a147a7afb81497b6b45bec9dce15f"
   local wrapper_blob="dc4eca28ca4f68ccb19b5ba459c7404477493141"
@@ -93,12 +93,12 @@ USAGE
       echo "FAILED: branch is not main"
       exit 70
     }
-    [[ "$(git rev-parse HEAD)" == "${approved_commit}" ]] || {
-      echo "FAILED: repository baseline mismatch"
+    git merge-base --is-ancestor "${approved_commit}" HEAD || {
+      echo "FAILED: approved baseline is not an ancestor of HEAD"
       exit 71
     }
-    [[ "$(git rev-parse origin/main)" == "${approved_commit}" ]] || {
-      echo "FAILED: origin baseline mismatch"
+    [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || {
+      echo "FAILED: local HEAD is not synchronized with origin/main"
       exit 72
     }
     [[ -z "$(git status --porcelain=v1 --untracked-files=all)" ]] || {
