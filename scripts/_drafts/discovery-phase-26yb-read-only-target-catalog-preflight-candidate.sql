@@ -56,18 +56,17 @@ where schemaname = 'public'
   and tablename = 'tools';
 
 select
-  table_name,
-  grantee,
-  privilege_type,
-  is_grantable,
-  count(*) as grant_row_count
+  count(*) as tools_grant_row_count,
+  count(distinct grantee) as distinct_grantee_count,
+  count(*) filter (where privilege_type = 'SELECT') as select_grant_row_count,
+  count(*) filter (where privilege_type <> 'SELECT') as non_select_grant_row_count,
+  count(*) filter (where is_grantable = 'YES') as grantable_privilege_row_count,
+  bool_or(privilege_type <> 'SELECT') as has_unexpected_privilege_type,
+  bool_or(is_grantable = 'YES') as has_grantable_privilege,
+  count(*) > 0 as has_matching_grant_rows
 from information_schema.role_table_grants
 where table_schema = 'public'
-  and table_name in (
-    'tools'
-  )
-group by table_name, grantee, privilege_type, is_grantable
-order by table_name, grantee, privilege_type;
+  and table_name = 'tools';
 
 -- No sequence query is present because the exact committed forward and rollback
 -- migrations contain zero explicit public-schema sequence identifiers.
