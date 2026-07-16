@@ -273,6 +273,9 @@ PYGEN
       exit 95
     }
 
+    echo "RECORD_PATH=${record_path}"
+    echo "EXPIRES_EPOCH=${expires_epoch}"
+    echo "SCOPE=${scope}"
     echo "PASSED: one-use authorization record created"
     echo "Record path: ${record_path}"
     echo "Expiration: within approved TTL"
