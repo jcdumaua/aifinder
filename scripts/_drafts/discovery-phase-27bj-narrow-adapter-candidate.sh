@@ -217,7 +217,7 @@ PY_SERVICE_ADAPTER
     exec {service_fd}<>"${service_file}"
     exec {authorization_fd}<>"${record_path}"
 
-    if "${wrapper}" \
+    if bash "${wrapper}" \
       --service-fd "${service_fd}" \
       --authorization-fd "${authorization_fd}" \
       --environment-class "${environment_class}" \

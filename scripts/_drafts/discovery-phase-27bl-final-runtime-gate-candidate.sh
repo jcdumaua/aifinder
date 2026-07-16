@@ -6,7 +6,7 @@ set -uo pipefail
 main() {
   local repo="/Users/jamescarlodumaua/aifinder"
   local adapter="scripts/_drafts/discovery-phase-27bj-narrow-adapter-candidate.sh"
-  local expected_adapter_sha="b98e02fef28a794bf1663d16e0d710e96a5d4e8212e9dda7ee271054eada5b12"
+  local expected_adapter_sha="a8aba99374d0f565e3d8430dd7361ae038d322c91baba99aa08c212e8f00b7fd"
   local retained="scripts/_drafts/discovery-phase-27bh-targeted-classifier-repair-candidate.sh"
   local execute_flag="${1:-}"
 

@@ -16,9 +16,9 @@ main() {
   local wrapper_sha="723fc9c1398323079ffa41a80c371c7176f2be526cb4360334c76429a3066c51"
   local wrapper_blob="f15082466c56c4b3a58662ba616ed61511fe6669"
   local manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
-  local manifest_sha="e35107971f805408193d940d51d80984ccbf073e4aacd9ae8e269c6836d1cdd8"
+  local manifest_sha="2a60e9b30e2b0573a038326f941971abe4e0ca131fa744b64ac7a2ae0ace310a"
   local adapter="scripts/_drafts/discovery-phase-27bj-narrow-adapter-candidate.sh"
-  local adapter_sha="b98e02fef28a794bf1663d16e0d710e96a5d4e8212e9dda7ee271054eada5b12"
+  local adapter_sha="a8aba99374d0f565e3d8430dd7361ae038d322c91baba99aa08c212e8f00b7fd"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
 
