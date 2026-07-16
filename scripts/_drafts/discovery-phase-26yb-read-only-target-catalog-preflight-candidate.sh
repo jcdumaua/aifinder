@@ -310,42 +310,56 @@ text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
 codes = re.findall(r"(?<![0-9A-Z])[0-9A-Z]{5}(?![0-9A-Z])", text.upper())
 code = codes[-1] if codes else ""
 
+classes = {
+    "00": "SUCCESSFUL_COMPLETION",
+    "01": "WARNING",
+    "02": "NO_DATA",
+    "03": "SQL_STATEMENT_NOT_YET_COMPLETE",
+    "08": "CONNECTION_EXCEPTION",
+    "09": "TRIGGERED_ACTION_EXCEPTION",
+    "0A": "FEATURE_NOT_SUPPORTED",
+    "0B": "INVALID_TRANSACTION_INITIATION",
+    "0F": "LOCATOR_EXCEPTION",
+    "0L": "INVALID_GRANTOR",
+    "0P": "INVALID_ROLE_SPECIFICATION",
+    "0Z": "DIAGNOSTICS_EXCEPTION",
+    "20": "CASE_NOT_FOUND",
+    "21": "CARDINALITY_VIOLATION",
+    "22": "DATA_EXCEPTION",
+    "23": "INTEGRITY_CONSTRAINT_VIOLATION",
+    "24": "INVALID_CURSOR_STATE",
+    "25": "INVALID_TRANSACTION_STATE",
+    "26": "INVALID_SQL_STATEMENT_NAME",
+    "27": "TRIGGERED_DATA_CHANGE_VIOLATION",
+    "28": "INVALID_AUTHORIZATION_SPECIFICATION",
+    "2B": "DEPENDENT_PRIVILEGE_DESCRIPTORS_STILL_EXIST",
+    "2D": "INVALID_TRANSACTION_TERMINATION",
+    "2F": "SQL_ROUTINE_EXCEPTION",
+    "34": "INVALID_CURSOR_NAME",
+    "38": "EXTERNAL_ROUTINE_EXCEPTION",
+    "39": "EXTERNAL_ROUTINE_INVOCATION_EXCEPTION",
+    "3B": "SAVEPOINT_EXCEPTION",
+    "3D": "INVALID_CATALOG_NAME",
+    "3F": "INVALID_SCHEMA_NAME",
+    "40": "TRANSACTION_ROLLBACK",
+    "42": "SYNTAX_OR_ACCESS_RULE_VIOLATION",
+    "44": "WITH_CHECK_OPTION_VIOLATION",
+    "53": "INSUFFICIENT_RESOURCES",
+    "54": "PROGRAM_LIMIT_EXCEEDED",
+    "55": "OBJECT_NOT_IN_PREREQUISITE_STATE",
+    "57": "OPERATOR_INTERVENTION_OR_CANCELLATION",
+    "58": "SYSTEM_ERROR",
+    "72": "SNAPSHOT_FAILURE",
+    "F0": "CONFIG_FILE_ERROR",
+    "HV": "FOREIGN_DATA_WRAPPER_ERROR",
+    "P0": "PLPGSQL_ERROR",
+    "XX": "INTERNAL_ERROR",
+}
+
 if not code:
     print("SQLSTATE_UNAVAILABLE")
-elif code.startswith("08"):
-    print("CONNECTION_EXCEPTION")
-elif code.startswith("28"):
-    print("INVALID_AUTHORIZATION_SPECIFICATION")
-elif code.startswith("3D"):
-    print("INVALID_CATALOG_NAME")
-elif code.startswith("3F"):
-    print("INVALID_SCHEMA_NAME")
-elif code.startswith("40"):
-    print("TRANSACTION_ROLLBACK")
-elif code.startswith("42"):
-    print("SYNTAX_OR_ACCESS_RULE_VIOLATION")
-elif code.startswith("53"):
-    print("INSUFFICIENT_RESOURCES")
-elif code.startswith("55"):
-    print("OBJECT_NOT_IN_PREREQUISITE_STATE")
-elif code.startswith("57"):
-    print("OPERATOR_INTERVENTION_OR_CANCELLATION")
-elif code.startswith("58"):
-    print("SYSTEM_ERROR")
-elif code.startswith("0A"):
-    print("FEATURE_NOT_SUPPORTED")
-elif code.startswith("25"):
-    print("INVALID_TRANSACTION_STATE")
-elif code.startswith("2F"):
-    print("SQL_ROUTINE_EXCEPTION")
-elif code.startswith("38"):
-    print("EXTERNAL_ROUTINE_EXCEPTION")
-elif code.startswith("39"):
-    print("EXTERNAL_ROUTINE_INVOCATION_EXCEPTION")
-elif code.startswith("XX"):
-    print("INTERNAL_ERROR")
 else:
-    print("OTHER_SQLSTATE_CLASS")
+    print(classes.get(code[:2], "UNRECOGNIZED_SQLSTATE_CLASS"))
 PY_PSQL_CLASSIFY
 )"
       rm -f "${psql_output}"
