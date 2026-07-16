@@ -128,6 +128,47 @@ USAGE
       exit 76
     }
 
+    local materialized_service_file=""
+    cleanup_materialized_service_file() {
+      if [[ -n "${materialized_service_file:-}" ]]; then
+        rm -f -- "${materialized_service_file}" 2>/dev/null || true
+      fi
+    }
+    trap cleanup_materialized_service_file EXIT
+
+    materialized_service_file="$(mktemp "/tmp/aifinder-phase-26yc-pgservice-materialized-${ts}.XXXXXX")"
+    chmod 600 "${materialized_service_file}"
+
+    python3 - "${service_fd}" "${materialized_service_file}" <<'PY_SERVICE_MATERIALIZE'
+import os
+import stat
+import sys
+from pathlib import Path
+
+source_fd = int(sys.argv[1])
+target = Path(sys.argv[2])
+
+os.lseek(source_fd, 0, os.SEEK_SET)
+payload = os.read(source_fd, 65536)
+if not payload:
+    raise SystemExit(96)
+if len(payload) >= 65536:
+    raise SystemExit(97)
+if b"\x00" in payload:
+    raise SystemExit(98)
+
+target.write_bytes(payload)
+os.chmod(target, 0o600)
+
+st = target.stat()
+if not stat.S_ISREG(st.st_mode):
+    raise SystemExit(99)
+if stat.S_IMODE(st.st_mode) != 0o600:
+    raise SystemExit(99)
+if st.st_uid != os.getuid():
+    raise SystemExit(99)
+PY_SERVICE_MATERIALIZE
+
     [[ -f "${identity_manifest}" ]] || { echo "FAILED: reviewed identity manifest is missing"; exit 77; }
     manifest_version="$(awk -F= '$1=="MANIFEST_VERSION"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
     manifest_baseline_commit="$(awk -F= '$1=="APPROVED_BASELINE_COMMIT"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
@@ -290,7 +331,7 @@ PY_AUTH_TRANSACTION
 
     local psql_rc=0
     set +e
-    PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight" \
+    PGSERVICEFILE="${materialized_service_file}" PGSERVICE="aifinder_preflight" \
       psql --no-psqlrc --set=ON_ERROR_STOP=0 --set=VERBOSITY=sqlstate --tuples-only --no-align \
         --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;" \
         --command="SET statement_timeout = '10s';" \
