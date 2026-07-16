@@ -484,6 +484,31 @@ if not code:
         ("CONNECTION_SERVER_CLOSED", (
             "server closed the connection unexpectedly",
         )),
+        ("SUPABASE_POOLER_TENANT_OR_USER_NOT_FOUND", (
+            "tenant or user not found",
+        )),
+        ("SUPABASE_POOLER_PROJECT_NOT_FOUND", (
+            "project not found",
+        )),
+        ("SUPABASE_POOLER_CONNECTION_RESET", (
+            "connection reset by peer",
+            "connection was forcibly closed",
+        )),
+        ("SUPABASE_POOLER_CAPACITY_REJECTED", (
+            "max client connections reached",
+            "max clients reached",
+            "too many clients",
+            "pool is full",
+        )),
+        ("SUPABASE_POOLER_SSL_REJECTED", (
+            "server does not support ssl",
+            "ssl is required",
+            "ssl connection has been closed unexpectedly",
+        )),
+        ("CONNECTION_ADDRESS_UNAVAILABLE", (
+            "cannot assign requested address",
+            "address not available",
+        )),
     ]
 
     exit_categories = {
