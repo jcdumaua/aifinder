@@ -291,28 +291,29 @@ PY_AUTH_TRANSACTION
     local psql_rc=0
     set +e
     PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight" \
-      psql --no-psqlrc --set=ON_ERROR_STOP=1 --set=VERBOSITY=sqlstate --tuples-only --no-align \
+      psql --no-psqlrc --set=ON_ERROR_STOP=0 --set=VERBOSITY=sqlstate --tuples-only --no-align \
         --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;" \
         --command="SET statement_timeout = '10s';" \
         --command="SET lock_timeout = '5s';" \
-        --file="${sql_candidate}" >"${psql_output}" 2>&1
+        --file="${sql_candidate}" \
+        --command='\echo __AIFINDER_LAST_ERROR_SQLSTATE__ :LAST_ERROR_SQLSTATE' \
+        >"${psql_output}" 2>&1
     psql_rc=$?
     set -e
 
-    if [[ "${psql_rc}" -ne 0 ]]; then
-      local failure_class
-      failure_class="$(python3 - "${psql_output}" <<'PY_PSQL_CLASSIFY'
+    local failure_class
+    failure_class="$(python3 - "${psql_output}" "${psql_rc}" <<'PY_PSQL_CLASSIFY'
 from pathlib import Path
 import re
 import sys
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
+psql_rc = int(sys.argv[2])
 matches = re.findall(
-    r"(?mi)^(?:ERROR|FATAL|PANIC):\s*([0-9A-Z]{5})\s*$",
+    r"(?m)^__AIFINDER_LAST_ERROR_SQLSTATE__\s+([0-9A-Z]{5})\s*$",
     text,
 )
 code = matches[-1].upper() if matches else ""
-
 classes = {
     "00": "SUCCESSFUL_COMPLETION",
     "01": "WARNING",
@@ -360,18 +361,21 @@ classes = {
 }
 
 if not code:
-    print("SQLSTATE_UNAVAILABLE")
+    print("SQLSTATE_UNAVAILABLE" if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE")
+elif code == "00000":
+    print("NO_SQL_FAILURE")
 else:
     print(classes.get(code[:2], "UNRECOGNIZED_SQLSTATE_CLASS"))
 PY_PSQL_CLASSIFY
 )"
+
+    if [[ "${failure_class}" != "NO_SQL_FAILURE" ]]; then
       rm -f "${psql_output}"
       echo "FAILED: read-only catalog preflight execution failed"
       echo "Redacted failure class: ${failure_class}"
       echo "psql exit status captured: YES"
       exit 100
     fi
-
     local output_line_count
     output_line_count="$(wc -l < "${psql_output}" | tr -d ' ')"
     rm -f "${psql_output}"
