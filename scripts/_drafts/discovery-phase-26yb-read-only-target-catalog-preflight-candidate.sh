@@ -128,6 +128,34 @@ USAGE
       exit 76
     }
 
+    [[ -f "${identity_manifest}" ]] || { echo "FAILED: reviewed identity manifest is missing"; exit 77; }
+    manifest_version="$(awk -F= '$1=="MANIFEST_VERSION"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_baseline_commit="$(awk -F= '$1=="APPROVED_BASELINE_COMMIT"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_path="$(awk -F= '$1=="WRAPPER_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_sha="$(awk -F= '$1=="WRAPPER_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_blob="$(awk -F= '$1=="WRAPPER_GIT_BLOB"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_wrapper_mode="$(awk -F= '$1=="WRAPPER_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_path="$(awk -F= '$1=="SQL_PATH"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_sha="$(awk -F= '$1=="SQL_SHA256"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_sql_mode="$(awk -F= '$1=="SQL_MODE"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_exit_93_required="$(awk -F= '$1=="WRAPPER_EXIT_93_REQUIRED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+    manifest_live_execution_authorized="$(awk -F= '$1=="LIVE_EXECUTION_AUTHORIZED"{print substr($0,index($0,"=")+1)}' "${identity_manifest}")"
+
+    [[ "${manifest_version}" == "1" ]] || { echo "FAILED: manifest version mismatch"; exit 78; }
+    [[ "${manifest_baseline_commit}" =~ ^[0-9a-f]{40}$ ]] || { echo "FAILED: manifest baseline format mismatch"; exit 79; }
+    [[ "${manifest_wrapper_path}" == "${wrapper}" ]] || { echo "FAILED: manifest wrapper path mismatch"; exit 80; }
+    [[ "${manifest_wrapper_sha}" =~ ^[0-9a-f]{64}$ ]] || { echo "FAILED: manifest wrapper SHA format mismatch"; exit 81; }
+    [[ "${manifest_wrapper_blob}" =~ ^[0-9a-f]{40}$ ]] || { echo "FAILED: manifest wrapper blob format mismatch"; exit 82; }
+    [[ "${manifest_wrapper_mode}" == "644" ]] || { echo "FAILED: manifest wrapper mode mismatch"; exit 83; }
+    [[ "${manifest_sql_path}" == "${sql_candidate}" ]] || { echo "FAILED: manifest SQL path mismatch"; exit 84; }
+    [[ "${manifest_sql_sha}" == "${sql_sha}" ]] || { echo "FAILED: manifest SQL SHA mismatch"; exit 85; }
+    [[ "${manifest_sql_mode}" == "644" ]] || { echo "FAILED: manifest SQL mode mismatch"; exit 86; }
+    [[ "${manifest_exit_93_required}" == "NO" ]] || { echo "FAILED: manifest inert-stop state mismatch"; exit 87; }
+    [[ "${manifest_live_execution_authorized}" == "YES" ]] || { echo "FAILED: manifest live authorization mismatch"; exit 88; }
+    [[ "$(shasum -a 256 "${wrapper}" | awk '{print $1}')" == "${manifest_wrapper_sha}" ]] || { echo "FAILED: wrapper SHA does not match reviewed manifest"; exit 89; }
+    [[ "$(git hash-object "${wrapper}")" == "${manifest_wrapper_blob}" ]] || { echo "FAILED: wrapper Git blob does not match reviewed manifest"; exit 90; }
+    [[ "$(stat -f '%Lp' "${wrapper}")" == "${manifest_wrapper_mode}" ]] || { echo "FAILED: wrapper file mode does not match reviewed manifest"; exit 91; }
+
     python3 - \
       "${authorization_fd}" \
       "${environment_class}" \

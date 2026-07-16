@@ -13,10 +13,10 @@ main() {
 
   local repo="/Users/jamescarlodumaua/aifinder"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
-  local wrapper_sha="3d15b78f49d8a190ab522b7344eb5902b5cad3fb7bb4b3822552d97f53abb51a"
-  local wrapper_blob="f1d0c5dbdb52d8286ff35f51ff1a143d4252b26d"
+  local wrapper_sha="cf731b70b8e7ff5ebed005e04e4c83bb1f9d6dd9c4fa916851c14a95abf4d2c2"
+  local wrapper_blob="f5f38b67b8c08a65171366ca4d30b2a030432d9c"
   local manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
-  local manifest_sha="949e55a345a6427ff2dbe72f8fb12115b321d625c70b546bd0cb1f52dc187b26"
+  local manifest_sha="502b55d78530ac4d57afb241120e5bb2d07431c5ad596fd6cb4c96e700e0e2ef"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
 
