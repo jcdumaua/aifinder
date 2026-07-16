@@ -622,6 +622,42 @@ families = [
     )),
 ]
 
+certificate_subfamilies = [
+    ("PSQL_CERT_ROOT_FILE_MISSING", (
+        "root certificate file",
+        "does not exist",
+    )),
+    ("PSQL_CERT_VERIFY_FAILED", (
+        "certificate verify failed",
+        "certificate verification failed",
+    )),
+    ("PSQL_CERT_HOSTNAME_MISMATCH", (
+        "does not match host name",
+        "hostname mismatch",
+    )),
+    ("PSQL_CERT_EXPIRED_OR_NOT_YET_VALID", (
+        "certificate has expired",
+        "certificate is not yet valid",
+    )),
+    ("PSQL_CERT_UNKNOWN_CA", (
+        "unknown ca",
+        "self-signed certificate",
+        "unable to get local issuer certificate",
+    )),
+    ("PSQL_CERT_CLIENT_CERT_MISSING", (
+        "client certificate",
+        "certificate file",
+    )),
+    ("PSQL_CERT_PRIVATE_KEY_FAILURE", (
+        "private key file",
+        "private key",
+    )),
+    ("PSQL_CERT_PERMISSION_FAILURE", (
+        "certificate file",
+        "permission denied",
+    )),
+]
+
 matched = []
 for label, needles in families:
     if label == "PSQL_TOKEN_FAMILY_SERVICE_DEFINITION":
@@ -635,6 +671,23 @@ for label in matched:
     print(label)
 if not matched:
     print("PSQL_TOKEN_FAMILY_NONE")
+
+certificate_matches = []
+for label, needles in certificate_subfamilies:
+    if label in {
+        "PSQL_CERT_ROOT_FILE_MISSING",
+        "PSQL_CERT_PERMISSION_FAILURE",
+    }:
+        if all(needle in lowered for needle in needles):
+            certificate_matches.append(label)
+    elif any(needle in lowered for needle in needles):
+        certificate_matches.append(label)
+
+print(f"PSQL_CERT_SUBFAMILY_COUNT={len(certificate_matches)}")
+for label in certificate_matches:
+    print(label)
+if not certificate_matches:
+    print("PSQL_CERT_SUBFAMILY_NONE")
 PY_PSQL_METADATA
 )"
       rm -f "${psql_output}"
