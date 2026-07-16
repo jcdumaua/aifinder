@@ -178,7 +178,7 @@ PY_SERVICE_ADAPTER
     # Mint one authorization record and capture only the generator's structured
     # handoff. Authorization contents are never read by this adapter.
     issuance_output="$(
-      "${generator}" \
+      bash "${generator}" \
         --environment-class "${environment_class}" \
         --ttl-seconds "${ttl_seconds}"
     )"
