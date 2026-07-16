@@ -573,6 +573,68 @@ print(f"PSQL_OUTPUT_LINE_BUCKET={line_bucket}")
 print(f"PSQL_OUTPUT_PREFIX_CLASS={prefix_class}")
 print(f"PSQL_OUTPUT_UTF8_REPLACEMENT={'YES' if chr(0xfffd) in text else 'NO'}")
 print(f"PSQL_OUTPUT_NORMALIZED_FINGERPRINT={fingerprint}")
+
+families = [
+    ("PSQL_TOKEN_FAMILY_SERVICE_FILE_OPEN", (
+        "could not open service file",
+        "service file",
+        "pgservicefile",
+    )),
+    ("PSQL_TOKEN_FAMILY_SERVICE_DEFINITION", (
+        "definition of service",
+        "service",
+        "not found",
+    )),
+    ("PSQL_TOKEN_FAMILY_PERMISSION", (
+        "permission denied",
+        "operation not permitted",
+    )),
+    ("PSQL_TOKEN_FAMILY_FILE_NOT_FOUND", (
+        "no such file or directory",
+        "file not found",
+    )),
+    ("PSQL_TOKEN_FAMILY_CONNECTION_OPTION", (
+        "invalid connection option",
+        "unsupported connection option",
+        "invalid uri query parameter",
+    )),
+    ("PSQL_TOKEN_FAMILY_SOCKET", (
+        "socket",
+        "local socket",
+    )),
+    ("PSQL_TOKEN_FAMILY_REMOTE_CONNECTION", (
+        "connection to server",
+        "could not connect to server",
+    )),
+    ("PSQL_TOKEN_FAMILY_HOST_RESOLUTION", (
+        "host name",
+        "hostname",
+        "translate host",
+    )),
+    ("PSQL_TOKEN_FAMILY_PORT", (
+        "port",
+        "invalid integer value",
+    )),
+    ("PSQL_TOKEN_FAMILY_CERTIFICATE", (
+        "certificate",
+        "ssl",
+        "tls",
+    )),
+]
+
+matched = []
+for label, needles in families:
+    if label == "PSQL_TOKEN_FAMILY_SERVICE_DEFINITION":
+        if all(needle in lowered for needle in needles):
+            matched.append(label)
+    elif any(needle in lowered for needle in needles):
+        matched.append(label)
+
+print(f"PSQL_TOKEN_FAMILY_COUNT={len(matched)}")
+for label in matched:
+    print(label)
+if not matched:
+    print("PSQL_TOKEN_FAMILY_NONE")
 PY_PSQL_METADATA
 )"
       rm -f "${psql_output}"
