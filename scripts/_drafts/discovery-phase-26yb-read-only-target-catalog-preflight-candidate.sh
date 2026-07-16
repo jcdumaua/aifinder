@@ -307,8 +307,11 @@ import re
 import sys
 
 text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
-codes = re.findall(r"(?<![0-9A-Z])[0-9A-Z]{5}(?![0-9A-Z])", text.upper())
-code = codes[-1] if codes else ""
+matches = re.findall(
+    r"(?mi)^(?:ERROR|FATAL|PANIC):\s*([0-9A-Z]{5})\s*$",
+    text,
+)
+code = matches[-1].upper() if matches else ""
 
 classes = {
     "00": "SUCCESSFUL_COMPLETION",
