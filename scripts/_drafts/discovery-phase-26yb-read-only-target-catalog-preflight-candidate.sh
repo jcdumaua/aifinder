@@ -539,10 +539,47 @@ PY_PSQL_CLASSIFY
 )"
 
     if [[ "${failure_class}" != "NO_SQL_FAILURE" ]]; then
+      local output_metadata
+      output_metadata="$(python3 - "${psql_output}" <<'PY_PSQL_METADATA'
+from pathlib import Path
+import hashlib
+import re
+import sys
+
+data = Path(sys.argv[1]).read_bytes()
+text = data.decode("utf-8", errors="replace")
+lines = text.splitlines()
+
+size = len(data)
+size_bucket = "EMPTY" if size == 0 else "LE_128" if size <= 128 else "LE_512" if size <= 512 else "LE_2048" if size <= 2048 else "GT_2048"
+
+line_count = len(lines)
+line_bucket = "ZERO" if line_count == 0 else "ONE" if line_count == 1 else "TWO_TO_THREE" if line_count <= 3 else "FOUR_TO_TEN" if line_count <= 10 else "GT_TEN"
+
+lowered = text.lower()
+prefix_class = "PSQL_ERROR_PREFIX" if "psql:" in lowered and "error:" in lowered else "FATAL_PREFIX" if "fatal:" in lowered else "WARNING_PREFIX" if "warning:" in lowered else "NO_RECOGNIZED_PREFIX"
+
+normalized = lowered
+normalized = re.sub(r"'[^']*'", "'<redacted>'", normalized)
+normalized = re.sub(r'"[^"]*"', '"<redacted>"', normalized)
+normalized = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "<ip>", normalized)
+normalized = re.sub(r"\b[0-9a-f:]{4,}\b", "<address>", normalized)
+normalized = re.sub(r"\b\d+\b", "<n>", normalized)
+normalized = re.sub(r"\s+", " ", normalized).strip()
+fingerprint = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+print(f"PSQL_OUTPUT_SIZE_BUCKET={size_bucket}")
+print(f"PSQL_OUTPUT_LINE_BUCKET={line_bucket}")
+print(f"PSQL_OUTPUT_PREFIX_CLASS={prefix_class}")
+print(f"PSQL_OUTPUT_UTF8_REPLACEMENT={'YES' if chr(0xfffd) in text else 'NO'}")
+print(f"PSQL_OUTPUT_NORMALIZED_FINGERPRINT={fingerprint}")
+PY_PSQL_METADATA
+)"
       rm -f "${psql_output}"
       echo "FAILED: read-only catalog preflight execution failed"
       echo "Redacted failure class: ${failure_class}"
       echo "psql exit category captured: YES"
+      printf '%s\n' "${output_metadata}"
       exit 100
     fi
     local output_line_count
