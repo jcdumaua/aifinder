@@ -288,15 +288,96 @@ PY_AUTH_TRANSACTION
     psql_output="$(mktemp "/tmp/aifinder-phase-26yc-psql-redacted-${ts}.XXXXXX")"
     chmod 600 "${psql_output}"
 
-    if ! PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight" \
+    local psql_rc=0
+    set +e
+    PGSERVICEFILE="/dev/fd/${service_fd}" PGSERVICE="aifinder_preflight" \
       psql --no-psqlrc --set=ON_ERROR_STOP=1 --tuples-only --no-align \
         --command="SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;" \
         --command="SET statement_timeout = '10s';" \
         --command="SET lock_timeout = '5s';" \
         --file="${sql_candidate}" >"${psql_output}" 2>&1
-    then
+    psql_rc=$?
+    set -e
+
+    if [[ "${psql_rc}" -ne 0 ]]; then
+      local failure_class
+      failure_class="$(python3 - "${psql_output}" <<'PY_PSQL_CLASSIFY'
+from pathlib import Path
+import re
+import sys
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").lower()
+
+rules = [
+    ("SERVICE_CONFIGURATION_FAILURE", [
+        r"service .* not found",
+        r"definition of service",
+        r"service file",
+        r"pgservice",
+    ]),
+    ("NETWORK_OR_DNS_FAILURE", [
+        r"could not translate host name",
+        r"name or service not known",
+        r"nodename nor servname provided",
+        r"network is unreachable",
+        r"no route to host",
+        r"connection refused",
+        r"could not connect to server",
+    ]),
+    ("TLS_FAILURE", [
+        r"ssl error",
+        r"certificate verify failed",
+        r"certificate",
+        r"tls",
+    ]),
+    ("AUTHENTICATION_FAILURE", [
+        r"password authentication failed",
+        r"authentication failed",
+        r"no password supplied",
+        r"role .* does not exist",
+    ]),
+    ("CONNECTION_TIMEOUT", [
+        r"timeout expired",
+        r"connection timed out",
+        r"statement timeout",
+        r"canceling statement due to statement timeout",
+    ]),
+    ("PERMISSION_OR_PRIVILEGE_FAILURE", [
+        r"permission denied",
+        r"must be owner",
+        r"insufficient privilege",
+        r"not permitted",
+    ]),
+    ("READ_ONLY_GUARD_FAILURE", [
+        r"read-only transaction",
+        r"cannot execute .* in a read-only transaction",
+    ]),
+    ("SQL_OBJECT_OR_SHAPE_FAILURE", [
+        r"does not exist",
+        r"undefined table",
+        r"undefined column",
+        r"undefined function",
+    ]),
+    ("SQL_SYNTAX_OR_EXECUTION_FAILURE", [
+        r"syntax error",
+        r"current transaction is aborted",
+        r"error:",
+        r"fatal:",
+    ]),
+]
+
+for label, patterns in rules:
+    if any(re.search(pattern, text) for pattern in patterns):
+        print(label)
+        raise SystemExit(0)
+
+print("UNCLASSIFIED_PSQL_FAILURE")
+PY_PSQL_CLASSIFY
+)"
       rm -f "${psql_output}"
       echo "FAILED: read-only catalog preflight execution failed"
+      echo "Redacted failure class: ${failure_class}"
+      echo "psql exit status captured: YES"
       exit 100
     fi
 
