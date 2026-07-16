@@ -160,6 +160,25 @@ if b"\x00" in payload:
 target.write_bytes(payload)
 os.chmod(target, 0o600)
 
+decoded = payload.decode("utf-8")
+lines = [line.strip() for line in decoded.splitlines() if line.strip() and not line.lstrip().startswith(("#", ";"))]
+if not lines or lines[0] != "[aifinder_preflight]":
+    raise SystemExit(100)
+
+entries = {}
+for line in lines[1:]:
+    if "=" not in line:
+        raise SystemExit(101)
+    key, value = line.split("=", 1)
+    key = key.strip()
+    if not key or key in entries:
+        raise SystemExit(101)
+    entries[key] = value
+
+required_keys = {"host", "port", "dbname", "user", "password", "sslmode"}
+if not required_keys.issubset(entries):
+    raise SystemExit(102)
+
 st = target.stat()
 if not stat.S_ISREG(st.st_mode):
     raise SystemExit(99)
@@ -467,7 +486,12 @@ if not code:
         )),
     ]
 
-    category = "CONNECTION_FAILURE_UNCLASSIFIED" if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE"
+    exit_categories = {
+        1: "PSQL_FATAL_ERROR",
+        2: "PSQL_BAD_CONNECTION",
+        3: "PSQL_SCRIPT_ERROR",
+    }
+    category = exit_categories.get(psql_rc, "PSQL_OTHER_FAILURE") if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE"
     for label, needles in connection_patterns:
         if label in {
             "CONNECTION_DATABASE_SELECTION_FAILURE",
@@ -493,7 +517,7 @@ PY_PSQL_CLASSIFY
       rm -f "${psql_output}"
       echo "FAILED: read-only catalog preflight execution failed"
       echo "Redacted failure class: ${failure_class}"
-      echo "psql exit status captured: YES"
+      echo "psql exit category captured: YES"
       exit 100
     fi
     local output_line_count
