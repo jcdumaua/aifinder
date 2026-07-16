@@ -469,6 +469,7 @@ if not code:
         ("CONNECTION_TLS_FAILURE", (
             "ssl error",
             "certificate verify failed",
+        "certificate validation failed",
             "tls",
         )),
         ("CONNECTION_AUTHENTICATION_FAILURE", (
@@ -509,7 +510,7 @@ if not code:
             "cannot assign requested address",
             "address not available",
         )),
-    ]
+     ('PSQL_CERT_VERIFY_FAILED', ('certificate verification failed', 'certificate validation failed',)), ('PSQL_CERT_UNKNOWN_CA', ('self signed certificate', 'unable to verify the first certificate', 'certificate signed by unknown authority',))]
 
     exit_categories = {
         1: "PSQL_FATAL_ERROR",
@@ -517,6 +518,7 @@ if not code:
         3: "PSQL_SCRIPT_ERROR",
     }
     category = exit_categories.get(psql_rc, "PSQL_OTHER_FAILURE") if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE"
+    category_before_connection_patterns = category
     for label, needles in connection_patterns:
         if label in {
             "CONNECTION_DATABASE_SELECTION_FAILURE",
@@ -530,6 +532,20 @@ if not code:
         elif any(needle in lowered for needle in needles):
             category = label
             break
+    if category == category_before_connection_patterns:
+        cert_diag_lowered = str(lowered)
+        cert_diag_has_ssl_term = "ssl" in cert_diag_lowered
+        cert_diag_has_cert_term = ("cert" in cert_diag_lowered or "certificate" in cert_diag_lowered)
+        cert_diag_has_ca_term = (" ca " in (" " + cert_diag_lowered + " ") or "authority" in cert_diag_lowered or "issuer" in cert_diag_lowered)
+        cert_diag_has_verify_term = ("verify" in cert_diag_lowered or "verification" in cert_diag_lowered or "validation" in cert_diag_lowered)
+        cert_diag_has_self_signed_term = ("self signed" in cert_diag_lowered or "self-signed" in cert_diag_lowered)
+        cert_diag_has_unknown_term = "unknown" in cert_diag_lowered
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_SSL_TERM={str(cert_diag_has_ssl_term).upper()}")
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_CERT_TERM={str(cert_diag_has_cert_term).upper()}")
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_CA_TERM={str(cert_diag_has_ca_term).upper()}")
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_VERIFY_TERM={str(cert_diag_has_verify_term).upper()}")
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_SELF_SIGNED_TERM={str(cert_diag_has_self_signed_term).upper()}")
+        print(f"PSQL_CERT_UNCLASSIFIED_HAS_UNKNOWN_TERM={str(cert_diag_has_unknown_term).upper()}")
     print(category)
 elif code == "00000":
     print("NO_SQL_FAILURE")
@@ -641,6 +657,9 @@ certificate_subfamilies = [
     )),
     ("PSQL_CERT_UNKNOWN_CA", (
         "unknown ca",
+        "self signed certificate",
+        "unable to verify the first certificate",
+        "certificate signed by unknown authority",
         "self-signed certificate",
         "unable to get local issuer certificate",
     )),
