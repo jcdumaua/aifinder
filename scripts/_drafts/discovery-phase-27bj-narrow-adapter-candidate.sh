@@ -8,7 +8,7 @@ main() {
   local repo="/Users/jamescarlodumaua/aifinder"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
   local generator="scripts/_drafts/discovery-phase-26yh-one-use-authorization-record-generator-candidate.sh"
-  local expected_head="758af7885906f6cccdf19e094231b57a64cf6f87"
+  local expected_head="6c7058c1845810ff77fe68cb1154a703a9c4391a"
   local expected_wrapper_sha="723fc9c1398323079ffa41a80c371c7176f2be526cb4360334c76429a3066c51"
   local environment_class="staging"
   local ttl_seconds="300"
