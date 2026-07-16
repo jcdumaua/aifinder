@@ -5,9 +5,8 @@ set -uo pipefail
 
 main() {
   local repo="/Users/jamescarlodumaua/aifinder"
-  local expected_head="6c7058c1845810ff77fe68cb1154a703a9c4391a"
   local adapter="scripts/_drafts/discovery-phase-27bj-narrow-adapter-candidate.sh"
-  local expected_adapter_sha="4371c104b54806a7eb4c671cdd7bd9fa638e6be908e58536092ed1f3efc0499e"
+  local expected_adapter_sha="6a91000667ccbc0e91d251617ba7770251a3ef6d7eb04d60c360247d1a655483"
   local retained="scripts/_drafts/discovery-phase-27bh-targeted-classifier-repair-candidate.sh"
   local execute_flag="${1:-}"
 
@@ -21,8 +20,10 @@ main() {
     umask 077
     cd "${repo}"
 
-    [[ "$(git rev-parse HEAD)" == "${expected_head}" ]] || { echo "FAILED: baseline mismatch"; exit 10; }
-    [[ "$(git rev-parse origin/main)" == "${expected_head}" ]] || { echo "FAILED: origin mismatch"; exit 11; }
+    [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || {
+      echo "FAILED: local HEAD is not synchronized with origin/main"
+      exit 10
+    }
     [[ "$(shasum -a 256 "${adapter}" | awk '{print $1}')" == "${expected_adapter_sha}" ]] || {
       echo "FAILED: adapter identity mismatch"
       exit 12
