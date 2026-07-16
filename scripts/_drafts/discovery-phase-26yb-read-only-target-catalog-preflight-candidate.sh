@@ -361,7 +361,52 @@ classes = {
 }
 
 if not code:
-    print("SQLSTATE_UNAVAILABLE" if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE")
+    lowered = text.lower()
+    connection_patterns = [
+        ("CONNECTION_DNS_RESOLUTION_FAILURE", (
+            "could not translate host name",
+            "name or service not known",
+            "nodename nor servname provided",
+        )),
+        ("CONNECTION_TCP_REFUSED", ("connection refused",)),
+        ("CONNECTION_TCP_UNREACHABLE", (
+            "network is unreachable",
+            "no route to host",
+        )),
+        ("CONNECTION_TIMEOUT", (
+            "connection timed out",
+            "timeout expired",
+        )),
+        ("CONNECTION_TLS_FAILURE", (
+            "ssl error",
+            "certificate verify failed",
+            "tls",
+        )),
+        ("CONNECTION_AUTHENTICATION_FAILURE", (
+            "password authentication failed",
+            "authentication failed",
+            "no password supplied",
+            "sasl authentication failed",
+        )),
+        ("CONNECTION_DATABASE_SELECTION_FAILURE", (
+            "database",
+            "does not exist",
+        )),
+        ("CONNECTION_SERVER_CLOSED", (
+            "server closed the connection unexpectedly",
+        )),
+    ]
+
+    category = "CONNECTION_FAILURE_UNCLASSIFIED" if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE"
+    for label, needles in connection_patterns:
+        if label == "CONNECTION_DATABASE_SELECTION_FAILURE":
+            if all(needle in lowered for needle in needles):
+                category = label
+                break
+        elif any(needle in lowered for needle in needles):
+            category = label
+            break
+    print(category)
 elif code == "00000":
     print("NO_SQL_FAILURE")
 else:
