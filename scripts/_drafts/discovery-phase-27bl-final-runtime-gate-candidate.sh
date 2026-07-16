@@ -55,7 +55,7 @@ main() {
       exit 14
     }
 
-    "${adapter}" --execute
+    bash "${adapter}" --execute
   )
 }
 
