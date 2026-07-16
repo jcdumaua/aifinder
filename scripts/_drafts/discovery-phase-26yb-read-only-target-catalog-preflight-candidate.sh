@@ -363,6 +363,35 @@ classes = {
 if not code:
     lowered = text.lower()
     connection_patterns = [
+        ("CONNECTION_STRING_MALFORMED", (
+            "invalid connection option",
+            'missing "=" after',
+            "missing key/value separator",
+            "unterminated quoted string",
+            "invalid uri query parameter",
+        )),
+        ("CONNECTION_URI_PERCENT_ENCODING_INVALID", (
+            "invalid percent-encoded token",
+            "invalid percent-encoding",
+        )),
+        ("CONNECTION_SERVICE_FILE_INVALID", (
+            "syntax error in service file",
+            "invalid service file",
+            "service file",
+            "line",
+        )),
+        ("CONNECTION_SERVICE_DEFINITION_MISSING", (
+            "definition of service",
+            "not found",
+        )),
+        ("CONNECTION_PORT_INVALID", (
+            "invalid integer value",
+            "port",
+        )),
+        ("CONNECTION_OPTION_UNSUPPORTED", (
+            "invalid connection option",
+            "unsupported connection option",
+        )),
         ("CONNECTION_DNS_RESOLUTION_FAILURE", (
             "could not translate host name",
             "name or service not known",
@@ -399,7 +428,12 @@ if not code:
 
     category = "CONNECTION_FAILURE_UNCLASSIFIED" if psql_rc != 0 else "SQLSTATE_MARKER_UNAVAILABLE"
     for label, needles in connection_patterns:
-        if label == "CONNECTION_DATABASE_SELECTION_FAILURE":
+        if label in {
+            "CONNECTION_DATABASE_SELECTION_FAILURE",
+            "CONNECTION_SERVICE_FILE_INVALID",
+            "CONNECTION_SERVICE_DEFINITION_MISSING",
+            "CONNECTION_PORT_INVALID",
+        }:
             if all(needle in lowered for needle in needles):
                 category = label
                 break
