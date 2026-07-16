@@ -16,7 +16,9 @@ main() {
   local wrapper_sha="723fc9c1398323079ffa41a80c371c7176f2be526cb4360334c76429a3066c51"
   local wrapper_blob="f15082466c56c4b3a58662ba616ed61511fe6669"
   local manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
-  local manifest_sha="1d6b7dce1ce64216d54ef59d0ce29befa4bf478d2f814f46abdb95234a1a8009"
+  local manifest_sha="927dd506b30db2cead40a28302ded271906c753c797d64ead3b3c94b664d1e87"
+  local adapter="scripts/_drafts/discovery-phase-27bj-narrow-adapter-candidate.sh"
+  local adapter_sha="e4ab93b8f3926a55c7fd5f10f90bcf70d10e99ad9a4eb5a502a9a6f37c4a8674"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
 
@@ -125,6 +127,31 @@ USAGE
       echo "FAILED: manifest mode mismatch"
       exit 79
     }
+    [[ -f "${adapter}" ]] || {
+      echo "FAILED: reviewed adapter is missing"
+      exit 79
+    }
+    [[ "$(shasum -a 256 "${adapter}" | awk '{print $1}')" == "${adapter_sha}" ]] || {
+      echo "FAILED: adapter SHA-256 mismatch"
+      exit 79
+    }
+    [[ "$(stat -f '%Lp' "${adapter}")" == "644" ]] || {
+      echo "FAILED: adapter mode mismatch"
+      exit 79
+    }
+    grep -Fq "ADAPTER_PATH=${adapter}" "${manifest}" || {
+      echo "FAILED: manifest adapter path mismatch"
+      exit 79
+    }
+    grep -Fq "ADAPTER_SHA256=${adapter_sha}" "${manifest}" || {
+      echo "FAILED: manifest adapter SHA mismatch"
+      exit 79
+    }
+    grep -Fq "ADAPTER_MODE=644" "${manifest}" || {
+      echo "FAILED: manifest adapter mode mismatch"
+      exit 79
+    }
+    bash -n "${adapter}"
     [[ "$(stat -f '%Lp' "${sql_candidate}")" == "644" ]] || {
       echo "FAILED: SQL candidate mode mismatch"
       exit 80
