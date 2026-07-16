@@ -8,7 +8,7 @@ main() {
   local repo="/Users/jamescarlodumaua/aifinder"
   local wrapper="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sh"
   local generator="scripts/_drafts/discovery-phase-26yh-one-use-authorization-record-generator-candidate.sh"
-  local expected_head="52d280dd4395c679f9bf6ea61acd4874d511e8cb"
+  local expected_head="758af7885906f6cccdf19e094231b57a64cf6f87"
   local expected_wrapper_sha="723fc9c1398323079ffa41a80c371c7176f2be526cb4360334c76429a3066c51"
   local environment_class="staging"
   local ttl_seconds="300"
@@ -198,7 +198,7 @@ PY_SERVICE_ADAPTER
       awk -F= '$1=="SCOPE"{print substr($0,index($0,"=")+1)}'
     )"
 
-    [[ "${record_path}" == /tmp/aifinder-phase-26yh-authorization-*.txt ]] || {
+    [[ "${record_path}" == /tmp/aifinder-phase-26yc-authorization-*.txt ]] || {
       echo "FAILED: authorization path is outside approved scope"
       exit 89
     }
