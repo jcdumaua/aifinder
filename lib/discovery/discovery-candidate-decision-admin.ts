@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { Database } from "../supabase/database.types";
 import type {
   DiscoveryCandidateDecisionAction,
