@@ -69,7 +69,7 @@ main() {
     }
 
     local ts service_file raw_output issuance_output record_path=""
-    local service_fd="" authorization_fd="" wrapper_rc=0
+    local service_fd="9" authorization_fd="8" wrapper_rc=0
     ts="$(date +%Y%m%d-%H%M%S)"
     service_file="$(mktemp "/tmp/aifinder-phase-27bj-service-${ts}.XXXXXX")"
     raw_output="$(mktemp "/tmp/aifinder-phase-27bj-wrapper-raw-${ts}.XXXXXX")"
@@ -214,8 +214,8 @@ PY_SERVICE_ADAPTER
       exit 94
     }
 
-    exec {service_fd}<>"${service_file}"
-    exec {authorization_fd}<>"${record_path}"
+    exec 9<>"${service_file}"
+    exec 8<>"${record_path}"
 
     if bash "${wrapper}" \
       --service-fd "${service_fd}" \

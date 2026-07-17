@@ -18,7 +18,7 @@ main() {
   local manifest="scripts/_drafts/discovery-phase-26ye-reviewed-wrapper-identity-manifest.txt"
   local manifest_sha="2a60e9b30e2b0573a038326f941971abe4e0ca131fa744b64ac7a2ae0ace310a"
   local adapter="scripts/_drafts/discovery-phase-27bj-narrow-adapter-candidate.sh"
-  local adapter_sha="a8aba99374d0f565e3d8430dd7361ae038d322c91baba99aa08c212e8f00b7fd"
+  local adapter_sha="aed72968025f6cf869c9ae1c6caba5dfc16305b9dacccd0943c9722373be1bad"
   local sql_candidate="scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql"
   local sql_sha="32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55"
 
