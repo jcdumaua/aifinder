@@ -227,6 +227,28 @@ for (const source of [helper, staging]) {
   assertNotIncludes(source, "'use client'", "A3 mutation helper");
 }
 
+
+assertIncludes(
+  route,
+  'import "server-only";',
+  "A4 decision route",
+);
+
+assertIncludes(route, "export async function POST", "A4 decision route");
+assertIncludes(route, "verifyAdminSession", "A4 decision route");
+assertIncludes(route, "verifyAdminCsrfRequest", "A4 decision route");
+assertIncludes(route, "checkAdminRateLimit", "A4 decision route");
+assertIncludes(route, "parseDiscoveryCandidateDecisionRequest", "A4 decision route");
+assertIncludes(route, "applyDiscoveryCandidateDecision", "A4 decision route");
+assertIncludes(route, "requestCorrelationId", "A4 decision route");
+assertIncludes(route, 'cache: "no-store"', "A4 decision route");
+assertNotIncludes(route, '"use client"', "A4 decision route");
+assertNotIncludes(route, "'use client'", "A4 decision route");
+assertNotIncludes(route, "details: error", "A4 decision route");
+assertNotIncludes(route, "error.message", "A4 decision route");
+
+console.log("A4 admin mutation route boundary static assertions passed.");
+
 console.log("A3 discovery mutation boundary static assertions passed.");
 
 console.log("Phase 19S candidate decision API static assertions passed.");
