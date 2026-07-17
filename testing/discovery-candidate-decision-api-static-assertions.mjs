@@ -6,6 +6,7 @@ const FILES = {
   rateLimit: "lib/admin-rate-limit.ts",
   validation: "lib/discovery/discovery-candidate-decision-validation.ts",
   helper: "lib/discovery/discovery-candidate-decision-admin.ts",
+  staging: "lib/discovery/discovery-candidate-staging-admin.ts",
   route:
     "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
   types: "lib/supabase/database.types.ts",
@@ -36,6 +37,7 @@ function assertNotIncludes(text, marker, label) {
 const rateLimit = read(FILES.rateLimit);
 const validation = read(FILES.validation);
 const helper = read(FILES.helper);
+const staging = read(FILES.staging);
 const route = read(FILES.route);
 const types = read(FILES.types);
 
@@ -116,5 +118,115 @@ for (const marker of [
   assertNotIncludes(helper, marker, "helper");
   assertNotIncludes(route, marker, "route");
 }
+
+
+assertIncludes(
+  helper,
+  'import "server-only";',
+  "decision helper",
+);
+
+assertIncludes(
+  helper,
+  'const CANDIDATE_DECISION_RPC = "admin_apply_discovery_candidate_decision";',
+  "decision helper",
+);
+
+assertIncludes(
+  helper,
+  "buildCandidateDecisionRpcArgs",
+  "decision helper",
+);
+
+assertIncludes(
+  helper,
+  "getSafeActorLabel",
+  "decision helper",
+);
+
+assertIncludes(
+  helper,
+  "p_request_correlation_id",
+  "decision helper",
+);
+
+assertIncludes(
+  helper,
+  "Candidate decision could not be applied.",
+  "decision helper",
+);
+
+assertNotIncludes(
+  helper,
+  "details: error",
+  "decision helper",
+);
+
+assertNotIncludes(
+  helper,
+  '.select("*")',
+  "decision helper",
+);
+
+assertIncludes(
+  staging,
+  'import "server-only";',
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  '.from("discovery_candidate_tools")',
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  ".insert(insertPayload)",
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  ".select(INSERT_SELECT_COLUMNS)",
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  "isValidNormalizedCandidate",
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  "audit_correlation_id",
+  "staging helper",
+);
+
+assertIncludes(
+  staging,
+  "Candidate staging insert failed.",
+  "staging helper",
+);
+
+assertNotIncludes(
+  staging,
+  '.select("*")',
+  "staging helper",
+);
+
+assertNotIncludes(
+  staging,
+  "details: error",
+  "staging helper",
+);
+
+for (const source of [helper, staging]) {
+  assertNotIncludes(source, '"use client"', "A3 mutation helper");
+  assertNotIncludes(source, "'use client'", "A3 mutation helper");
+}
+
+console.log("A3 discovery mutation boundary static assertions passed.");
 
 console.log("Phase 19S candidate decision API static assertions passed.");
