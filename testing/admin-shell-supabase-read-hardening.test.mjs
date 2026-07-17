@@ -125,4 +125,95 @@ assert.equal(
   "admin tools GET handler must return a safe generic load error",
 );
 
+
+const privilegedClientPath = "lib/supabase-admin.ts";
+const privilegedClientSource = readFileSync(privilegedClientPath, "utf8");
+
+assert.equal(
+  privilegedClientSource.includes('import "server-only";') ||
+    privilegedClientSource.includes("import 'server-only';"),
+  true,
+  "privileged Supabase client module must declare an explicit server-only boundary",
+);
+
+assert.equal(
+  privilegedClientSource.includes("SUPABASE_SERVICE_ROLE_KEY"),
+  true,
+  "privileged Supabase client module must use the service-role environment key",
+);
+
+assert.equal(
+  privilegedClientSource.includes("NEXT_PUBLIC_SUPABASE_URL"),
+  true,
+  "privileged Supabase client module must use the configured Supabase URL",
+);
+
+assert.equal(
+  /if\s*\(\s*!supabaseUrl\s*\|\|\s*!supabaseServiceRoleKey\s*\)/.test(
+    privilegedClientSource,
+  ),
+  true,
+  "privileged Supabase client module must fail closed when required configuration is absent",
+);
+
+assert.equal(
+  /throw\s+new\s+Error\s*\(/.test(privilegedClientSource),
+  true,
+  "privileged Supabase client module must stop construction on invalid configuration",
+);
+
+assert.equal(
+  /export\s+const\s+supabaseAdmin\s*=\s*createClient\s*\(/.test(
+    privilegedClientSource,
+  ),
+  true,
+  "privileged Supabase client module must preserve one stable exported admin client",
+);
+
+assert.equal(
+  /^\s*["']use client["'];?/m.test(privilegedClientSource),
+  false,
+  "privileged Supabase client module must never declare a client-component boundary",
+);
+
+const privilegedClientImporters = [
+  "app/api/admin/audit-logs/route.ts",
+  "app/api/admin/discovery/candidate-staging-queue/route.ts",
+  "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts",
+  "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
+  "app/api/admin/discovery/discovered-tools/[id]/route.ts",
+  "app/api/admin/discovery/discovered-tools/bulk-status/route.ts",
+  "app/api/admin/discovery/discovered-tools/route.ts",
+  "app/api/admin/discovery/intake/route.ts",
+  "app/api/admin/discovery/runs/manual/claim/route.ts",
+  "app/api/admin/discovery/runs/manual/route.ts",
+  "app/api/admin/discovery/runs/route.ts",
+  "app/api/admin/discovery/sources/[id]/route.ts",
+  "app/api/admin/discovery/sources/route.ts",
+  "app/api/admin/submissions/route.ts",
+  "app/api/admin/tools/route.ts",
+  "app/api/admin/upload-logo/route.ts",
+  "app/api/upload-logo/route.ts",
+  "app/category/[slug]/page.tsx",
+  "app/compare/page.tsx",
+  "app/sitemap.ts",
+  "app/tool/[slug]/page.tsx",
+  "lib/admin-audit-log.ts",
+  "lib/discovery/discovery-candidate-decision-admin.ts",
+  "lib/homepage-control-admin.ts",
+  "lib/homepage-control-public.ts",
+];
+
+for (const importerPath of privilegedClientImporters) {
+  const importerSource = readFileSync(importerPath, "utf8");
+
+  assert.equal(
+    /^\s*["']use client["'];?/m.test(importerSource),
+    false,
+    `${importerPath} must not be a client component while importing the privileged Supabase client`,
+  );
+}
+
+console.log("A2 privileged client boundary static assertions passed");
+
 console.log("admin shell Supabase read hardening static assertions passed");
