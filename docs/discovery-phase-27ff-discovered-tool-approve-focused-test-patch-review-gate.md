@@ -1,0 +1,86 @@
+# AiFinder Phase 27FF — Discovered Tool Approve Focused Test Patch Review Gate
+
+## Status
+`PENDING_GEMINI_REVIEW`
+
+## Baseline
+```text
+Commit: 48ff171adee324c44c50471037f68c7d3d0e2a3e
+Authorized workstream: AUTHORIZE_DISCOVERED_TOOL_APPROVE_FOCUSED_TEST_PATCH_ONLY
+Source modification: NO
+Test execution: NOT_PERFORMED
+Runtime posture: DORMANT
+```
+
+## Exact Test Patch Scope
+```text
+testing/discovered-tool-approve-route-security-static-assertions.mjs|2a5edb5e824b84d64d6bbf6cec808be3531d686fc256b249e561d568d4892b5a|mode=100644
+```
+
+## Preserved Source Identities
+```text
+app/api/admin/discovery/discovered-tools/[id]/approve/route.ts|360a8f894e0694c924ad1d6952c79793de845fbbac0619af219cebb1f4212588|mode=100644
+lib/admin-auth.ts|b00a3c0f3b4728647e3fea202c2e3b57663a4e567888b828a765df4ba83181dc|mode=100644
+lib/admin-rate-limit.ts|83005203a7aa47b7af6d77ff96519524a3f08341649257fe125d44c3ad3e670b|mode=100644
+lib/supabase-admin.ts|fea8f1b29460bdf245321e6dec80091dc63dd119fa17bface6f6d4980749dbae|mode=100644
+```
+
+## Static Security Contract
+```text
+ASSERTION_COUNT=48
+REQUIRES_SERVER_ONLY=YES
+PRESERVES_NODE_RUNTIME=YES
+PRESERVES_FORCE_DYNAMIC=YES
+REQUIRES_POST_ONLY_MUTATION_HANDLER=YES
+REQUIRES_SESSION_BEFORE_RATE_LIMIT=YES
+REQUIRES_CSRF_BEFORE_RATE_LIMIT=YES
+REQUIRES_RATE_LIMIT_BEFORE_RPC=YES
+REQUIRES_FIXED_UNAUTHORIZED_LOG=YES
+REQUIRES_FIXED_FAILURE_LOG=YES
+REQUIRES_FIXED_UNEXPECTED_LOG=YES
+REJECTS_SESSION_DIAGNOSTIC_LOGGING=YES
+REJECTS_RAW_RPC_MESSAGE_LOGGING=YES
+REJECTS_RAW_RPC_MESSAGE_RESPONSE=YES
+REJECTS_SUBSTRING_ERROR_CLASSIFICATION=YES
+REQUIRES_EXACT_APPROVE_RPC=YES
+REJECTS_DIRECT_TABLE_MUTATION=YES
+PRESERVES_UUID_HEADERS_AND_BOUNDED_STATUSES=YES
+PRESERVES_APPROVED_TOOL_ID_SUCCESS_SHAPE=YES
+PRESERVES_AUTH_RATE_LIMIT_AND_ADMIN_DEPENDENCIES=YES
+SUCCESS_MARKER=Discovered tool approve route security static assertions passed.
+```
+
+## Expected Initial Failure
+The current route is expected to fail first on the missing `server-only` boundary. The harness is fail-fast, so baseline evidence must retain only the first observed assertion failure.
+
+## Scope Verification
+```text
+TEST_FILES_CREATED=1
+OTHER_TEST_FILES_MODIFIED=0
+SOURCE_FILES_MODIFIED=0
+DOCUMENTS_CREATED=1
+TEST_EXECUTION=NOT_PERFORMED
+APPLICATION_RUNTIME=NOT_STARTED
+ENVIRONMENT_VALUE_ACCESS=NO
+DATABASE_ACCESS=NO
+OPERATIONAL_REACTIVATION=BLOCKED
+```
+
+## Recommended Successor
+```text
+AUTHORIZE_DISCOVERED_TOOL_APPROVE_TEST_PATCH_COMMIT_AND_FOCUSED_EXECUTION
+```
+
+## Gemini Review Request
+Select exactly one:
+- `APPROVE_PHASE_27FF_DISCOVERED_TOOL_APPROVE_FOCUSED_TEST_PATCH`
+- `REQUEST_CHANGES_PHASE_27FF_DISCOVERED_TOOL_APPROVE_TEST_CONTRACT`
+- `BLOCK_PHASE_27FF_PENDING_TEST_SCOPE_RECONCILIATION`
+
+If approving, select:
+- `AUTHORIZE_DISCOVERED_TOOL_APPROVE_TEST_PATCH_COMMIT_AND_FOCUSED_EXECUTION`
+- `AUTHORIZE_DISCOVERED_TOOL_APPROVE_TEST_PATCH_COMMIT_ONLY`
+- `SELECT_DISCOVERED_TOOL_APPROVE_TEST_PATCH_REVISION_FIRST`
+- `REQUEST_DIFFERENT_SUCCESSOR`
+
+State explicitly whether `testing/discovered-tool-approve-route-security-static-assertions.mjs` and this gate may be committed and pushed, and whether focused execution of only the named test is authorized. Source modification remains prohibited unless separately authorized.
