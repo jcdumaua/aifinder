@@ -234,18 +234,34 @@ assertIncludes(
   "A4 decision route",
 );
 
-assertIncludes(route, "export async function POST", "A4 decision route");
+assertIncludes(
+  route,
+  "export const POST = createCandidateDecisionHandler();",
+  "A4 decision route",
+);
 assertIncludes(route, "verifyAdminSession", "A4 decision route");
 assertIncludes(route, "verifyAdminCsrfRequest", "A4 decision route");
 assertIncludes(route, "checkAdminRateLimit", "A4 decision route");
 assertIncludes(route, "parseDiscoveryCandidateDecisionRequest", "A4 decision route");
 assertIncludes(route, "applyDiscoveryCandidateDecision", "A4 decision route");
-assertIncludes(route, "requestCorrelationId", "A4 decision route");
-assertIncludes(route, 'cache: "no-store"', "A4 decision route");
+assertIncludes(
+  route,
+  "...decisionInput,",
+  "A4 decision route validated correlation propagation",
+);
+assertIncludes(
+  route,
+  '"Cache-Control": "no-store"',
+  "A4 decision route",
+);
 assertNotIncludes(route, '"use client"', "A4 decision route");
 assertNotIncludes(route, "'use client'", "A4 decision route");
 assertNotIncludes(route, "details: error", "A4 decision route");
-assertNotIncludes(route, "error.message", "A4 decision route");
+assertIncludes(
+  route,
+  '"Candidate decision could not be applied."',
+  "A4 decision route bounded fallback error",
+);
 
 console.log("A4 admin mutation route boundary static assertions passed.");
 
