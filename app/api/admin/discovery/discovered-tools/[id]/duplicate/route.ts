@@ -1,7 +1,9 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import {
-  verifyAdminCsrfRequest,
   verifyAdminSession,
+  verifyAdminCsrfRequest,
 } from "../../../../../../../lib/admin-auth";
 import {
   ADMIN_RATE_LIMIT_ACTIONS,
@@ -34,6 +36,7 @@ const VALID_MATCH_TYPES = new Set([
 ]);
 
 const MAX_REASON_LENGTH = 500;
+const GENERIC_OPERATIONAL_ERROR = "Failed to mark duplicate.";
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -43,6 +46,10 @@ function jsonResponse(data: object, status = 200) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+function operationalFailureResponse() {
+  return jsonResponse({ error: GENERIC_OPERATIONAL_ERROR }, 500);
 }
 
 function isValidUuid(value: string) {
@@ -117,209 +124,192 @@ function getMatchScore(value: unknown) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const adminSession = verifyAdminSession(request);
+  try {
+    const adminSession = verifyAdminSession(request);
 
-  if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine duplicate request.", {
-      errors: adminSession.errors,
+    if (!adminSession.isAdmin || !adminSession.actor) {
+      console.warn("discovered_tool_duplicate_unauthorized");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    if (!verifyAdminCsrfRequest(request)) {
+      return jsonResponse(
+        { error: "Security token missing or expired. Please log in again." },
+        403
+      );
+    }
+
+    const rateLimit = checkAdminRateLimit({
+      request,
+      action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolDuplicate,
+      actor: adminSession.actor,
     });
 
-    return jsonResponse({ error: "Unauthorized" }, 401);
-  }
-
-  if (!verifyAdminCsrfRequest(request)) {
-    return jsonResponse(
-      { error: "Security token missing or expired. Please log in again." },
-      403
-    );
-  }
-
-  const rateLimit = checkAdminRateLimit({
-    request,
-    action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolDuplicate,
-    actor: adminSession.actor,
-  });
-
-  if (!rateLimit.allowed) {
-    return jsonResponse(getAdminRateLimitResponseData(rateLimit), rateLimit.status);
-  }
-
-  const { id } = await context.params;
-
-  if (!isValidUuid(id)) {
-    return jsonResponse({ error: "Invalid discovered tool ID." }, 400);
-  }
-
-  let body: Record<string, unknown>;
-
-  try {
-    body = await readJsonBody(request);
-  } catch (error) {
-    return jsonResponse(
-      { error: error instanceof Error ? error.message : "Invalid request body." },
-      400
-    );
-  }
-
-  const candidateType = body.candidate_type;
-
-  if (
-    typeof candidateType !== "string" ||
-    !VALID_CANDIDATE_TYPES.has(candidateType)
-  ) {
-    return jsonResponse({ error: "Invalid candidate type." }, 400);
-  }
-
-  const matchType = body.match_type;
-
-  if (typeof matchType !== "string" || !VALID_MATCH_TYPES.has(matchType)) {
-    return jsonResponse({ error: "Invalid match type." }, 400);
-  }
-
-  let candidateToolId: string | null = null;
-  let candidateSubmissionId: string | null = null;
-  let candidateDiscoveredToolId: string | null = null;
-  let reason: string | null = null;
-  let matchScore = 0;
-
-  try {
-    matchScore = getMatchScore(body.match_score);
-    reason = getOptionalText(body.reason, "Reason", MAX_REASON_LENGTH);
-
-    if (candidateType === "tool") {
-      candidateToolId = getPositiveBigintLikeId(
-        body.candidate_tool_id,
-        "Candidate tool ID"
+    if (!rateLimit.allowed) {
+      return jsonResponse(
+        getAdminRateLimitResponseData(rateLimit),
+        rateLimit.status
       );
     }
 
-    if (candidateType === "submission") {
-      candidateSubmissionId = getPositiveBigintLikeId(
-        body.candidate_submission_id,
-        "Candidate submission ID"
-      );
+    const { id } = await context.params;
+
+    if (!isValidUuid(id)) {
+      return jsonResponse({ error: "Invalid discovered tool ID." }, 400);
     }
 
-    if (candidateType === "discovered_tool") {
-      if (
-        typeof body.candidate_discovered_tool_id !== "string" ||
-        !isValidUuid(body.candidate_discovered_tool_id)
-      ) {
-        throw new Error("Candidate discovered tool ID is invalid.");
+    let body: Record<string, unknown>;
+
+    try {
+      body = await readJsonBody(request);
+    } catch {
+      return jsonResponse({ error: "Invalid request body." }, 400);
+    }
+
+    const candidateType = body.candidate_type;
+
+    if (
+      typeof candidateType !== "string" ||
+      !VALID_CANDIDATE_TYPES.has(candidateType)
+    ) {
+      return jsonResponse({ error: "Invalid candidate type." }, 400);
+    }
+
+    const matchType = body.match_type;
+
+    if (typeof matchType !== "string" || !VALID_MATCH_TYPES.has(matchType)) {
+      return jsonResponse({ error: "Invalid match type." }, 400);
+    }
+
+    let candidateToolId: string | null = null;
+    let candidateSubmissionId: string | null = null;
+    let candidateDiscoveredToolId: string | null = null;
+    let reason: string | null = null;
+    let matchScore = 0;
+
+    try {
+      matchScore = getMatchScore(body.match_score);
+      reason = getOptionalText(body.reason, "Reason", MAX_REASON_LENGTH);
+
+      if (candidateType === "tool") {
+        candidateToolId = getPositiveBigintLikeId(
+          body.candidate_tool_id,
+          "Candidate tool ID"
+        );
       }
 
-      candidateDiscoveredToolId = body.candidate_discovered_tool_id;
+      if (candidateType === "submission") {
+        candidateSubmissionId = getPositiveBigintLikeId(
+          body.candidate_submission_id,
+          "Candidate submission ID"
+        );
+      }
+
+      if (candidateType === "discovered_tool") {
+        if (
+          typeof body.candidate_discovered_tool_id !== "string" ||
+          !isValidUuid(body.candidate_discovered_tool_id)
+        ) {
+          throw new Error("Candidate discovered tool ID is invalid.");
+        }
+
+        candidateDiscoveredToolId = body.candidate_discovered_tool_id;
+      }
+    } catch {
+      return jsonResponse({ error: "Invalid duplicate data." }, 400);
     }
-  } catch (error) {
+
+    const { data: discoveredTool, error: discoveredToolError } =
+      await supabaseAdmin
+        .from("discovered_tools")
+        .select("id, status")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (discoveredToolError) {
+      console.error("discovered_tool_duplicate_load_failed");
+      return operationalFailureResponse();
+    }
+
+    if (!discoveredTool) {
+      return jsonResponse({ error: "Discovered tool not found." }, 404);
+    }
+
+    const { data: duplicateCandidate, error: duplicateError } =
+      await supabaseAdmin
+        .from("discovery_duplicate_candidates")
+        .insert({
+          discovered_tool_id: id,
+          candidate_type: candidateType,
+          candidate_tool_id: candidateToolId,
+          candidate_submission_id: candidateSubmissionId,
+          candidate_discovered_tool_id: candidateDiscoveredToolId,
+          match_type: matchType,
+          match_score: matchScore,
+          is_blocking: true,
+          reason,
+        })
+        .select("*")
+        .single();
+
+    if (duplicateError) {
+      console.error("discovered_tool_duplicate_candidate_insert_failed");
+      return operationalFailureResponse();
+    }
+
+    const { data: updatedTool, error: updateError } = await supabaseAdmin
+      .from("discovered_tools")
+      .update({
+        status: "duplicate",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("id, status, updated_at")
+      .single();
+
+    if (updateError) {
+      console.error("discovered_tool_duplicate_status_update_failed");
+      return operationalFailureResponse();
+    }
+
+    const { error: auditError } = await supabaseAdmin
+      .from("discovery_audit_events")
+      .insert({
+        discovered_tool_id: id,
+        action: "mark-duplicate",
+        actor_id: adminSession.actor.id,
+        actor_label: adminSession.actor.label,
+        message: "Marked discovered tool as duplicate.",
+        metadata: {
+          previous_status: discoveredTool.status,
+          duplicate_candidate_id: duplicateCandidate.id,
+          candidate_type: candidateType,
+          candidate_tool_id: candidateToolId,
+          candidate_submission_id: candidateSubmissionId,
+          candidate_discovered_tool_id: candidateDiscoveredToolId,
+          match_type: matchType,
+          match_score: matchScore,
+          reason,
+        },
+      });
+
+    if (auditError) {
+      console.error("discovered_tool_duplicate_audit_insert_failed");
+      return operationalFailureResponse();
+    }
+
     return jsonResponse(
-      { error: error instanceof Error ? error.message : "Invalid duplicate data." },
-      400
-    );
-  }
-
-  const { data: discoveredTool, error: discoveredToolError } = await supabaseAdmin
-    .from("discovered_tools")
-    .select("id, status")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (discoveredToolError) {
-    console.error("Failed to load discovered tool before duplicate mark.", {
-      message: discoveredToolError.message,
-    });
-
-    return jsonResponse({ error: "Failed to mark duplicate." }, 500);
-  }
-
-  if (!discoveredTool) {
-    return jsonResponse({ error: "Discovered tool not found." }, 404);
-  }
-
-  const { data: duplicateCandidate, error: duplicateError } = await supabaseAdmin
-    .from("discovery_duplicate_candidates")
-    .insert({
-      discovered_tool_id: id,
-      candidate_type: candidateType,
-      candidate_tool_id: candidateToolId,
-      candidate_submission_id: candidateSubmissionId,
-      candidate_discovered_tool_id: candidateDiscoveredToolId,
-      match_type: matchType,
-      match_score: matchScore,
-      is_blocking: true,
-      reason,
-    })
-    .select("*")
-    .single();
-
-  if (duplicateError) {
-    console.error("Failed to create Discovery Engine duplicate candidate.", {
-      message: duplicateError.message,
-    });
-
-    return jsonResponse({ error: "Failed to mark duplicate." }, 500);
-  }
-
-  const { data: updatedTool, error: updateError } = await supabaseAdmin
-    .from("discovered_tools")
-    .update({
-      status: "duplicate",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select("id, status, updated_at")
-    .single();
-
-  if (updateError) {
-    console.error("Failed to update discovered tool duplicate status.", {
-      message: updateError.message,
-    });
-
-    return jsonResponse(
-      { error: "Duplicate candidate created, but status update failed." },
-      500
-    );
-  }
-
-  const { error: auditError } = await supabaseAdmin
-    .from("discovery_audit_events")
-    .insert({
-      discovered_tool_id: id,
-      action: "mark-duplicate",
-      actor_id: adminSession.actor.id,
-      actor_label: adminSession.actor.label,
-      message: "Marked discovered tool as duplicate.",
-      metadata: {
-        previous_status: discoveredTool.status,
-        duplicate_candidate_id: duplicateCandidate.id,
-        candidate_type: candidateType,
-        candidate_tool_id: candidateToolId,
-        candidate_submission_id: candidateSubmissionId,
-        candidate_discovered_tool_id: candidateDiscoveredToolId,
-        match_type: matchType,
-        match_score: matchScore,
-        reason,
+      {
+        success: true,
+        data: {
+          duplicateCandidate,
+          tool: updatedTool,
+        },
       },
-    });
-
-  if (auditError) {
-    console.error("Failed to write Discovery Engine duplicate audit event.", {
-      message: auditError.message,
-    });
-
-    return jsonResponse(
-      { error: "Duplicate marked, but audit logging failed." },
-      500
+      201
     );
+  } catch {
+    console.error("discovered_tool_duplicate_unexpected_failure");
+    return operationalFailureResponse();
   }
-
-  return jsonResponse(
-    {
-      success: true,
-      data: {
-        duplicateCandidate,
-        tool: updatedTool,
-      },
-    },
-    201
-  );
 }
