@@ -47,7 +47,6 @@ export function verifyAdminSession(request: Request): VerifyAdminSessionResult {
   const sessionSecret = process.env.ADMIN_SESSION_SECRET;
 
   if (!sessionSecret) {
-    console.error("ADMIN_SESSION_SECRET is missing.");
     return {
       isAdmin: false,
       actor: null,

@@ -3,6 +3,7 @@ import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   ADMIN_CSRF_COOKIE_NAME,
   ADMIN_SESSION_COOKIE_NAME,
+  verifyAdminSession,
 } from "../../../../lib/admin-auth";
 
 export const runtime = "nodejs";
@@ -19,6 +20,18 @@ function jsonResponse(data: object, status = 200) {
 }
 
 export async function POST(request: Request) {
+  const adminSession = verifyAdminSession(request);
+
+  if (!adminSession.isAdmin) {
+    return jsonResponse(
+      {
+        success: false,
+        message: "Unauthorized.",
+      },
+      401
+    );
+  }
+
   await createAdminAuditLog({
     request,
     action: "admin_logout",
