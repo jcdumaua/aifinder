@@ -1,0 +1,106 @@
+# AiFinder Phase 27FD — Next Security Hardening Reselection Planning Review Gate
+
+## Status
+`PENDING_GEMINI_REVIEW`
+
+## Baseline
+```text
+Commit: a880f92c3613fdf3240236d83596a7cec5e8d91c
+Completed hardening: A1_A4_SUBMIT_TOOL_AND_HOMEPAGE_DRAFT
+Source modification: NOT_AUTHORIZED
+Test execution: NOT_AUTHORIZED
+Runtime posture: DORMANT
+```
+
+## Reselection Method
+A bounded static ranker inspected tracked TypeScript and JavaScript sources while excluding documentation, tests, and completed hardening surfaces. It retained only structural security signals and accessed no environment values, credentials, response bodies, or database content.
+
+## Selected Next Surface
+```text
+PATH=app/api/admin/discovery/discovered-tools/[id]/approve/route.ts
+SHA256=360a8f894e0694c924ad1d6952c79793de845fbbac0619af219cebb1f4212588
+MODE=100644
+SCORE=130
+REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+CLASSIFICATION=SECRET_SAFE_LOGGING_AND_ERROR_SURFACE_REVIEW
+ROUTE=YES
+MIDDLEWARE=NO
+MUTATION=YES
+PRIVILEGED=NO
+LOGGING=YES
+RAW_ERROR=YES
+SERVER_ONLY=NO
+AUTH=YES
+CSRF=YES
+RATE_LIMIT=YES
+ENV_ACCESS=NO
+```
+
+## Ranked Candidate Ledger
+```text
+CANDIDATE_COUNT=46
+RANK=1|PATH=app/api/admin/discovery/discovered-tools/[id]/approve/route.ts|SHA256=360a8f894e0694c924ad1d6952c79793de845fbbac0619af219cebb1f4212588|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=2|PATH=app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts|SHA256=80be444e27a208559ed724c7bbf79358f12888d31f245cec54e3cf3d91165cdd|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=3|PATH=app/api/admin/discovery/discovered-tools/[id]/route.ts|SHA256=e9bc69f4537e4c831c8f959bbc1082c4324b2c37d475f0823572793c0658a34c|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=4|PATH=app/api/admin/discovery/discovered-tools/bulk-status/route.ts|SHA256=7bb9b81be5c34896920c393dc29c02b9b42458e8573dc4459a4673e69f216f03|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=5|PATH=app/api/admin/discovery/intake/route.ts|SHA256=296a24846a1fa73b07935d01a4526492ebefbcb98fb2d597e6db226642031167|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=6|PATH=app/api/admin/discovery/runs/manual/claim/route.ts|SHA256=6c80d03cf87c8a42a5166b89c96eecb525fcb4f5e76317de8084ad91a68050fe|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=7|PATH=app/api/admin/discovery/runs/manual/route.ts|SHA256=59da56b2a68351e702ae80d83ced37175b755ba16734bb4e478d5f172b3c6586|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=8|PATH=app/api/admin/discovery/sources/[id]/route.ts|SHA256=9372499e20d81d966d65648627aa2e77b8caa564b64c388237c9799f873a1df6|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=9|PATH=app/api/admin/discovery/sources/route.ts|SHA256=011e135251ba43f40b6bdee40f3007cfc25b60c91666e0fb63d81b8a13daaa2c|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=10|PATH=app/api/admin/login/route.ts|SHA256=4d0d2ce96cbd96f31667111bf2c3bc7d1c508d28e961f06a256df50d236a4cdd|SCORE=130|REASONS=MUTATION_ROUTE,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,MUTATION_ROUTE_CSRF_REVIEW,ENV_ACCESS_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=11|PATH=app/api/admin/submissions/route.ts|SHA256=94f12378081fbd5c42501714c6d164328906b1c9d34f52cb83d627675cb8c321|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+RANK=12|PATH=app/api/admin/tools/route.ts|SHA256=d7a0d1ca0e468964668f01e3550b212d490968be8f1ecd087c06a2ea2f70b359|SCORE=130|REASONS=MUTATION_ROUTE,LOGGING_RAW_ERROR_SIGNAL,ROUTE_WITHOUT_SERVER_ONLY,MUTATION_WITHOUT_SERVER_ONLY,SECRET_NAMED_LOGGING_REVIEW
+```
+
+## Relevant Existing Test Candidates
+```text
+TEST_CANDIDATE_COUNT=6
+testing/admin-shell-supabase-read-hardening.test.mjs
+testing/discovery-admin-route-read-only-dependency-inventory-source-harness.mjs
+testing/discovery-candidate-extraction-invocation-route.test.mjs
+testing/discovery-candidate-preview-route.test.mjs
+testing/discovery-candidate-staging-queue-api-read-route.test.mjs
+testing/homepage-draft-route-security-static-assertions.mjs
+```
+
+## Recommended Successor
+```text
+AUTHORIZE_SELECTED_SECURITY_SURFACE_NARROW_CONTEXT_AND_TEST_CONTRACT_PLANNING
+```
+
+The successor should remain static-only and:
+1. inspect the selected source and immediate dependencies;
+2. define exact security invariants;
+3. select one coherent existing test harness or propose a focused new static test;
+4. perform no source or test modification and no test execution;
+5. create the next planning review gate.
+
+## System Layer Progress Report
+- Governance / phase control: `NEXT_SECURITY_RESELECTION_PENDING_REVIEW`
+- Static verification: `NEXT_SURFACE_SELECTED`
+- Documentation continuity: `PRESERVED`
+- Runtime validation harness discipline: `DORMANT`
+- Security hardening: `A1_A4_SUBMIT_TOOL_AND_HOMEPAGE_DRAFT_COMMITTED`
+- Service-role isolation: `HARDENED`
+- Admin route safety: `ACTIVE_RESELECTION`
+- Public submit route safety: `HARDENED`
+- Secret-safe logging: `ACTIVE_RESELECTION`
+- Database mutation: `NOT_AUTHORIZED`
+- Operational reactivation: `BLOCKED`
+- Public launch readiness: `NOT_READY_FOR_PUBLIC_LAUNCH`
+- Overall Discovery Engine progress: `99%`
+
+## Gemini Review Request
+Select exactly one:
+- `APPROVE_PHASE_27FD_NEXT_SECURITY_HARDENING_RESELECTION`
+- `REQUEST_CHANGES_PHASE_27FD_RESELECTION_METHOD_OR_TARGET`
+- `BLOCK_PHASE_27FD_PENDING_SECURITY_LEDGER_RECONCILIATION`
+
+If approving, select:
+- `AUTHORIZE_SELECTED_SECURITY_SURFACE_NARROW_CONTEXT_AND_TEST_CONTRACT_PLANNING`
+- `AUTHORIZE_SELECTED_SECURITY_SURFACE_FOCUSED_TEST_PATCH_ONLY`
+- `REQUEST_DIFFERENT_SECURITY_SURFACE`
+- `REQUEST_DIFFERENT_SUCCESSOR`
+
+State explicitly whether source inspection, test modification, source modification, or test execution is authorized. Unless explicitly stated, source modification and execution remain prohibited.
