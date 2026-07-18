@@ -1,3 +1,5 @@
+import "server-only";
+
 import { supabaseAdmin } from "./supabase-admin";
 
 export type AdminAuditAction =
@@ -82,9 +84,9 @@ export async function createAdminAuditLog({
     ]);
 
     if (error) {
-      console.error("Admin audit log insert error:", error.message);
+      console.error("admin_audit_log_insert_rejected");
     }
-  } catch (error) {
-    console.error("Admin audit log error:", error);
+  } catch {
+    console.error("admin_audit_log_unexpected_failure");
   }
 }

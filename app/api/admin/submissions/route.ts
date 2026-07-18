@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
@@ -24,6 +26,45 @@ const ADMIN_RATE_LIMIT_MAX_REQUESTS = 80;
 
 const adminRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+const TRUSTED_REQUEST_ERROR_MESSAGES = new Set([
+  "Invalid request format.",
+  "Request is too large.",
+  "Invalid request body.",
+  "Submission ID is invalid.",
+  "Tool name is required.",
+  "Tool name contains invalid characters.",
+  "Tool name must be 80 characters or fewer.",
+  "Tool name contains unsafe content.",
+  "Category is required.",
+  "Category contains invalid characters.",
+  "Category must be 40 characters or fewer.",
+  "Please select a valid category.",
+  "Description is required.",
+  "Description contains invalid characters.",
+  "Description must be 500 characters or fewer.",
+  "Description contains unsafe content.",
+  "Pricing contains invalid characters.",
+  "Pricing must be 80 characters or fewer.",
+  "Please select a valid pricing option.",
+  "Website URL is required.",
+  "Website URL contains invalid characters.",
+  "Website URL must be 500 characters or fewer.",
+  "Website URL must be a valid URL.",
+  "Website URL must start with https://",
+  "Website URL cannot contain username or password.",
+  "Website URL cannot use local or private addresses.",
+  "Website URL cannot link directly to a downloadable file.",
+  "Logo URL contains invalid characters.",
+  "Logo URL must be 500 characters or fewer.",
+  "Logo URL must be a valid URL.",
+  "Logo URL must start with https://",
+  "Logo URL cannot contain username or password.",
+  "Logo URL cannot use local or private addresses.",
+  "Logo URL cannot link directly to a downloadable file.",
+  "Unable to check existing tools.",
+  "Unable to check pending submissions.",
+]);
+
 type ExistingToolRow = {
   id: number;
   name: string | null;
@@ -43,6 +84,17 @@ function jsonResponse(data: object, status = 200) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+function getTrustedRequestErrorMessage(error: unknown, fallback: string) {
+  if (
+    error instanceof Error &&
+    TRUSTED_REQUEST_ERROR_MESSAGES.has(error.message)
+  ) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function getClientIp(request: Request) {
@@ -182,7 +234,7 @@ async function findDuplicateToolDomain(
     .limit(1);
 
   if (error) {
-    console.error("Duplicate live tools check error:", error.message);
+    console.error("admin_submissions_duplicate_live_tool_check_failed");
     throw new Error("Unable to check existing tools.");
   }
 
@@ -209,7 +261,7 @@ async function findDuplicatePendingSubmissionDomain(
     .limit(1);
 
   if (error) {
-    console.error("Duplicate pending submissions check error:", error.message);
+    console.error("admin_submissions_duplicate_pending_check_failed");
     throw new Error("Unable to check pending submissions.");
   }
 
@@ -243,7 +295,7 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false });
 
     if (submissionsError) {
-      console.error("Admin submissions load error:", submissionsError.message);
+      console.error("admin_submissions_load_failed");
 
       return jsonResponse({ error: "Failed to load submissions." }, 500);
     }
@@ -275,7 +327,7 @@ export async function GET(request: Request) {
       totalToolsError || pendingError || approvedError || rejectedError;
 
     if (statsError) {
-      console.error("Admin stats error:", statsError.message);
+      console.error("admin_submissions_stats_load_failed");
 
       return jsonResponse({ error: "Failed to load admin stats." }, 500);
     }
@@ -289,8 +341,8 @@ export async function GET(request: Request) {
         rejectedSubmissions: rejectedSubmissions || 0,
       },
     });
-  } catch (error) {
-    console.error("Admin submissions GET error:", error);
+  } catch {
+    console.error("admin_submissions_get_unexpected_failure");
 
     return jsonResponse({ error: "Failed to load admin submissions." }, 500);
   }
@@ -359,7 +411,7 @@ export async function POST(request: Request) {
     );
 
     if (approvalError) {
-      console.error("Approve submission RPC error:", approvalError.message);
+      console.error("admin_submission_approval_rpc_failed");
 
       return jsonResponse(
         { error: "Failed to approve submission." },
@@ -387,10 +439,10 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to approve submission.",
+        error: getTrustedRequestErrorMessage(
+          error,
+          "Failed to approve submission."
+        ),
       },
       400
     );
@@ -454,7 +506,7 @@ export async function PUT(request: Request) {
       .single();
 
     if (error || !data) {
-      console.error("Update submission error:", error?.message);
+      console.error("admin_submission_update_failed");
 
       return jsonResponse(
         { error: "Pending submission not found or could not be updated." },
@@ -482,10 +534,10 @@ export async function PUT(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to update submission.",
+        error: getTrustedRequestErrorMessage(
+          error,
+          "Failed to update submission."
+        ),
       },
       400
     );
@@ -512,7 +564,7 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error || !data) {
-      console.error("Reject submission error:", error?.message);
+      console.error("admin_submission_rejection_failed");
 
       return jsonResponse(
         { error: "Pending submission not found or already reviewed." },
@@ -538,10 +590,10 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to reject submission.",
+        error: getTrustedRequestErrorMessage(
+          error,
+          "Failed to reject submission."
+        ),
       },
       400
     );

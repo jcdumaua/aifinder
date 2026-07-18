@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
@@ -25,6 +27,46 @@ const ADMIN_RATE_LIMIT_MAX_REQUESTS = 80;
 
 const adminRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+const TRUSTED_REQUEST_ERROR_MESSAGES = new Set([
+  "Invalid request format.",
+  "Request is too large.",
+  "Invalid request body.",
+  "Tool name is required.",
+  "Tool name contains invalid characters.",
+  "Tool name must be 80 characters or fewer.",
+  "Tool name contains unsafe content.",
+  "Category is required.",
+  "Category contains invalid characters.",
+  "Category must be 40 characters or fewer.",
+  "Please select a valid category.",
+  "Description is required.",
+  "Description contains invalid characters.",
+  "Description must be 500 characters or fewer.",
+  "Description contains unsafe content.",
+  "Pricing contains invalid characters.",
+  "Pricing must be 80 characters or fewer.",
+  "Please select a valid pricing option.",
+  "Website URL is required.",
+  "Website URL contains invalid characters.",
+  "Website URL must be 500 characters or fewer.",
+  "Website URL must be a valid URL.",
+  "Website URL must start with https://",
+  "Website URL cannot contain username or password.",
+  "Website URL cannot use local or private addresses.",
+  "Website URL cannot link directly to a downloadable file.",
+  "Logo URL contains invalid characters.",
+  "Logo URL must be 500 characters or fewer.",
+  "Logo URL must be a valid URL.",
+  "Logo URL must start with https://",
+  "Logo URL cannot contain username or password.",
+  "Logo URL cannot use local or private addresses.",
+  "Logo URL cannot link directly to a downloadable file.",
+  "Unable to check existing tools.",
+  "Tool ID is invalid.",
+  "Tool name must include at least one URL-safe character.",
+  "Unable to check existing tool slugs.",
+]);
+
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
     status,
@@ -33,6 +75,17 @@ function jsonResponse(data: object, status = 200) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+function getTrustedRequestErrorMessage(error: unknown, fallback: string) {
+  if (
+    error instanceof Error &&
+    TRUSTED_REQUEST_ERROR_MESSAGES.has(error.message)
+  ) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function getClientIp(request: Request) {
@@ -183,7 +236,7 @@ async function findDuplicateWebsiteDomain(
   const { data, error } = await query.limit(1);
 
   if (error) {
-    console.error("Tool duplicate domain check error:", error.message);
+    console.error("admin_tools_duplicate_domain_check_failed");
     throw new Error("Unable to check existing tools.");
   }
 
@@ -207,7 +260,7 @@ async function findDuplicateToolSlug(
   const { data, error } = await query.limit(1);
 
   if (error) {
-    console.error("Tool duplicate slug check error:", error.message);
+    console.error("admin_tools_duplicate_slug_check_failed");
     throw new Error("Unable to check existing tool slugs.");
   }
 
@@ -228,7 +281,7 @@ export async function GET(request: Request) {
       .order("id", { ascending: false });
 
     if (error) {
-      console.error("Admin tools load error:", error.message);
+      console.error("admin_tools_load_failed");
 
       return jsonResponse({ error: "Failed to load live tools." }, 500);
     }
@@ -236,8 +289,8 @@ export async function GET(request: Request) {
     return jsonResponse({
       tools: data || [],
     });
-  } catch (error) {
-    console.error("Admin tools GET error:", error);
+  } catch {
+    console.error("admin_tools_get_unexpected_failure");
 
     return jsonResponse({ error: "Failed to load live tools." }, 500);
   }
@@ -293,7 +346,7 @@ export async function POST(request: Request) {
     ]);
 
     if (error) {
-      console.error("Admin add tool error:", error.message);
+      console.error("admin_tool_add_failed");
 
       return jsonResponse({ error: "Failed to add tool." }, 500);
     }
@@ -317,7 +370,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error: error instanceof Error ? error.message : "Failed to add tool.",
+        error: getTrustedRequestErrorMessage(error, "Failed to add tool."),
       },
       400
     );
@@ -375,7 +428,7 @@ export async function PUT(request: Request) {
       .single();
 
     if (error || !data) {
-      console.error("Admin update tool error:", error?.message);
+      console.error("admin_tool_update_failed");
 
       return jsonResponse(
         { error: "Tool not found or could not be updated." },
@@ -403,8 +456,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to update tool.",
+        error: getTrustedRequestErrorMessage(error, "Failed to update tool."),
       },
       400
     );
@@ -434,7 +486,7 @@ export async function DELETE(request: Request) {
       .single();
 
     if (error || !data) {
-      console.error("Admin delete tool error:", error?.message);
+      console.error("admin_tool_delete_failed");
 
       return jsonResponse(
         { error: "Tool not found or could not be deleted." },
@@ -460,8 +512,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     return jsonResponse(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to delete tool.",
+        error: getTrustedRequestErrorMessage(error, "Failed to delete tool."),
       },
       400
     );

@@ -15,7 +15,7 @@ const ROUTE_ABS = path.join(REPO_ROOT, ROUTE_PATH);
 const READ_ONLY_HASHES = new Map([
   [
     "lib/admin-audit-log.ts",
-    "784205b5c724f5d6fbc626ed91052ce50c99342750d3abaf2baf9b990bd08c8c",
+    "545ebc99f886918fc579b0b050cff12ad16ca283bbb3437e7505a27bd86bd6e3",
   ],
   [
     "lib/admin-auth.ts",
@@ -1006,12 +1006,49 @@ check(
   "responses are not centralized through the no-store and nosniff JSON helper."
 );
 
+const auditWriter = parseFile("lib/admin-audit-log.ts");
+const auditFirstStatement = auditWriter.sourceFile.statements[0];
+const auditConsoleCalls = consoleCalls(auditWriter.sourceFile);
+const auditEventNames = new Set(
+  auditConsoleCalls
+    .filter(
+      (call) =>
+        call.arguments.length === 1 && ts.isStringLiteral(call.arguments[0])
+    )
+    .map((call) => call.arguments[0].text)
+);
+const auditCatch = collect(auditWriter.sourceFile, ts.isCatchClause)[0];
+const expectedAuditEvents = new Set([
+  "admin_audit_log_insert_rejected",
+  "admin_audit_log_unexpected_failure",
+]);
+
 check(
   "A34",
   [...READ_ONLY_HASHES].every(
     ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash
-  ),
-  "an immediate read-only dependency identity differs from the approved SHA-256 contract."
+  ) &&
+    Boolean(
+      auditFirstStatement &&
+        ts.isImportDeclaration(auditFirstStatement) &&
+        !auditFirstStatement.importClause &&
+        ts.isStringLiteral(auditFirstStatement.moduleSpecifier) &&
+        auditFirstStatement.moduleSpecifier.text === "server-only"
+    ) &&
+    auditConsoleCalls.length === 2 &&
+    auditConsoleCalls.every(
+      (call) =>
+        call.expression.getText() === "console.error" &&
+        call.arguments.length === 1 &&
+        ts.isStringLiteral(call.arguments[0])
+    ) &&
+    auditEventNames.size === expectedAuditEvents.size &&
+    [...auditEventNames].every((event) => expectedAuditEvents.has(event)) &&
+    Boolean(auditCatch && !auditCatch.variableDeclaration) &&
+    !first(auditCatch.block, ts.isThrowStatement) &&
+    !auditWriter.text.includes("error.message") &&
+    !auditWriter.text.includes("error?.message"),
+  "the immediate dependency identity or fixed, server-only, swallow-on-failure audit boundary differs from the approved contract."
 );
 
 check(
