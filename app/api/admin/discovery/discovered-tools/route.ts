@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "../../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
@@ -82,9 +84,7 @@ export async function GET(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine discovered tools request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovered_tools_queue_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -143,9 +143,7 @@ export async function GET(request: Request) {
   const { data, count, error } = await query;
 
   if (error) {
-    console.error("Failed to fetch Discovery Engine discovered tools.", {
-      message: error.message,
-    });
+    console.error("discovered_tools_queue_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovered tools." }, 500);
   }
@@ -175,9 +173,7 @@ export async function GET(request: Request) {
     : { data: [], error: null };
 
   if (sourcesError) {
-    console.error("Failed to fetch Discovery Engine queue sources.", {
-      message: sourcesError.message,
-    });
+    console.error("discovered_tools_queue_sources_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery sources." }, 500);
   }
@@ -190,9 +186,7 @@ export async function GET(request: Request) {
     : { data: [], error: null };
 
   if (runsError) {
-    console.error("Failed to fetch Discovery Engine queue runs.", {
-      message: runsError.message,
-    });
+    console.error("discovered_tools_queue_runs_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery runs." }, 500);
   }
@@ -205,9 +199,7 @@ export async function GET(request: Request) {
     : { data: [], error: null };
 
   if (duplicateRowsError) {
-    console.error("Failed to fetch Discovery Engine queue duplicate summaries.", {
-      message: duplicateRowsError.message,
-    });
+    console.error("discovered_tools_queue_duplicates_load_failed");
 
     return jsonResponse({ error: "Failed to fetch duplicate summaries." }, 500);
   }

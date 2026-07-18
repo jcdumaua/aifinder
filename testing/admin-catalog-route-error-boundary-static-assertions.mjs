@@ -137,6 +137,9 @@ const PROTECTED_HASHES = new Map([
   ["testing/discovery-candidate-preview-route.test.mjs", "2f1f0d183cdf566876e02ccbbd2b7800c7080e65cb39c12bbd82adfaa39fe5f1"],
   ["testing/discovery-candidate-preview-read-only-auth-contract-source-harness.mjs", "a7dc69efc47dce2bae1d206ca6ee32d21ef4e3f096ee604fa57e9c3b7aa1363f"],
   ["testing/discovery-candidate-preview-route-export-contract-static-assertions.mjs", "32ca45d158a547a6cc66100d0975e1697e139e0cf9a90ebff1ef05c94b7b4ae3"],
+  ["app/api/admin/discovery/runs/route.ts", "62b84b6e7dee14d51383c403f3ce7e48815f92e81730cf283baa74620547a0ee"],
+  ["app/api/admin/discovery/discovered-tools/route.ts", "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010"],
+  ["testing/admin-discovery-read-route-diagnostic-logging-static-assertions.mjs", "b3a4eaf7ae7e12ac6be8aa53642adbb1174c399356d014cad4b05d3e95de5b6d"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([

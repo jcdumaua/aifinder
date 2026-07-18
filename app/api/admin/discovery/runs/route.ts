@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "../../../../../lib/admin-auth";
 import { normalizeManualMetadataFetchAuditEvents } from "../../../../../lib/discovery-run-results-review";
@@ -77,9 +79,7 @@ export async function GET(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine runs request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_runs_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -121,9 +121,7 @@ export async function GET(request: Request) {
   const { data, count, error } = await query;
 
   if (error) {
-    console.error("Failed to fetch Discovery Engine runs.", {
-      message: error.message,
-    });
+    console.error("discovery_runs_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery runs." }, 500);
   }
@@ -176,9 +174,7 @@ export async function GET(request: Request) {
       .limit(MAX_AUDIT_EVENTS_PER_PAGE);
 
     if (auditError) {
-      console.error("Failed to fetch Discovery Engine run audit events.", {
-        message: auditError.message,
-      });
+      console.error("discovery_run_audit_events_load_failed");
       auditWarning = "Audit timeline is unavailable.";
     } else {
       for (const auditRow of auditRows || []) {
