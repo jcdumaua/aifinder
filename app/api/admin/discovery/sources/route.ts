@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -131,9 +133,7 @@ export async function GET(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Sources request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_sources_list_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -186,9 +186,7 @@ export async function GET(request: Request) {
   const { data, count, error } = await query;
 
   if (error) {
-    console.error("Failed to fetch Discovery Sources.", {
-      message: error.message,
-    });
+    console.error("discovery_sources_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery sources." }, 500);
   }
@@ -208,9 +206,7 @@ export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Source create request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_source_create_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -284,9 +280,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existingSourceError) {
-    console.error("Failed to check existing discovery source.", {
-      message: existingSourceError.message,
-    });
+    console.error("discovery_source_duplicate_check_failed");
 
     return jsonResponse({ error: "Failed to check discovery sources." }, 500);
   }
@@ -318,9 +312,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError) {
-    console.error("Failed to create discovery source.", {
-      message: insertError.message,
-    });
+    console.error("discovery_source_create_failed");
 
     return jsonResponse({ error: "Failed to create discovery source." }, 500);
   }
@@ -343,10 +335,7 @@ export async function POST(request: Request) {
     });
 
   if (auditError) {
-    console.error("Failed to write Discovery Source create audit event.", {
-      message: auditError.message,
-      sourceId: source.id,
-    });
+    console.error("discovery_source_create_audit_failed");
 
     return jsonResponse(
       { error: "Discovery source created, but audit logging failed." },

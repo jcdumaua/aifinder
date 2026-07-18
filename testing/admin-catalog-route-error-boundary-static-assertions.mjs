@@ -20,6 +20,10 @@ const LOGIN_HARNESS_PATH =
 const ADMIN_SHELL_PATH = "testing/admin-shell-supabase-read-hardening.test.mjs";
 const AUDIT_ROUTE_HARNESS_PATH =
   "testing/audit-logs-route-security-static-assertions.mjs";
+const PHASE_27GL_HARNESS_PATH =
+  "testing/admin-discovery-source-status-mutation-diagnostic-logging-static-assertions.mjs";
+const PHASE_27GL_SUCCESS_MARKER =
+  "PASS: admin discovery source/status mutation diagnostic logging static assertions (32 assertions)";
 
 const EXPECTED_SUBMISSIONS_EXPORTS = new Set([
   "runtime",
@@ -140,6 +144,11 @@ const PROTECTED_HASHES = new Map([
   ["app/api/admin/discovery/runs/route.ts", "62b84b6e7dee14d51383c403f3ce7e48815f92e81730cf283baa74620547a0ee"],
   ["app/api/admin/discovery/discovered-tools/route.ts", "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010"],
   ["testing/admin-discovery-read-route-diagnostic-logging-static-assertions.mjs", "b3a4eaf7ae7e12ac6be8aa53642adbb1174c399356d014cad4b05d3e95de5b6d"],
+  ["app/api/admin/discovery/sources/route.ts", "5b38d852ec929680282a72f312a6e0af4a6ffecd47cf00e02f4e1724ae6f3dff"],
+  ["app/api/admin/discovery/sources/[id]/route.ts", "b405327e796331aec0714f8f34f637d55d2cf7d626f26dc7ed322608cbd5e293"],
+  ["app/api/admin/discovery/discovered-tools/[id]/route.ts", "93b6cf77fbe2a87839c8f10854e8002ba4bb2cc759b41a4b4977b77ea84db7fc"],
+  ["app/api/admin/discovery/discovered-tools/bulk-status/route.ts", "f1c9254f35c48a44f96b08c136dc418a724aa60cd3dcec9b8051b25cf17c9f6d"],
+  [PHASE_27GL_HARNESS_PATH, "45dd79aee8f5cbf6bc3ca09760288bcb659f09bd65e572c748ef0ccd5c116008"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([
@@ -479,6 +488,7 @@ const auditWriter = parseFile(AUDIT_WRITER_PATH);
 const loginHarness = parseFile(LOGIN_HARNESS_PATH, ts.ScriptKind.JS);
 const adminShell = parseFile(ADMIN_SHELL_PATH, ts.ScriptKind.JS);
 const auditRouteHarness = parseFile(AUDIT_ROUTE_HARNESS_PATH, ts.ScriptKind.JS);
+const phase27glHarness = parseFile(PHASE_27GL_HARNESS_PATH, ts.ScriptKind.JS);
 
 check(
   "A02",
@@ -846,6 +856,7 @@ check(
   [...PROTECTED_HASHES].every(
     ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
   ) &&
+    phase27glHarness.text.includes(PHASE_27GL_SUCCESS_MARKER) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ),

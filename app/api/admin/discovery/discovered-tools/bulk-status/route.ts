@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -118,9 +120,7 @@ export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine bulk status request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovered_tools_bulk_status_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -174,9 +174,7 @@ export async function POST(request: Request) {
     .in("id", ids);
 
   if (existingToolsError) {
-    console.error("Failed to load Discovery Engine tools before bulk status.", {
-      message: existingToolsError.message,
-    });
+    console.error("discovered_tools_bulk_status_load_failed");
 
     return jsonResponse({ error: "Failed to load selected candidates." }, 500);
   }
@@ -219,9 +217,7 @@ export async function POST(request: Request) {
     .select("id, status, updated_at");
 
   if (updateError) {
-    console.error("Failed to bulk update Discovery Engine discovered tools.", {
-      message: updateError.message,
-    });
+    console.error("discovered_tools_bulk_status_update_failed");
 
     return jsonResponse({ error: "Failed to update selected candidates." }, 500);
   }
@@ -245,9 +241,7 @@ export async function POST(request: Request) {
     .insert(auditRows);
 
   if (auditError) {
-    console.error("Failed to write Discovery Engine bulk audit events.", {
-      message: auditError.message,
-    });
+    console.error("discovered_tools_bulk_status_audit_failed");
 
     return jsonResponse(
       { error: "Bulk status updated, but audit logging failed." },

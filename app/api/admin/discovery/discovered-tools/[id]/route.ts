@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { verifyAdminCsrfRequest, verifyAdminSession } from "../../../../../../lib/admin-auth";
 import {
@@ -36,9 +38,7 @@ export async function GET(request: Request, context: RouteContext) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine detail request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovered_tool_detail_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -56,9 +56,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (toolError) {
-    console.error("Failed to fetch Discovery Engine discovered tool detail.", {
-      message: toolError.message,
-    });
+    console.error("discovered_tool_detail_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovered tool." }, 500);
   }
@@ -74,9 +72,7 @@ export async function GET(request: Request, context: RouteContext) {
     .order("created_at", { ascending: false });
 
   if (evidenceError) {
-    console.error("Failed to fetch Discovery Engine evidence.", {
-      message: evidenceError.message,
-    });
+    console.error("discovered_tool_evidence_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery evidence." }, 500);
   }
@@ -88,9 +84,7 @@ export async function GET(request: Request, context: RouteContext) {
     .order("created_at", { ascending: false });
 
   if (duplicateError) {
-    console.error("Failed to fetch Discovery Engine duplicate candidates.", {
-      message: duplicateError.message,
-    });
+    console.error("discovered_tool_duplicates_load_failed");
 
     return jsonResponse({ error: "Failed to fetch duplicate candidates." }, 500);
   }
@@ -103,9 +97,7 @@ export async function GET(request: Request, context: RouteContext) {
       .limit(50);
 
     if (auditError) {
-      console.error("Failed to fetch Discovery Engine audit events.", {
-        message: auditError.message,
-      });
+      console.error("discovered_tool_audit_events_load_failed");
 
       return jsonResponse({ error: "Failed to fetch audit events." }, 500);
     }
@@ -120,9 +112,7 @@ export async function GET(request: Request, context: RouteContext) {
       : { data: null, error: null };
 
   if (sourceError) {
-    console.error("Failed to fetch Discovery Engine source detail.", {
-      message: sourceError.message,
-    });
+    console.error("discovered_tool_source_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery source." }, 500);
   }
@@ -137,9 +127,7 @@ export async function GET(request: Request, context: RouteContext) {
       : { data: null, error: null };
 
   if (runError) {
-    console.error("Failed to fetch Discovery Engine run detail.", {
-      message: runError.message,
-    });
+    console.error("discovered_tool_run_load_failed");
 
     return jsonResponse({ error: "Failed to fetch discovery run." }, 500);
   }
@@ -219,9 +207,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine status update request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovered_tool_status_update_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -284,9 +270,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (existingToolError) {
-    console.error("Failed to load Discovery Engine tool before status update.", {
-      message: existingToolError.message,
-    });
+    console.error("discovered_tool_status_update_load_failed");
 
     return jsonResponse({ error: "Failed to update discovered tool." }, 500);
   }
@@ -323,9 +307,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (updateError) {
-    console.error("Failed to update Discovery Engine discovered tool status.", {
-      message: updateError.message,
-    });
+    console.error("discovered_tool_status_update_failed");
 
     return jsonResponse({ error: "Failed to update discovered tool." }, 500);
   }
@@ -346,9 +328,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
   if (auditError) {
-    console.error("Failed to write Discovery Engine audit event.", {
-      message: auditError.message,
-    });
+    console.error("discovered_tool_status_update_audit_failed");
 
     return jsonResponse(
       { error: "Status updated, but audit logging failed." },

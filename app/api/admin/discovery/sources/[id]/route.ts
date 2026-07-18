@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -211,9 +213,7 @@ export async function PATCH(
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Source update request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_source_update_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -320,9 +320,7 @@ export async function PATCH(
         .maybeSingle();
 
     if (existingSourceError) {
-      console.error("Failed to check duplicate discovery source slug.", {
-        message: existingSourceError.message,
-      });
+      console.error("discovery_source_update_duplicate_check_failed");
 
       return jsonResponse({ error: "Failed to check discovery sources." }, 500);
     }
@@ -345,9 +343,7 @@ export async function PATCH(
     .maybeSingle();
 
   if (previousSourceError) {
-    console.error("Failed to load discovery source before update.", {
-      message: previousSourceError.message,
-    });
+    console.error("discovery_source_update_load_failed");
 
     return jsonResponse({ error: "Failed to update discovery source." }, 500);
   }
@@ -366,9 +362,7 @@ export async function PATCH(
     .single();
 
   if (updateError) {
-    console.error("Failed to update discovery source.", {
-      message: updateError.message,
-    });
+    console.error("discovery_source_update_failed");
 
     return jsonResponse({ error: "Failed to update discovery source." }, 500);
   }
@@ -391,10 +385,7 @@ export async function PATCH(
     });
 
   if (auditError) {
-    console.error("Failed to write Discovery Source update audit event.", {
-      message: auditError.message,
-      sourceId: source.id,
-    });
+    console.error("discovery_source_update_audit_failed");
 
     return jsonResponse(
       { error: "Discovery source updated, but audit logging failed." },
