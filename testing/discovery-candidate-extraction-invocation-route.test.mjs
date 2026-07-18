@@ -32,8 +32,11 @@ const {
   CANDIDATE_EXTRACTION_INVOCATION_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_INVOCATION_SCHEMA_VERSION,
 } = await import("../lib/discovery/discovery-candidate-extraction-invocation.ts");
-const { POST, createCandidateExtractionInvokeHandler } = await import(
+const { POST } = await import(
   "../app/api/admin/discovery/candidate-extraction/invoke/route.ts"
+);
+const { createCandidateExtractionInvokeHandler } = await import(
+  "../app/api/admin/discovery/candidate-extraction/invoke/handler.ts"
 );
 
 const ALLOWED_RATE_LIMIT = {
@@ -636,9 +639,16 @@ test("rate-limit rejection returns a safe response", async () => {
 
 
 test("route source stays free of direct DB writes and audit writes", () => {
-  const source = readFileSync(
+  const routeSource = readFileSync(
     new URL(
       "../app/api/admin/discovery/candidate-extraction/invoke/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const handlerSource = readFileSync(
+    new URL(
+      "../app/api/admin/discovery/candidate-extraction/invoke/handler.ts",
       import.meta.url,
     ),
     "utf8",
@@ -659,13 +669,16 @@ test("route source stays free of direct DB writes and audit writes", () => {
   ];
 
   for (const token of forbiddenTokens) {
-    assert.equal(source.includes(token), false);
+    assert.equal(routeSource.includes(token), false);
+    assert.equal(handlerSource.includes(token), false);
   }
 
-  assert.equal(source.includes("createCandidateExtractionInvokeHandler"), true);
-  assert.equal(source.includes("resolveCandidatePreviewLiveStagingOptions"), true);
+  assert.equal(routeSource.includes("createCandidateExtractionInvokeHandler"), true);
+  assert.equal(routeSource.includes("./handler"), true);
+  assert.equal(handlerSource.includes("createCandidateExtractionInvokeHandler"), true);
+  assert.equal(handlerSource.includes("resolveCandidatePreviewLiveStagingOptions"), true);
   assert.equal(
-    source.includes("discovery-candidate-preview-live-staging-resolver"),
+    handlerSource.includes("discovery-candidate-preview-live-staging-resolver"),
     true,
   );
 });
