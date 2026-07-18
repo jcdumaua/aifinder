@@ -5,6 +5,7 @@ import process from "node:process";
 const repoRoot = process.cwd();
 
 const candidatePreviewRoutePath = "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts";
+const candidatePreviewHandlerPath = "app/api/admin/discovery/runs/[id]/candidate-preview/handler.ts";
 const readOnlyHelperPath = "lib/admin-auth-read-only.ts";
 const mutatingAuthDependencyPath = "lib/admin-auth.ts";
 
@@ -97,6 +98,7 @@ function main() {
   print("db_mutation", false);
 
   assertFileExists("candidate_preview_route", candidatePreviewRoutePath);
+  assertFileExists("candidate_preview_handler", candidatePreviewHandlerPath);
   assertFileExists("read_only_helper", readOnlyHelperPath);
   assertFileExists("mutating_auth_dependency_reference", mutatingAuthDependencyPath);
 
@@ -105,35 +107,67 @@ function main() {
   }
 
   const candidatePreviewRouteSource = readSource(candidatePreviewRoutePath);
+  const candidatePreviewHandlerSource = readSource(candidatePreviewHandlerPath);
   const readOnlyHelperSource = readSource(readOnlyHelperPath);
+
+  if (!candidatePreviewRouteSource.includes(
+    'import { createCandidatePreviewRouteHandler } from "./handler";',
+  )) {
+    fail("candidate preview route must import the sibling handler factory");
+  }
+
+  if (!candidatePreviewRouteSource.includes(
+    "export const GET = createCandidatePreviewRouteHandler();",
+  )) {
+    fail("candidate preview route must wire GET to the sibling handler factory");
+  }
+
+  if (
+    !candidatePreviewRouteSource.includes("CandidatePreviewRouteContext")
+    || !candidatePreviewRouteSource.includes("CandidatePreviewRouteDependencies")
+  ) {
+    fail("candidate preview route must preserve both type-only exports");
+  }
+
+  if (!candidatePreviewHandlerSource.startsWith('import "server-only";')) {
+    fail("candidate preview handler must preserve its server-only boundary");
+  }
+
+  if (
+    importsLibAdminAuth(candidatePreviewRouteSource)
+    || importsReadOnlyAdminAuth(candidatePreviewRouteSource)
+    || candidatePreviewRouteSource.includes("discovery-candidate-preview-provider")
+  ) {
+    fail("candidate preview thin route must not import implementation dependencies");
+  }
 
   assertEquals(
     "candidate_preview_route_imports_lib_admin_auth",
-    importsLibAdminAuth(candidatePreviewRouteSource),
+    importsLibAdminAuth(candidatePreviewHandlerSource),
     false,
   );
 
   assertEquals(
     "candidate_preview_route_imports_lib_admin_auth_read_only",
-    importsReadOnlyAdminAuth(candidatePreviewRouteSource),
+    importsReadOnlyAdminAuth(candidatePreviewHandlerSource),
     true,
   );
 
   assertEquals(
     "candidate_preview_route_uses_getReadOnlyAdminSession",
-    candidatePreviewRouteSource.includes("getReadOnlyAdminSession"),
+    candidatePreviewHandlerSource.includes("getReadOnlyAdminSession"),
     true,
   );
 
   assertEquals(
     "candidate_preview_route_async_returntype_recovered",
-    candidatePreviewRouteSource.includes("type AdminSession = Awaited<ReturnType<typeof getReadOnlyAdminSession>>;"),
+    candidatePreviewHandlerSource.includes("type AdminSession = Awaited<ReturnType<typeof getReadOnlyAdminSession>>;"),
     true,
   );
 
   assertEquals(
     "candidate_preview_route_awaits_verify_session",
-    /await\s+verifySession\s*\(\s*request\s*\)/.test(candidatePreviewRouteSource),
+    /await\s+verifySession\s*\(\s*request\s*\)/.test(candidatePreviewHandlerSource),
     true,
   );
 
@@ -175,7 +209,7 @@ function main() {
 
   assertEquals(
     "candidate_preview_route_active_mutation_marker_count",
-    containsActiveRouteMutationMarker(candidatePreviewRouteSource) ? 1 : 0,
+    containsActiveRouteMutationMarker(candidatePreviewHandlerSource) ? 1 : 0,
     0,
   );
 
@@ -187,7 +221,7 @@ function main() {
 
   assertEquals(
     "candidate_preview_route_generic_db_mutation_marker_count",
-    containsGenericDbMutationMarker(candidatePreviewRouteSource) ? 1 : 0,
+    containsGenericDbMutationMarker(candidatePreviewHandlerSource) ? 1 : 0,
     0,
   );
 

@@ -1,39 +1,55 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { register } from "node:module";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
-const nextServerMockUrl = `data:text/javascript,${encodeURIComponent(`
-export const NextResponse = {
+const require = createRequire(import.meta.url);
+const ts = require("typescript");
+
+const routePath = path.resolve(
+  "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts",
+);
+const handlerPath = path.resolve(
+  "app/api/admin/discovery/runs/[id]/candidate-preview/handler.ts",
+);
+const routeSource = readFileSync(routePath, "utf8");
+const handlerSource = readFileSync(handlerPath, "utf8");
+
+const testableSource = `
+const NextResponse = {
   json(data, init = {}) {
     return Response.json(data, init);
   },
 };
-`)}`;
+${handlerSource.replace(/^import[\s\S]*?;\n/gm, "")}
+`;
 
-register(
-  `data:text/javascript,${encodeURIComponent(`
-export async function resolve(specifier, context, nextResolve) {
-  if (specifier === "next/server") {
-    return {
-      url: ${JSON.stringify(nextServerMockUrl)},
-      shortCircuit: true,
-    };
-  }
+const transpiled = ts.transpileModule(testableSource, {
+  compilerOptions: {
+    module: ts.ModuleKind.ES2022,
+    target: ts.ScriptTarget.ES2022,
+    strict: true,
+  },
+}).outputText;
 
-  return nextResolve(specifier, context);
+const tempModulePath = path.join(
+  tmpdir(),
+  `aifinder-phase-27gd-candidate-preview-handler-${process.pid}-${Date.now()}.mjs`,
+);
+
+writeFileSync(tempModulePath, transpiled);
+
+let moduleUnderTest;
+try {
+  moduleUnderTest = await import(pathToFileURL(tempModulePath).href);
+} finally {
+  unlinkSync(tempModulePath);
 }
-`)}`,
-  import.meta.url,
-);
 
-await import("./register-typescript-test-loader.mjs");
-
-const routeModule = await import(
-  "../app/api/admin/discovery/runs/[id]/candidate-preview/route.ts"
-);
-
-const { createCandidatePreviewRouteHandler } = routeModule;
+const { createCandidatePreviewRouteHandler } = moduleUnderTest;
 
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const SOURCE_ID = "22222222-2222-4222-8222-222222222222";
@@ -161,8 +177,23 @@ function assertNoRawPayloadLeak(value) {
 }
 
 test("route exports GET only", () => {
-  assert.equal(typeof routeModule.GET, "function");
-  assert.equal("POST" in routeModule, false);
+  assert.equal(
+    routeSource.includes(
+      'import { createCandidatePreviewRouteHandler } from "./handler";',
+    ),
+    true,
+  );
+  assert.equal(
+    routeSource.includes("export const GET = createCandidatePreviewRouteHandler();"),
+    true,
+  );
+  assert.equal(routeSource.includes("CandidatePreviewRouteContext"), true);
+  assert.equal(routeSource.includes("CandidatePreviewRouteDependencies"), true);
+  assert.equal(routeSource.includes("export const POST"), false);
+  assert.equal(routeSource.includes("export const PUT"), false);
+  assert.equal(routeSource.includes("export const PATCH"), false);
+  assert.equal(routeSource.includes("export const DELETE"), false);
+  assert.equal(handlerSource.startsWith('import "server-only";'), true);
 });
 
 test("unauthenticated request returns 401 and does not call provider", async () => {
@@ -401,18 +432,21 @@ test("provider exception returns generic 500", async () => {
 });
 
 test("route source stays read-only and avoids CSRF/staging helpers", () => {
-  const source = readFileSync(
-    "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts",
-    "utf8",
-  );
+  const implementationAndWiring = `${routeSource}\n${handlerSource}`;
 
-  assert.equal(source.includes("verifyAdminCsrfRequest"), false);
-  assert.equal(source.includes("invokeCandidateExtractionStagingPipeline"), false);
-  assert.equal(source.includes("stageNormalizedDiscoveryCandidate"), false);
-  assert.equal(source.includes(".insert("), false);
-  assert.equal(source.includes(".upsert("), false);
-  assert.equal(source.includes(".update("), false);
-  assert.equal(source.includes(".delete("), false);
-  assert.equal(source.includes("export async function POST"), false);
-  assert.equal(source.includes("export const POST"), false);
+  assert.equal(implementationAndWiring.includes("verifyAdminCsrfRequest"), false);
+  assert.equal(
+    implementationAndWiring.includes("invokeCandidateExtractionStagingPipeline"),
+    false,
+  );
+  assert.equal(
+    implementationAndWiring.includes("stageNormalizedDiscoveryCandidate"),
+    false,
+  );
+  assert.equal(implementationAndWiring.includes(".insert("), false);
+  assert.equal(implementationAndWiring.includes(".upsert("), false);
+  assert.equal(implementationAndWiring.includes(".update("), false);
+  assert.equal(implementationAndWiring.includes(".delete("), false);
+  assert.equal(routeSource.includes("export async function POST"), false);
+  assert.equal(routeSource.includes("export const POST"), false);
 });
