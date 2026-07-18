@@ -168,7 +168,7 @@ function errorResponse(
   );
 }
 
-export function createCandidateDecisionHandler(
+function createCandidateDecisionHandler(
   dependencies: CandidateDecisionRouteDependencies = {},
 ) {
   return async function candidateDecisionHandler(
