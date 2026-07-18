@@ -11,7 +11,11 @@ const ts = require("typescript");
 const routePath = path.resolve(
   "app/api/admin/discovery/candidate-staging-queue/route.ts",
 );
-const source = readFileSync(routePath, "utf8");
+const handlerPath = path.resolve(
+  "app/api/admin/discovery/candidate-staging-queue/handler.ts",
+);
+const routeSource = readFileSync(routePath, "utf8");
+const handlerSource = readFileSync(handlerPath, "utf8");
 
 for (const forbiddenExport of [
   "export async function POST",
@@ -23,7 +27,11 @@ for (const forbiddenExport of [
   "export const PATCH",
   "export const DELETE",
 ]) {
-  assert.equal(source.includes(forbiddenExport), false, `${forbiddenExport} must not exist`);
+  assert.equal(
+    routeSource.includes(forbiddenExport),
+    false,
+    `${forbiddenExport} must not exist`,
+  );
 }
 
 for (const pattern of [
@@ -33,7 +41,16 @@ for (const pattern of [
   ".delete(",
   ".rpc(",
 ]) {
-  assert.equal(source.includes(pattern), false, `${pattern} must not exist in route source`);
+  assert.equal(
+    routeSource.includes(pattern),
+    false,
+    `${pattern} must not exist in route source`,
+  );
+  assert.equal(
+    handlerSource.includes(pattern),
+    false,
+    `${pattern} must not exist in handler source`,
+  );
 }
 
 const testableSource = `
@@ -48,7 +65,7 @@ const NextResponse = {
     });
   },
 };
-${source.replace(/^import[\s\S]*?;\n/gm, "")}
+${handlerSource.replace(/^import[\s\S]*?;\n/gm, "")}
 `;
 
 const transpiled = ts.transpileModule(testableSource, {
@@ -373,11 +390,26 @@ test("GET unknown helper error maps to 500 candidate_queue_read_failed safely", 
 });
 
 test("route source keeps GET-only and mutation-free boundaries", () => {
-  assert.equal(source.includes("export const GET = createCandidateStagingQueueReadHandler();"), true);
-  assert.equal(source.includes("export const POST"), false);
-  assert.equal(source.includes("export const PUT"), false);
-  assert.equal(source.includes("export const PATCH"), false);
-  assert.equal(source.includes("export const DELETE"), false);
+  assert.equal(
+    routeSource.includes(
+      'import { createCandidateStagingQueueReadHandler } from "./handler";',
+    ),
+    true,
+  );
+  assert.equal(
+    routeSource.includes(
+      "export const GET = createCandidateStagingQueueReadHandler();",
+    ),
+    true,
+  );
+  assert.equal(routeSource.includes("export const POST"), false);
+  assert.equal(routeSource.includes("export const PUT"), false);
+  assert.equal(routeSource.includes("export const PATCH"), false);
+  assert.equal(routeSource.includes("export const DELETE"), false);
+  assert.equal(
+    handlerSource.startsWith('import "server-only";'),
+    true,
+  );
 });
 
 for (const { name, fn } of tests) {

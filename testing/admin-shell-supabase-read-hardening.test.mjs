@@ -178,7 +178,7 @@ assert.equal(
 
 const privilegedClientImporters = [
   "app/api/admin/audit-logs/route.ts",
-  "app/api/admin/discovery/candidate-staging-queue/route.ts",
+  "app/api/admin/discovery/candidate-staging-queue/handler.ts",
   "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts",
   "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
   "app/api/admin/discovery/discovered-tools/[id]/route.ts",
