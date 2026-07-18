@@ -180,9 +180,7 @@ function createCandidateDecisionHandler(
     )(request);
 
     if (!adminSession.isAdmin || !adminSession.actor) {
-      console.warn("Unauthorized candidate decision mutation request.", {
-        errors: adminSession.errors,
-      });
+      console.warn("candidate_decision_unauthorized");
 
       return errorResponse("unauthorized", "Unauthorized.", 401);
     }
@@ -260,9 +258,7 @@ function createCandidateDecisionHandler(
         return errorResponse(error.code, error.message, MUTATION_ERROR_STATUS[error.code]);
       }
 
-      console.error("Candidate decision mutation failed.", {
-        message: error instanceof Error ? error.message : "unknown",
-      });
+      console.error("candidate_decision_unexpected_failure");
 
       return errorResponse(
         "candidate_decision_rpc_failed",

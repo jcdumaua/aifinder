@@ -651,13 +651,13 @@ check(
     unauthorizedBranch &&
       unauthorizedConsoleCalls.length === 1 &&
       compact(unauthorizedText).includes(
-        'console.warn("Unauthorizedcandidatedecisionmutationrequest.",{errors:adminSession.errors,})',
+        'console.warn("candidate_decision_unauthorized")',
       ) &&
       compact(unauthorizedText).includes(
         'returnerrorResponse("unauthorized","Unauthorized.",401)',
       ),
   ),
-  "the unauthorized predicate, two-argument warning, diagnostic object, or fixed 401 response changed.",
+  "the unauthorized predicate, fixed one-literal warning, or fixed 401 response changed.",
 );
 
 const csrfCalls = callsNamed(requestHandler, "csrfVerifier");
@@ -1007,23 +1007,17 @@ check(
   "A21",
   consoleSignatures.length === 2 &&
     consoleSignatures[0].method === "warn" &&
-    consoleSignatures[0].args.length === 2 &&
+    consoleSignatures[0].args.length === 1 &&
     stringLiteral(consoleSignatures[0].args[0]) ===
-      "Unauthorized candidate decision mutation request." &&
-    ts.isObjectLiteralExpression(consoleSignatures[0].args[1]) &&
-    compact(consoleSignatures[0].args[1].getText(route.sourceFile)) ===
-      "{errors:adminSession.errors,}" &&
+      "candidate_decision_unauthorized" &&
     consoleSignatures[1].method === "error" &&
-    consoleSignatures[1].args.length === 2 &&
+    consoleSignatures[1].args.length === 1 &&
     stringLiteral(consoleSignatures[1].args[0]) ===
-      "Candidate decision mutation failed." &&
-    ts.isObjectLiteralExpression(consoleSignatures[1].args[1]) &&
-    compact(consoleSignatures[1].args[1].getText(route.sourceFile)) ===
-      '{message:errorinstanceofError?error.message:"unknown",}' &&
+      "candidate_decision_unexpected_failure" &&
     !/(createAdminAuditLog|auditLog|console\.(info|log|debug|trace))/.test(
       route.text,
     ),
-  "the exact two existing console calls changed or logging/audit expanded.",
+  "the exact two fixed one-literal console calls changed or logging/audit expanded.",
 );
 
 const requestHandlerCatches = collect(requestHandler, ts.isCatchClause);

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
@@ -238,7 +240,7 @@ export async function POST(request: Request) {
       });
 
     if (error) {
-      console.error("Admin logo upload error:", error.message);
+      console.error("admin_logo_upload_storage_failed");
 
       return jsonResponse(
         { error: "Unable to upload logo. Please try again later." },
@@ -269,7 +271,7 @@ export async function POST(request: Request) {
       logoUrl: data.publicUrl,
     });
   } catch (error) {
-    console.error("Admin logo upload route error:", error);
+    console.error("admin_logo_upload_unexpected_failure");
 
     return jsonResponse(
       { error: "Logo upload failed. Please try again." },
