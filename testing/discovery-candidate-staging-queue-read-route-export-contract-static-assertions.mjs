@@ -196,11 +196,11 @@ const PROTECTED_HASHES = new Map([
   ],
   [
     PHASE_27GB_ROUTE_PATH,
-    "2b90a0ce7c29d9a5db24cbbe52c631ac8f4e2f8075221948cd08b1456fcf8d1b",
+    "f42eb9f67823bcd5e0797e7d52991eb64fe8a4caec72f06c0cc52041a1a4e3fb",
   ],
   [
     PHASE_27GB_HARNESS_PATH,
-    "e9f944e81e93c6bc7946b89dfc58b8845557fb18e6747f8955c173a632664c53",
+    "ad3d3cdd2773eba2aa62cd04b14a194c77e110699591d7be302414c13934f59d",
   ],
 ]);
 
@@ -651,8 +651,9 @@ const getInitializer = getVariable?.declaration.initializer
   : null;
 check(
   "A03",
-  routeImports.modules.length === 1 &&
-    routeImports.modules[0] === "./handler" &&
+  routeImports.modules.length === 2 &&
+    routeImports.modules[0] === "server-only" &&
+    routeImports.modules[1] === "./handler" &&
     setsEqual(
       routeImports.names,
       new Set(["createCandidateStagingQueueReadHandler"]),
@@ -745,7 +746,9 @@ check(
   "A07",
   arraysEqual(handlerImports.modules, expectedHandlerModules) &&
     setsEqual(handlerImports.names, expectedHandlerImports) &&
-    routeImports.modules.length === 1 &&
+    routeImports.modules.length === 2 &&
+    routeImports.modules[0] === "server-only" &&
+    routeImports.modules[1] === "./handler" &&
     !/(audit|storage|mutation|createClient|service[_-]?role)/i.test(
       handlerImports.modules.join("\n"),
     ),

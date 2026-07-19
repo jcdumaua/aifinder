@@ -1,3 +1,4 @@
+import "server-only";
 import { createCandidatePreviewRouteHandler } from "./handler";
 
 export type {

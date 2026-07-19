@@ -1,3 +1,4 @@
+import "server-only";
 import { createCandidateStagingQueueReadHandler } from "./handler";
 
 export type {

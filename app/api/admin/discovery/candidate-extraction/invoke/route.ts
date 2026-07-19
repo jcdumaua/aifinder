@@ -1,3 +1,4 @@
+import "server-only";
 import { createCandidateExtractionInvokeHandler } from "./handler";
 
 export const runtime = "nodejs";

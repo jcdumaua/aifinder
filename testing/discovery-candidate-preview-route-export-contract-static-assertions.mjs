@@ -187,10 +187,10 @@ const PROTECTED_HASHES = new Map([
   [LIVE_RESOLVER_TEST_PATH, "f952d8be45df1c900be9a0a16cddd3de47e249dd40039789e5faa02152366e23"],
   [LIVE_PANEL_TEST_PATH, "ab64c825de9e665c1c0f015968b9305d4ffefdc60657bf31f99c3c90c81cd7ee"],
   [PHASE_27GC_HANDLER_PATH, "9a6b16457620721c57e33d0e9b4c4ee4e46abe9bbce81aa7a0d9809d80ae3754"],
-  [PHASE_27GC_ROUTE_PATH, "7dd883c20bf1559a1ff7139b0347314c533c9e45e2c36cf7dd5465481abe8741"],
+  [PHASE_27GC_ROUTE_PATH, "088b8e51b73c9278508806523ae273235fbb6c5ec5d0b02c799f88578d0507e8"],
   [PHASE_27GC_ADMIN_SHELL_PATH, "85e2207dd61820862c998c9cd4f2fc118cb24445184e0c44af79887867b4b9e1"],
   [PHASE_27GC_ROUTE_TEST_PATH, "ce80eec655b466158f906dec382462998638c21fb43a422a53c219ddc3a54a99"],
-  [PHASE_27GC_HARNESS_PATH, "7d451328501768347df78c4b2f6cc22292b105fa359e104f7c6c34ebd9c6cf36"],
+  [PHASE_27GC_HARNESS_PATH, "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90"],
 ]);
 
 function fail(id, reason) {
@@ -521,7 +521,9 @@ check("A02",
 const routeImports = importDetails(route);
 const routeFactoryCalls = callsNamed(route.sourceFile, "createCandidatePreviewRouteHandler");
 check("A03",
-  routeImports.modules.length === 1 && routeImports.modules[0] === "./handler" &&
+  routeImports.modules.length === 2 &&
+  routeImports.modules[0] === "server-only" &&
+  routeImports.modules[1] === "./handler" &&
   routeImports.names.size === 1 &&
   routeImports.names.has("createCandidatePreviewRouteHandler") &&
   routeFactoryCalls.length === 1 && routeFactoryCalls[0].arguments.length === 0 &&

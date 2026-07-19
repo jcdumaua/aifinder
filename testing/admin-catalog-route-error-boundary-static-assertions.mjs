@@ -40,6 +40,16 @@ const PHASE_27GP_HARNESS_PATH =
   "testing/admin-discovery-intake-diagnostic-logging-static-assertions.mjs";
 const PHASE_27GP_SUCCESS_MARKER =
   "PASS: admin discovery intake diagnostic logging static assertions (26 assertions)";
+const PHASE_27GR_WRAPPER_1_PATH =
+  "app/api/admin/discovery/candidate-extraction/invoke/route.ts";
+const PHASE_27GR_WRAPPER_2_PATH =
+  "app/api/admin/discovery/candidate-staging-queue/route.ts";
+const PHASE_27GR_WRAPPER_3_PATH =
+  "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts";
+const PHASE_27GR_HARNESS_PATH =
+  "testing/admin-discovery-wrapper-server-only-boundary-static-assertions.mjs";
+const PHASE_27GR_SUCCESS_MARKER =
+  "PASS: admin discovery wrapper server-only boundary static assertions (30 assertions)";
 
 const EXPECTED_SUBMISSIONS_EXPORTS = new Set([
   "runtime",
@@ -151,12 +161,12 @@ const PROTECTED_HASHES = new Map([
   ["app/api/admin/discovery/candidate-staging-queue/handler.ts", "9a6b16457620721c57e33d0e9b4c4ee4e46abe9bbce81aa7a0d9809d80ae3754"],
   ["app/api/admin/discovery/candidate-staging-queue/route.ts", "7dd883c20bf1559a1ff7139b0347314c533c9e45e2c36cf7dd5465481abe8741"],
   ["testing/discovery-candidate-staging-queue-api-read-route.test.mjs", "ce80eec655b466158f906dec382462998638c21fb43a422a53c219ddc3a54a99"],
-  ["testing/discovery-candidate-staging-queue-read-route-export-contract-static-assertions.mjs", "7d451328501768347df78c4b2f6cc22292b105fa359e104f7c6c34ebd9c6cf36"],
+  ["testing/discovery-candidate-staging-queue-read-route-export-contract-static-assertions.mjs", "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90"],
   ["app/api/admin/discovery/runs/[id]/candidate-preview/route.ts", "c1005ed25788bb0f3499464bbb4add13c9c33d87bd6b33fc38dfc4007a4fef64"],
   ["app/api/admin/discovery/runs/[id]/candidate-preview/handler.ts", "d4caae0a42723ecba1a19248f27525105faec4eb568201a5ee4fe666d7add0bf"],
   ["testing/discovery-candidate-preview-route.test.mjs", "2f1f0d183cdf566876e02ccbbd2b7800c7080e65cb39c12bbd82adfaa39fe5f1"],
   ["testing/discovery-candidate-preview-read-only-auth-contract-source-harness.mjs", "a7dc69efc47dce2bae1d206ca6ee32d21ef4e3f096ee604fa57e9c3b7aa1363f"],
-  ["testing/discovery-candidate-preview-route-export-contract-static-assertions.mjs", "32ca45d158a547a6cc66100d0975e1697e139e0cf9a90ebff1ef05c94b7b4ae3"],
+  ["testing/discovery-candidate-preview-route-export-contract-static-assertions.mjs", "023fdaba4fe81bb6a0f4cb8d0381bd051fd5d97b2d65bdfbd76cb33c79fbe28f"],
   ["app/api/admin/discovery/runs/route.ts", "62b84b6e7dee14d51383c403f3ce7e48815f92e81730cf283baa74620547a0ee"],
   ["app/api/admin/discovery/discovered-tools/route.ts", "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010"],
   ["testing/admin-discovery-read-route-diagnostic-logging-static-assertions.mjs", "b3a4eaf7ae7e12ac6be8aa53642adbb1174c399356d014cad4b05d3e95de5b6d"],
@@ -171,6 +181,10 @@ const PROTECTED_HASHES = new Map([
   [PHASE_27GO_HARNESS_PATH, "1ca893ab8f168bf0d44cd081b80ea14c31adfc84c7d56177e28c7dd634534161"],
   [PHASE_27GP_ROUTE_PATH, "a6042baca7b525d62fb9ae1e6006aa2678051c49291680b39b0787045bec2382"],
   [PHASE_27GP_HARNESS_PATH, "02ee44a5555eccf6a8f304853ee4162b08dc20f90fda5d67fb92729d602ac5a6"],
+  [PHASE_27GR_WRAPPER_1_PATH, "3ecfa9a4fcef05062d24f8e7c06493fd84e8b834824a4a68fc9ae742e5d01b84"],
+  [PHASE_27GR_WRAPPER_2_PATH, "088b8e51b73c9278508806523ae273235fbb6c5ec5d0b02c799f88578d0507e8"],
+  [PHASE_27GR_WRAPPER_3_PATH, "d6c3fc81d96d9b25a95765f932db1069118576dc7154e6a6f5ae09287a88968e"],
+  [PHASE_27GR_HARNESS_PATH, "32a38a808b76e8748c073a39cc2f713f7c50a1ceedde64a6d5072a0c428bbcba"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([
@@ -514,6 +528,7 @@ const phase27glHarness = parseFile(PHASE_27GL_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27gnHarness = parseFile(PHASE_27GN_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27goHarness = parseFile(PHASE_27GO_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27gpHarness = parseFile(PHASE_27GP_HARNESS_PATH, ts.ScriptKind.JS);
+const phase27grHarness = parseFile(PHASE_27GR_HARNESS_PATH, ts.ScriptKind.JS);
 
 check(
   "A02",
@@ -885,6 +900,7 @@ check(
     phase27gnHarness.text.includes(PHASE_27GN_SUCCESS_MARKER) &&
     phase27goHarness.text.includes(PHASE_27GO_SUCCESS_MARKER) &&
     phase27gpHarness.text.includes(PHASE_27GP_SUCCESS_MARKER) &&
+    phase27grHarness.text.includes(PHASE_27GR_SUCCESS_MARKER) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ),
