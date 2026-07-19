@@ -44,7 +44,7 @@ test("subprocess limits and fixed options are explicit", async () => {
   assert.match(source, /maxBuffer: GIT_MAX_BUFFER_BYTES/);
   assert.match(source, /killSignal: GIT_KILL_SIGNAL/);
   assert.match(source, /shell: false/);
-  assert.match(source, /env: createGitChildEnvironment\(process\.env\)/);
+  assert.match(source, /env: SEALED_GIT_ENVIRONMENT/);
 });
 
 test("child environment is narrow and fixed", async () => {
@@ -70,6 +70,39 @@ test("fixed Git configuration overrides are exact", async () => {
   ]) {
     assert.match(source, new RegExp(`"${fixedValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
   }
+});
+
+test("execution baseline is dynamically bound, strictly validated, and not disclosed", async () => {
+  const source = await readHarness();
+  assert.match(source, /const EXPECTED_BASELINE_ENVIRONMENT_KEY = "AIFINDER_EXPECTED_EXECUTION_BASELINE";/);
+  assert.doesNotMatch(source, /const EXPECTED_BASELINE = "[0-9a-f]{40}";/);
+  assert.match(source, /process\.env\[EXPECTED_BASELINE_ENVIRONMENT_KEY\]/);
+  assert.match(source, /!\/\^\[0-9a-f\]\{40\}\$\/\.test\(expectedBaseline\)/);
+  assert.match(source, /EXPECTED_BASELINE_INVALID: "EXPECTED_BASELINE_INVALID"/);
+  assert.match(source, /head\.value !== expectedBaseline/);
+  assert.doesNotMatch(source, /console\.log\([^\n]*expectedBaseline|expected_baseline\s*:/);
+  const environment = source.match(/const SEALED_GIT_ENVIRONMENT = Object\.freeze\(\{[\s\S]*?\}\);/)?.[0] ?? "";
+  assert.doesNotMatch(environment, /AIFINDER_EXPECTED_EXECUTION_BASELINE|EXPECTED_BASELINE_ENVIRONMENT_KEY/);
+});
+
+test("Git version parser accepts only bare Git or exact numeric Apple Git suffix", async () => {
+  const source = await readHarness();
+  const parser = source.match(/function parseGitVersion\([\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(parser, /\^git version \(\[0-9\]\+\)\\\.\(\[0-9\]\+\)\\\.\(\[0-9\]\+\)\(\?: \\(Apple Git-\(\[0-9\]\+\)\\\)\)\?\$/);
+  assert.match(parser, /match\.slice\(1, 4\)/);
+  assert.match(source, /const MINIMUM_GIT_VERSION = Object\.freeze\(\[2, 35, 2\]\);/);
+});
+
+test("default guard result remains bounded and operationally blocked", async () => {
+  const source = await readHarness();
+  for (const field of [
+    "approval_guard_matched: false", "runtime_validation: false", "route_invocation: false",
+    "network_call: false", "live_db_read: false", "db_mutation: false",
+    'operational_reactivation_status: "BLOCKED"',
+  ]) assert.ok(source.includes(field));
+  assert.match(source, /printResult\("SKIPPED_BY_DEFAULT"/);
+  assert.match(source, /emitBoundedEvidence\("SKIPPED_BY_DEFAULT"\)/);
+  assert.match(source, /return 0;/);
 });
 
 test("results use categorical and bounded evidence", async () => {

@@ -59,6 +59,40 @@ const NEGATIVE_EXACT_KEYS = Object.freeze(new Set([
   "host", "path", "filepath", "filename", "request", "response", "body", "headers",
 ]));
 
+const DEFAULT_GUARD_SKIPPED_PROFILE = Object.freeze({
+  schema_version: 1,
+  harness_status: "SKIPPED_BY_DEFAULT",
+  approval_guard_matched: false,
+  runtime_validation: false,
+  route_invocation: false,
+  network_call: false,
+  live_db_read: false,
+  db_mutation: false,
+  operational_reactivation_status: "BLOCKED",
+  branch_match: true,
+  expected_baseline_match: true,
+  repository_state_class: "EXPECTED_EXCLUDED_ONLY",
+  tracked_tree_clean: true,
+  index_empty: true,
+  untracked_count: 5,
+  expected_excluded_set_match: true,
+  expected_excluded_hash_match: true,
+  git_version_supported: true,
+  git_version_class: "SUPPORTED",
+  ...Object.fromEntries(["version", "branch", "head", "status"].flatMap((operation) => [
+    [`git_${operation}_success`, true],
+    [`git_${operation}_result_class`, "SUCCESS"],
+    [`git_${operation}_status`, 0],
+    [`git_${operation}_timed_out`, false],
+    [`git_${operation}_output_limit_exceeded`, false],
+    [`git_${operation}_signal_present`, false],
+  ])),
+});
+
+const SEMANTIC_PROFILES = Object.freeze({
+  DEFAULT_GUARD_SKIPPED: DEFAULT_GUARD_SKIPPED_PROFILE,
+});
+
 class ValidationFailure extends Error {
   constructor(resultClass) {
     super(resultClass);
@@ -294,6 +328,14 @@ export function validateBoundedEvidenceBytes(bytes) {
   return Object.freeze({ valid: true, result_class: "VALID" });
 }
 
+export function validateSemanticProfile(profileName, evidence) {
+  if (!Object.hasOwn(SEMANTIC_PROFILES, profileName)) fail("PROFILE_UNKNOWN");
+  for (const [key, expectedValue] of Object.entries(SEMANTIC_PROFILES[profileName])) {
+    if (!Object.hasOwn(evidence, key) || evidence[key] !== expectedValue) fail("PROFILE_MISMATCH");
+  }
+  return Object.freeze({ valid: true, result_class: "VALID" });
+}
+
 function isAllowedWrapperInputPath(inputPath) {
   if (!path.isAbsolute(inputPath)) return false;
   const resolvedPath = path.resolve(inputPath);
@@ -307,20 +349,23 @@ function isAllowedWrapperInputPath(inputPath) {
   }
 }
 
-export function validateBoundedEvidenceFile(inputPath) {
+export function validateBoundedEvidenceFile(profileName, inputPath) {
   if (!isAllowedWrapperInputPath(inputPath)) fail("INPUT_PATH_FORBIDDEN");
   const inputStat = lstatSync(inputPath);
   if (inputStat.size > MAX_VALIDATOR_INPUT_BYTES) fail("INPUT_TOO_LARGE");
   const bytes = readFileSync(inputPath);
-  return validateBoundedEvidenceBytes(bytes);
+  const schemaResult = validateBoundedEvidenceBytes(bytes);
+  const evidence = JSON.parse(decodeUtf8(bytes));
+  validateSemanticProfile(profileName, evidence);
+  return schemaResult;
 }
 
 const isCli = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isCli) {
   let result = Object.freeze({ valid: false, result_class: "VALIDATION_REJECTED" });
   try {
-    if (process.argv.length !== 3) fail("ARGUMENT_COUNT_INVALID");
-    result = validateBoundedEvidenceFile(process.argv[2]);
+    if (process.argv.length !== 4) fail("ARGUMENT_COUNT_INVALID");
+    result = validateBoundedEvidenceFile(process.argv[2], process.argv[3]);
   } catch (error) {
     result = Object.freeze({
       valid: false,

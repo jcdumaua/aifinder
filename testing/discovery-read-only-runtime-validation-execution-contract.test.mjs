@@ -12,7 +12,7 @@ const paths = Object.freeze({
   wrapper: path.join(testDirectory, "discovery-read-only-runtime-validation-execution-wrapper-candidate.sh"),
   validator: path.join(testDirectory, "discovery-read-only-runtime-validation-evidence-validator.mjs"),
   executionTest: fileURLToPath(import.meta.url),
-  batchRecord: path.join(repositoryRoot, "docs/discovery-phase-27hd-27ia-harness-execution-readiness-static-preparation-batch-gate.md"),
+  batchRecord: path.join(repositoryRoot, "docs/discovery-phase-27ib-27iu-controlled-execution-contract-final-correction-batch-gate.md"),
 });
 
 async function sources() {
@@ -74,8 +74,46 @@ test("wrapper remains inert and binds only execution-gate placeholders", async (
   assert.match(wrapper, /OUTER_TIMEOUT_SECONDS=10/);
   assert.match(wrapper, /MAX_COMBINED_LOG_BYTES=2097152/);
   assert.match(wrapper, /MAX_VALIDATOR_INPUT_BYTES=1048576/);
+  assert.match(wrapper, /MAX_CAPTURE_FILE_BYTES=1048576/);
+  assert.match(wrapper, /MAX_CAPTURE_FILE_BLOCKS_1024=1024/);
+  assert.doesNotMatch(wrapper, /MAX_CAPTURE_FILE_BLOCKS_512/);
   assert.match(wrapper, /umask 077/);
   assert.doesNotMatch(wrapper, /declare -A|mapfile|readarray|\[\[ -v |\$\{[^}]+,,\}|bash -c|sh -c/);
+});
+
+test("wrapper seals every future Node launch and never forwards approval", async () => {
+  const { wrapper } = await sources();
+  assert.match(wrapper, /HARNESS_SYNTAX\) exec \/usr\/bin\/env -i LANG=C LC_ALL=C "\$NODE_EXECUTABLE" --check/);
+  assert.match(wrapper, /STATIC_TESTS\) exec \/usr\/bin\/env -i LANG=C LC_ALL=C "\$NODE_EXECUTABLE" --test/);
+  assert.match(wrapper, /HARNESS\) exec \/usr\/bin\/env -i LANG=C LC_ALL=C AIFINDER_EXPECTED_EXECUTION_BASELINE="\$EXPECTED_EXECUTION_BASELINE"/);
+  assert.match(wrapper, /VALIDATOR\) exec \/usr\/bin\/env -i LANG=C LC_ALL=C "\$NODE_EXECUTABLE"[^\n]*DEFAULT_GUARD_SKIPPED/);
+  assert.doesNotMatch(wrapper, /AIFINDER_RUN_DISCOVERY_READ_ONLY_RUNTIME_VALIDATION_HARNESS_25FD|APPROVAL_GUARD/);
+  assert.doesNotMatch(wrapper, /\bPATH=|\bHOME=|env -i[^\n]*(?:PATH|HOME)=/);
+});
+
+test("wrapper applies fail-closed resource bounds and watchdog to every child", async () => {
+  const { wrapper } = await sources();
+  const runner = wrapper.slice(wrapper.indexOf("run_fixed_child_with_watchdog()"), wrapper.indexOf("run_future_authorized_static_checks()"));
+  assert.match(runner, /ulimit -f "\$MAX_CAPTURE_FILE_BLOCKS_1024" \|\| exit 96/);
+  assert.match(runner, /exec \/usr\/bin\/env -i/g);
+  assert.match(runner, /\/bin\/sleep "\$OUTER_TIMEOUT_SECONDS"/);
+  assert.match(runner, /\/bin\/kill -KILL "\$child_pid"/);
+  assert.match(runner, /RESOURCE_LIMIT_SETUP_FAILED/);
+  assert.match(runner, /WATCHDOG_SETUP_FAILED/);
+  assert.match(runner, /CHILD_FILE_LIMIT_EXCEEDED/);
+  assert.match(runner, /check_capture_bounds/);
+  assert.match(wrapper, /STDOUT_CAPTURE_LIMIT_EXCEEDED/);
+  assert.match(wrapper, /STDERR_CAPTURE_LIMIT_EXCEEDED/);
+  assert.match(wrapper, /COMBINED_OUTPUT_LIMIT_EXCEEDED/);
+});
+
+test("wrapper documents absolute future launch and exact two-line binding", async () => {
+  const { wrapper } = await sources();
+  assert.match(wrapper, /Future invocation: \/usr\/bin\/env -i \/bin\/bash \/tmp\/<exact-bound-wrapper-path>/);
+  assert.equal(wrapper.match(/^EXPECTED_EXECUTION_BASELINE="__BIND_AT_EXECUTION_GATE__"$/gm)?.length, 1);
+  assert.equal(wrapper.match(/^NODE_EXECUTABLE="__BIND_AT_EXECUTION_GATE__"$/gm)?.length, 1);
+  assert.equal(wrapper.match(/__BIND_AT_EXECUTION_GATE__/g)?.length, 2);
+  assert.match(wrapper, /\[ "\$#" -eq 0 \]/);
 });
 
 test("validator is bounded, rejects duplicates and unknown fields, and has no active capabilities", async () => {
@@ -89,6 +127,28 @@ test("validator is bounded, rejects duplicates and unknown fields, and has no ac
   const imports = validator.split("\n").filter((line) => line.startsWith("import ")).join("\n");
   assert.doesNotMatch(imports, /child_process|http|https|net|tls|dns/);
   assert.doesNotMatch(validator, /process\.env|spawn\s*\(|spawnSync\s*\(|exec\s*\(|execFile\s*\(|eval\s*\(|new Function|import\s*\(/);
+});
+
+test("validator enforces the one exact default-guard semantic profile", async () => {
+  const { validator } = await sources();
+  assert.match(validator, /const DEFAULT_GUARD_SKIPPED_PROFILE = Object\.freeze\(\{/);
+  assert.match(validator, /DEFAULT_GUARD_SKIPPED: DEFAULT_GUARD_SKIPPED_PROFILE/);
+  for (const value of [
+    'harness_status: "SKIPPED_BY_DEFAULT"', "approval_guard_matched: false", "runtime_validation: false",
+    "route_invocation: false", "network_call: false", "live_db_read: false", "db_mutation: false",
+    'repository_state_class: "EXPECTED_EXCLUDED_ONLY"', "untracked_count: 5", 'git_version_class: "SUPPORTED"',
+  ]) assert.ok(validator.includes(value));
+  assert.match(validator, /PROFILE_UNKNOWN/);
+  assert.match(validator, /PROFILE_MISMATCH/);
+  assert.match(validator, /process\.argv\.length !== 4/);
+  assert.match(validator, /validateBoundedEvidenceFile\(process\.argv\[2\], process\.argv\[3\]\)/);
+});
+
+test("Apple Git parser contract is identical in intent across JavaScript and Bash", async () => {
+  const { harness, wrapper } = await sources();
+  assert.ok(harness.includes("^git version ([0-9]+)\\.([0-9]+)\\.([0-9]+)(?: \\(Apple Git-([0-9]+)\\))?$"));
+  assert.ok(wrapper.includes("^git\\ version\\ ([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\ \\(Apple\\ Git-([0-9]+)\\))?$"));
+  assert.match(wrapper, /MINIMUM_GIT_VERSION="2\.35\.2"/);
 });
 
 test("sources contain no caller-controlled escape path or active prohibited command", async () => {

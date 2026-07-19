@@ -22,7 +22,7 @@ const PHASE = "25FD";
 const TASK = "read-only-runtime-validation-harness";
 const APPROVAL_GUARD = "AIFINDER_RUN_DISCOVERY_READ_ONLY_RUNTIME_VALIDATION_HARNESS_25FD";
 const EXPECTED_BRANCH = "main";
-const EXPECTED_BASELINE = "3dd669999cbcfbb5480b0beb3ae4c5032d068ebb";
+const EXPECTED_BASELINE_ENVIRONMENT_KEY = "AIFINDER_EXPECTED_EXECUTION_BASELINE";
 const OPERATIONAL_REACTIVATION_STATUS = "blocked";
 const GIT_EXECUTABLE = "/usr/bin/git";
 const MINIMUM_GIT_VERSION = Object.freeze([2, 35, 2]);
@@ -127,6 +127,7 @@ const HARNESS_ERROR_CATEGORY = Object.freeze({
   GIT_OPERATION_FAILED: "GIT_OPERATION_FAILED",
   WRONG_BRANCH: "WRONG_BRANCH",
   WRONG_BASELINE: "WRONG_BASELINE",
+  EXPECTED_BASELINE_INVALID: "EXPECTED_BASELINE_INVALID",
   DIRTY_WORKING_TREE: "DIRTY_WORKING_TREE",
   MANIFEST_INVALID: "MANIFEST_INVALID",
   MANIFEST_REQUIRES_APPROVAL: "MANIFEST_REQUIRES_APPROVAL",
@@ -352,17 +353,25 @@ function verifyGitExecutableIdentity() {
 }
 
 function parseGitVersion(value) {
-  const match = /^git version ([0-9]+)\.([0-9]+)\.([0-9]+)$/.exec(value);
+  const match = /^git version ([0-9]+)\.([0-9]+)\.([0-9]+)(?: \(Apple Git-([0-9]+)\))?$/.exec(value);
   if (!match) {
     return null;
   }
 
-  const parts = match.slice(1).map((part) => Number(part));
+  const parts = match.slice(1, 4).map((part) => Number(part));
   if (parts.some((part) => !Number.isSafeInteger(part) || part < 0)) {
     return null;
   }
 
   return Object.freeze(parts);
+}
+
+function readExpectedBaseline() {
+  const expectedBaseline = process.env[EXPECTED_BASELINE_ENVIRONMENT_KEY];
+  if (typeof expectedBaseline !== "string" || !/^[0-9a-f]{40}$/.test(expectedBaseline)) {
+    throw new Error(HARNESS_ERROR_CATEGORY.EXPECTED_BASELINE_INVALID);
+  }
+  return expectedBaseline;
 }
 
 function isGitVersionSupported(version) {
@@ -443,6 +452,7 @@ function emitBoundedEvidence(harnessStatus) {
 
 function verifyRepoSafety() {
   const root = repoRoot();
+  const expectedBaseline = readExpectedBaseline();
   const evidenceRows = [];
   const repositoryEvidence = {
     branchMatch: false,
@@ -496,7 +506,7 @@ function verifyRepoSafety() {
     printGitEvidence([withGitResultClass(head.evidence, GIT_RESULT_CLASS.OUTPUT_MALFORMED)]);
     throw new Error(HARNESS_ERROR_CATEGORY.GIT_OPERATION_FAILED);
   }
-  if (head.value !== EXPECTED_BASELINE) {
+  if (head.value !== expectedBaseline) {
     printGitEvidence([withGitResultClass(head.evidence, GIT_RESULT_CLASS.IDENTITY_MISMATCH)]);
     throw new Error(HARNESS_ERROR_CATEGORY.WRONG_BASELINE);
   }

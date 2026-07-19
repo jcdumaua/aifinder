@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Inert Phase 27HD-27IA candidate. The repository copy is not execution-eligible.
+# Inert Phase 27IB-27IU candidate. The repository copy is not execution-eligible.
+# Future invocation: /usr/bin/env -i /bin/bash /tmp/<exact-bound-wrapper-path>
 
 REPOSITORY_PATH="/Users/jamescarlodumaua/aifinder"
 EXPECTED_BRANCH="main"
@@ -11,16 +12,16 @@ GIT_EXECUTABLE="/usr/bin/git"
 MINIMUM_GIT_VERSION="2.35.2"
 
 RUNTIME_HARNESS_PATH="testing/discovery-read-only-runtime-validation-harness.mjs"
-RUNTIME_HARNESS_SHA256="6f7247494fc7348aac42006b6dd97228027acfdcb606b7d0316fb638a79a7722"
+RUNTIME_HARNESS_SHA256="d08b0eaeeb9621917021f1c6e98eec21f4e7c0357cd2cf70dab34c7da43f5e24"
 RUNTIME_HARNESS_MODE="755"
 STATIC_CONTRACT_TEST_PATH="testing/discovery-read-only-runtime-validation-harness-static-contract.test.mjs"
-STATIC_CONTRACT_TEST_SHA256="0bc5a0a7e152031ca981feb80c46bb709c0ace797a1a74b37c560780b5a0807c"
+STATIC_CONTRACT_TEST_SHA256="0404360fa6016daa710941ec479444b59eb4dc15146467c8247644109f565869"
 STATIC_CONTRACT_TEST_MODE="644"
 VALIDATOR_PATH="testing/discovery-read-only-runtime-validation-evidence-validator.mjs"
-VALIDATOR_SHA256="a445704b7b682282e16aee44ff52c209dc155dc9056bee36d26d89881f579b62"
+VALIDATOR_SHA256="77ef17723ef5b9848497c303d00d7c5a156ac2ebffce0bf3a2f612bd5dc3bf3a"
 VALIDATOR_MODE="644"
 EXECUTION_CONTRACT_TEST_PATH="testing/discovery-read-only-runtime-validation-execution-contract.test.mjs"
-EXECUTION_CONTRACT_TEST_SHA256="e2eaf6c0762ba68036c165b65f34fa5fe2d896f71437b8bb66233dcf8f993750"
+EXECUTION_CONTRACT_TEST_SHA256="73465c67994cd132c5affc5a35731c3561daeda03f74d4aa14066d5bab0a0e59"
 EXECUTION_CONTRACT_TEST_MODE="644"
 WRAPPER_CANDIDATE_PATH="testing/discovery-read-only-runtime-validation-execution-wrapper-candidate.sh"
 
@@ -28,6 +29,8 @@ TMP_ROOT_PREFIX="/tmp/aifinder-runtime-validation-"
 OUTER_TIMEOUT_SECONDS=10
 MAX_COMBINED_LOG_BYTES=2097152
 MAX_VALIDATOR_INPUT_BYTES=1048576
+MAX_CAPTURE_FILE_BYTES=1048576
+MAX_CAPTURE_FILE_BLOCKS_1024=1024
 
 GIT_CONFIG_OVERRIDE_ARGS=(
   "-c" "core.fsmonitor=false"
@@ -64,8 +67,8 @@ fail_closed() {
 
 require_fixed_bindings() {
   [ "$#" -eq 0 ] || fail_closed "ARGUMENTS_PROHIBITED"
-  [ "$EXPECTED_EXECUTION_BASELINE" != "__BIND_AT_EXECUTION_GATE__" ] || fail_closed "BASELINE_UNBOUND"
-  [ "$NODE_EXECUTABLE" != "__BIND_AT_EXECUTION_GATE__" ] || fail_closed "NODE_EXECUTABLE_UNBOUND"
+  case "$EXPECTED_EXECUTION_BASELINE" in __BIND_AT_EXECUTION_*) fail_closed "BASELINE_UNBOUND" ;; esac
+  case "$NODE_EXECUTABLE" in __BIND_AT_EXECUTION_*) fail_closed "NODE_EXECUTABLE_UNBOUND" ;; esac
   [ -n "$NODE_EXECUTABLE" ] || fail_closed "NODE_EXECUTABLE_UNBOUND"
   [ "${NODE_EXECUTABLE#/}" != "$NODE_EXECUTABLE" ] || fail_closed "NODE_EXECUTABLE_NOT_ABSOLUTE"
 }
@@ -102,18 +105,13 @@ verify_file_identity() {
 
 verify_git_version_text() {
   version_text="$1"
-  case "$version_text" in
-    "git version "[0-9]*.[0-9]*.[0-9]*) ;;
-    *) fail_closed "GIT_VERSION_MALFORMED" ;;
-  esac
-  version_number=${version_text#git version }
-  version_major=${version_number%%.*}
-  version_tail=${version_number#*.}
-  version_minor=${version_tail%%.*}
-  version_patch=${version_tail#*.}
-  case "$version_major:$version_minor:$version_patch" in
-    *[!0-9:]*|::*|*::*|*:) fail_closed "GIT_VERSION_MALFORMED" ;;
-  esac
+  if [[ "$version_text" =~ ^git\ version\ ([0-9]+)\.([0-9]+)\.([0-9]+)(\ \(Apple\ Git-([0-9]+)\))?$ ]]; then
+    version_major=${BASH_REMATCH[1]}
+    version_minor=${BASH_REMATCH[2]}
+    version_patch=${BASH_REMATCH[3]}
+  else
+    fail_closed "GIT_VERSION_MALFORMED"
+  fi
   if [ "$version_major" -lt 2 ] \
     || { [ "$version_major" -eq 2 ] && [ "$version_minor" -lt 35 ]; } \
     || { [ "$version_major" -eq 2 ] && [ "$version_minor" -eq 35 ] && [ "$version_patch" -lt 2 ]; }; then
@@ -176,8 +174,31 @@ prepare_output_directory() {
   done
 }
 
-run_harness_with_watchdog() {
-  "$NODE_EXECUTABLE" "$REPOSITORY_PATH/$RUNTIME_HARNESS_PATH" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" &
+check_capture_bounds() {
+  stdout_bytes=$(/usr/bin/wc -c < "$STDOUT_CAPTURE_FILE") || fail_closed "CAPTURE_SIZE_CHECK_FAILED"
+  stderr_bytes=$(/usr/bin/wc -c < "$STDERR_CAPTURE_FILE") || fail_closed "CAPTURE_SIZE_CHECK_FAILED"
+  [ "$stdout_bytes" -le "$MAX_CAPTURE_FILE_BYTES" ] || fail_closed "STDOUT_CAPTURE_LIMIT_EXCEEDED"
+  [ "$stderr_bytes" -le "$MAX_CAPTURE_FILE_BYTES" ] || fail_closed "STDERR_CAPTURE_LIMIT_EXCEEDED"
+  combined_bytes=$((stdout_bytes + stderr_bytes))
+  [ "$combined_bytes" -le "$MAX_COMBINED_LOG_BYTES" ] || fail_closed "COMBINED_OUTPUT_LIMIT_EXCEEDED"
+}
+
+run_fixed_child_with_watchdog() {
+  fixed_child="$1"
+  : > "$TIMEOUT_MARKER_FILE" || fail_closed "TIMEOUT_MARKER_RESET_FAILED"
+  (
+    ulimit -f "$MAX_CAPTURE_FILE_BLOCKS_1024" || exit 96
+    case "$fixed_child" in
+      HARNESS_SYNTAX) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$RUNTIME_HARNESS_PATH" ;;
+      STATIC_TEST_SYNTAX) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$STATIC_CONTRACT_TEST_PATH" ;;
+      VALIDATOR_SYNTAX) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$VALIDATOR_PATH" ;;
+      EXECUTION_TEST_SYNTAX) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$EXECUTION_CONTRACT_TEST_PATH" ;;
+      STATIC_TESTS) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" --test "$REPOSITORY_PATH/$STATIC_CONTRACT_TEST_PATH" "$REPOSITORY_PATH/$EXECUTION_CONTRACT_TEST_PATH" ;;
+      HARNESS) exec /usr/bin/env -i LANG=C LC_ALL=C AIFINDER_EXPECTED_EXECUTION_BASELINE="$EXPECTED_EXECUTION_BASELINE" "$NODE_EXECUTABLE" "$REPOSITORY_PATH/$RUNTIME_HARNESS_PATH" ;;
+      VALIDATOR) exec /usr/bin/env -i LANG=C LC_ALL=C "$NODE_EXECUTABLE" "$REPOSITORY_PATH/$VALIDATOR_PATH" DEFAULT_GUARD_SKIPPED "$HARNESS_CANDIDATE_FILE" ;;
+      *) exit 95 ;;
+    esac
+  ) >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" &
   child_pid=$!
   (
     /bin/sleep "$OUTER_TIMEOUT_SECONDS"
@@ -187,32 +208,38 @@ run_harness_with_watchdog() {
     fi
   ) &
   watchdog_pid=$!
+  [ "$watchdog_pid" -gt 0 ] || {
+    /bin/kill -KILL "$child_pid" 2> /dev/null
+    wait "$child_pid" 2> /dev/null
+    fail_closed "WATCHDOG_SETUP_FAILED"
+  }
+  /bin/kill -0 "$watchdog_pid" 2> /dev/null || {
+    /bin/kill -KILL "$child_pid" 2> /dev/null
+    wait "$child_pid" 2> /dev/null
+    fail_closed "WATCHDOG_SETUP_FAILED"
+  }
   wait "$child_pid"
   child_status=$?
   /bin/kill "$watchdog_pid" 2> /dev/null
   wait "$watchdog_pid" 2> /dev/null
   [ ! -s "$TIMEOUT_MARKER_FILE" ] || fail_closed "OUTER_TIMEOUT"
+  [ "$child_status" -ne 96 ] || fail_closed "RESOURCE_LIMIT_SETUP_FAILED"
+  [ "$child_status" -ne 95 ] || fail_closed "FIXED_CHILD_UNKNOWN"
+  [ "$child_status" -ne 153 ] || fail_closed "CHILD_FILE_LIMIT_EXCEEDED"
+  check_capture_bounds
   return "$child_status"
 }
 
 run_future_authorized_static_checks() {
-  "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$RUNTIME_HARNESS_PATH" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" \
-    || fail_closed "HARNESS_SYNTAX_CHECK_FAILED"
-  "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$STATIC_CONTRACT_TEST_PATH" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" \
-    || fail_closed "STATIC_TEST_SYNTAX_CHECK_FAILED"
-  "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$VALIDATOR_PATH" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" \
-    || fail_closed "VALIDATOR_SYNTAX_CHECK_FAILED"
-  "$NODE_EXECUTABLE" --check "$REPOSITORY_PATH/$EXECUTION_CONTRACT_TEST_PATH" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" \
-    || fail_closed "EXECUTION_TEST_SYNTAX_CHECK_FAILED"
-  /bin/bash -n "$0" >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" \
-    || fail_closed "WRAPPER_SYNTAX_CHECK_FAILED"
-  "$NODE_EXECUTABLE" --test "$REPOSITORY_PATH/$STATIC_CONTRACT_TEST_PATH" "$REPOSITORY_PATH/$EXECUTION_CONTRACT_TEST_PATH" \
-    >> "$STDOUT_CAPTURE_FILE" 2>> "$STDERR_CAPTURE_FILE" || fail_closed "STATIC_TEST_EXECUTION_FAILED"
+  run_fixed_child_with_watchdog HARNESS_SYNTAX || fail_closed "HARNESS_SYNTAX_CHECK_FAILED"
+  run_fixed_child_with_watchdog STATIC_TEST_SYNTAX || fail_closed "STATIC_TEST_SYNTAX_CHECK_FAILED"
+  run_fixed_child_with_watchdog VALIDATOR_SYNTAX || fail_closed "VALIDATOR_SYNTAX_CHECK_FAILED"
+  run_fixed_child_with_watchdog EXECUTION_TEST_SYNTAX || fail_closed "EXECUTION_TEST_SYNTAX_CHECK_FAILED"
+  run_fixed_child_with_watchdog STATIC_TESTS || fail_closed "STATIC_TEST_EXECUTION_FAILED"
 }
 
 extract_and_validate_bounded_evidence() {
-  combined_bytes=$(( $(/usr/bin/wc -c < "$STDOUT_CAPTURE_FILE") + $(/usr/bin/wc -c < "$STDERR_CAPTURE_FILE") ))
-  [ "$combined_bytes" -le "$MAX_COMBINED_LOG_BYTES" ] || fail_closed "COMBINED_OUTPUT_LIMIT_EXCEEDED"
+  check_capture_bounds
   last_line=""
   while IFS= read -r captured_line; do
     last_line=$captured_line
@@ -221,9 +248,12 @@ extract_and_validate_bounded_evidence() {
   chmod 600 "$HARNESS_CANDIDATE_FILE" || fail_closed "TEMP_PERMISSION_FAILED"
   candidate_bytes=$(/usr/bin/wc -c < "$HARNESS_CANDIDATE_FILE")
   [ "$candidate_bytes" -le "$MAX_VALIDATOR_INPUT_BYTES" ] || fail_closed "VALIDATOR_INPUT_LIMIT_EXCEEDED"
-  "$NODE_EXECUTABLE" "$REPOSITORY_PATH/$VALIDATOR_PATH" "$HARNESS_CANDIDATE_FILE" > "$VALIDATOR_RESULT_FILE" 2> /dev/null
+  : > "$STDOUT_CAPTURE_FILE"
+  : > "$STDERR_CAPTURE_FILE"
+  run_fixed_child_with_watchdog VALIDATOR
   validator_status=$?
   [ "$validator_status" -eq 0 ] || fail_closed "EVIDENCE_VALIDATION_REJECTED"
+  /bin/cp "$STDOUT_CAPTURE_FILE" "$VALIDATOR_RESULT_FILE" || fail_closed "VALIDATOR_RESULT_PRESERVE_FAILED"
   /bin/cp "$HARNESS_CANDIDATE_FILE" "$BOUNDED_REVIEW_FILE" || fail_closed "BOUNDED_EVIDENCE_PRESERVE_FAILED"
   chmod 600 "$BOUNDED_REVIEW_FILE" || fail_closed "TEMP_PERMISSION_FAILED"
   : > "$STDOUT_CAPTURE_FILE"
@@ -244,8 +274,9 @@ main() {
   verify_committed_source_identities
   prepare_output_directory
   run_future_authorized_static_checks
-  run_harness_with_watchdog
+  run_fixed_child_with_watchdog HARNESS
   harness_status=$?
+  [ "$harness_status" -eq 0 ] || fail_closed "HARNESS_EXIT_NONZERO"
   extract_and_validate_bounded_evidence
   finalize_delivery "$harness_status"
   exit "$harness_status"
