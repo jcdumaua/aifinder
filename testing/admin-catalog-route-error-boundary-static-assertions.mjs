@@ -35,6 +35,11 @@ const PHASE_27GO_HARNESS_PATH =
   "testing/admin-discovery-manual-claim-diagnostic-logging-static-assertions.mjs";
 const PHASE_27GO_SUCCESS_MARKER =
   "PASS: admin discovery manual-claim diagnostic logging static assertions (32 assertions)";
+const PHASE_27GP_ROUTE_PATH = "app/api/admin/discovery/intake/route.ts";
+const PHASE_27GP_HARNESS_PATH =
+  "testing/admin-discovery-intake-diagnostic-logging-static-assertions.mjs";
+const PHASE_27GP_SUCCESS_MARKER =
+  "PASS: admin discovery intake diagnostic logging static assertions (26 assertions)";
 
 const EXPECTED_SUBMISSIONS_EXPORTS = new Set([
   "runtime",
@@ -164,6 +169,8 @@ const PROTECTED_HASHES = new Map([
   [PHASE_27GN_HARNESS_PATH, "cd0fc45154e0eb1d13bb915bb7a59c51d684af7c766ed64b2c4f6c139556f665"],
   [PHASE_27GO_ROUTE_PATH, "41d1741cca2d5fefd6a3c204f14ff319de9bdf3dc18da3518ea8487088550aaf"],
   [PHASE_27GO_HARNESS_PATH, "1ca893ab8f168bf0d44cd081b80ea14c31adfc84c7d56177e28c7dd634534161"],
+  [PHASE_27GP_ROUTE_PATH, "a6042baca7b525d62fb9ae1e6006aa2678051c49291680b39b0787045bec2382"],
+  [PHASE_27GP_HARNESS_PATH, "02ee44a5555eccf6a8f304853ee4162b08dc20f90fda5d67fb92729d602ac5a6"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([
@@ -506,6 +513,7 @@ const auditRouteHarness = parseFile(AUDIT_ROUTE_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27glHarness = parseFile(PHASE_27GL_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27gnHarness = parseFile(PHASE_27GN_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27goHarness = parseFile(PHASE_27GO_HARNESS_PATH, ts.ScriptKind.JS);
+const phase27gpHarness = parseFile(PHASE_27GP_HARNESS_PATH, ts.ScriptKind.JS);
 
 check(
   "A02",
@@ -876,6 +884,7 @@ check(
     phase27glHarness.text.includes(PHASE_27GL_SUCCESS_MARKER) &&
     phase27gnHarness.text.includes(PHASE_27GN_SUCCESS_MARKER) &&
     phase27goHarness.text.includes(PHASE_27GO_SUCCESS_MARKER) &&
+    phase27gpHarness.text.includes(PHASE_27GP_SUCCESS_MARKER) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ),

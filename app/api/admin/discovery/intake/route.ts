@@ -1,3 +1,4 @@
+import "server-only";
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -195,9 +196,7 @@ export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized Discovery Engine intake request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_manual_intake_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -293,9 +292,7 @@ export async function POST(request: Request) {
       .limit(1);
 
   if (existingDiscoveredError) {
-    console.error("Failed to check existing discovered tools.", {
-      message: existingDiscoveredError.message,
-    });
+    console.error("discovery_manual_intake_existing_discovered_lookup_failed");
 
     return jsonResponse({ error: "Failed to check discovery queue." }, 500);
   }
@@ -322,9 +319,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (liveToolsError) {
-    console.error("Failed to check live tools during discovery intake.", {
-      message: liveToolsError.message,
-    });
+    console.error("discovery_manual_intake_live_tools_lookup_failed");
 
     return jsonResponse({ error: "Failed to check live tools." }, 500);
   }
@@ -338,9 +333,7 @@ export async function POST(request: Request) {
       .limit(1);
 
   if (pendingSubmissionsError) {
-    console.error("Failed to check pending submissions during discovery intake.", {
-      message: pendingSubmissionsError.message,
-    });
+    console.error("discovery_manual_intake_pending_submissions_lookup_failed");
 
     return jsonResponse({ error: "Failed to check pending submissions." }, 500);
   }
@@ -395,9 +388,7 @@ export async function POST(request: Request) {
         .maybeSingle();
 
     if (discoverySourceError) {
-      console.error("Failed to validate manual intake discovery source.", {
-        message: discoverySourceError.message,
-      });
+      console.error("discovery_manual_intake_source_load_failed");
 
       return jsonResponse({ error: "Failed to validate discovery source." }, 500);
     }
@@ -434,9 +425,7 @@ export async function POST(request: Request) {
     .single();
 
   if (discoveryRunError) {
-    console.error("Failed to create manual discovery run.", {
-      message: discoveryRunError.message,
-    });
+    console.error("discovery_manual_intake_run_insert_failed");
 
     return jsonResponse({ error: "Failed to create discovery run." }, 500);
   }
@@ -473,9 +462,7 @@ export async function POST(request: Request) {
       .single();
 
   if (discoveredInsertError) {
-    console.error("Failed to create manual discovery intake candidate.", {
-      message: discoveredInsertError.message,
-    });
+    console.error("discovery_manual_intake_discovered_tool_insert_failed");
 
     await supabaseAdmin
       .from("discovery_runs")
@@ -516,9 +503,7 @@ export async function POST(request: Request) {
     .single();
 
   if (evidenceError) {
-    console.error("Failed to create manual discovery evidence.", {
-      message: evidenceError.message,
-    });
+    console.error("discovery_manual_intake_evidence_insert_failed");
 
     await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
@@ -557,9 +542,7 @@ export async function POST(request: Request) {
         .single();
 
     if (duplicateError) {
-      console.error("Failed to create manual intake duplicate candidate.", {
-        message: duplicateError.message,
-      });
+      console.error("discovery_manual_intake_duplicate_candidate_insert_failed");
 
       await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
@@ -599,9 +582,7 @@ export async function POST(request: Request) {
     });
 
   if (auditError) {
-    console.error("Failed to write manual discovery intake audit event.", {
-      message: auditError.message,
-    });
+    console.error("discovery_manual_intake_audit_insert_failed");
 
     await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
 
@@ -618,9 +599,7 @@ export async function POST(request: Request) {
       .eq("id", sourceId);
 
     if (sourceUpdateError) {
-      console.error("Failed to update discovery source last_run_at.", {
-        message: sourceUpdateError.message,
-      });
+      console.error("discovery_manual_intake_source_update_failed");
     }
   }
 
