@@ -24,6 +24,11 @@ const PHASE_27GL_HARNESS_PATH =
   "testing/admin-discovery-source-status-mutation-diagnostic-logging-static-assertions.mjs";
 const PHASE_27GL_SUCCESS_MARKER =
   "PASS: admin discovery source/status mutation diagnostic logging static assertions (32 assertions)";
+const PHASE_27GN_ROUTE_PATH = "app/api/admin/discovery/runs/manual/route.ts";
+const PHASE_27GN_HARNESS_PATH =
+  "testing/admin-discovery-manual-trigger-diagnostic-logging-static-assertions.mjs";
+const PHASE_27GN_SUCCESS_MARKER =
+  "PASS: admin discovery manual-trigger diagnostic logging static assertions (28 assertions)";
 
 const EXPECTED_SUBMISSIONS_EXPORTS = new Set([
   "runtime",
@@ -149,6 +154,8 @@ const PROTECTED_HASHES = new Map([
   ["app/api/admin/discovery/discovered-tools/[id]/route.ts", "93b6cf77fbe2a87839c8f10854e8002ba4bb2cc759b41a4b4977b77ea84db7fc"],
   ["app/api/admin/discovery/discovered-tools/bulk-status/route.ts", "f1c9254f35c48a44f96b08c136dc418a724aa60cd3dcec9b8051b25cf17c9f6d"],
   [PHASE_27GL_HARNESS_PATH, "45dd79aee8f5cbf6bc3ca09760288bcb659f09bd65e572c748ef0ccd5c116008"],
+  [PHASE_27GN_ROUTE_PATH, "863c34131f8ce0d34ff8473bca1ba5e1f6af4dba6302ff008a595228b935c11c"],
+  [PHASE_27GN_HARNESS_PATH, "cd0fc45154e0eb1d13bb915bb7a59c51d684af7c766ed64b2c4f6c139556f665"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([
@@ -489,6 +496,7 @@ const loginHarness = parseFile(LOGIN_HARNESS_PATH, ts.ScriptKind.JS);
 const adminShell = parseFile(ADMIN_SHELL_PATH, ts.ScriptKind.JS);
 const auditRouteHarness = parseFile(AUDIT_ROUTE_HARNESS_PATH, ts.ScriptKind.JS);
 const phase27glHarness = parseFile(PHASE_27GL_HARNESS_PATH, ts.ScriptKind.JS);
+const phase27gnHarness = parseFile(PHASE_27GN_HARNESS_PATH, ts.ScriptKind.JS);
 
 check(
   "A02",
@@ -857,6 +865,7 @@ check(
     ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
   ) &&
     phase27glHarness.text.includes(PHASE_27GL_SUCCESS_MARKER) &&
+    phase27gnHarness.text.includes(PHASE_27GN_SUCCESS_MARKER) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ),

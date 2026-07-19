@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -58,9 +60,7 @@ export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized manual crawler trigger request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_manual_crawler_trigger_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -111,9 +111,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (sourceError) {
-    console.error("Failed to validate manual crawler source.", {
-      message: sourceError.message,
-    });
+    console.error("discovery_manual_crawler_source_load_failed");
 
     return jsonResponse({ error: "Failed to validate discovery source." }, 500);
   }
@@ -140,9 +138,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (activeRunError) {
-    console.error("Failed to check active manual crawler runs.", {
-      message: activeRunError.message,
-    });
+    console.error("discovery_manual_crawler_active_runs_load_failed");
 
     return jsonResponse({ error: "Failed to check active discovery runs." }, 500);
   }
@@ -190,9 +186,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertRunError) {
-    console.error("Failed to create manual crawler run trigger.", {
-      message: insertRunError.message,
-    });
+    console.error("discovery_manual_crawler_run_create_failed");
 
     return jsonResponse({ error: "Failed to create discovery run." }, 500);
   }
@@ -232,10 +226,7 @@ export async function POST(request: Request) {
     });
 
   if (auditError) {
-    console.error("Failed to audit manual crawler run trigger.", {
-      message: auditError.message,
-      runId: discoveryRunRecord.id,
-    });
+    console.error("discovery_manual_crawler_trigger_audit_failed");
   }
 
   return jsonResponse(
