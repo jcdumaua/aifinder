@@ -1,3 +1,4 @@
+import "server-only";
 import { NextResponse } from "next/server";
 import {
   verifyAdminCsrfRequest,
@@ -302,12 +303,7 @@ async function writeAuditEvent({
   });
 
   if (error) {
-    console.error("Failed to write manual crawler executor audit event.", {
-      eventType,
-      runId,
-      sourceId,
-      message: error.message,
-    });
+    console.error("discovery_manual_crawler_claim_audit_write_failed");
 
     return false;
   }
@@ -863,11 +859,7 @@ async function recoverStaleRunningRuns({
     .limit(20);
 
   if (error) {
-    console.error("Failed to check running manual crawler runs.", {
-      message: error.message,
-      sourceId,
-      runId: targetRunId,
-    });
+    console.error("discovery_manual_crawler_stale_runs_load_failed");
 
     throw new Error("Failed to check active discovery runs.");
   }
@@ -906,11 +898,7 @@ async function recoverStaleRunningRuns({
       .maybeSingle();
 
     if (recoveryError) {
-      console.error("Failed to recover stale manual crawler run.", {
-        message: recoveryError.message,
-        sourceId,
-        staleRunId: staleRun.id,
-      });
+      console.error("discovery_manual_crawler_stale_run_recovery_failed");
 
       throw new Error("Failed to recover stale discovery run.");
     }
@@ -969,11 +957,9 @@ async function completeMetadataFetchSmokeRun({
       .maybeSingle();
 
     if (error) {
-      console.error("Failed to reject metadata-fetch smoke run plan count.", {
-        message: error.message,
-        runId: claimedRun.id,
-        sourceId,
-      });
+      console.error(
+        "discovery_manual_crawler_metadata_smoke_empty_plan_failure_update_failed"
+      );
 
       return jsonResponse({ error: "Failed to reject metadata-fetch smoke run." }, 500);
     }
@@ -1052,11 +1038,9 @@ async function completeMetadataFetchSmokeRun({
       .maybeSingle();
 
     if (error) {
-      console.error("Failed to complete metadata-fetch smoke run.", {
-        message: error.message,
-        runId: claimedRun.id,
-        sourceId,
-      });
+      console.error(
+        "discovery_manual_crawler_metadata_smoke_success_update_failed"
+      );
 
       return jsonResponse({ error: "Failed to complete metadata-fetch smoke run." }, 500);
     }
@@ -1121,12 +1105,9 @@ async function completeMetadataFetchSmokeRun({
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to record metadata-fetch smoke adapter failure.", {
-      message: error.message,
-      runId: claimedRun.id,
-      sourceId,
-      adapterStatus: fetchResult.status,
-    });
+    console.error(
+      "discovery_manual_crawler_metadata_smoke_adapter_failure_update_failed"
+    );
 
     return jsonResponse({ error: "Failed to record metadata-fetch smoke failure." }, 500);
   }
@@ -1216,11 +1197,9 @@ async function completeManualMetadataFetchRun({
       .maybeSingle();
 
     if (error) {
-      console.error("Failed to reject manual metadata fetch run plan count.", {
-        message: error.message,
-        runId: claimedRun.id,
-        sourceId,
-      });
+      console.error(
+        "discovery_manual_crawler_metadata_fetch_plan_limit_failure_update_failed"
+      );
 
       return jsonResponse(
         { error: "Failed to reject manual metadata fetch run." },
@@ -1346,11 +1325,9 @@ async function completeManualMetadataFetchRun({
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to finalize manual metadata fetch run.", {
-      message: error.message,
-      runId: claimedRun.id,
-      sourceId,
-    });
+    console.error(
+      "discovery_manual_crawler_metadata_fetch_terminal_update_failed"
+    );
 
     return jsonResponse({ error: "Failed to finalize manual metadata fetch run." }, 500);
   }
@@ -1479,11 +1456,9 @@ async function completeManualStaticHtmlEvidenceRun({
       .maybeSingle();
 
     if (error) {
-      console.error("Failed to reject static HTML evidence run plan count.", {
-        message: error.message,
-        runId: claimedRun.id,
-        sourceId,
-      });
+      console.error(
+        "discovery_manual_crawler_static_html_plan_limit_failure_update_failed"
+      );
 
       return jsonResponse(
         { error: "Failed to reject static HTML evidence run." },
@@ -1568,11 +1543,9 @@ async function completeManualStaticHtmlEvidenceRun({
       .maybeSingle();
 
     if (error) {
-      console.error("Failed to record static HTML evidence executor failure.", {
-        message: error.message,
-        runId: claimedRun.id,
-        sourceId,
-      });
+      console.error(
+        "discovery_manual_crawler_static_html_execution_failure_update_failed"
+      );
 
       return jsonResponse(
         { error: "Failed to record static HTML evidence executor failure." },
@@ -1656,11 +1629,9 @@ async function completeManualStaticHtmlEvidenceRun({
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to finalize static HTML evidence run.", {
-      message: error.message,
-      runId: claimedRun.id,
-      sourceId,
-    });
+    console.error(
+      "discovery_manual_crawler_static_html_terminal_update_failed"
+    );
 
     return jsonResponse({ error: "Failed to finalize static HTML evidence run." }, 500);
   }
@@ -1721,9 +1692,7 @@ export async function POST(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
-    console.warn("Unauthorized manual crawler executor claim request.", {
-      errors: adminSession.errors,
-    });
+    console.warn("discovery_manual_crawler_claim_unauthorized");
 
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
@@ -1779,10 +1748,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (runError) {
-    console.error("Failed to load manual crawler run for executor claim.", {
-      message: runError.message,
-      runId,
-    });
+    console.error("discovery_manual_crawler_claim_run_load_failed");
 
     return jsonResponse({ error: "Failed to load discovery run." }, 500);
   }
@@ -1814,11 +1780,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (sourceError) {
-    console.error("Failed to validate manual crawler executor source.", {
-      message: sourceError.message,
-      runId,
-      sourceId: runRecord.source_id,
-    });
+    console.error("discovery_manual_crawler_claim_source_load_failed");
 
     return jsonResponse({ error: "Failed to validate discovery source." }, 500);
   }
@@ -1892,12 +1854,9 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (rejectError) {
-      console.error("Failed to record manual crawler request-plan rejection.", {
-        message: rejectError.message,
-        runId: runRecord.id,
-        sourceId: runRecord.source_id,
-        preflightFailureCode: requestPlanPreflight.reason,
-      });
+      console.error(
+        "discovery_manual_crawler_claim_preflight_rejection_update_failed"
+      );
 
       return jsonResponse({ error: "Failed to record request-plan preflight rejection." }, 500);
     }
@@ -2083,11 +2042,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (claimError) {
-    console.error("Failed to claim manual crawler dry run.", {
-      message: claimError.message,
-      runId: runRecord.id,
-      sourceId: runRecord.source_id,
-    });
+    console.error("discovery_manual_crawler_claim_update_failed");
 
     await writeAuditEvent({
       actor: adminSession.actor,
@@ -2191,11 +2146,9 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (completeError) {
-    console.error("Failed to complete manual crawler dry run.", {
-      message: completeError.message,
-      runId: claimedRunRecord.id,
-      sourceId: runRecord.source_id,
-    });
+    console.error(
+      "discovery_manual_crawler_dry_run_completion_update_failed"
+    );
 
     await writeAuditEvent({
       actor: adminSession.actor,
