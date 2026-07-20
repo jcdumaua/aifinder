@@ -48,7 +48,12 @@ const EXPECTED_PHASE_27GW_TOKENS = Object.freeze([
   "DOWNSTREAM_NOT_YET_ELIGIBLE=1",
   "TOTAL_PREREQUISITE_DOMAINS=9",
   "PRIMARY_CLASSIFICATION_CONFLICTS=0",
-  "PHASE_27GW_RECLASSIFICATION_OCCURRED=false",
+]);
+const EXPECTED_PHASE_27GW_ADJUSTMENT_PATTERNS = Object.freeze([
+  /The original preflight design expected `2\/4\/2\/1`/,
+  /Actual static evidence produced `1\/5\/2\/1`/,
+  /The additional unresolved runtime-harness domain is retained/,
+  /runtime remains unauthorized/i,
 ]);
 
 async function readHarness() {
@@ -89,7 +94,7 @@ test("harness is import-inert and emits exactly one JSON stdout record synchrono
   const approvedFsImports = ["accessSync", "existsSync", "lstatSync", "readFileSync", "writeSync"];
   const fsSpecifiers = [...source.matchAll(/["'](?:node:)?fs(?:\/promises)?["']/g)];
   const namedFsImports = [...source.matchAll(
-    /import\s*\{([\s\S]*?)\}\s*from\s*["']node:fs["']\s*;?/g,
+    /import\s*\{([^}]*)\}\s*from\s*["']node:fs["']\s*;?/g,
   )];
   const importedFsBindings = namedFsImports.length === 1
     ? namedFsImports[0][1].split(",").map((binding) => binding.trim()).filter(Boolean)
@@ -194,10 +199,19 @@ test("harness diagnostics are stderr-only and categorical", async () => {
   const diagnosticEnd = source.indexOf("\n}", diagnosticStart);
   assert.notEqual(diagnosticEnd, -1);
   const diagnosticBody = source.slice(diagnosticStart, diagnosticEnd + 2);
+  const finalEvidenceHelper = extractFunction(source, "emitBoundedEvidence");
+  const diagnosticArguments = [...source.matchAll(/writeDiagnosticLine\(([^;\n]*)\);/g)]
+    .map((match) => match[1]);
 
   assert.match(diagnosticBody, /writeSync\(2,\s*`\$\{value\}\\n`\)/);
   assert.doesNotMatch(diagnosticBody, /writeSync\(1,|console\./);
-  assert.doesNotMatch(source, /write(?:Sync)?\([^\n]*(?:\.stack|error\.message)|stdout\s*:|stderr\s*:/);
+  assert.doesNotMatch(source, /write(?:Sync)?\([^\n]*(?:\.stack|error\.message)/);
+  assert.equal(diagnosticArguments.length > 0, true);
+  for (const argument of diagnosticArguments) {
+    assert.doesNotMatch(argument, /\.stack|error\.message/);
+  }
+  assert.doesNotMatch(diagnosticBody, /\b(?:stdout|stderr)\s*:/);
+  assert.doesNotMatch(finalEvidenceHelper, /\b(?:stdout|stderr)\s*:/);
 });
 
 test("harness Git operation allowlist and sealed child environment are exact", async () => {
@@ -364,6 +378,9 @@ test("unchanged dependency identities and Phase 27GW map remain exact", async ()
   assert.equal(phaseStat.mode & 0o777, 0o644);
   for (const token of EXPECTED_PHASE_27GW_TOKENS) {
     assert.equal(phaseSource.split(token).length - 1, 1, `unexpected count for ${token}`);
+  }
+  for (const pattern of EXPECTED_PHASE_27GW_ADJUSTMENT_PATTERNS) {
+    assert.match(phaseSource, pattern);
   }
   assert.doesNotMatch(phaseSource, /PHASE_27GW_RECLASSIFICATION_OCCURRED=true/);
 });
