@@ -88,7 +88,7 @@ const ACTIVE_IDENTITY_ENTRIES = Object.freeze([
   }),
   Object.freeze({
     path: "testing/discovery-read-only-runtime-validation-execution-contract.test.mjs",
-    sha256: "bb8a2fe5bc861614da464b35783690ea2c3f7187b10eff863ce977906a1f9f3e",
+    sha256: "9bc2e42d10dfe651b431ed152600280d4abd8748bbdb03e84a8c06160ef74f43",
     mode: 0o644,
     regular_file_required: true,
     symlink_rejected: true,

@@ -4,7 +4,7 @@
 
 REPOSITORY_PATH="/Users/jamescarlodumaua/aifinder"
 SUPERVISOR_PATH="/Users/jamescarlodumaua/aifinder/testing/discovery-read-only-runtime-validation-execution-supervisor.mjs"
-EXPECTED_SUPERVISOR_SHA256="0d469d85cfcb974b978bd4e1742b1679c5516d14adf0e0b685f06caf1b83b317"
+EXPECTED_SUPERVISOR_SHA256="cea9c6fb38d8c0df111c8f23e6d20fc2911643faa37d0daa5027ced55a364608"
 
 EXPECTED_EXECUTION_BASELINE="__BIND_AT_EXECUTION_GATE__"
 NODE_EXECUTABLE="__BIND_AT_EXECUTION_GATE__"

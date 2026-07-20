@@ -817,6 +817,16 @@ test("wrapper has exactly three full declarations and no malformed sentinel", as
   assert.doesNotMatch(wrapper, /`__BIND_AT_EXECUTION|__BIND_AT_EXECUTION__|__BIND_AT_EXECUTION_GATE_(?!_)/);
 });
 
+test("wrapper pins the exact current supervisor source identity", async () => {
+  const { wrapper, supervisor } = await sources();
+  const declarations = [
+    ...wrapper.matchAll(/^EXPECTED_SUPERVISOR_SHA256="([0-9a-f]{64})"$/gm),
+  ];
+
+  assert.equal(declarations.length, 1);
+  assert.equal(declarations[0][1], sha256(Buffer.from(supervisor, "utf8")));
+});
+
 test("wrapper forwards caller arguments only into the effective zero-argument check", async () => {
   const { wrapper } = await sources();
   assert.match(wrapper, /main\(\)\s*\{[\s\S]*\[ "\$#" -eq 0 \] \|\| exit 64/);
