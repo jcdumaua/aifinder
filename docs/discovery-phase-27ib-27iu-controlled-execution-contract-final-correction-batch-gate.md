@@ -135,6 +135,13 @@ The harness, wrapper, validator, static harness test, and execution-contract tes
 
 The runtime-harness domain remains unresolved. The five excluded governance files remain outside implementation scope and retain their exact identities. No environment or sensitive value was inspected. No source or syntax validation was executed. Nothing was staged, committed, pushed, fetched, pulled, deployed, or network-revalidated.
 
+The following exact tokens repair the deterministic source-test/document mismatch without changing the historical no-execution determination:
+
+HARNESS_EXECUTED=false
+STATIC_TESTS_EXECUTED=false
+WRAPPER_EXECUTED=false
+VALIDATOR_EXECUTED=false
+
 ## Future gate and final result
 
 `PROPOSE_SINGLE_SEPARATELY_REVIEWED_LOCAL_ONLY_STATIC_TEST_PLUS_HARNESS_EXECUTION_GATE`

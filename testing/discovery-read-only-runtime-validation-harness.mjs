@@ -14,7 +14,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { X_OK } from "node:constants";
-import { accessSync, existsSync, lstatSync, readFileSync } from "node:fs";
+import { accessSync, existsSync, lstatSync, readFileSync, writeSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -160,6 +160,22 @@ const boundedEvidence = {
   git_version_class: "UNVERIFIED",
 };
 
+for (const operation of Object.values(GIT_OPERATION)) {
+  const prefix = `git_${operation.id.toLowerCase()}`;
+  Object.assign(boundedEvidence, {
+    [`${prefix}_success`]: false,
+    [`${prefix}_result_class`]: GIT_RESULT_CLASS.NO_EXIT_STATUS,
+    [`${prefix}_status`]: -1,
+    [`${prefix}_timed_out`]: false,
+    [`${prefix}_output_limit_exceeded`]: false,
+    [`${prefix}_signal_present`]: false,
+    [`${prefix}_primary_output_present`]: false,
+    [`${prefix}_diagnostic_output_present`]: false,
+    [`${prefix}_primary_output_length`]: "EMPTY",
+    [`${prefix}_diagnostic_output_length`]: "EMPTY",
+  });
+}
+
 /**
  * Phase 25FD intentionally ships no route entries.
  * A later approved manifest-population phase must add route entries before any
@@ -174,7 +190,7 @@ function classifyOutputLength(value) {
   if (length <= 64) return "UP_TO_64_BYTES";
   if (length <= 1024) return "UP_TO_1_KIB";
   if (length <= 65536) return "UP_TO_64_KIB";
-  return "OVER_64_KIB";
+  return "UP_TO_1_MIB";
 }
 
 function createGitEvidence(operation, resultClass, result, stdoutText, stderrText) {
@@ -252,50 +268,51 @@ function repoRoot() {
   return resolve(scriptDir, "..");
 }
 
+function writeDiagnosticLine(value) {
+  writeSync(2, `${value}\n`);
+}
+
 function printBoundary() {
-  console.log("=== AiFinder Discovery Engine — Read-Only Runtime Validation Harness ===");
-  console.log(`phase=${PHASE}`);
-  console.log(`task=${TASK}`);
-  console.log("boundary=guarded_inert_harness_scaffold");
-  console.log("runtime_validation=false");
-  console.log("route_invocation=false");
-  console.log("local_server_startup=false");
-  console.log("live_db_read=false");
-  console.log("admin_api_invocation=false");
-  console.log("public_route_invocation=false");
-  console.log("browser_automation=false");
-  console.log("network_call=false");
-  console.log("candidate_staging=false");
-  console.log("candidate_decision_execution=false");
-  console.log("approve_for_draft=false");
-  console.log("public_publishing=false");
-  console.log("db_mutation=false");
-  console.log(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
+  writeDiagnosticLine("boundary=guarded_inert_harness_scaffold");
+  writeDiagnosticLine(`phase=${PHASE}`);
+  writeDiagnosticLine(`task=${TASK}`);
+  writeDiagnosticLine("runtime_validation=false");
+  writeDiagnosticLine("route_invocation=false");
+  writeDiagnosticLine("local_server_startup=false");
+  writeDiagnosticLine("live_db_read=false");
+  writeDiagnosticLine("admin_api_invocation=false");
+  writeDiagnosticLine("public_route_invocation=false");
+  writeDiagnosticLine("browser_automation=false");
+  writeDiagnosticLine("network_call=false");
+  writeDiagnosticLine("candidate_staging=false");
+  writeDiagnosticLine("candidate_decision_execution=false");
+  writeDiagnosticLine("approve_for_draft=false");
+  writeDiagnosticLine("public_publishing=false");
+  writeDiagnosticLine("db_mutation=false");
+  writeDiagnosticLine(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
 }
 
 function printResult(status, reason) {
-  console.log("=== Harness result ===");
-  console.log(`harness_status=${status}`);
-  console.log(`reason=${reason}`);
-  console.log(`route_count=${STATIC_ROUTE_MANIFEST.length}`);
-  console.log("routes_passed=0");
-  console.log("routes_failed=0");
-  console.log(`routes_blocked=${STATIC_ROUTE_MANIFEST.length}`);
-  console.log("values_printed=false");
-  console.log("secret_like_output_detected=false");
-  console.log("mutation_attempt_detected=false");
-  console.log(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
+  writeDiagnosticLine(`harness_status=${status}`);
+  writeDiagnosticLine(`reason=${reason}`);
+  writeDiagnosticLine(`route_count=${STATIC_ROUTE_MANIFEST.length}`);
+  writeDiagnosticLine("routes_passed=0");
+  writeDiagnosticLine("routes_failed=0");
+  writeDiagnosticLine(`routes_blocked=${STATIC_ROUTE_MANIFEST.length}`);
+  writeDiagnosticLine("values_printed=false");
+  writeDiagnosticLine("secret_like_output_detected=false");
+  writeDiagnosticLine("mutation_attempt_detected=false");
+  writeDiagnosticLine(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
 }
 
 function printProgressReport() {
-  console.log("=== Discovery Engine progress report ===");
-  console.log("controlled_build_sequence_status=stable");
-  console.log("current_harness_status=inert_scaffold_only");
-  console.log("runtime_validation_progress=not_started");
-  console.log("route_invocation_progress=not_started");
-  console.log("manifest_population_status=not_started");
-  console.log("operational_reactivation_progress=halted");
-  console.log(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
+  writeDiagnosticLine("controlled_build_sequence_status=stable");
+  writeDiagnosticLine("current_harness_status=inert_scaffold_only");
+  writeDiagnosticLine("runtime_validation_progress=not_started");
+  writeDiagnosticLine("route_invocation_progress=not_started");
+  writeDiagnosticLine("manifest_population_status=not_started");
+  writeDiagnosticLine("operational_reactivation_progress=halted");
+  writeDiagnosticLine(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
 }
 
 function printGitEvidence(evidenceRows) {
@@ -312,16 +329,16 @@ function printGitEvidence(evidenceRows) {
     boundedEvidence[`${prefix}_diagnostic_output_present`] = evidence.stderrPresent;
     boundedEvidence[`${prefix}_primary_output_length`] = evidence.stdoutLengthBucket;
     boundedEvidence[`${prefix}_diagnostic_output_length`] = evidence.stderrLengthBucket;
-    console.log(`${prefix}_success=${evidence.success}`);
-    console.log(`${prefix}_result_class=${evidence.resultClass}`);
-    console.log(`${prefix}_status=${status}`);
-    console.log(`${prefix}_timed_out=${evidence.timedOut}`);
-    console.log(`${prefix}_output_limit_exceeded=${evidence.outputLimitExceeded}`);
-    console.log(`${prefix}_signal_present=${evidence.signalPresent}`);
-    console.log(`${prefix}_stdout_present=${evidence.stdoutPresent}`);
-    console.log(`${prefix}_stderr_present=${evidence.stderrPresent}`);
-    console.log(`${prefix}_stdout_length=${evidence.stdoutLengthBucket}`);
-    console.log(`${prefix}_stderr_length=${evidence.stderrLengthBucket}`);
+    writeDiagnosticLine(`${prefix}_success=${evidence.success}`);
+    writeDiagnosticLine(`${prefix}_result_class=${evidence.resultClass}`);
+    writeDiagnosticLine(`${prefix}_status=${status}`);
+    writeDiagnosticLine(`${prefix}_timed_out=${evidence.timedOut}`);
+    writeDiagnosticLine(`${prefix}_output_limit_exceeded=${evidence.outputLimitExceeded}`);
+    writeDiagnosticLine(`${prefix}_signal_present=${evidence.signalPresent}`);
+    writeDiagnosticLine(`${prefix}_primary_output_present=${evidence.stdoutPresent}`);
+    writeDiagnosticLine(`${prefix}_diagnostic_output_present=${evidence.stderrPresent}`);
+    writeDiagnosticLine(`${prefix}_primary_output_length=${evidence.stdoutLengthBucket}`);
+    writeDiagnosticLine(`${prefix}_diagnostic_output_length=${evidence.stderrLengthBucket}`);
   }
 }
 
@@ -352,18 +369,20 @@ function verifyGitExecutableIdentity() {
   }
 }
 
-function parseGitVersion(value) {
+export function parseGitVersion(value) {
   const match = /^git version ([0-9]+)\.([0-9]+)\.([0-9]+)(?: \(Apple Git-([0-9]+)\))?$/.exec(value);
   if (!match) {
     return null;
   }
 
-  const parts = match.slice(1, 4).map((part) => Number(part));
-  if (parts.some((part) => !Number.isSafeInteger(part) || part < 0)) {
+  const capturedNumericParts = match.slice(1, 5)
+    .filter((part) => part !== undefined)
+    .map((part) => Number(part));
+  if (capturedNumericParts.some((part) => !Number.isSafeInteger(part) || part < 0)) {
     return null;
   }
 
-  return Object.freeze(parts);
+  return Object.freeze(capturedNumericParts.slice(0, 3));
 }
 
 function readExpectedBaseline() {
@@ -374,8 +393,12 @@ function readExpectedBaseline() {
   return expectedBaseline;
 }
 
-function isGitVersionSupported(version) {
+export function isGitVersionSupported(version) {
+  if (!Array.isArray(version) || version.length !== MINIMUM_GIT_VERSION.length) {
+    return false;
+  }
   for (let index = 0; index < MINIMUM_GIT_VERSION.length; index += 1) {
+    if (!Number.isSafeInteger(version[index]) || version[index] < 0) return false;
     if (version[index] > MINIMUM_GIT_VERSION[index]) return true;
     if (version[index] < MINIMUM_GIT_VERSION[index]) return false;
   }
@@ -433,21 +456,21 @@ function printRepositoryEvidence(evidence) {
     git_version_supported: evidence.gitVersionSupported,
     git_version_class: evidence.gitVersionClass,
   });
-  console.log(`branch_match=${evidence.branchMatch}`);
-  console.log(`expected_baseline_match=${evidence.expectedBaselineMatch}`);
-  console.log(`repository_state_class=${evidence.repositoryStateClass}`);
-  console.log(`tracked_tree_clean=${evidence.trackedTreeClean}`);
-  console.log(`index_empty=${evidence.indexEmpty}`);
-  console.log(`untracked_count=${evidence.untrackedCount}`);
-  console.log(`expected_excluded_set_match=${evidence.expectedExcludedSetMatch}`);
-  console.log(`expected_excluded_hash_match=${evidence.expectedExcludedHashMatch}`);
-  console.log(`git_version_supported=${evidence.gitVersionSupported}`);
-  console.log(`git_version_class=${evidence.gitVersionClass}`);
+  writeDiagnosticLine(`branch_match=${evidence.branchMatch}`);
+  writeDiagnosticLine(`expected_baseline_match=${evidence.expectedBaselineMatch}`);
+  writeDiagnosticLine(`repository_state_class=${evidence.repositoryStateClass}`);
+  writeDiagnosticLine(`tracked_tree_clean=${evidence.trackedTreeClean}`);
+  writeDiagnosticLine(`index_empty=${evidence.indexEmpty}`);
+  writeDiagnosticLine(`untracked_count=${evidence.untrackedCount}`);
+  writeDiagnosticLine(`expected_excluded_set_match=${evidence.expectedExcludedSetMatch}`);
+  writeDiagnosticLine(`expected_excluded_hash_match=${evidence.expectedExcludedHashMatch}`);
+  writeDiagnosticLine(`git_version_supported=${evidence.gitVersionSupported}`);
+  writeDiagnosticLine(`git_version_class=${evidence.gitVersionClass}`);
 }
 
 function emitBoundedEvidence(harnessStatus) {
   boundedEvidence.harness_status = harnessStatus;
-  console.log(JSON.stringify(Object.freeze({ ...boundedEvidence })));
+  writeSync(1, `${JSON.stringify(Object.freeze({ ...boundedEvidence }))}\n`);
 }
 
 function verifyRepoSafety() {
@@ -581,7 +604,7 @@ function main() {
 
   const approved = verifyApprovalGuard();
   boundedEvidence.approval_guard_matched = approved;
-  console.log(`approval_guard_matched=${approved}`);
+  writeDiagnosticLine(`approval_guard_matched=${approved}`);
 
   if (!approved) {
     printResult("SKIPPED_BY_DEFAULT", "missing_phase_25fd_runtime_guard");
@@ -596,21 +619,23 @@ function main() {
   return 2;
 }
 
-try {
-  const exitCode = main();
-  process.exit(exitCode);
-} catch (error) {
-  const errorCategory = error instanceof Error
-    && Object.values(HARNESS_ERROR_CATEGORY).includes(error.message)
-    ? error.message
-    : HARNESS_ERROR_CATEGORY.UNKNOWN_ERROR;
-  console.log("=== Harness failure ===");
-  console.log("harness_status=FAILED");
-  console.log(`error_category=${errorCategory}`);
-  console.log("values_printed=false");
-  console.log("secret_like_output_detected=false");
-  console.log("mutation_attempt_detected=false");
-  console.log(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
-  emitBoundedEvidence("FAILED");
-  process.exit(1);
+const isCli = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isCli) {
+  try {
+    const exitCode = main();
+    process.exitCode = exitCode;
+  } catch (error) {
+    const errorCategory = error instanceof Error
+      && Object.values(HARNESS_ERROR_CATEGORY).includes(error.message)
+      ? error.message
+      : HARNESS_ERROR_CATEGORY.UNKNOWN_ERROR;
+    writeDiagnosticLine("harness_status=FAILED");
+    writeDiagnosticLine(`error_category=${errorCategory}`);
+    writeDiagnosticLine("values_printed=false");
+    writeDiagnosticLine("secret_like_output_detected=false");
+    writeDiagnosticLine("mutation_attempt_detected=false");
+    writeDiagnosticLine(`operational_reactivation_status=${OPERATIONAL_REACTIVATION_STATUS}`);
+    emitBoundedEvidence("FAILED");
+    process.exitCode = 1;
+  }
 }

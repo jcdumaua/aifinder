@@ -1,10 +1,13 @@
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { readFileSync, writeSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const MAX_VALIDATOR_INPUT_BYTES = 1024 * 1024;
 const MAX_JSON_DEPTH = 64;
-const WRAPPER_OUTPUT_ROOT_PATTERN = /^\/tmp\/aifinder-runtime-validation-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9_-]+$/;
+const EXACT_VALIDATOR_SUCCESS_BYTES = Buffer.from(
+  '{"valid":true,"result_class":"VALID"}\n',
+  "utf8",
+);
 
 const OPERATION_FIELD_NAMES = Object.freeze([
   "git_version_success", "git_version_result_class", "git_version_status", "git_version_timed_out",
@@ -34,6 +37,7 @@ const REQUIRED_TOP_LEVEL_FIELDS = Object.freeze([
   "network_call", "live_db_read", "db_mutation", "operational_reactivation_status", "branch_match",
   "expected_baseline_match", "repository_state_class", "tracked_tree_clean", "index_empty", "untracked_count",
   "expected_excluded_set_match", "expected_excluded_hash_match", "git_version_supported", "git_version_class",
+  ...OPERATION_FIELD_NAMES,
 ]);
 
 const BOOLEAN_FIELDS = Object.freeze(new Set([
@@ -49,7 +53,9 @@ const RESULT_CLASSES = Object.freeze(new Set([
   "SPAWN_ERROR", "OUTPUT_MISSING", "OUTPUT_MALFORMED", "IDENTITY_MISMATCH", "REPOSITORY_STATE_MISMATCH",
   "VERSION_UNSUPPORTED", "VERSION_MALFORMED", "EXECUTABLE_UNAVAILABLE",
 ]));
-const LENGTH_BUCKETS = Object.freeze(new Set(["EMPTY", "UP_TO_64_BYTES", "UP_TO_1_KIB", "UP_TO_64_KIB", "OVER_64_KIB"]));
+const LENGTH_BUCKETS = Object.freeze(new Set([
+  "EMPTY", "UP_TO_64_BYTES", "UP_TO_1_KIB", "UP_TO_64_KIB", "UP_TO_1_MIB",
+]));
 const HARNESS_STATUSES = Object.freeze(new Set(["SKIPPED_BY_DEFAULT", "ABORTED", "FAILED"]));
 const REPOSITORY_STATE_CLASSES = Object.freeze(new Set(["UNVERIFIED", "EXPECTED_EXCLUDED_ONLY", "MISMATCH"]));
 const VERSION_CLASSES = Object.freeze(new Set(["UNVERIFIED", "SUPPORTED"]));
@@ -250,7 +256,9 @@ function rejectNegativeKeys(key) {
   const normalized = key.toLowerCase();
   const segments = normalizeKeySegments(key);
   if (NEGATIVE_EXACT_KEYS.has(normalized)) fail("FIELD_NAME_FORBIDDEN");
-  if (segments.length === 1 && NEGATIVE_EXACT_KEYS.has(segments[0])) fail("FIELD_NAME_FORBIDDEN");
+  if (segments.some((segment) => NEGATIVE_EXACT_KEYS.has(segment))) {
+    fail("FIELD_NAME_FORBIDDEN");
+  }
 }
 
 function rejectUnsafeString(value) {
@@ -328,50 +336,73 @@ export function validateBoundedEvidenceBytes(bytes) {
   return Object.freeze({ valid: true, result_class: "VALID" });
 }
 
+function validatePresenceAndLength(present, lengthClass) {
+  if (typeof present !== "boolean" || !LENGTH_BUCKETS.has(lengthClass)) {
+    fail("PROFILE_MISMATCH");
+  }
+  if (present === false && lengthClass !== "EMPTY") fail("PROFILE_MISMATCH");
+  if (present === true && lengthClass === "EMPTY") fail("PROFILE_MISMATCH");
+}
+
+function validateSuccessfulGitOperation(operation, evidence) {
+  const prefix = `git_${operation}`;
+  for (const [suffix, expectedValue] of [
+    ["success", true],
+    ["result_class", "SUCCESS"],
+    ["status", 0],
+    ["timed_out", false],
+    ["output_limit_exceeded", false],
+    ["signal_present", false],
+    ["diagnostic_output_present", false],
+    ["diagnostic_output_length", "EMPTY"],
+  ]) {
+    if (evidence[`${prefix}_${suffix}`] !== expectedValue) fail("PROFILE_MISMATCH");
+  }
+
+  const primaryOutputPresent = evidence[`${prefix}_primary_output_present`];
+  const primaryOutputLength = evidence[`${prefix}_primary_output_length`];
+  const diagnosticOutputPresent = evidence[`${prefix}_diagnostic_output_present`];
+  const diagnosticOutputLength = evidence[`${prefix}_diagnostic_output_length`];
+  validatePresenceAndLength(primaryOutputPresent, primaryOutputLength);
+  validatePresenceAndLength(diagnosticOutputPresent, diagnosticOutputLength);
+  if (operation !== "status" && primaryOutputPresent !== true) fail("PROFILE_MISMATCH");
+}
+
 export function validateSemanticProfile(profileName, evidence) {
   if (!Object.hasOwn(SEMANTIC_PROFILES, profileName)) fail("PROFILE_UNKNOWN");
+  if (evidence === null
+    || Array.isArray(evidence)
+    || typeof evidence !== "object"
+    || Object.getPrototypeOf(evidence) !== Object.prototype) {
+    fail("PROFILE_MISMATCH");
+  }
   for (const [key, expectedValue] of Object.entries(SEMANTIC_PROFILES[profileName])) {
     if (!Object.hasOwn(evidence, key) || evidence[key] !== expectedValue) fail("PROFILE_MISMATCH");
   }
-  return Object.freeze({ valid: true, result_class: "VALID" });
-}
-
-function isAllowedWrapperInputPath(inputPath) {
-  if (!path.isAbsolute(inputPath)) return false;
-  const resolvedPath = path.resolve(inputPath);
-  const parentPath = path.dirname(resolvedPath);
-  if (!WRAPPER_OUTPUT_ROOT_PATTERN.test(parentPath)) return false;
-  try {
-    const inputStat = lstatSync(resolvedPath);
-    return inputStat.isFile() && !inputStat.isSymbolicLink() && realpathSync(parentPath) === parentPath;
-  } catch {
-    return false;
+  for (const operation of ["version", "branch", "head", "status"]) {
+    validateSuccessfulGitOperation(operation, evidence);
   }
-}
-
-export function validateBoundedEvidenceFile(profileName, inputPath) {
-  if (!isAllowedWrapperInputPath(inputPath)) fail("INPUT_PATH_FORBIDDEN");
-  const inputStat = lstatSync(inputPath);
-  if (inputStat.size > MAX_VALIDATOR_INPUT_BYTES) fail("INPUT_TOO_LARGE");
-  const bytes = readFileSync(inputPath);
-  const schemaResult = validateBoundedEvidenceBytes(bytes);
-  const evidence = JSON.parse(decodeUtf8(bytes));
-  validateSemanticProfile(profileName, evidence);
-  return schemaResult;
+  return Object.freeze({ valid: true, result_class: "VALID" });
 }
 
 const isCli = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isCli) {
   let result = Object.freeze({ valid: false, result_class: "VALIDATION_REJECTED" });
   try {
-    if (process.argv.length !== 4) fail("ARGUMENT_COUNT_INVALID");
-    result = validateBoundedEvidenceFile(process.argv[2], process.argv[3]);
+    if (process.argv.length !== 3) fail("ARGUMENT_COUNT_INVALID");
+    const bytes = readFileSync(0);
+    result = validateBoundedEvidenceBytes(bytes);
+    const evidence = JSON.parse(decodeUtf8(bytes));
+    validateSemanticProfile(process.argv[2], evidence);
   } catch (error) {
     result = Object.freeze({
       valid: false,
       result_class: error instanceof ValidationFailure ? error.resultClass : "VALIDATION_REJECTED",
     });
   }
-  process.stdout.write(`${JSON.stringify(result)}\n`);
+  const resultBytes = result.valid
+    ? EXACT_VALIDATOR_SUCCESS_BYTES
+    : Buffer.from(`${JSON.stringify(result)}\n`, "utf8");
+  writeSync(1, resultBytes);
   process.exitCode = result.valid ? 0 : 1;
 }
