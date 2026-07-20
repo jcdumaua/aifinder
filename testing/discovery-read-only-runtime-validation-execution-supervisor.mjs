@@ -81,14 +81,14 @@ const ACTIVE_IDENTITY_ENTRIES = Object.freeze([
   }),
   Object.freeze({
     path: "testing/discovery-read-only-runtime-validation-evidence-validator.mjs",
-    sha256: "dc24690bad19c09ee2cf74b336d99f3a57204e846d3a4470b8994cb9120287bb",
+    sha256: "61340d21c4a2d97cdcce439aeb85a16fd54bae9538724dff4df3d554a298b60c",
     mode: 0o644,
     regular_file_required: true,
     symlink_rejected: true,
   }),
   Object.freeze({
     path: "testing/discovery-read-only-runtime-validation-execution-contract.test.mjs",
-    sha256: "9b6fa5e7d0e12a3b38fe5630b37b7128d68314fbafa06d64c4ffa011192a14c7",
+    sha256: "bb8a2fe5bc861614da464b35783690ea2c3f7187b10eff863ce977906a1f9f3e",
     mode: 0o644,
     regular_file_required: true,
     symlink_rejected: true,
@@ -856,6 +856,8 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
   const spawn = dependencies.spawn ?? nodeSpawn;
   const setTimer = dependencies.setTimeout ?? setTimeout;
   const clearTimer = dependencies.clearTimeout ?? clearTimeout;
+  const setLifecycleTimer = dependencies.setLifecycleTimeout ?? setTimeout;
+  const clearLifecycleTimer = dependencies.clearLifecycleTimeout ?? clearTimeout;
   const terminateProcessGroup = dependencies.terminateProcessGroup
     ?? defaultTerminateProcessGroup;
   const runtimeState = context?.runtimeState ?? null;
@@ -919,6 +921,7 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
     let terminalCause = null;
     let exitStatus = null;
     let exitSignal = null;
+    let exitObserved = false;
     let settlementCount = 0;
     let settled = false;
     let settling = false;
@@ -954,56 +957,62 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
 
     const clearReapTimer = () => {
       if (reapTimerHandle === undefined) return;
-      clearTimeout(reapTimerHandle);
+      clearLifecycleTimer(reapTimerHandle);
       runtimeState?.activeTimers?.delete(reapTimerHandle);
       reapTimerHandle = undefined;
     };
 
+    const childExitObserved = () => exitObserved
+      || Number.isInteger(child?.exitCode)
+      || (typeof child?.signalCode === "string" && child.signalCode.length > 0);
+
     const terminateOnce = () => {
       if (terminationPromise) return terminationPromise;
       if (!hasValidPid) return Promise.resolve(false);
+      if (childExitObserved()) return Promise.resolve(true);
+
       terminationAttempted = true;
-      // Reap/termination deadlines deliberately use intrinsic timers. The injected
-      // timer hook is reserved for the fixed 10-second command deadline, so a test
-      // hook cannot suppress lifecycle cleanup and existing deterministic fixtures
-      // continue to observe exactly one injected command timer.
+      let resolveTerminationPromise;
       terminationPromise = new Promise((resolveTermination) => {
-        let completed = false;
-        let terminationTimer;
-        try {
-          terminationTimer = setTimeout(() => {
-            if (completed) return;
-            completed = true;
-            runtimeState?.activeTimers?.delete(terminationTimer);
-            terminationSucceeded = false;
-            resolveTermination(false);
-          }, CHILD_REAP_GRACE_MS);
-        } catch {
-          completed = true;
-          terminationSucceeded = false;
-          resolveTermination(false);
-          return;
-        }
-        runtimeState?.activeTimers?.add(terminationTimer);
-        Promise.resolve()
-          .then(() => terminateProcessGroup(negativeGroupPid, "SIGKILL"))
-          .then((value) => {
-            if (completed) return;
-            completed = true;
-            clearTimeout(terminationTimer);
-            runtimeState?.activeTimers?.delete(terminationTimer);
-            terminationSucceeded = value === true;
-            resolveTermination(terminationSucceeded);
-          })
-          .catch(() => {
-            if (completed) return;
-            completed = true;
-            clearTimeout(terminationTimer);
-            runtimeState?.activeTimers?.delete(terminationTimer);
-            terminationSucceeded = false;
-            resolveTermination(false);
-          });
+        resolveTerminationPromise = resolveTermination;
       });
+
+      let completed = false;
+      let terminationTimer;
+      const finishTermination = (value) => {
+        if (completed) return;
+        completed = true;
+        if (terminationTimer !== undefined) {
+          clearLifecycleTimer(terminationTimer);
+          runtimeState?.activeTimers?.delete(terminationTimer);
+        }
+        terminationSucceeded = value === true;
+        resolveTerminationPromise(terminationSucceeded);
+      };
+
+      try {
+        terminationTimer = setLifecycleTimer(
+          () => finishTermination(false),
+          CHILD_REAP_GRACE_MS,
+        );
+        runtimeState?.activeTimers?.add(terminationTimer);
+      } catch {
+        finishTermination(false);
+        return terminationPromise;
+      }
+
+      let terminationResult;
+      try {
+        // Invoke in the current JavaScript turn. Do not add a microtask window
+        // between authorizing termination and signaling the still-live group leader.
+        terminationResult = terminateProcessGroup(negativeGroupPid, "SIGKILL");
+      } catch {
+        finishTermination(false);
+        return terminationPromise;
+      }
+      Promise.resolve(terminationResult)
+        .then((value) => finishTermination(value === true))
+        .catch(() => finishTermination(false));
       return terminationPromise;
     };
 
@@ -1059,8 +1068,11 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
       }
     };
     const onExit = (status, signal) => {
+      exitObserved = true;
       exitStatus = Number.isInteger(status) ? status : null;
       exitSignal = typeof signal === "string" && signal.length > 0 ? signal : null;
+      clearFixedTimer();
+      armReapDeadline();
     };
 
     const removeListenerSafely = (target, eventName, listener) => {
@@ -1130,7 +1142,7 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
     const armReapDeadline = () => {
       if (reapTimerHandle !== undefined || settled || settling) return;
       try {
-        reapTimerHandle = setTimeout(settleUnreaped, CHILD_REAP_GRACE_MS);
+        reapTimerHandle = setLifecycleTimer(settleUnreaped, CHILD_REAP_GRACE_MS);
         runtimeState?.activeTimers?.add(reapTimerHandle);
       } catch {
         settleUnreaped();
@@ -1138,8 +1150,12 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
     };
 
     const requestTerminal = (resultClass) => {
+      if (resultClass === RESULT_CLASS.TIMEOUT && childExitObserved()) {
+        armReapDeadline();
+        return;
+      }
       if (terminalCause === null) terminalCause = resultClass;
-      if (hasValidPid) void terminateOnce();
+      if (!childExitObserved() && hasValidPid) void terminateOnce();
       armReapDeadline();
     };
     activeRecord.terminate = () => {
@@ -1150,6 +1166,7 @@ export async function runBoundedChild(commandId, context, dependencies = {}) {
     const onClose = async (status, signal) => {
       if (settled || settling) return;
       settling = true;
+      exitObserved = true;
       if (Number.isInteger(status)) exitStatus = status;
       if (typeof signal === "string" && signal.length > 0) exitSignal = signal;
       activeRecord.closed = true;

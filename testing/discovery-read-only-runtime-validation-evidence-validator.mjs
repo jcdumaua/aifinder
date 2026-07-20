@@ -1,4 +1,4 @@
-import { readFileSync, writeSync } from "node:fs";
+import { readSync, writeSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -109,6 +109,48 @@ class ValidationFailure extends Error {
 
 function fail(resultClass) {
   throw new ValidationFailure(resultClass);
+}
+
+export function readBoundedInputBytes({
+  fd = 0,
+  maximumBytes = MAX_VALIDATOR_INPUT_BYTES,
+  chunkBytes = 64 * 1024,
+  read = readSync,
+} = {}) {
+  if (!Number.isSafeInteger(fd)
+    || fd < 0
+    || !Number.isSafeInteger(maximumBytes)
+    || maximumBytes < 1
+    || !Number.isSafeInteger(chunkBytes)
+    || chunkBytes < 1
+    || typeof read !== "function") {
+    fail("INPUT_READER_INVALID");
+  }
+
+  const chunks = [];
+  let totalBytes = 0;
+  const scratch = Buffer.alloc(Math.min(chunkBytes, maximumBytes + 1));
+
+  while (true) {
+    const remainingIncludingSentinel = maximumBytes - totalBytes + 1;
+    const requestedBytes = Math.min(scratch.length, remainingIncludingSentinel);
+    let bytesRead;
+    try {
+      bytesRead = read(fd, scratch, 0, requestedBytes, null);
+    } catch {
+      fail("INPUT_READ_FAILED");
+    }
+    if (!Number.isSafeInteger(bytesRead) || bytesRead < 0 || bytesRead > requestedBytes) {
+      fail("INPUT_READ_FAILED");
+    }
+    if (bytesRead === 0) break;
+
+    totalBytes += bytesRead;
+    if (totalBytes > maximumBytes) fail("INPUT_TOO_LARGE");
+    chunks.push(Buffer.from(scratch.subarray(0, bytesRead)));
+  }
+
+  return Buffer.concat(chunks, totalBytes);
 }
 
 function assertInputBytes(bytes) {
@@ -390,7 +432,7 @@ if (isCli) {
   let result = Object.freeze({ valid: false, result_class: "VALIDATION_REJECTED" });
   try {
     if (process.argv.length !== 3) fail("ARGUMENT_COUNT_INVALID");
-    const bytes = readFileSync(0);
+    const bytes = readBoundedInputBytes();
     result = validateBoundedEvidenceBytes(bytes);
     const evidence = JSON.parse(decodeUtf8(bytes));
     validateSemanticProfile(process.argv[2], evidence);

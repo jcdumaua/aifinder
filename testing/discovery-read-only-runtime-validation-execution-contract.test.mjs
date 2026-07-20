@@ -30,6 +30,7 @@ import {
   validatePostRunVerification,
 } from "./discovery-read-only-runtime-validation-execution-supervisor.mjs";
 import {
+  readBoundedInputBytes,
   validateBoundedEvidenceBytes,
   validateSemanticProfile,
 } from "./discovery-read-only-runtime-validation-evidence-validator.mjs";
@@ -511,6 +512,38 @@ function validateDefaultEvidence(evidence) {
   return validateSemanticProfile("DEFAULT_GUARD_SKIPPED", evidence);
 }
 
+function createBufferReader(sourceBytes, maximumChunkBytes = 65_536) {
+  const source = Buffer.from(sourceBytes);
+  const calls = [];
+  let cursor = 0;
+
+  return {
+    calls,
+    get bytesReturned() {
+      return cursor;
+    },
+    read(fd, target, targetOffset, requestedBytes, position) {
+      assert.equal(fd, 0);
+      assert.equal(position, null);
+      assert.ok(Buffer.isBuffer(target));
+      assert.equal(Number.isSafeInteger(targetOffset) && targetOffset >= 0, true);
+      assert.equal(Number.isSafeInteger(requestedBytes) && requestedBytes >= 1, true);
+
+      const bytesRead = Math.min(
+        source.length - cursor,
+        requestedBytes,
+        maximumChunkBytes,
+      );
+      if (bytesRead > 0) {
+        source.copy(target, targetOffset, cursor, cursor + bytesRead);
+        cursor += bytesRead;
+      }
+      calls.push(Object.freeze({ requestedBytes, bytesRead }));
+      return bytesRead;
+    },
+  };
+}
+
 function createMockStdin() {
   const stdin = new EventEmitter();
   stdin.eventTrace = [];
@@ -535,6 +568,8 @@ function createMockStdin() {
 function createMockChild(pid = 4242, { pipedStdin = false } = {}) {
   const child = new EventEmitter();
   child.pid = pid;
+  child.exitCode = null;
+  child.signalCode = null;
   child.stdin = pipedStdin ? createMockStdin() : null;
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
@@ -546,9 +581,17 @@ function createRunnerFixture({ emitOutput, pipedStdin = false } = {}) {
   const spawnCalls = [];
   const terminationCalls = [];
   const clearTimerCalls = [];
+  const lifecycleTimers = new Map();
   let timerCallback;
   let timerHandle;
+  let lifecycleTimerSequence = 0;
   let closeEmitted = false;
+
+  function emitExit(status = 0, signal = null) {
+    child.exitCode = Number.isInteger(status) ? status : null;
+    child.signalCode = typeof signal === "string" && signal.length > 0 ? signal : null;
+    child.emit("exit", status, signal);
+  }
 
   function emitClose(status = null, signal = "SIGKILL") {
     if (closeEmitted) return;
@@ -560,7 +603,7 @@ function createRunnerFixture({ emitOutput, pipedStdin = false } = {}) {
     spawn(executable, args, options) {
       spawnCalls.push({ executable, args, options });
       if (emitOutput) {
-        queueMicrotask(() => emitOutput({ child, emitClose }));
+        queueMicrotask(() => emitOutput({ child, emitClose, emitExit }));
       }
       return child;
     },
@@ -573,6 +616,16 @@ function createRunnerFixture({ emitOutput, pipedStdin = false } = {}) {
     clearTimeout(handle) {
       clearTimerCalls.push(handle);
     },
+    setLifecycleTimeout(callback, milliseconds) {
+      assert.equal(milliseconds, 1_000);
+      lifecycleTimerSequence += 1;
+      const handle = Object.freeze({ timer: `lifecycle-test-timer-${lifecycleTimerSequence}` });
+      lifecycleTimers.set(handle, callback);
+      return handle;
+    },
+    clearLifecycleTimeout(handle) {
+      lifecycleTimers.delete(handle);
+    },
     async terminateProcessGroup(groupPid, signal) {
       terminationCalls.push({ groupPid, signal });
       queueMicrotask(() => emitClose(null, "SIGKILL"));
@@ -584,9 +637,19 @@ function createRunnerFixture({ emitOutput, pipedStdin = false } = {}) {
     child,
     clearTimerCalls,
     dependencies,
+    emitClose,
+    emitExit,
+    fireLifecycleTimers() {
+      const callbacks = [...lifecycleTimers.values()];
+      lifecycleTimers.clear();
+      for (const callback of callbacks) callback();
+    },
     fireTimer() {
       assert.equal(typeof timerCallback, "function", "runner did not arm its fixed timer");
       timerCallback();
+    },
+    get lifecycleTimerCount() {
+      return lifecycleTimers.size;
     },
     get timerHandle() {
       return timerHandle;
@@ -865,6 +928,11 @@ test("timeout settles once, kills the negative process group, and clears resourc
   const pending = runBoundedChild("GIT_VERSION", FIXED_CONTEXT, fixture.dependencies);
   await Promise.resolve();
   fixture.fireTimer();
+  assert.deepEqual(
+    fixture.terminationCalls,
+    [{ groupPid: -4242, signal: "SIGKILL" }],
+    "group termination must begin synchronously in the timeout callback turn",
+  );
   const envelope = await pending;
 
   assertExactSpawnCall(fixture, "GIT_VERSION");
@@ -873,6 +941,49 @@ test("timeout settles once, kills the negative process group, and clears resourc
   assert.equal(envelope.result.stdout_limit_exceeded, false);
   assert.equal(envelope.result.stderr_limit_exceeded, false);
   assert.equal(envelope.result.combined_limit_exceeded, false);
+});
+
+test("exit observation blocks a stale timeout from signaling the process group", async () => {
+  const fixture = createRunnerFixture();
+  const pending = runBoundedChild("GIT_VERSION", FIXED_CONTEXT, fixture.dependencies);
+  await Promise.resolve();
+
+  fixture.emitExit(0, null);
+  assert.equal(fixture.lifecycleTimerCount, 1);
+  fixture.fireTimer();
+  assert.deepEqual(fixture.terminationCalls, []);
+
+  fixture.emitClose(0, null);
+  const envelope = await pending;
+  assert.equal(envelope.result.success, true);
+  assert.equal(envelope.result.result_class, "SUCCESS");
+  assert.equal(envelope.result.exit_status, 0);
+  assert.equal(envelope.result.child_reaped, true);
+  assert.equal(envelope.result.timer_cleared, true);
+  assert.equal(envelope.result.settlement_count, 1);
+  assert.deepEqual(fixture.clearTimerCalls, [fixture.timerHandle]);
+  assertListenerCleanup(fixture.child);
+});
+
+test("exit without close fails after a bounded reap deadline without group signaling", async () => {
+  const fixture = createRunnerFixture();
+  const pending = runBoundedChild("GIT_VERSION", FIXED_CONTEXT, fixture.dependencies);
+  await Promise.resolve();
+
+  fixture.emitExit(0, null);
+  assert.equal(fixture.lifecycleTimerCount, 1);
+  fixture.fireLifecycleTimers();
+  const envelope = await pending;
+
+  assert.equal(envelope.result.success, false);
+  assert.equal(envelope.result.result_class, "CHILD_REAP_FAILED");
+  assert.equal(envelope.result.child_reaped, false);
+  assert.equal(envelope.result.process_group_termination_attempted, false);
+  assert.equal(envelope.result.process_group_termination_succeeded, false);
+  assert.equal(envelope.result.timer_cleared, true);
+  assert.equal(envelope.result.settlement_count, 1);
+  assert.deepEqual(fixture.terminationCalls, []);
+  assertListenerCleanup(fixture.child);
 });
 
 test("stdout overflow is bounded and classified once", async () => {
@@ -1062,10 +1173,52 @@ test("validator rejects a default-guard semantic profile mismatch", () => {
   );
 });
 
+test("bounded validator reader accepts exactly one MiB incrementally", () => {
+  const input = Buffer.alloc(ONE_MIB, 0x61);
+  const fixture = createBufferReader(input, 16_384);
+  const bytes = readBoundedInputBytes({
+    read: fixture.read,
+    maximumBytes: ONE_MIB,
+    chunkBytes: 65_536,
+  });
+
+  assert.deepEqual(bytes, input);
+  assert.equal(fixture.bytesReturned, ONE_MIB);
+  assert.equal(fixture.calls.length > 2, true);
+  assert.equal(fixture.calls.every((call) => call.requestedBytes <= 65_536), true);
+  assert.equal(fixture.calls.at(-1).bytesRead, 0);
+});
+
+test("bounded validator reader stops after the first byte beyond one MiB", () => {
+  const fixture = createBufferReader(Buffer.alloc(ONE_MIB + 100, 0x62), 32_768);
+  assertCategoricalRejection(
+    () => readBoundedInputBytes({
+      read: fixture.read,
+      maximumBytes: ONE_MIB,
+      chunkBytes: 65_536,
+    }),
+    "INPUT_TOO_LARGE",
+  );
+  assert.equal(fixture.bytesReturned, ONE_MIB + 1);
+});
+
+test("bounded validator reader reports read failures categorically", () => {
+  assertCategoricalRejection(
+    () => readBoundedInputBytes({
+      read() {
+        throw new Error("synthetic read failure");
+      },
+    }),
+    "INPUT_READ_FAILED",
+  );
+});
+
 test("validator CLI is stdin-only and writes exact categorical JSON synchronously", async () => {
   const { validator } = await sources();
   assert.match(validator, /process\.argv\.length !== 3/);
-  assert.match(validator, /readFileSync\(0\)/);
+  assert.match(validator, /export function readBoundedInputBytes\(/);
+  assert.match(validator, /const bytes = readBoundedInputBytes\(\);/);
+  assert.doesNotMatch(validator, /readFileSync\(0\)/);
   assert.equal(
     validator.split('\'{"valid":true,"result_class":"VALID"}\\n\'').length - 1,
     1,
@@ -1078,7 +1231,10 @@ test("validator CLI is stdin-only and writes exact categorical JSON synchronousl
   assert.match(validator, /result\.valid\s*\?\s*EXACT_VALIDATOR_SUCCESS_BYTES\s*:/);
   assert.match(validator, /writeSync\(1,/);
   assert.match(validator, /process\.exitCode\s*=/);
-  assert.doesNotMatch(validator, /WRAPPER_OUTPUT_ROOT_PATTERN|realpathSync|isAllowedWrapperInputPath|process\.exit\s*\(/);
+  assert.doesNotMatch(
+    validator,
+    /WRAPPER_OUTPUT_ROOT_PATTERN|realpathSync|isAllowedWrapperInputPath|readFileSync\(0\)|process\.exit\s*\(/,
+  );
 });
 
 test("supervisor Git parser matches the safe-integer contract", () => {
