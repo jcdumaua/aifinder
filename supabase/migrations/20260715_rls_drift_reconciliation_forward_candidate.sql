@@ -1,5 +1,11 @@
 -- AIFINDER GUARDED DRAFT — NOT AUTHORIZED FOR EXECUTION
 -- This candidate deliberately aborts before any remediation statement.
+DO $aifinder_guard$
+BEGIN
+  RAISE EXCEPTION
+    'AIFINDER_DRAFT_ONLY: independent review and explicit execution authorization required';
+END
+$aifinder_guard$;
 
 BEGIN;
 
