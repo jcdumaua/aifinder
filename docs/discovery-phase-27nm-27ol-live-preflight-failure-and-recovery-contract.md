@@ -1,10 +1,16 @@
-# Phase 27NM–27OL Live-Preflight Failure and Recovery Contract — Option A Request-Changes Repair
+# Phase 27NM–27OL Live-Preflight Failure and Recovery Contract — Post-Integration Governance Closure
 
 ## Status
 
 This is a static future-runtime contract. The repository models signed assertions, signed consume receipts, a transport-free replay client, an untrusted protected-launch request client, and fabricated replay, protected-pending, and journal behavior. It installs or operates no protected component and authorizes no live execution.
 
-The controlling baseline is `f7e7bd743a999f691bd30c593617aa191522fec6`. The corrected activation manifest identity is `6d4e55d8f7a0abacfde9091c9d719856dffdce03ba154c5d1bd03eec6153c401`.
+The static Option A integration completed at commit `31a684294fa9f5d0c375a3457f601e78faf07833`, parent `f7e7bd743a999f691bd30c593617aa191522fec6`, tree `0ffdfbd3d2541d5ae82f5e4a80283ddbb7f24ff7`, subject `Implement authenticated authorization trust redesign candidates`. The Phase 27RO–27RZ integration authority is `SPENT_NON_REUSABLE`.
+
+The Phase 28AI–28AN token `APPROVE_PHASE_28AI_28AN_EXACT_6_PATH_POST_INTEGRATION_GOVERNANCE_CLOSURE_IMPLEMENT_REVIEW_NO_STAGE_NO_COMMIT_NO_PUSH` is spent for implementation and review only. The Phase 28AR–28AZ token `APPROVE_PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINAL_REVIEW_FIX_COMMIT_PUSH_AND_BOUNDED_VERCEL_GIT_SIDE_EFFECT_VERIFICATION` is consumed exactly once for exact six-path final review, correction, verification, staging, commit, push, GitHub verification, and bounded Vercel Git-side-effect verification. Its parent/pre-commit baseline is `31a684294fa9f5d0c375a3457f601e78faf07833`, resulting commit is `EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR`, and subject is `Reconcile authorization trust governance after integration`.
+
+The bounded Vercel correlation classifies the baseline-bound deployment as environment `PRODUCTION`, state `READY`, trigger `AUTOMATIC_GIT_INTEGRATION`, and materiality `MATERIAL_PRODUCTION_SIDE_EFFECT`. Access/protection and production branch remain `UNRESOLVED`; only bounded digests and categories are retained.
+
+This post-integration governance closure changes documentation and manifest state only. It does not alter any verifier, client, schema, fixture, runner, protected-state model, runtime failure category, recovery rule, or operational boundary below. Live readiness remains blocked.
 
 ## Local verifier and service-time authority
 
@@ -75,7 +81,11 @@ No assertion, receipt, request, log, repository file, or review package may cont
 
 ## Static-only rollback
 
-A precondition failure creates no repository change. After repair-token consumption, all eleven starting files are backed up outside the repository. Any failure restores all eleven exact hashes, bytes, and modes while preserving the token-consumption receipt to prevent reuse. No broad Git reset, `git clean`, checkout-based rollback, staging, commit, push, infrastructure action, or operational retry is allowed.
+The historical eleven-file repair rollback applied only before commit `31a684294fa9f5d0c375a3457f601e78faf07833`; it is now `HISTORICAL_NON_EXECUTABLE` and must never overwrite or reverse committed integration state.
+
+The Phase 28AI–28AN six-file backups remain historical recovery evidence. Phase 28AR–28AZ used its own exact six-file pre-edit backups before review and correction. No broad Git reset, `git clean`, checkout-based rollback, infrastructure action, or operational retry is authorized. After the authorized commit and push, rollback is not automatic: any subsequent repository modification requires new Gemini review and separately named exact authorization.
+
+The stable post-commit repository state is zero tracked modifications, empty index, exactly three unchanged excluded untracked files, and ahead/behind `0/0`. Final file identities are bound without circular self-reference by the final Git tree and final CCR. The only authorized Vercel write-side effect is the automatic Git-integration deployment caused by the exact push; direct deployment, promotion, rollback, cancellation, or settings mutation remains prohibited.
 
 ## Live readiness
 

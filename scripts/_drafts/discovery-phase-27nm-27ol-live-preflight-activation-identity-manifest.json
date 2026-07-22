@@ -1,7 +1,7 @@
 {
-  "manifest_version": 3,
-  "phase": "PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_CORRECTION_AND_EXACT_INTEGRATION",
-  "construction_baseline": "f7e7bd743a999f691bd30c593617aa191522fec6",
+  "manifest_version": 5,
+  "phase": "PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINALIZATION",
+  "construction_baseline": "31a684294fa9f5d0c375a3457f601e78faf07833",
   "implementation_authorization": {
     "initial_token": "APPROVE_PHASE_27QM_27RF_OPTION_A_AUTHORIZATION_TRUST_REDESIGN_REBIND_AND_AUTHORIZE_STATIC_IMPLEMENTATION_SCOPE",
     "initial_token_state": "CONSUMED_FOR_EXACT_12_PATH_STATIC_IMPLEMENTATION",
@@ -10,8 +10,16 @@
     "repair_token_state": "CONSUMED_FOR_EXACT_11_PATH_STATIC_REPAIR",
     "prior_token_state": "SUPERSEDED_UNCONSUMED_NON_EXECUTABLE",
     "full_load_token": "APPROVE_PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_REVIEW_FIX_EXACT_16_PATH_COMMIT_PUSH_AND_REMOTE_VERIFICATION",
-    "full_load_token_state": "CONSUMED_EXACTLY_ONCE_FOR_AUTHORIZED_FULL_LOAD_WORKFLOW",
-    "staging_commit_push_authorized": true
+    "full_load_token_state": "SPENT_NON_REUSABLE",
+    "governance_closure_implementation_token": "APPROVE_PHASE_28AI_28AN_EXACT_6_PATH_POST_INTEGRATION_GOVERNANCE_CLOSURE_IMPLEMENT_REVIEW_NO_STAGE_NO_COMMIT_NO_PUSH",
+    "governance_closure_implementation_token_state": "SPENT_FOR_EXACT_6_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH",
+    "governance_finalization_token": "APPROVE_PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINAL_REVIEW_FIX_COMMIT_PUSH_AND_BOUNDED_VERCEL_GIT_SIDE_EFFECT_VERIFICATION",
+    "governance_finalization_token_state": "CONSUMED_EXACTLY_ONCE",
+    "governance_finalization_token_purpose": "EXACT_6_PATH_FINAL_REVIEW_FIX_STAGE_COMMIT_PUSH_GITHUB_AND_BOUNDED_VERCEL_VERIFICATION",
+    "governance_finalization_parent": "31a684294fa9f5d0c375a3457f601e78faf07833",
+    "governance_finalization_resulting_commit": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "governance_finalization_commit_subject": "Reconcile authorization trust governance after integration",
+    "direct_vercel_write_authorized": false
   },
   "architecture_selection": {
     "architecture": "OPTION_A_EXTERNAL_AUTHORIZATION_SERVICE_WITH_PROTECTED_LOCAL_LAUNCHER",
@@ -77,11 +85,11 @@
       "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
     },
     "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": {
-      "sha256": "57a8ccdeff2f80f8ddaaaccb73965281d3740ef5ddc4968de03ff45b1cdc4cf4",
-      "bytes": 17888,
+      "sha256": "9a01afa909248ce5d31dd066e94e9669ec15ac0b49b5447bfb8e8b12bda1369e",
+      "bytes": 20674,
       "filesystem_mode": "0644",
       "expected_git_mode": "100644",
-      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+      "classification": "FINAL_GOVERNANCE_RECONCILIATION"
     },
     "scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-candidate.sql": {
       "sha256": "9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820",
@@ -133,11 +141,11 @@
       "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
     },
     "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
-      "sha256": "4174c6796e84d046f32c9a9273ef4a339c2d80c49c6e9f6deb3c444a8562b476",
-      "bytes": 9116,
+      "sha256": "5f03f1a2b2ee970ed8df4e098eec754468be386ad819d9f18598d6a7c6dd6a27",
+      "bytes": 11176,
       "filesystem_mode": "0644",
       "expected_git_mode": "100644",
-      "classification": "FULL_LOAD_REPAIRED_GOVERNANCE_ELIGIBLE"
+      "classification": "FINAL_GOVERNANCE_RECONCILIATION"
     }
   },
   "self_binding": {
@@ -145,6 +153,96 @@
     "self_bytes": "EXTERNALLY_BOUND_NO_SELF_REFERENCE",
     "filesystem_mode": "0644",
     "expected_git_mode": "100644"
+  },
+  "integration_completion": {
+    "commit": "31a684294fa9f5d0c375a3457f601e78faf07833",
+    "parent": "f7e7bd743a999f691bd30c593617aa191522fec6",
+    "tree": "0ffdfbd3d2541d5ae82f5e4a80283ddbb7f24ff7",
+    "subject": "Implement authenticated authorization trust redesign candidates",
+    "integrated_path_count": 16,
+    "remote_synchronization": "LOCAL_MAIN_ORIGIN_MAIN_GITHUB_MAIN_EQUAL",
+    "ahead_count": 0,
+    "behind_count": 0,
+    "tracked_tree_at_committed_baseline": "CLEAN",
+    "index_at_committed_baseline": "EMPTY",
+    "post_integration_excluded_untracked_count": 3,
+    "integration_authority_state": "SPENT_NON_REUSABLE"
+  },
+  "governance_finalization": {
+    "parent": "31a684294fa9f5d0c375a3457f601e78faf07833",
+    "resulting_commit": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "subject": "Reconcile authorization trust governance after integration",
+    "finalized_path_count": 6,
+    "final_path_identity_bindings": {
+      "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR",
+      "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR",
+      "docs/discovery-phase-27nm-27ol-static-audit-and-synthetic-assurance-result.md": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR",
+      "docs/discovery-phase-27nm-27ol-full-load-static-execution-readiness-gate.md": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR",
+      "docs/discovery-phase-27nm-27ol-live-preflight-failure-and-recovery-contract.md": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR",
+      "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": "EXTERNALLY_BOUND_BY_FINAL_GIT_TREE_AND_CCR"
+    },
+    "final_nonself_path_identities": {
+      "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": {
+        "sha256": "9a01afa909248ce5d31dd066e94e9669ec15ac0b49b5447bfb8e8b12bda1369e",
+        "bytes": 20674,
+        "filesystem_mode": "0644",
+        "git_mode": "100644"
+      },
+      "docs/discovery-phase-27nm-27ol-static-audit-and-synthetic-assurance-result.md": {
+        "sha256": "9cc22d091f7938d5890c9ecd1ba594c24b479c64cfd761940e090e7c398a770c",
+        "bytes": 10851,
+        "filesystem_mode": "0644",
+        "git_mode": "100644"
+      },
+      "docs/discovery-phase-27nm-27ol-full-load-static-execution-readiness-gate.md": {
+        "sha256": "96511b6b54b8b16e90cd74c03a506bf613dea307eb39962612e0a5d30ef83ad2",
+        "bytes": 7596,
+        "filesystem_mode": "0644",
+        "git_mode": "100644"
+      },
+      "docs/discovery-phase-27nm-27ol-live-preflight-failure-and-recovery-contract.md": {
+        "sha256": "1eeacb08bbe6ad5cddac7de275c95225f0886eb58cab874be60194f8b6d129f5",
+        "bytes": 10712,
+        "filesystem_mode": "0644",
+        "git_mode": "100644"
+      },
+      "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
+        "sha256": "5f03f1a2b2ee970ed8df4e098eec754468be386ad819d9f18598d6a7c6dd6a27",
+        "bytes": 11176,
+        "filesystem_mode": "0644",
+        "git_mode": "100644"
+      }
+    },
+    "manifest_identity": "EXTERNALLY_BOUND_NO_SELF_REFERENCE",
+    "identity_binding_method": "FINAL_GIT_TREE_AND_CONTENT_ADDRESSED_CCR_NO_SELF_OR_CROSS_FILE_CIRCULARITY",
+    "tracked_modification_count": 0,
+    "index_state": "EMPTY",
+    "excluded_untracked_count": 3,
+    "ahead_count": 0,
+    "behind_count": 0,
+    "subsequent_repository_modification_requires_new_review_and_authorization": true
+  },
+  "vercel_status": {
+    "context": "Vercel",
+    "state": "READY",
+    "target_sha256": "d4fab4b57864a81d8c3a385403afc7b8929ddc26729507cee4fc7175c28c9e1b",
+    "team_identity_sha256": "299417c8096086e991c8474361389bea8282805ea14adcf06db8750aa89e9997",
+    "project_identity_sha256": "784394aa367eeba9a87d329b9f500b0463d8502559047f8f487941139d8f4fb4",
+    "deployment_identity_sha256": "bf3a42bbd0fbafedc7491b68e90fbf6186b11c7df7ecef6548691f2b968c4216",
+    "classification": "BOUNDED_BASELINE_PRODUCTION_DEPLOYMENT_READY_ACCESS_UNRESOLVED",
+    "plugin_result": "BOUNDED_READ_ONLY_CORRELATION_COMPLETE",
+    "environment": "PRODUCTION",
+    "access": "UNRESOLVED",
+    "trigger": "AUTOMATIC_GIT_INTEGRATION",
+    "production_branch": "UNRESOLVED",
+    "automatic_main_push_deployment": true,
+    "automatic_main_push_deployment_basis": "BOUND_MAIN_STATUS_AND_BASELINE_GIT_DEPLOYMENT",
+    "actor": "UNRESOLVED",
+    "promotion": "UNRESOLVED",
+    "materiality": "MATERIAL_PRODUCTION_SIDE_EFFECT",
+    "direct_vercel_write_authorized": false,
+    "subsequent_direct_vercel_action_requires_new_authorization": true,
+    "cleartext_target_retained": false
   },
   "output_contract": {
     "sha256": "fdd6b45c5cdeaf4a78f57447faab245acffeb5fc3f259a2051603f3cc98fd7d6",
@@ -422,7 +520,7 @@
     "protected_launcher": "EXTERNAL_NOT_IMPLEMENTED",
     "production_cryptography": "EXTERNAL_NOT_IMPLEMENTED",
     "live_readiness": "BLOCKED",
-    "primary_final_classification": "OPTION_A_STATIC_FULL_LOAD_CORRECTED_PENDING_EXACT_INTEGRATION"
+    "primary_final_classification": "OPTION_A_STATIC_INTEGRATION_COMPLETE_LIVE_READINESS_BLOCKED"
   },
   "synthetic_assurance": {
     "fixture_count": 73,
@@ -458,8 +556,10 @@
   },
   "future_execution": {
     "live_execution_authorized": false,
-    "future_gemini_final_review_required": false,
-    "future_exact_commit_push_token_required": false,
+    "current_governance_finalization_gemini_review_required": false,
+    "current_governance_finalization_exact_token_required": false,
+    "subsequent_repository_modification_gemini_review_required": true,
+    "subsequent_repository_modification_exact_authorization_required": true,
     "real_keys_or_trust_installation_separately_authorized": false,
     "protected_launcher_installation_separately_authorized": false,
     "connection_profile_creation_separately_authorized": false,
@@ -467,15 +567,16 @@
     "sql_or_database_access_separately_authorized": false
   },
   "repair_scope": {
-    "changed_path_count": 13,
-    "behavior_path_count": 7,
-    "governance_and_manifest_path_count": 6,
-    "eligible_unchanged_path_count": 3,
+    "historical_full_load_changed_path_count": 13,
+    "historical_behavior_path_count": 7,
+    "finalized_governance_and_manifest_path_count": 6,
+    "historical_eligible_unchanged_path_count": 3,
     "excluded_unchanged_path_count": 3,
-    "authorized_integration_path_count": 16,
-    "expected_post_commit_untracked_count": 3,
-    "final_untracked_count_before_integration": 19,
-    "tracked_modification_count": 0,
-    "index_state": "EMPTY"
+    "completed_integration_path_count": 16,
+    "post_integration_untracked_count": 3,
+    "current_tracked_modification_count": 0,
+    "current_index_state": "EMPTY",
+    "resulting_commit_binding": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "subsequent_change_token_binding": "REQUIRES_NEW_GEMINI_REVIEW_AND_EXACT_AUTHORIZATION"
   }
 }

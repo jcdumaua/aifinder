@@ -1,10 +1,16 @@
-# Phase 27NM–27OL Full-Load Static Execution-Readiness Gate — Option A Full-Load Correction
+# Phase 27NM–27OL Full-Load Static Execution-Readiness Gate — Post-Integration Governance Closure
 
 ## Determination
 
-Primary classification: `OPTION_A_STATIC_FULL_LOAD_CORRECTED_PENDING_EXACT_INTEGRATION`.
+Primary classification: `OPTION_A_STATIC_INTEGRATION_COMPLETE_LIVE_READINESS_BLOCKED`.
 
-The consumed Phase 27RO–27RZ full-load token authorizes independent review, repeated in-scope test-first correction, exact sixteen-path staging, one exact-subject commit, push to `origin/main`, and remote Git identity verification at baseline `f7e7bd743a999f691bd30c593617aa191522fec6`. It does not authorize production keys or trust, infrastructure, endpoints, protected-launcher installation, connection profiles, network calls, service material, SQL, database or Supabase access, migrations, type generation, application execution, deployment, publishing, operational reactivation, or public launch.
+The Phase 27RO–27RZ full-load token is `SPENT_NON_REUSABLE`. The completed exact sixteen-path integration is commit `31a684294fa9f5d0c375a3457f601e78faf07833`, parent `f7e7bd743a999f691bd30c593617aa191522fec6`, tree `0ffdfbd3d2541d5ae82f5e4a80283ddbb7f24ff7`, subject `Implement authenticated authorization trust redesign candidates`. Local `main`, local `origin/main`, and GitHub `main` were synchronized at that identity with ahead/behind `0/0`. The spent token cannot authorize any further repository or operational action and never authorized production keys or trust, infrastructure, endpoints, protected-launcher installation, connection profiles, network calls, service material, SQL, database or Supabase access, migrations, type generation, application execution, deployment, publishing, operational reactivation, or public launch.
+
+The Phase 28AI–28AN token `APPROVE_PHASE_28AI_28AN_EXACT_6_PATH_POST_INTEGRATION_GOVERNANCE_CLOSURE_IMPLEMENT_REVIEW_NO_STAGE_NO_COMMIT_NO_PUSH` is spent for the six-path implementation and review only; it cannot authorize staging, commit, push, or any operational action.
+
+The Phase 28AR–28AZ token `APPROVE_PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINAL_REVIEW_FIX_COMMIT_PUSH_AND_BOUNDED_VERCEL_GIT_SIDE_EFFECT_VERIFICATION` is consumed exactly once for this exact six-path final review, in-scope correction, static verification, staging, one commit, one push, GitHub verification, and bounded Vercel Git-side-effect verification. Parent/pre-commit baseline is `31a684294fa9f5d0c375a3457f601e78faf07833`; resulting commit is `EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR`; exact subject is `Reconcile authorization trust governance after integration`.
+
+The bounded read-only pre-push classification correlates one baseline-bound Vercel deployment. Environment is `PRODUCTION`, state is `READY`, trigger is `AUTOMATIC_GIT_INTEGRATION`, and materiality is `MATERIAL_PRODUCTION_SIDE_EFFECT`. Access/protection and production branch are `UNRESOLVED`; no public/private/access claim is made. Only target and bounded identifier digests are retained.
 
 ## Architecture gate
 
@@ -22,11 +28,11 @@ Option A remains the only permitted architecture:
 - protected atomic local journal keyed by SHA-256 of exact canonical receipt bytes;
 - optional, non-mandatory CI/OIDC issuance evidence.
 
-The corrected architecture gate identity is `57a8ccdeff2f80f8ddaaaccb73965281d3740ef5ddc4968de03ff45b1cdc4cf4`. The corrected activation manifest identity is `6d4e55d8f7a0abacfde9091c9d719856dffdce03ba154c5d1bd03eec6153c401`.
+The final architecture gate identity is SHA-256 `9a01afa909248ce5d31dd066e94e9669ec15ac0b49b5447bfb8e8b12bda1369e`, 20,674 bytes. The activation manifest retains `EXTERNALLY_BOUND_NO_SELF_REFERENCE`; its exact final identity is supplied by the final Git tree and CCR.
 
-## Exact repair scope
+## Completed integration scope
 
-Exactly thirteen of the sixteen eligible untracked paths are changed:
+The completed integration contains thirteen corrected paths:
 
 1. signed-authorization assertion schema;
 2. signed-authorization verifier candidate;
@@ -42,16 +48,16 @@ Exactly thirteen of the sixteen eligible untracked paths are changed:
 12. this readiness gate;
 13. migration-history placement/grant/type-generation dependency gate.
 
-Three paths remain byte-identical and eligible for integration: the bounded-evidence validator, bounded-evidence fixtures, and bounded-evidence runner.
+The bounded-evidence validator, bounded-evidence fixtures, and bounded-evidence runner supplied the remaining three byte-identical paths in the exact sixteen-path completed integration.
 
-Three superseded unsigned/local-consumption paths remain byte-identical and excluded. They may not be staged in a later redesign commit.
+Three superseded unsigned/local-consumption paths remain byte-identical, excluded, and untracked. They are outside the current six-path governance closure and may not be staged under this phase.
 
 ## Static assurance gate
 
 A pass requires all of the following in one fresh run:
 
-- exact pre-repair baseline and nineteen-file identities;
-- token consumption only after complete backup of all eleven repair paths;
+- exact completed commit, parent, tree, subject, remote synchronization, and three-file excluded set;
+- Phase 28AI–28AN token consumption only after complete backup of all six governance paths;
 - RED `31 pass / 12 fail`;
 - verifier stage `35 pass / 8 fail`;
 - replay stage `37 pass / 6 fail`;
@@ -71,7 +77,7 @@ A pass requires all of the following in one fresh run:
 - `/bin/bash -n` for the thin client;
 - secret, endpoint, private-key, connection-string, and token-pattern scan;
 - `git diff --check`;
-- exact nineteen-file untracked composition, zero tracked modifications, and empty index;
+- exact six-path pre-commit diff scope, exact three-file untracked composition, and empty index;
 - a complete external Gemini final-review package;
 - no forbidden operational action.
 
@@ -81,8 +87,8 @@ The deterministic adapter is not production Ed25519. The replay and protected-pe
 
 ## Repository completion state
 
-The successful pre-integration state is zero tracked modifications, exactly nineteen untracked files, and an empty index. The consumed Phase 27RO–27RZ authority permits staging exactly the sixteen eligible paths only after every fresh gate passes. After integration, exactly three excluded paths must remain untracked and unchanged.
+After the exact Phase 28AR–28AZ commit and push, the stable repository state is zero tracked modifications, an empty index, exactly three unchanged excluded untracked paths, and ahead/behind `0/0`. The exact six final file identities are bound non-circularly by the final Git tree and final CCR. The automatic Vercel Git-integration deployment caused by the push is the sole authorized platform write-side effect; no direct Vercel write is authorized.
 
 ## Next action
 
-Finish identity rebinding and fresh validation, stage exactly the sixteen authorized paths, commit with the approved subject, push to `origin/main`, and verify all local and remote identities. Every operational layer remains blocked.
+Preserve the completed governance finalization and final CCR. Every subsequent repository change requires new Gemini review and a separately named exact authorization. Every operational layer remains blocked.

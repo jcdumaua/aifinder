@@ -1,10 +1,12 @@
-# Phase 27OT–27PE Option A Authorization-Trust Architecture and Static-Assurance Gate — Request-Changes Repair
+# Phase 27OT–27PE Option A Authorization-Trust Architecture and Static-Assurance Gate — Post-Integration Governance Closure
 
 ## Status and authority
 
 This document describes a repository-local, non-secret, fabricated-only static model. It does not establish production trust, install a protected launcher, select or contact an endpoint, create a key, resolve a connection profile, consume authoritative replay state, invoke `psql`, execute SQL, access a database or Supabase, move a migration, generate types, deploy, publish, reactivate operations, or launch publicly.
 
-The controlling baseline is `f7e7bd743a999f691bd30c593617aa191522fec6`. Gemini returned the earlier exact repair authority:
+The exact parent and pre-commit baseline for this governance finalization is `31a684294fa9f5d0c375a3457f601e78faf07833`. Its parent is `f7e7bd743a999f691bd30c593617aa191522fec6`, its tree is `0ffdfbd3d2541d5ae82f5e4a80283ddbb7f24ff7`, and its subject is `Implement authenticated authorization trust redesign candidates`.
+
+Gemini returned the earlier exact repair authority:
 
 `APPROVE_PHASE_27RG_27RN_OPTION_A_STATIC_IMPLEMENTATION_EXACT_11_PATH_REPAIR_SCOPE`
 
@@ -12,9 +14,15 @@ That token is consumed only for the exact eleven-path static repair, the 43-case
 
 The earlier Phase 27QM–27RF implementation token remains `CONSUMED_FOR_EXACT_12_PATH_STATIC_IMPLEMENTATION`. The superseded Phase 27OT–27PE token remains `SUPERSEDED_UNCONSUMED_NON_EXECUTABLE`.
 
-Gemini subsequently returned `APPROVE_PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_REVIEW_FIX_EXACT_16_PATH_COMMIT_PUSH_AND_REMOTE_VERIFICATION`. It is consumed exactly once for independent review, in-scope test-first correction, static validation, exact sixteen-path integration, push, and remote verification. It does not authorize any operational layer listed above.
+Gemini subsequently returned `APPROVE_PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_REVIEW_FIX_EXACT_16_PATH_COMMIT_PUSH_AND_REMOTE_VERIFICATION`. That authority is `SPENT_NON_REUSABLE`: it was consumed exactly once for independent review, in-scope test-first correction, static validation, exact sixteen-path integration, push, and remote verification. The exact sixteen-path static integration completed at the bound commit, and local `main`, local `origin/main`, and GitHub `main` were verified at that same identity with ahead/behind `0/0`. The spent authority may not be reused and does not authorize any operational layer listed above.
 
-Primary classification: `OPTION_A_STATIC_FULL_LOAD_CORRECTED_PENDING_EXACT_INTEGRATION`.
+Phase 28AI–28AN used `APPROVE_PHASE_28AI_28AN_EXACT_6_PATH_POST_INTEGRATION_GOVERNANCE_CLOSURE_IMPLEMENT_REVIEW_NO_STAGE_NO_COMMIT_NO_PUSH` exactly once for the six-path implementation and review only. That authority is `SPENT_FOR_EXACT_6_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH`; it cannot authorize the integration or any operational action.
+
+Gemini then returned `APPROVE_PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINAL_REVIEW_FIX_COMMIT_PUSH_AND_BOUNDED_VERCEL_GIT_SIDE_EFFECT_VERIFICATION`. It is consumed exactly once for the exact six-path final review, in-scope correction, static verification, staging, one commit with subject `Reconcile authorization trust governance after integration`, one push to `origin/main`, GitHub verification, and bounded read-only Vercel Git-side-effect verification. The resulting commit is `EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR`, with parent `31a684294fa9f5d0c375a3457f601e78faf07833`. This authority does not authorize any direct Vercel write or operational layer.
+
+Primary classification: `OPTION_A_STATIC_INTEGRATION_COMPLETE_LIVE_READINESS_BLOCKED`.
+
+The bounded read-only GitHub/Vercel pre-push correlation resolves exactly one target, team, project, and baseline-bound deployment without retaining their clear-text identifiers. The GitHub target SHA-256 is `d4fab4b57864a81d8c3a385403afc7b8929ddc26729507cee4fc7175c28c9e1b`; the deployment is `PRODUCTION`, state `READY`, trigger `AUTOMATIC_GIT_INTEGRATION`, and materiality `MATERIAL_PRODUCTION_SIDE_EFFECT`. Access/protection and production-branch metadata remain `UNRESOLVED`; no claim of public, private, or authentication-required access is made. No logs, source, environment values, aliases, domains, actor identifiers, settings, or secrets were accessed or retained.
 
 ## Selected architecture
 
@@ -181,6 +189,8 @@ Passing this corpus establishes only consistency of the fabricated grammar, dete
 
 ## Repository and integration boundary
 
-The full-load correction modifies thirteen of the sixteen eligible untracked paths. The bounded-evidence validator, bounded-evidence fixtures, and bounded-evidence runner remain byte-identical and eligible. Three superseded unsigned/local-consumption paths remain byte-identical and excluded.
+The completed static integration contains exactly sixteen reviewed paths: thirteen corrected paths plus the byte-identical bounded-evidence validator, fixtures, and runner. Three superseded unsigned/local-consumption paths remain byte-identical, excluded, untracked, and outside any integration or governance staging scope.
 
-Before integration, the successful repository state is zero tracked modifications, exactly nineteen untracked files, and an empty index. The consumed Phase 27RO–27RZ authority permits staging and committing exactly the sixteen eligible paths only after every fresh gate passes; all live and operational layers remain blocked.
+The Phase 28AR–28AZ finalization has an exact six-path scope. Its resulting commit is externally bound by Git and the final CCR, with the exact subject above. The stable post-commit state is zero tracked modifications, empty index, exactly three unchanged excluded untracked files, and local/remote ahead/behind `0/0`. The six final content identities are recorded non-circularly by the final Git tree and content-addressed CCR rather than embedded in files that would hash themselves or one another.
+
+Every repository modification after this exact finalization requires new Gemini review and separately named exact authorization. Assertion issuance, authorization-record generation, live execution, migration execution, mutation, type generation, direct deployment, publishing, operational reactivation, and public launch remain false and blocked.

@@ -8,6 +8,12 @@
 - Type generation: `BLOCKED`.
 - Database, migration, schema, policy, grant, type-generation, and operational execution: not authorized.
 
+The Option A static integration completed at commit `31a684294fa9f5d0c375a3457f601e78faf07833`, parent `f7e7bd743a999f691bd30c593617aa191522fec6`, tree `0ffdfbd3d2541d5ae82f5e4a80283ddbb7f24ff7`, subject `Implement authenticated authorization trust redesign candidates`. The Phase 27RO–27RZ authority is `SPENT_NON_REUSABLE`. This completed static integration changes no migration-history evidence, placement decision, database boundary, or type-generation eligibility.
+
+The Phase 28AI–28AN token `APPROVE_PHASE_28AI_28AN_EXACT_6_PATH_POST_INTEGRATION_GOVERNANCE_CLOSURE_IMPLEMENT_REVIEW_NO_STAGE_NO_COMMIT_NO_PUSH` is spent for the exact six-path implementation and review only. The Phase 28AR–28AZ token `APPROVE_PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINAL_REVIEW_FIX_COMMIT_PUSH_AND_BOUNDED_VERCEL_GIT_SIDE_EFFECT_VERIFICATION` is consumed exactly once for the exact six-path final review, correction, static verification, staging, commit, push, GitHub verification, and bounded Vercel Git-side-effect verification. The exact parent/pre-commit baseline is `31a684294fa9f5d0c375a3457f601e78faf07833`; the resulting commit is `EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR`; and the subject is `Reconcile authorization trust governance after integration`.
+
+The bounded baseline deployment classification is environment `PRODUCTION`, state `READY`, trigger `AUTOMATIC_GIT_INTEGRATION`, and materiality `MATERIAL_PRODUCTION_SIDE_EFFECT`; access/protection and production branch remain `UNRESOLVED`. This metadata does not change migration history, database evidence, placement, grants, or type-generation eligibility.
+
 ## Phase 27OE migration-history limitation
 
 The repository has exactly 24 active-directory SQL files:
@@ -141,6 +147,8 @@ The target was neither read for secrets nor modified/chmodded. Type generation i
 
 ## Next decision boundary
 
-`HISTORICAL_PHASE_27NM_27OL_BOUNDARY_SUPERSEDED`: the earlier redesign-required and predecessor-repair-required classification described the pre-Option-A, pre-`f7e7bd743a999f691bd30c593617aa191522fec6` state. The committed predecessor repair is complete at that baseline, and the repository now contains a separately reviewed Option A static candidate model for exact-scope integration. This supersession does not promote any static candidate to live readiness.
+`HISTORICAL_PHASE_27NM_27OL_BOUNDARY_SUPERSEDED`: the earlier redesign-required and predecessor-repair-required classification described the pre-Option-A, pre-`f7e7bd743a999f691bd30c593617aa191522fec6` state. The committed predecessor repair and the separately reviewed Option A static integration are complete at their bound commits. This supersession does not promote any static artifact to live readiness.
 
-The current exact integration authority still cannot authorize migration movement, guard removal, live evidence, SQL, database access, grant cleanup, schema action, type generation, authorization-record generation, protected-launcher installation, wrapper activation, or any operational action. Each remains blocked and requires a separately named scope and exact future authorization.
+The spent Phase 27RO–27RZ and Phase 28AI–28AN authorities cannot authorize migration movement, guard removal, live evidence, SQL, database access, grant cleanup, schema action, type generation, authorization-record generation, protected-launcher installation, wrapper activation, or any operational action. Phase 28AR–28AZ authorizes only the completed governance finalization and the bounded automatic Vercel Git-integration side effect of its exact push; it authorizes none of those operational actions.
+
+The stable post-commit repository state is zero tracked modifications, empty index, exactly three unchanged excluded untracked files, and ahead/behind `0/0`. The exact six final file identities are bound non-circularly by the final Git tree and final CCR. Every subsequent repository modification requires new Gemini review and a separately named exact authorization.
