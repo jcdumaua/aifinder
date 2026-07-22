@@ -17,8 +17,8 @@
   "artifacts": {
     "sql_candidate": {
       "path": "scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-candidate.sql",
-      "sha256": "7ac8fef2247fb99a4987bfdd5ff14667c0f22519c1bfcd3453c58d19b64c99e7",
-      "bytes": 30419,
+      "sha256": "9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820",
+      "bytes": 30940,
       "git_mode": "100644",
       "filesystem_mode": "0644"
     },
@@ -90,79 +90,268 @@
       "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED"
     ],
     "format_rules": {
-      "TARGET_ENVIRONMENT_CLASSIFICATION": { "kind": "categorical" },
-      "EVIDENCE_TIMESTAMP_UTC": { "kind": "timestamp" },
-      "SNAPSHOT_IDENTITY_CLASSIFICATION": { "kind": "literal", "value": "SINGLE_READ_ONLY_TRANSACTION" },
-      "EXPECTED_REPOSITORY_MIGRATION_COUNT": { "kind": "literal", "value": "24" },
-      "EXPECTED_HISTORY_IDENTITY_COUNT": { "kind": "integer_or_unavailable" },
-      "LIVE_HISTORY_ENTRY_COUNT": { "kind": "integer_or_unavailable" },
-      "MATCHED_HISTORY_IDENTITY_COUNT": { "kind": "integer_or_unavailable" },
-      "MISSING_HISTORY_IDENTITY_COUNT": { "kind": "integer_or_unavailable" },
-      "UNEXPECTED_HISTORY_IDENTITY_COUNT": { "kind": "integer_or_unavailable" },
-      "DUPLICATED_HISTORY_IDENTITY_COUNT": { "kind": "integer_or_unavailable" },
-      "RENAMED_SAME_CONTENT_COUNT": { "kind": "integer_or_unavailable" },
-      "DIFFERENT_CONTENT_COUNT": { "kind": "integer_or_unavailable" },
-      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION": { "kind": "categorical" },
-      "EXPECTED_RELATION_COUNT": { "kind": "integer" },
-      "PRESENT_RELATION_COUNT": { "kind": "integer_or_unavailable" },
-      "MISSING_RELATION_COUNT": { "kind": "integer_or_unavailable" },
-      "RLS_ENABLED_COUNT": { "kind": "integer_or_unavailable" },
-      "RLS_FORCED_COUNT": { "kind": "integer_or_unavailable" },
-      "EXPECTED_POLICY_COUNT": { "kind": "integer" },
-      "MATCHED_POLICY_COUNT": { "kind": "integer_or_unavailable" },
-      "UNEXPECTED_POLICY_COUNT": { "kind": "integer_or_unavailable" },
-      "TOOLS_LEGACY_POLICY_COUNT": { "kind": "integer_or_unavailable" },
-      "TOOLS_APPROVED_ONLY_POLICY_COUNT": { "kind": "integer_or_unavailable" },
-      "POLICY_CLASSIFICATION": { "kind": "categorical" },
-      "EXPECTED_GRANT_CLASS_COUNT": { "kind": "literal", "value": "4" },
-      "MATCHED_GRANT_CLASS_COUNT": { "kind": "integer_or_unavailable" },
-      "UNEXPECTED_GRANT_CLASS_COUNT": { "kind": "integer_or_unavailable" },
-      "PUBLIC_GRANT_CLASSIFICATION": { "kind": "categorical" },
-      "ANON_GRANT_CLASSIFICATION": { "kind": "categorical" },
-      "AUTHENTICATED_GRANT_CLASSIFICATION": { "kind": "categorical" },
-      "SERVICE_ROLE_GRANT_CLASSIFICATION": { "kind": "categorical" },
-      "OWNERSHIP_CLASSIFICATION": { "kind": "categorical" },
-      "SEQUENCE_DEPENDENCY_CLASSIFICATION": { "kind": "categorical" },
-      "FUNCTION_SECURITY_CLASSIFICATION": { "kind": "categorical" },
-      "TRIGGER_DEPENDENCY_CLASSIFICATION": { "kind": "categorical" },
-      "OUT_OF_BAND_DRIFT_CLASSIFICATION": { "kind": "categorical" },
-      "FORWARD_PRECONDITION_CLASSIFICATION": { "kind": "categorical" },
-      "ROLLBACK_PRECONDITION_CLASSIFICATION": { "kind": "categorical" },
-      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION": { "kind": "categorical" },
-      "ROW_VALUES_PRINTED": { "kind": "fixed_false" },
-      "RAW_CATALOG_ROWS_PRINTED": { "kind": "fixed_false" },
-      "RAW_MIGRATION_HISTORY_ROWS_PRINTED": { "kind": "fixed_false" },
-      "POLICY_EXPRESSIONS_PRINTED": { "kind": "fixed_false" },
-      "GRANT_ROWS_PRINTED": { "kind": "fixed_false" },
-      "OWNER_IDENTITIES_PRINTED": { "kind": "fixed_false" },
-      "FUNCTION_BODIES_PRINTED": { "kind": "fixed_false" },
-      "TRIGGER_DEFINITIONS_PRINTED": { "kind": "fixed_false" },
-      "INDEX_DEFINITIONS_PRINTED": { "kind": "fixed_false" },
-      "CONSTRAINT_DEFINITIONS_PRINTED": { "kind": "fixed_false" },
-      "DATABASE_URL_PRINTED": { "kind": "fixed_false" },
-      "HOSTNAMES_PRINTED": { "kind": "fixed_false" },
-      "PROJECT_REFERENCE_PRINTED": { "kind": "fixed_false" },
-      "CREDENTIALS_PRINTED": { "kind": "fixed_false" },
-      "SECRETS_PRINTED": { "kind": "fixed_false" },
-      "RAW_ERROR_TEXT_PRINTED": { "kind": "fixed_false" },
-      "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED": { "kind": "fixed_false" }
+      "TARGET_ENVIRONMENT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "EVIDENCE_TIMESTAMP_UTC": {
+        "kind": "timestamp"
+      },
+      "SNAPSHOT_IDENTITY_CLASSIFICATION": {
+        "kind": "literal",
+        "value": "SINGLE_READ_ONLY_TRANSACTION"
+      },
+      "EXPECTED_REPOSITORY_MIGRATION_COUNT": {
+        "kind": "literal",
+        "value": "24"
+      },
+      "EXPECTED_HISTORY_IDENTITY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "LIVE_HISTORY_ENTRY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "MATCHED_HISTORY_IDENTITY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "MISSING_HISTORY_IDENTITY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "UNEXPECTED_HISTORY_IDENTITY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "DUPLICATED_HISTORY_IDENTITY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "RENAMED_SAME_CONTENT_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "DIFFERENT_CONTENT_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "EXPECTED_RELATION_COUNT": {
+        "kind": "integer"
+      },
+      "PRESENT_RELATION_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "MISSING_RELATION_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "RLS_ENABLED_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "RLS_FORCED_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "EXPECTED_POLICY_COUNT": {
+        "kind": "integer"
+      },
+      "MATCHED_POLICY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "UNEXPECTED_POLICY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "TOOLS_LEGACY_POLICY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "TOOLS_APPROVED_ONLY_POLICY_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "POLICY_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "EXPECTED_GRANT_CLASS_COUNT": {
+        "kind": "literal",
+        "value": "4"
+      },
+      "MATCHED_GRANT_CLASS_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "UNEXPECTED_GRANT_CLASS_COUNT": {
+        "kind": "integer_or_unavailable"
+      },
+      "PUBLIC_GRANT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "ANON_GRANT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "AUTHENTICATED_GRANT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "SERVICE_ROLE_GRANT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "OWNERSHIP_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "SEQUENCE_DEPENDENCY_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "FUNCTION_SECURITY_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "TRIGGER_DEPENDENCY_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "OUT_OF_BAND_DRIFT_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "FORWARD_PRECONDITION_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "ROLLBACK_PRECONDITION_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION": {
+        "kind": "categorical"
+      },
+      "ROW_VALUES_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "RAW_CATALOG_ROWS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "RAW_MIGRATION_HISTORY_ROWS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "POLICY_EXPRESSIONS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "GRANT_ROWS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "OWNER_IDENTITIES_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "FUNCTION_BODIES_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "TRIGGER_DEFINITIONS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "INDEX_DEFINITIONS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "CONSTRAINT_DEFINITIONS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "DATABASE_URL_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "HOSTNAMES_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "PROJECT_REFERENCE_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "CREDENTIALS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "SECRETS_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "RAW_ERROR_TEXT_PRINTED": {
+        "kind": "fixed_false"
+      },
+      "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED": {
+        "kind": "fixed_false"
+      }
     },
     "categorical_allowlists": {
-      "TARGET_ENVIRONMENT_CLASSIFICATION": ["LOCAL", "PREVIEW", "STAGING", "PRODUCTION"],
-      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION": ["UNAVAILABLE", "DUPLICATED", "OUT_OF_BAND", "DRIFT", "EXACT_MATCH"],
-      "POLICY_CLASSIFICATION": ["SEMANTIC_MISMATCH", "MISSING", "UNEXPECTED", "EXACT_MATCH", "UNAVAILABLE"],
-      "PUBLIC_GRANT_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_NONE", "UNEXPECTED_PRESENT"],
-      "ANON_GRANT_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_NONE", "UNEXPECTED_PRESENT"],
-      "AUTHENTICATED_GRANT_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_NONE", "UNEXPECTED_PRESENT"],
-      "SERVICE_ROLE_GRANT_CLASSIFICATION": ["UNAVAILABLE", "INSUFFICIENT", "SUFFICIENT", "UNEXPECTED"],
-      "OWNERSHIP_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_MATCH", "MISMATCH"],
-      "SEQUENCE_DEPENDENCY_CLASSIFICATION": ["UNAVAILABLE", "MISSING", "EXPECTED_MATCH", "MISMATCH"],
-      "FUNCTION_SECURITY_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_MATCH", "MISSING", "UNSAFE_DEFINER_OR_SEARCH_PATH", "UNEXPECTED_EXECUTE_GRANT"],
-      "TRIGGER_DEPENDENCY_CLASSIFICATION": ["UNAVAILABLE", "EXPECTED_MATCH", "MISSING", "UNEXPECTED"],
-      "OUT_OF_BAND_DRIFT_CLASSIFICATION": ["UNAVAILABLE", "MULTIPLE", "MIGRATION_HISTORY", "SCHEMA", "POLICY", "GRANT", "FUNCTION_OR_TRIGGER", "NONE"],
-      "FORWARD_PRECONDITION_CLASSIFICATION": ["UNAVAILABLE", "PASS", "FAIL"],
-      "ROLLBACK_PRECONDITION_CLASSIFICATION": ["UNAVAILABLE", "PASS", "FAIL"],
-      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION": ["BLOCKED", "UNAVAILABLE"]
+      "TARGET_ENVIRONMENT_CLASSIFICATION": [
+        "LOCAL",
+        "PREVIEW",
+        "STAGING",
+        "PRODUCTION"
+      ],
+      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "DUPLICATED",
+        "OUT_OF_BAND",
+        "DRIFT",
+        "EXACT_MATCH"
+      ],
+      "POLICY_CLASSIFICATION": [
+        "SEMANTIC_MISMATCH",
+        "MISSING",
+        "UNEXPECTED",
+        "EXACT_MATCH",
+        "UNAVAILABLE"
+      ],
+      "PUBLIC_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "ANON_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "AUTHENTICATED_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "SERVICE_ROLE_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "INSUFFICIENT",
+        "SUFFICIENT",
+        "UNEXPECTED"
+      ],
+      "OWNERSHIP_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISMATCH"
+      ],
+      "SEQUENCE_DEPENDENCY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "MISSING",
+        "EXPECTED_MATCH",
+        "MISMATCH"
+      ],
+      "FUNCTION_SECURITY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISSING",
+        "UNSAFE_DEFINER_OR_SEARCH_PATH",
+        "UNEXPECTED_EXECUTE_GRANT"
+      ],
+      "TRIGGER_DEPENDENCY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISSING",
+        "UNEXPECTED"
+      ],
+      "OUT_OF_BAND_DRIFT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "MULTIPLE",
+        "MIGRATION_HISTORY",
+        "SCHEMA",
+        "POLICY",
+        "GRANT",
+        "FUNCTION_OR_TRIGGER",
+        "NONE"
+      ],
+      "FORWARD_PRECONDITION_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "PASS",
+        "FAIL"
+      ],
+      "ROLLBACK_PRECONDITION_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "PASS",
+        "FAIL"
+      ],
+      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION": [
+        "BLOCKED",
+        "UNAVAILABLE"
+      ]
     },
     "mandatory_negative_assertions": {
       "ROW_VALUES_PRINTED": "false",
@@ -185,21 +374,96 @@
     }
   },
   "expected_relations": [
-    { "repository_identity": "public.admin_audit_archives", "identity_sha256": "eff9c5df034755303d5875e911fd67494f53de8f13894ce369f9854a84793b8e", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.admin_audit_logs", "identity_sha256": "ceb4ec79081d90e0fa1ed04023a0b85c145ad8d9f0067bbd77fc92ec48e62ef4", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovered_tools", "identity_sha256": "0f8d6a2325c63c912455a085a949257385e7d093e227d4145603f206528f3116", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_audit_events", "identity_sha256": "6e5ca85d79bf7440f4bebe6c08182375e6d4436dd13860b64c318deb4c2afb1a", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_candidate_preview_artifacts", "identity_sha256": "3d2ec5b53aa05f14a528b345145525280280649748ec593a95845fa56c2cfcad", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_candidate_tools", "identity_sha256": "a631ea4020da44f04d0772d91f316741f8bd27fbfa4dd7392325cec70c50a4ac", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_duplicate_candidates", "identity_sha256": "725089f8ae7bab99cacced0a7c7f8e6e9ddfa5177f28b56c906eab35070dfdaf", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_evidence", "identity_sha256": "5ac83bc532feed1f58215df3cdf12588f9cf14f367b7d47f8e6a954077bc5aef", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_runs", "identity_sha256": "263c6e365118838ca3ae1c66996cb9bff6f052cddfc4031c4d4982c047e82cd7", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.discovery_sources", "identity_sha256": "d2fb7d3e3a5add7a197e7b8240236b1c31abd7eb49f435d4297192558bafd324", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.homepage_control_audit_events", "identity_sha256": "e4ae2e02f8d37248a4ec229bf3409237cb743f30fa1736b98247f82b350879f6", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.homepage_control_checklist_runs", "identity_sha256": "5e9e60269c9be7f69b92004e1c6a119ed55de8636410f8a221134422f2a2cecb", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.homepage_control_configs", "identity_sha256": "f59c8e18b7f7d6d49ee17a9454eff47c70b10758b32ac25cd7f044965e75b401", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.submitted_tools", "identity_sha256": "a9434d1d29a6b2fab54b6118122d60dd7b7a7cdddec1e3b8a34662364ca69310", "rls_enabled": true, "rls_forced": false },
-    { "repository_identity": "public.tools", "identity_sha256": "1a86e7ea30c2cf735b043ab228a8f58832cff5f50748c0504a1459c8a39fd584", "rls_enabled": true, "rls_forced": false }
+    {
+      "repository_identity": "public.admin_audit_archives",
+      "identity_sha256": "eff9c5df034755303d5875e911fd67494f53de8f13894ce369f9854a84793b8e",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.admin_audit_logs",
+      "identity_sha256": "ceb4ec79081d90e0fa1ed04023a0b85c145ad8d9f0067bbd77fc92ec48e62ef4",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovered_tools",
+      "identity_sha256": "0f8d6a2325c63c912455a085a949257385e7d093e227d4145603f206528f3116",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_audit_events",
+      "identity_sha256": "6e5ca85d79bf7440f4bebe6c08182375e6d4436dd13860b64c318deb4c2afb1a",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_candidate_preview_artifacts",
+      "identity_sha256": "3d2ec5b53aa05f14a528b345145525280280649748ec593a95845fa56c2cfcad",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_candidate_tools",
+      "identity_sha256": "a631ea4020da44f04d0772d91f316741f8bd27fbfa4dd7392325cec70c50a4ac",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_duplicate_candidates",
+      "identity_sha256": "725089f8ae7bab99cacced0a7c7f8e6e9ddfa5177f28b56c906eab35070dfdaf",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_evidence",
+      "identity_sha256": "5ac83bc532feed1f58215df3cdf12588f9cf14f367b7d47f8e6a954077bc5aef",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_runs",
+      "identity_sha256": "263c6e365118838ca3ae1c66996cb9bff6f052cddfc4031c4d4982c047e82cd7",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.discovery_sources",
+      "identity_sha256": "d2fb7d3e3a5add7a197e7b8240236b1c31abd7eb49f435d4297192558bafd324",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.homepage_control_audit_events",
+      "identity_sha256": "e4ae2e02f8d37248a4ec229bf3409237cb743f30fa1736b98247f82b350879f6",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.homepage_control_checklist_runs",
+      "identity_sha256": "5e9e60269c9be7f69b92004e1c6a119ed55de8636410f8a221134422f2a2cecb",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.homepage_control_configs",
+      "identity_sha256": "f59c8e18b7f7d6d49ee17a9454eff47c70b10758b32ac25cd7f044965e75b401",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.submitted_tools",
+      "identity_sha256": "a9434d1d29a6b2fab54b6118122d60dd7b7a7cdddec1e3b8a34662364ca69310",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "repository_identity": "public.tools",
+      "identity_sha256": "1a86e7ea30c2cf735b043ab228a8f58832cff5f50748c0504a1459c8a39fd584",
+      "rls_enabled": true,
+      "rls_forced": false
+    }
   ],
   "migration_inventory_summary": {
     "active_count": 24,
@@ -209,66 +473,383 @@
     "nonstandard_active_count": 2
   },
   "expected_migrations": [
-    { "path": "supabase/migrations/20260602000100_add_normalized_domain_duplicate_protection.sql", "version": "20260602000100", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "59535ac5db55e3d083a4c83094e2aabd089046044320d6391833957ea73b719c", "git_blob": "15420d8acc44405556d74b61b2777652584d1a3f", "bytes": 8486, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260602000200_create_discovered_tools_queue.sql", "version": "20260602000200", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "c22e3662ebf71202a35f8e439ff231441b4fbfa1021af0a0d46f50e66a858c21", "git_blob": "6c89f0ff7536adf3b3d5556a3ee9e9b75dc3d76f", "bytes": 2628, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260612000100_create_homepage_control_room.sql", "version": "20260612000100", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "c8c4b394f5d13290d9954bdaf19464a6133c0121f75173256ca849cf469f6fb9", "git_blob": "c7889187a2f8e07308bde78a84015c53ccdc3a0a", "bytes": 8550, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260612000200_harden_discovered_tools_access.sql", "version": "20260612000200", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "72b476fbdce344994984dfdfc07b1fa50ea28ecc6581c6e9ff9bf85c7e7494b9", "git_blob": "5e5d37d8f6be8b64d8d6610c5eb9370d847cb988", "bytes": 1489, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260612000300_publish_homepage_control_config.sql", "version": "20260612000300", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "d2158dc437b949c9221236e87a39eedf4d445ab87260628d2824abd7b307d1f5", "git_blob": "3ca2ed6bcc89a2bf11323d29b2e10d8e54b91e2a", "bytes": 5023, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260614000100_allow_preview_transition_audit_action.sql", "version": "20260614000100", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "9b7563eff78bba38c64d3454a901530575355f356dffffe820c25480f8f54777", "git_blob": "35248a62fabdc89819091db963220a22bc0247c2", "bytes": 652, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260615001110_updated-preview-checklist.sql", "version": "20260615001110", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "04ea95601993b373ab3b45bf310df578aa7c59322519c03ca58627b258caf0b3", "git_blob": "a476982a92b2f7d875bf2de8ad6242133bb66234", "bytes": 6171, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260615002000_draft_public_safe_tools_schema.sql", "version": "20260615002000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "51ca6418c43b3944f096b6c33fc07537c09997504b034002a9dc649c5f1967cb", "git_blob": "c4004814bffa6a564b2bb1ad6862e29dd405876a", "bytes": 7332, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260616002151_finalize_public_safe_tools_schema_patch.sql", "version": "20260616002151", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "97c54dc39c1d40349bcfd26f313ea6c3702c6b7fac7de0521e17563453e7a9f7", "git_blob": "8bad8015c5dc7c7185730536cc198e5363a4cc5f", "bytes": 2041, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260616002251_finalize_public_safe_tools_schema_patch.sql", "version": "20260616002251", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "48c368ae821583456111488f2cd33093d5ce8b94377705e28b09f6bb91c60019", "git_blob": "1447efd69dc1422c5bc011ab02fd07630782f0b8", "bytes": 2137, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260616003000_patch_approve_submitted_tool_slug_status.sql", "version": "20260616003000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "4479be746e7aeb425b62c308d8f0fda04414d743a02e3ba7b200e50a6ee46cc4", "git_blob": "55d9c4a96198beed2941236eec6d376cac5953a2", "bytes": 2639, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260617003000_create_discovery_engine_schema_phase_3b.sql", "version": "20260617003000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "1d80e6a73afc8cfdd1b28cc8e807c552036d27b1016e7193b56a7159528c4148", "git_blob": "5efdc25e066da707fcefa1b408c4d8c5b6cb9d92", "bytes": 12475, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260617004000_create_approve_discovered_tool_rpc.sql", "version": "20260617004000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "53bf7dfc094c0d1724bcfbf1259f30327066a286fef52b8503c6ffb23e05d563", "git_blob": "0d0ef625cbb299e05e9c0cc997abec013f7c898f", "bytes": 5180, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260617004500_seed_discovery_queue_smoke_test.sql", "version": "20260617004500", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "507bab9f850e59150d6e16b1a437c8fe050f977d1f778809152169741fc1c2a8", "git_blob": "d3c35860beeeacbaa4a3e47deeeb14373bac1400", "bytes": 580, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260617005500_cleanup_discovery_queue_smoke_test.sql", "version": "20260617005500", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "335e48902bb7634a196cfc07c3e6712cc68225b510b6490df9feb429ee7651e4", "git_blob": "fadf53fa15dd756d22b932be492c0e48ab43b2b4", "bytes": 566, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260625171333_create_discovery_candidate_tools.sql", "version": "20260625171333", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "b835318afb883d9f387447eae515118997912042a0004b27782217be9dfb78b9", "git_blob": "79d773b1b9e1cb3e6fdcbb18fa05864b0ed64502", "bytes": 10171, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260626171330_candidate_staging_schema_audit_expansion.sql", "version": "20260626171330", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "292a4e91941f4321762152e0d742f3777c9bff81abb38167f3ca910f42b8e5ed", "git_blob": "92694aaa7bc052a27387c11a5a500c57ac6c1be3", "bytes": 2188, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260628150430_create_discovery_candidate_preview_artifacts.sql", "version": "20260628150430", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "8d63b3f64fa2d7ab85d6a821a9885f3fdcd613d97623842ad0928da50b5e6744", "git_blob": "408dba9a767bbfe0b6b03918372f8dafa6ff8728", "bytes": 8878, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260628164230_add_preview_artifact_source_url_snapshot.sql", "version": "20260628164230", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "9a718a2ec24cf425821afece711de9561e53c7cfd236953391671b628c01c538", "git_blob": "a1a451512fbd5e55c32d947630e68384e032d6ac", "bytes": 4247, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260701190000_candidate_staging_queue_decision_schema_expansion.sql", "version": "20260701190000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "1ccdcdfacd38933cbd6edfd80b6591ff757216e5a7204eb0db9940598e307922", "git_blob": "abfd3d3898af5d9393925a992a51090b23342dff", "bytes": 5953, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260702190000_candidate_decision_mutation_rpc.sql", "version": "20260702190000", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "7b3cbb1234aa0e492f366baa5e340bda174b619ede1cfb48616658a0f631651f", "git_blob": "8415a73dcc8e8784d14cf0f88d7c96b9408ed6a3", "bytes": 6968, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" },
-    { "path": "supabase/migrations/20260705120607_discovery_sources_status_forward_reconciliation.sql", "version": "20260705120607", "prefix_classification": "CANONICAL_14_DIGIT_PREFIX", "sha256": "47b9ee1bde06c9f54cb4ece2c8b70d827ca0215e634cf2f58554d97b82fd6511", "git_blob": "383a49eeb005373f4b215a841ba0d10918a244be", "bytes": 1209, "git_mode": "100644", "eligibility_class": "EXPECTED_HISTORY_IDENTITY" }
+    {
+      "path": "supabase/migrations/20260602000100_add_normalized_domain_duplicate_protection.sql",
+      "version": "20260602000100",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "59535ac5db55e3d083a4c83094e2aabd089046044320d6391833957ea73b719c",
+      "git_blob": "15420d8acc44405556d74b61b2777652584d1a3f",
+      "bytes": 8486,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260602000200_create_discovered_tools_queue.sql",
+      "version": "20260602000200",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "c22e3662ebf71202a35f8e439ff231441b4fbfa1021af0a0d46f50e66a858c21",
+      "git_blob": "6c89f0ff7536adf3b3d5556a3ee9e9b75dc3d76f",
+      "bytes": 2628,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260612000100_create_homepage_control_room.sql",
+      "version": "20260612000100",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "c8c4b394f5d13290d9954bdaf19464a6133c0121f75173256ca849cf469f6fb9",
+      "git_blob": "c7889187a2f8e07308bde78a84015c53ccdc3a0a",
+      "bytes": 8550,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260612000200_harden_discovered_tools_access.sql",
+      "version": "20260612000200",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "72b476fbdce344994984dfdfc07b1fa50ea28ecc6581c6e9ff9bf85c7e7494b9",
+      "git_blob": "5e5d37d8f6be8b64d8d6610c5eb9370d847cb988",
+      "bytes": 1489,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260612000300_publish_homepage_control_config.sql",
+      "version": "20260612000300",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "d2158dc437b949c9221236e87a39eedf4d445ab87260628d2824abd7b307d1f5",
+      "git_blob": "3ca2ed6bcc89a2bf11323d29b2e10d8e54b91e2a",
+      "bytes": 5023,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260614000100_allow_preview_transition_audit_action.sql",
+      "version": "20260614000100",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "9b7563eff78bba38c64d3454a901530575355f356dffffe820c25480f8f54777",
+      "git_blob": "35248a62fabdc89819091db963220a22bc0247c2",
+      "bytes": 652,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260615001110_updated-preview-checklist.sql",
+      "version": "20260615001110",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "04ea95601993b373ab3b45bf310df578aa7c59322519c03ca58627b258caf0b3",
+      "git_blob": "a476982a92b2f7d875bf2de8ad6242133bb66234",
+      "bytes": 6171,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260615002000_draft_public_safe_tools_schema.sql",
+      "version": "20260615002000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "51ca6418c43b3944f096b6c33fc07537c09997504b034002a9dc649c5f1967cb",
+      "git_blob": "c4004814bffa6a564b2bb1ad6862e29dd405876a",
+      "bytes": 7332,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260616002151_finalize_public_safe_tools_schema_patch.sql",
+      "version": "20260616002151",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "97c54dc39c1d40349bcfd26f313ea6c3702c6b7fac7de0521e17563453e7a9f7",
+      "git_blob": "8bad8015c5dc7c7185730536cc198e5363a4cc5f",
+      "bytes": 2041,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260616002251_finalize_public_safe_tools_schema_patch.sql",
+      "version": "20260616002251",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "48c368ae821583456111488f2cd33093d5ce8b94377705e28b09f6bb91c60019",
+      "git_blob": "1447efd69dc1422c5bc011ab02fd07630782f0b8",
+      "bytes": 2137,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260616003000_patch_approve_submitted_tool_slug_status.sql",
+      "version": "20260616003000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "4479be746e7aeb425b62c308d8f0fda04414d743a02e3ba7b200e50a6ee46cc4",
+      "git_blob": "55d9c4a96198beed2941236eec6d376cac5953a2",
+      "bytes": 2639,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260617003000_create_discovery_engine_schema_phase_3b.sql",
+      "version": "20260617003000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "1d80e6a73afc8cfdd1b28cc8e807c552036d27b1016e7193b56a7159528c4148",
+      "git_blob": "5efdc25e066da707fcefa1b408c4d8c5b6cb9d92",
+      "bytes": 12475,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260617004000_create_approve_discovered_tool_rpc.sql",
+      "version": "20260617004000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "53bf7dfc094c0d1724bcfbf1259f30327066a286fef52b8503c6ffb23e05d563",
+      "git_blob": "0d0ef625cbb299e05e9c0cc997abec013f7c898f",
+      "bytes": 5180,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260617004500_seed_discovery_queue_smoke_test.sql",
+      "version": "20260617004500",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "507bab9f850e59150d6e16b1a437c8fe050f977d1f778809152169741fc1c2a8",
+      "git_blob": "d3c35860beeeacbaa4a3e47deeeb14373bac1400",
+      "bytes": 580,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260617005500_cleanup_discovery_queue_smoke_test.sql",
+      "version": "20260617005500",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "335e48902bb7634a196cfc07c3e6712cc68225b510b6490df9feb429ee7651e4",
+      "git_blob": "fadf53fa15dd756d22b932be492c0e48ab43b2b4",
+      "bytes": 566,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260625171333_create_discovery_candidate_tools.sql",
+      "version": "20260625171333",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "b835318afb883d9f387447eae515118997912042a0004b27782217be9dfb78b9",
+      "git_blob": "79d773b1b9e1cb3e6fdcbb18fa05864b0ed64502",
+      "bytes": 10171,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260626171330_candidate_staging_schema_audit_expansion.sql",
+      "version": "20260626171330",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "292a4e91941f4321762152e0d742f3777c9bff81abb38167f3ca910f42b8e5ed",
+      "git_blob": "92694aaa7bc052a27387c11a5a500c57ac6c1be3",
+      "bytes": 2188,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260628150430_create_discovery_candidate_preview_artifacts.sql",
+      "version": "20260628150430",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "8d63b3f64fa2d7ab85d6a821a9885f3fdcd613d97623842ad0928da50b5e6744",
+      "git_blob": "408dba9a767bbfe0b6b03918372f8dafa6ff8728",
+      "bytes": 8878,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260628164230_add_preview_artifact_source_url_snapshot.sql",
+      "version": "20260628164230",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "9a718a2ec24cf425821afece711de9561e53c7cfd236953391671b628c01c538",
+      "git_blob": "a1a451512fbd5e55c32d947630e68384e032d6ac",
+      "bytes": 4247,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260701190000_candidate_staging_queue_decision_schema_expansion.sql",
+      "version": "20260701190000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "1ccdcdfacd38933cbd6edfd80b6591ff757216e5a7204eb0db9940598e307922",
+      "git_blob": "abfd3d3898af5d9393925a992a51090b23342dff",
+      "bytes": 5953,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260702190000_candidate_decision_mutation_rpc.sql",
+      "version": "20260702190000",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "7b3cbb1234aa0e492f366baa5e340bda174b619ede1cfb48616658a0f631651f",
+      "git_blob": "8415a73dcc8e8784d14cf0f88d7c96b9408ed6a3",
+      "bytes": 6968,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    },
+    {
+      "path": "supabase/migrations/20260705120607_discovery_sources_status_forward_reconciliation.sql",
+      "version": "20260705120607",
+      "prefix_classification": "CANONICAL_14_DIGIT_PREFIX",
+      "sha256": "47b9ee1bde06c9f54cb4ece2c8b70d827ca0215e634cf2f58554d97b82fd6511",
+      "git_blob": "383a49eeb005373f4b215a841ba0d10918a244be",
+      "bytes": 1209,
+      "git_mode": "100644",
+      "eligibility_class": "EXPECTED_HISTORY_IDENTITY"
+    }
   ],
   "quarantined_candidates": [
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql", "version": "20260715", "prefix_classification": "NONSTANDARD_8_DIGIT_DATE_PREFIX", "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "git_blob": "ccd51ccf9b82bf853d3ee7b2f3998dfda3dd5987", "bytes": 2342, "git_mode": "100644", "eligibility_class": "QUARANTINED_NONSTANDARD_CANDIDATE", "draft_path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql", "draft_sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "active_draft_byte_identical": true },
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql", "version": "20260715", "prefix_classification": "NONSTANDARD_8_DIGIT_DATE_PREFIX", "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "git_blob": "30a10a75098b2301ae11bed3bb20995aef5d1460", "bytes": 1004, "git_mode": "100644", "eligibility_class": "QUARANTINED_NONSTANDARD_CANDIDATE", "draft_path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql", "draft_sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "active_draft_byte_identical": true }
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "version": "20260715",
+      "prefix_classification": "NONSTANDARD_8_DIGIT_DATE_PREFIX",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "git_blob": "ccd51ccf9b82bf853d3ee7b2f3998dfda3dd5987",
+      "bytes": 2342,
+      "git_mode": "100644",
+      "eligibility_class": "QUARANTINED_NONSTANDARD_CANDIDATE",
+      "draft_path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "draft_sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "active_draft_byte_identical": true
+    },
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "version": "20260715",
+      "prefix_classification": "NONSTANDARD_8_DIGIT_DATE_PREFIX",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "git_blob": "30a10a75098b2301ae11bed3bb20995aef5d1460",
+      "bytes": 1004,
+      "git_mode": "100644",
+      "eligibility_class": "QUARANTINED_NONSTANDARD_CANDIDATE",
+      "draft_path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "draft_sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "active_draft_byte_identical": true
+    }
   ],
   "expected_policies": [
-    { "repository_identity": "public.discovery_candidate_preview_artifacts::Deny all access to discovery_candidate_preview_artifacts", "identity_sha256": "d5de71234559875aced8cede6e5292f9ec7918df900d7df75a6e00e9e11fe7d8", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_candidate_tools::Deny all access to discovery_candidate_tools", "identity_sha256": "4eb7aa2f33b59a24ac14d204a1ad32b1c09727037711c503f1b31e2cb8bc3104", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_audit_events::Deny all access to discovery_audit_events", "identity_sha256": "50336476f164281f234e12e573565491df0a9653618a73b92568f1378ad84a5f", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_duplicate_candidates::Deny all access to discovery_duplicate_candidates", "identity_sha256": "87117f25c10f5dfaec06ec40653e2767998ba83e49384900768c732f150e7ac4", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_evidence::Deny all access to discovery_evidence", "identity_sha256": "221df95c4de0d47d2f1608d932467142817cd66a694d64b7e4feea0dea87b91a", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_runs::Deny all access to discovery_runs", "identity_sha256": "74b07b3c0f6e2c7cc2f244e2dfa2eb426cc2437e0931d7ea5afe90bd16353693", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovery_sources::Deny all access to discovery_sources", "identity_sha256": "d380551b814eb2301e59c9d08ac8ef42995a8d7827198105b9d5efe88b434657", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.discovered_tools::Deny all access to discovered_tools", "identity_sha256": "718658e5abec587f3d98dc0fc9d520d937f4e53eb17274658475040c1744f504", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_audit_events::Admin can insert homepage control audit events", "identity_sha256": "9f7c68f6335bb0ea836e1910d9da1bb7d3f9f7d2e41cc05c4cbf807e45608e38", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_audit_events::Admin can read homepage control audit events", "identity_sha256": "082b5339f1376d2d4de442ae2cfca2ba52fd63b711ab3cfaa252e3bed4779e54", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_checklist_runs::Admin can read homepage control checklist runs", "identity_sha256": "da57dd0e886290d0cdaaf8ff12021030aad5ea417969292b4143dfcbd8ba6232", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_checklist_runs::Admin can write homepage control checklist runs", "identity_sha256": "babbff040ac8ade5c046fc834e5c5877cfb1d92c4d5dd15bfd5b6df0f2c2ed20", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_configs::Admin can read homepage control configs", "identity_sha256": "6e8878bbe0188d3f833bd08eae82a5fd350e8103192d3e1b45660dbda69eb185", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.homepage_control_configs::Admin can write homepage control configs", "identity_sha256": "b74793e86ff9978f84604963be758371f26b54e8e822a245d93968e327ade88a", "semantic_class": "EXACT_REPOSITORY_POLICY" },
-    { "repository_identity": "public.tools::Allow public read access to approved tools", "identity_sha256": "12d40427397ba420df6d245a661b38735fe295cc2889bbc3f3d2746eaaad6954", "semantic_class": "EXACT_REPOSITORY_POLICY" }
+    {
+      "repository_identity": "public.discovered_tools::Deny all access to discovered_tools",
+      "identity_sha256": "718658e5abec587f3d98dc0fc9d520d937f4e53eb17274658475040c1744f504",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_audit_events::Deny all access to discovery_audit_events",
+      "identity_sha256": "50336476f164281f234e12e573565491df0a9653618a73b92568f1378ad84a5f",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_candidate_preview_artifacts::Deny all access to discovery_candidate_preview_artifacts",
+      "identity_sha256": "d5de71234559875aced8cede6e5292f9ec7918df900d7df75a6e00e9e11fe7d8",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_candidate_tools::Deny all access to discovery_candidate_tools",
+      "identity_sha256": "4eb7aa2f33b59a24ac14d204a1ad32b1c09727037711c503f1b31e2cb8bc3104",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_duplicate_candidates::Deny all access to discovery_duplicate_candidates",
+      "identity_sha256": "87117f25c10f5dfaec06ec40653e2767998ba83e49384900768c732f150e7ac4",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_evidence::Deny all access to discovery_evidence",
+      "identity_sha256": "221df95c4de0d47d2f1608d932467142817cd66a694d64b7e4feea0dea87b91a",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_runs::Deny all access to discovery_runs",
+      "identity_sha256": "74b07b3c0f6e2c7cc2f244e2dfa2eb426cc2437e0931d7ea5afe90bd16353693",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.discovery_sources::Deny all access to discovery_sources",
+      "identity_sha256": "d380551b814eb2301e59c9d08ac8ef42995a8d7827198105b9d5efe88b434657",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_audit_events::Admin can insert homepage control audit events",
+      "identity_sha256": "9f7c68f6335bb0ea836e1910d9da1bb7d3f9f7d2e41cc05c4cbf807e45608e38",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_audit_events::Admin can read homepage control audit events",
+      "identity_sha256": "082b5339f1376d2d4de442ae2cfca2ba52fd63b711ab3cfaa252e3bed4779e54",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_checklist_runs::Admin can read homepage control checklist runs",
+      "identity_sha256": "da57dd0e886290d0cdaaf8ff12021030aad5ea417969292b4143dfcbd8ba6232",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_checklist_runs::Admin can write homepage control checklist runs",
+      "identity_sha256": "babbff040ac8ade5c046fc834e5c5877cfb1d92c4d5dd15bfd5b6df0f2c2ed20",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_configs::Admin can read homepage control configs",
+      "identity_sha256": "6e8878bbe0188d3f833bd08eae82a5fd350e8103192d3e1b45660dbda69eb185",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.homepage_control_configs::Admin can write homepage control configs",
+      "identity_sha256": "b74793e86ff9978f84604963be758371f26b54e8e822a245d93968e327ade88a",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    },
+    {
+      "repository_identity": "public.tools::Allow public read access to approved tools",
+      "identity_sha256": "12d40427397ba420df6d245a661b38735fe295cc2889bbc3f3d2746eaaad6954",
+      "semantic_class": "EXACT_REPOSITORY_POLICY"
+    }
   ],
   "expected_grant_classes": [
-    { "role_class": "ANON", "expectation": "EXPECTED_NONE" },
-    { "role_class": "AUTHENTICATED", "expectation": "EXPECTED_NONE" },
-    { "role_class": "PUBLIC", "expectation": "EXPECTED_NONE" },
-    { "role_class": "SERVICE_ROLE", "expectation": "SUFFICIENT" }
+    {
+      "role_class": "ANON",
+      "expectation": "EXPECTED_NONE"
+    },
+    {
+      "role_class": "AUTHENTICATED",
+      "expectation": "EXPECTED_NONE"
+    },
+    {
+      "role_class": "PUBLIC",
+      "expectation": "EXPECTED_NONE"
+    },
+    {
+      "role_class": "SERVICE_ROLE",
+      "expectation": "SUFFICIENT"
+    }
   ],
   "audit_identities": {
     "table_identities": [
-      { "repository_identity": "public.admin_audit_archives", "identity_sha256": "eff9c5df034755303d5875e911fd67494f53de8f13894ce369f9854a84793b8e" },
-      { "repository_identity": "public.admin_audit_logs", "identity_sha256": "ceb4ec79081d90e0fa1ed04023a0b85c145ad8d9f0067bbd77fc92ec48e62ef4" }
+      {
+        "repository_identity": "public.admin_audit_archives",
+        "identity_sha256": "eff9c5df034755303d5875e911fd67494f53de8f13894ce369f9854a84793b8e"
+      },
+      {
+        "repository_identity": "public.admin_audit_logs",
+        "identity_sha256": "ceb4ec79081d90e0fa1ed04023a0b85c145ad8d9f0067bbd77fc92ec48e62ef4"
+      }
     ],
-    "sequence_identity": { "repository_identity": "public.admin_audit_logs_id_seq", "identity_sha256": "da9f7c8e4ff7dbfa672d5fc6934655d9c2d2fe4941f4c2f6b0db7445fd047f9a" }
+    "sequence_identity": {
+      "repository_identity": "public.admin_audit_logs_id_seq",
+      "identity_sha256": "da9f7c8e4ff7dbfa672d5fc6934655d9c2d2fe4941f4c2f6b0db7445fd047f9a"
+    }
   },
-  "function_security_categories": ["UNAVAILABLE", "EXPECTED_MATCH", "MISSING", "UNSAFE_DEFINER_OR_SEARCH_PATH", "UNEXPECTED_EXECUTE_GRANT"],
-  "trigger_dependency_categories": ["UNAVAILABLE", "EXPECTED_MATCH", "MISSING", "UNEXPECTED"],
-  "ownership_expectation": { "classification": "UNAVAILABLE", "identity_disclosure": false },
+  "function_security_categories": [
+    "UNAVAILABLE",
+    "EXPECTED_MATCH",
+    "MISSING",
+    "UNSAFE_DEFINER_OR_SEARCH_PATH",
+    "UNEXPECTED_EXECUTE_GRANT"
+  ],
+  "trigger_dependency_categories": [
+    "UNAVAILABLE",
+    "EXPECTED_MATCH",
+    "MISSING",
+    "UNEXPECTED"
+  ],
+  "ownership_expectation": {
+    "classification": "UNAVAILABLE",
+    "identity_disclosure": false
+  },
   "generated_type_target": {
     "path": "lib/supabase/database.types.ts",
     "sha256": "7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c",
@@ -277,34 +858,184 @@
     "filesystem_mode": "0600"
   },
   "guard_identities": [
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql", "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "bytes": 2342, "git_mode": "100644", "filesystem_mode": "0644", "guard_count": 1, "guard_before_transaction": true, "transaction_order": 1 },
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql", "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "bytes": 1004, "git_mode": "100644", "filesystem_mode": "0644", "guard_count": 1, "guard_before_transaction": true, "transaction_order": 2 },
-    { "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql", "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "bytes": 2342, "git_mode": "100644", "filesystem_mode": "0644", "guard_count": 1, "guard_before_transaction": true, "transaction_order": 3 },
-    { "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql", "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "bytes": 1004, "git_mode": "100644", "filesystem_mode": "0644", "guard_count": 1, "guard_before_transaction": true, "transaction_order": 4 }
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "bytes": 2342,
+      "git_mode": "100644",
+      "filesystem_mode": "0644",
+      "guard_count": 1,
+      "guard_before_transaction": true,
+      "transaction_order": 1
+    },
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "bytes": 1004,
+      "git_mode": "100644",
+      "filesystem_mode": "0644",
+      "guard_count": 1,
+      "guard_before_transaction": true,
+      "transaction_order": 2
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "bytes": 2342,
+      "git_mode": "100644",
+      "filesystem_mode": "0644",
+      "guard_count": 1,
+      "guard_before_transaction": true,
+      "transaction_order": 3
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "bytes": 1004,
+      "git_mode": "100644",
+      "filesystem_mode": "0644",
+      "guard_count": 1,
+      "guard_before_transaction": true,
+      "transaction_order": 4
+    }
   ],
   "phase_27na_planning_authorities": [
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/01-migration-filename-placement-disposition.md", "sha256": "8083bcea9a395e44d52e82daa7f011488ee8e0e34270470d98d9bee61c02a23a", "bytes": 6109, "filesystem_mode": "0644" },
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/02-migration-history-evidence-contract.md", "sha256": "165b5dcd9129a13069ec336b3e8d623662fbc6be7e636e79f4af134817582a0a", "bytes": 5109, "filesystem_mode": "0644" },
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/03-audit-grant-dependency-map.md", "sha256": "9a6b532ef341d87105ba5db414d2c2524cea0fb1d249c92568fc638975043bdc", "bytes": 5467, "filesystem_mode": "0644" },
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/04-secret-safe-live-preflight-design.md", "sha256": "292d982c95e39ee0663035c57b6b5a5f7ee2867aff72260c13b541ddacbf074b", "bytes": 4832, "filesystem_mode": "0644" },
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/05-failure-rollback-contract.md", "sha256": "7bf0109221c3357ff8256b121fec4ac79249596d284259cfd9d85d9234111765", "bytes": 3811, "filesystem_mode": "0644" },
-    { "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/06-type-generation-dependency-order.md", "sha256": "31d39d96edbbee4bb59a3f85596dea750ee4ae39ec3374158e8ca3093bb1202d", "bytes": 2363, "filesystem_mode": "0644" }
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/01-migration-filename-placement-disposition.md",
+      "sha256": "8083bcea9a395e44d52e82daa7f011488ee8e0e34270470d98d9bee61c02a23a",
+      "bytes": 6109,
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/02-migration-history-evidence-contract.md",
+      "sha256": "165b5dcd9129a13069ec336b3e8d623662fbc6be7e636e79f4af134817582a0a",
+      "bytes": 5109,
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/03-audit-grant-dependency-map.md",
+      "sha256": "9a6b532ef341d87105ba5db414d2c2524cea0fb1d249c92568fc638975043bdc",
+      "bytes": 5467,
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/04-secret-safe-live-preflight-design.md",
+      "sha256": "292d982c95e39ee0663035c57b6b5a5f7ee2867aff72260c13b541ddacbf074b",
+      "bytes": 4832,
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/05-failure-rollback-contract.md",
+      "sha256": "7bf0109221c3357ff8256b121fec4ac79249596d284259cfd9d85d9234111765",
+      "bytes": 3811,
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "/private/tmp/aifinder-phase-27na-27nf-static-readiness-20260721T004200Z/06-type-generation-dependency-order.md",
+      "sha256": "31d39d96edbbee4bb59a3f85596dea750ee4ae39ec3374158e8ca3093bb1202d",
+      "bytes": 2363,
+      "filesystem_mode": "0644"
+    }
   ],
   "controlling_inputs": [
-    { "path": "docs/discovery-phase-25cj-supabase-type-generation-execution-result-documentation-gate.md", "sha256": "2d652182ed96770801c872651ad00e7ca1a9c44eaf9a647bfd52bcad5048cb74", "bytes": 9194, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "docs/discovery-phase-26wc-live-rls-static-migration-reconciliation-inventory.md", "sha256": "3bd21fd9921650cd07f06f374d5cd34c644d8f134d0a1fcbdfd6b752ab0b7204", "bytes": 74894, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "docs/discovery-phase-26xw-guard-removal-and-rls-remediation-execution-readiness-planning-gate.md", "sha256": "753b2fc1c6c9b238201a11ee067abb4c0ef831282951fe6b087c219d876f80a8", "bytes": 3840, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "docs/discovery-phase-27mn-27mq-database-rls-migration-static-reconciliation-planning-gate.md", "sha256": "a9d13a7e6115d6d4e1842c7cd8c27dc2e16de6635c908d3ac280749ef5fd34e8", "bytes": 10117, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "docs/discovery-phase-27mr-27mv-database-rls-migration-static-reconciliation-inspection-gate.md", "sha256": "43223adbe692874b9cf2a039fbb34dae0fe4a510fa8102777b9b8f766d02bf1b", "bytes": 18148, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "docs/discovery-phase-27mw-27mz-active-migration-guard-divergence-containment-gate.md", "sha256": "48c225c3525536c9d942bd7f7c402ee1b8ab9427ae41330d96a679ba7d422c77", "bytes": 2939, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "lib/supabase/database.types.ts", "sha256": "7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c", "bytes": 42654, "git_mode": "100644", "filesystem_mode": "0600" },
-    { "path": "scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql", "sha256": "32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55", "bytes": 2975, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "scripts/discovery-admin-audit-sequence-metadata-query-candidate.sql", "sha256": "2b231fe90f7e0cfca150535cb2d90b7ab96514fa50d7efc567cdeecba4738d43", "bytes": 1954, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "scripts/discovery-rls-drift-catalog-ddl-metadata-query-candidate.sql", "sha256": "b2b93480012f4dbec65203c556829b61b49500ab85fd5e0c493084b9b57f3589", "bytes": 4142, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql", "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "bytes": 2342, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql", "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "bytes": 1004, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql", "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9", "bytes": 2342, "git_mode": "100644", "filesystem_mode": "0644" },
-    { "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql", "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f", "bytes": 1004, "git_mode": "100644", "filesystem_mode": "0644" }
+    {
+      "path": "docs/discovery-phase-25cj-supabase-type-generation-execution-result-documentation-gate.md",
+      "sha256": "2d652182ed96770801c872651ad00e7ca1a9c44eaf9a647bfd52bcad5048cb74",
+      "bytes": 9194,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "docs/discovery-phase-26wc-live-rls-static-migration-reconciliation-inventory.md",
+      "sha256": "3bd21fd9921650cd07f06f374d5cd34c644d8f134d0a1fcbdfd6b752ab0b7204",
+      "bytes": 74894,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "docs/discovery-phase-26xw-guard-removal-and-rls-remediation-execution-readiness-planning-gate.md",
+      "sha256": "753b2fc1c6c9b238201a11ee067abb4c0ef831282951fe6b087c219d876f80a8",
+      "bytes": 3840,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "docs/discovery-phase-27mn-27mq-database-rls-migration-static-reconciliation-planning-gate.md",
+      "sha256": "a9d13a7e6115d6d4e1842c7cd8c27dc2e16de6635c908d3ac280749ef5fd34e8",
+      "bytes": 10117,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "docs/discovery-phase-27mr-27mv-database-rls-migration-static-reconciliation-inspection-gate.md",
+      "sha256": "43223adbe692874b9cf2a039fbb34dae0fe4a510fa8102777b9b8f766d02bf1b",
+      "bytes": 18148,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "docs/discovery-phase-27mw-27mz-active-migration-guard-divergence-containment-gate.md",
+      "sha256": "48c225c3525536c9d942bd7f7c402ee1b8ab9427ae41330d96a679ba7d422c77",
+      "bytes": 2939,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "lib/supabase/database.types.ts",
+      "sha256": "7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c",
+      "bytes": 42654,
+      "git_mode": "100644",
+      "filesystem_mode": "0600"
+    },
+    {
+      "path": "scripts/_drafts/discovery-phase-26yb-read-only-target-catalog-preflight-candidate.sql",
+      "sha256": "32ea49528123a7bbafe6d430fdc637a91da4a6c977ee5cc9e5f912770a907c55",
+      "bytes": 2975,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "scripts/discovery-admin-audit-sequence-metadata-query-candidate.sql",
+      "sha256": "2b231fe90f7e0cfca150535cb2d90b7ab96514fa50d7efc567cdeecba4738d43",
+      "bytes": 1954,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "scripts/discovery-rls-drift-catalog-ddl-metadata-query-candidate.sql",
+      "sha256": "b2b93480012f4dbec65203c556829b61b49500ab85fd5e0c493084b9b57f3589",
+      "bytes": 4142,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "bytes": 2342,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "bytes": 1004,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "bytes": 2342,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "bytes": 1004,
+      "git_mode": "100644",
+      "filesystem_mode": "0644"
+    }
   ],
   "authorization_flags": {
     "execution_authorized": false,

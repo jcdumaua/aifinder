@@ -203,3 +203,129 @@ Failure or rollback behavior is fail closed: missing or mismatched authorization
 `PROPOSE_PHASE_27NG_27NL_SECRET_SAFE_LIVE_PREFLIGHT_STATIC_REPAIR_GEMINI_FINAL_REVIEW`
 
 The final Gemini package must bind the completed document identity externally, include all four files verbatim and all permitted static evidence, and obtain exactly: `APPROVE_PHASE_27NG_27NL_SECRET_SAFE_LIVE_PREFLIGHT_STATIC_REPAIR_AND_AUTHORIZE_EXACT_SCOPE_COMMIT_PUSH`. That proposed commit authorization does not authorize live preflight, migration execution, or type generation.
+
+---
+
+## Phase 27PY-27QC controlling predecessor-repair addendum
+
+This addendum is the controlling disposition for the final three-file predecessor repair. Where the historical Phase 27NG-27NL text describes an earlier identity, defect, readiness label, or next gate, this addendum supersedes that statement while retaining it as audit history.
+
+### Authorization, baseline, tokens, and exact scope
+
+- Fresh Gemini authorization consumed exactly once for this repair:
+  `APPROVE_PHASE_27PU_27PX_CORRECTED_CHECKER_INPUT_VALIDATION_RECOVERY_AND_AUTHORIZE_ONE_FRESH_EXACT_SCOPE_REPAIR_ATTEMPT`
+- Repository baseline, local `main`, local `origin/main`, and read-only remote `main`:
+  `7b740e3b83e3efde6de358b316d391b643889fad`
+- Branch: `main`; initial ahead/behind: `0/0`; initial tracked modifications: `0`; initial index: empty; frozen untracked count: `11`.
+- Permanently consumed and non-reusable predecessor token:
+  `APPROVE_PHASE_27OM_27OS_COMMITTED_PREFLIGHT_PREDECESSOR_TARGETED_REPAIR_SCOPE`
+- Permanently consumed and non-reusable predecessor token:
+  `APPROVE_PHASE_27PL_27PN_MIGRATION_HISTORY_UNAVAILABLE_PREDICATE_RECOVERY_AND_AUTHORIZE_ONE_FRESH_EXACT_SCOPE_REPAIR_ATTEMPT`
+- Separately approved redesign token remains unconsumed and out of scope:
+  `APPROVE_PHASE_27OT_27PE_AUTHENTICATED_ISSUER_AND_REPLAY_AUTHORITY_REDESIGN_SCOPE`
+
+The exact repository repair scope is only:
+
+1. `scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-candidate.sql`
+2. `scripts/_drafts/discovery-phase-27ng-27nl-static-identity-manifest.json`
+3. `docs/discovery-phase-27ng-27nl-secret-safe-live-preflight-static-repair-gate.md`
+
+No fourth repository path is part of this repair.
+
+### Historical failures and corrected checker
+
+The first historical diagnosis was `INSPECTION_PREDICATE_FALSE_NEGATIVE`: a formatting-sensitive predicate rejected approved semantics. The subsequent checker failure was independently diagnosed as `CHECKER_REGION_EXTRACTION_DEFECT` at exact stage `SEMANTIC_ASSERTIONS.REGION_CLASSIFICATIONS.END_BOUNDARY`.
+
+The defective checker assumed the next CTE must have the exact shape `output_rows AS (`. The valid SQL uses an explicit column list: `output_rows(sort_order, evidence_key, evidence_value) AS (`. The old extractor raised `ValueError("missing next CTE")`, and its generic top-level handler suppressed that stage before any named semantic assertion ran.
+
+The immutable corrected checker is:
+
+- path: `/private/tmp/aifinder-phase-27pu-27px-diagnostic.vMuYQX/corrected_semantic_checker.py`;
+- SHA-256: `c0e6b840ca04cff528e6d41f025e6adb1241e1e7530f4cb8b818cd22f275712f`;
+- bytes: `22957`;
+- filesystem mode: `0600`;
+- prequalification: `10/10` expectations matched, with four required passes and six required failures;
+- result: `CORRECTED_CHECKER_PREQUALIFIED_FOR_FRESH_REPAIR_REVIEW`.
+
+The corrected checker accepts CTE declarations with or without explicit column lists, locates CTE bodies by quote-aware balanced-parenthesis scanning, preserves role-specific modes, rejects duplicate JSON keys, compares generated deterministic serializations without requiring source-byte canonical form, retains every approved structural and semantic assertion, and emits stable stage IDs without raw source, exception, path, credential, or environment output.
+
+### Original defects and exact repaired identities
+
+The original SQL began its read-only transaction before validating the activation literals, contained two explicit `ROLLBACK;` occurrences, and used unqualified privilege and timestamp functions without a fixed trusted resolution boundary. The original manifest contained the exact approved policy objects but not their required lexical `repository_identity` order.
+
+The repaired SQL rejects missing or invalid public activation literals before `BEGIN`; that comparison is only a precondition and does **not** establish trusted caller provenance or an authenticated issuer. It then opens one read-only transaction, applies exactly one transaction-local `SET LOCAL search_path = pg_catalog;`, uses qualified `pg_catalog` privilege and timestamp functions, emits only the bounded output projection, and ends with one terminal `ROLLBACK;`.
+
+Final repaired SQL identity:
+
+- SHA-256: `9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820`;
+- bytes: `30940`;
+- filesystem mode: `0644`;
+- Git mode: `100644`;
+- Git blob: `ea2aeae24027de6520e5aed59c29097561f9f8d3`.
+
+Final repaired manifest identity:
+
+- SHA-256: `e36bc2e44361db5a660e73075888b1c328d1476cea5f06a0f5aceb8c42ec5f43`;
+- bytes: `38907`;
+- filesystem mode: `0644`;
+- Git mode: `100644`;
+- Git blob: `2932ba9708bac4fec3353f1c480e27edcdede955`.
+
+This gate deliberately does not self-embed its own SHA-256 or byte count. Its completed identity is computed only after the final bytes are frozen and is bound externally by the Phase 27QC Gemini final-review package.
+
+### Repaired control flow and bounded-output semantics
+
+The repaired SQL has one activation comparison before `BEGIN`, one `BEGIN TRANSACTION READ ONLY;`, one `SET LOCAL statement_timeout = '5s';`, one `SET LOCAL lock_timeout = '2s';`, one `SET LOCAL idle_in_transaction_session_timeout = '10s';`, one `SET LOCAL search_path = pg_catalog;`, and one terminal `ROLLBACK;` after the fixed output projection. Invalid activation does not reach an explicit transaction.
+
+All `has_table_privilege`, `has_sequence_privilege`, `to_char`, and `clock_timestamp` calls are schema-qualified through `pg_catalog`. Executable mutation, DDL, temporary-table creation, extension operations, dynamic SQL, application-row reads, migration-history reads, and raw-output expansion remain absent.
+
+The output contract remains exactly 56 ordered keys, 15 categorical allowlists, and 17 mandatory fixed-`false` assertions. The six migration metric aliases are literal text `UNAVAILABLE`; keys 5-10 reference those aliases exactly; keys 11-12 are literal `UNAVAILABLE`; and key 13 references the fail-closed migration-history classification. Unavailability is the first branch propagated to out-of-band drift, forward-precondition, and rollback-precondition classifications. No `supabase_migrations` or `schema_migrations` relation is read, no filename/version-only evidence is treated as applied-content identity, and unavailable history cannot become `EXACT_MATCH`, `PASS`, or `NONE`.
+
+The manifest strictly rejects duplicate keys, binds the repaired SQL identity, preserves the exact 56-key sequence, 15 allowlists, 17 negatives, and the exact fifteen policy identity/digest/semantic-class objects as an unordered set, while placing those policies in exact lexical `repository_identity` order. Protected migrations, relations, grants, guards, generated-type target, controlling inputs, and false authorization flags remain unchanged. The manifest contains no self-referential manifest hash.
+
+### Transaction failure limitation
+
+The terminal source `ROLLBACK;` is guaranteed only when execution reaches that statement. An abrupt client, network, or process failure after `BEGIN` relies on client disconnect closing the read-only transaction; it does not guarantee execution of the terminal source rollback. This static repair makes no stronger runtime claim.
+
+### Preservation ledger
+
+- Hard-inert wrapper preserved unchanged: SHA-256 `f7f989e92df1bb3f36a75dabbb62f71b55cf2fc55f59be534903aa0a713376fc`, Git mode `100644`, filesystem mode `0644`; it was not sourced or invoked.
+- Frozen ledger preserved: SHA-256 `7c0993404e8d3f509988db097a61aa6eeadbfb1495d25cfeaa5a67ba97e19b84`, 5804 bytes, mode `0400`; all eleven regular non-symlink mode-`0644` files remain exact with aggregate `153376` bytes.
+- Forward active/draft migration pair preserved at SHA-256 `0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9`.
+- Rollback active/draft migration pair preserved at SHA-256 `9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f`.
+- Each of the four migration guards remains present exactly once before its explicit transaction; no migration was executed or placed.
+- Generated type preserved unchanged: `lib/supabase/database.types.ts`, SHA-256 `7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c`, Git mode `100644`, filesystem mode `0600`.
+- Previously bound metadata-query candidates remain byte-for-byte unchanged.
+
+### Phase 27PY-27QC static-verification and prohibited-operation ledger
+
+Authorized static evidence consists only of exact identity/mode/type/owner checks, immutable checker execution over its approved static role bindings, duplicate-key manifest parsing inside that checker, non-executing lexical/semantic inspection, Git status/diff/history inspection, and final-review packaging. It is not live-readiness or execution authority.
+
+- Repository tracked paths changed: exactly the three approved paths.
+- Added, deleted, or renamed repository paths: none.
+- Index: empty; staging, commit, and push: not performed.
+- SQL or wrapper execution: not performed.
+- Database, Supabase, catalog, environment, credential, URL, service-material, or secret access: not performed.
+- Application, route, server, test, build, package script, bounded-evidence validator, synthetic runner, or repository harness execution: not performed.
+- Migration action, type generation, key creation, infrastructure creation, deployment, publishing, operational reactivation, and public launch: not performed.
+- Only the initial and final read-only remote-`main` identity checks are permitted network activity.
+
+### Controlling blocked-state ledger
+
+`LIVE_PREFLIGHT_EXECUTION=BLOCKED`
+
+`AUTHORIZATION_TRUST_REDESIGN=REQUIRED`
+
+`MIGRATION_EXECUTION=BLOCKED`
+
+`TYPE_GENERATION=BLOCKED`
+
+`DEPLOYMENT=BLOCKED`
+
+`PUBLISHING=BLOCKED`
+
+`OPERATIONAL_REACTIVATION=BLOCKED`
+
+`PUBLIC_LAUNCH=BLOCKED`
+
+No static success, public literal comparison, or future commit/push authorization can relax these blocked states. The next permitted gate is Gemini review of the complete Phase 27QC package. Only an exact later approval may authorize staging, committing, and pushing these same three paths; it cannot authorize execution or operations.

@@ -13,11 +13,6 @@
 \quit 3
 \endif
 
-BEGIN TRANSACTION READ ONLY;
-SET LOCAL statement_timeout = '5s';
-SET LOCAL lock_timeout = '2s';
-SET LOCAL idle_in_transaction_session_timeout = '10s';
-
 SELECT (
   :'AIFINDER_REVIEWED_WRAPPER' = 'PHASE_27NG_27NL_REVIEWED_WRAPPER'
   AND :'AIFINDER_SECRET_SAFE_LIVE_PREFLIGHT_ACTIVATED'
@@ -27,9 +22,14 @@ SELECT (
 ) AS aifinder_preflight_activation_valid \gset
 \if :aifinder_preflight_activation_valid
 \else
-ROLLBACK;
 \quit 3
 \endif
+
+BEGIN TRANSACTION READ ONLY;
+SET LOCAL statement_timeout = '5s';
+SET LOCAL lock_timeout = '2s';
+SET LOCAL idle_in_transaction_session_timeout = '10s';
+SET LOCAL search_path = pg_catalog;
 
 WITH expected_relations(relname) AS (
   VALUES
@@ -262,19 +262,19 @@ WITH expected_relations(relname) AS (
        AND (SELECT count(*) FROM audit_sequence) = 1
        AND NOT EXISTS (
         SELECT 1 FROM audit_relations AS ar
-        WHERE has_table_privilege('anon', ar.oid, 'SELECT')
-           OR has_table_privilege('anon', ar.oid, 'INSERT')
-           OR has_table_privilege('anon', ar.oid, 'UPDATE')
-           OR has_table_privilege('anon', ar.oid, 'DELETE')
-           OR has_table_privilege('anon', ar.oid, 'TRUNCATE')
-           OR has_table_privilege('anon', ar.oid, 'REFERENCES')
-           OR has_table_privilege('anon', ar.oid, 'TRIGGER')
+        WHERE pg_catalog.has_table_privilege('anon', ar.oid, 'SELECT')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'INSERT')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'UPDATE')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'DELETE')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'TRUNCATE')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'REFERENCES')
+           OR pg_catalog.has_table_privilege('anon', ar.oid, 'TRIGGER')
       )
       AND NOT EXISTS (
         SELECT 1 FROM audit_sequence AS s
-        WHERE has_sequence_privilege('anon', s.oid, 'USAGE')
-           OR has_sequence_privilege('anon', s.oid, 'SELECT')
-           OR has_sequence_privilege('anon', s.oid, 'UPDATE')
+        WHERE pg_catalog.has_sequence_privilege('anon', s.oid, 'USAGE')
+           OR pg_catalog.has_sequence_privilege('anon', s.oid, 'SELECT')
+           OR pg_catalog.has_sequence_privilege('anon', s.oid, 'UPDATE')
       ) THEN 'EXPECTED_NONE'
       ELSE 'UNEXPECTED_PRESENT'
     END AS anon_grant_classification,
@@ -285,19 +285,19 @@ WITH expected_relations(relname) AS (
        AND (SELECT count(*) FROM audit_sequence) = 1
        AND NOT EXISTS (
         SELECT 1 FROM audit_relations AS ar
-        WHERE has_table_privilege('authenticated', ar.oid, 'SELECT')
-           OR has_table_privilege('authenticated', ar.oid, 'INSERT')
-           OR has_table_privilege('authenticated', ar.oid, 'UPDATE')
-           OR has_table_privilege('authenticated', ar.oid, 'DELETE')
-           OR has_table_privilege('authenticated', ar.oid, 'TRUNCATE')
-           OR has_table_privilege('authenticated', ar.oid, 'REFERENCES')
-           OR has_table_privilege('authenticated', ar.oid, 'TRIGGER')
+        WHERE pg_catalog.has_table_privilege('authenticated', ar.oid, 'SELECT')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'INSERT')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'UPDATE')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'DELETE')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'TRUNCATE')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'REFERENCES')
+           OR pg_catalog.has_table_privilege('authenticated', ar.oid, 'TRIGGER')
       )
       AND NOT EXISTS (
         SELECT 1 FROM audit_sequence AS s
-        WHERE has_sequence_privilege('authenticated', s.oid, 'USAGE')
-           OR has_sequence_privilege('authenticated', s.oid, 'SELECT')
-           OR has_sequence_privilege('authenticated', s.oid, 'UPDATE')
+        WHERE pg_catalog.has_sequence_privilege('authenticated', s.oid, 'USAGE')
+           OR pg_catalog.has_sequence_privilege('authenticated', s.oid, 'SELECT')
+           OR pg_catalog.has_sequence_privilege('authenticated', s.oid, 'UPDATE')
       ) THEN 'EXPECTED_NONE'
       ELSE 'UNEXPECTED_PRESENT'
     END AS authenticated_grant_classification,
@@ -307,43 +307,43 @@ WITH expected_relations(relname) AS (
       WHEN (SELECT count(*) FROM audit_relations) = 2
        AND (SELECT count(*) FROM audit_sequence) = 1
        AND (
-        has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'UPDATE')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'TRUNCATE')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'REFERENCES')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'TRIGGER')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'UPDATE')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'DELETE')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'TRUNCATE')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'REFERENCES')
-        OR has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'TRIGGER')
-        OR has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'SELECT')
-        OR has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'UPDATE')
+        pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'UPDATE')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'TRUNCATE')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'REFERENCES')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'TRIGGER')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'UPDATE')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'DELETE')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'TRUNCATE')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'REFERENCES')
+        OR pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'TRIGGER')
+        OR pg_catalog.has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'SELECT')
+        OR pg_catalog.has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'UPDATE')
        ) THEN 'UNEXPECTED'
       WHEN (SELECT count(*) FROM audit_relations) = 2
        AND (SELECT count(*) FROM audit_sequence) = 1
        AND (
-        NOT has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'SELECT')
-        OR NOT has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'INSERT')
-        OR NOT has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'DELETE')
-        OR NOT has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'SELECT')
-        OR NOT has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'INSERT')
-        OR NOT has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'USAGE')
+        NOT pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'SELECT')
+        OR NOT pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'INSERT')
+        OR NOT pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_logs'), 'DELETE')
+        OR NOT pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'SELECT')
+        OR NOT pg_catalog.has_table_privilege('service_role', (SELECT oid FROM audit_relations WHERE relname = 'admin_audit_archives'), 'INSERT')
+        OR NOT pg_catalog.has_sequence_privilege('service_role', (SELECT oid FROM audit_sequence), 'USAGE')
        ) THEN 'INSUFFICIENT'
       WHEN (SELECT count(*) FROM audit_relations) = 2
        AND (SELECT count(*) FROM audit_sequence) = 1
        AND NOT EXISTS (
         SELECT 1 FROM audit_relations AS ar
         WHERE (ar.relname = 'admin_audit_logs'
-          AND (NOT has_table_privilege('service_role', ar.oid, 'SELECT')
-            OR NOT has_table_privilege('service_role', ar.oid, 'INSERT')
-            OR NOT has_table_privilege('service_role', ar.oid, 'DELETE')))
+          AND (NOT pg_catalog.has_table_privilege('service_role', ar.oid, 'SELECT')
+            OR NOT pg_catalog.has_table_privilege('service_role', ar.oid, 'INSERT')
+            OR NOT pg_catalog.has_table_privilege('service_role', ar.oid, 'DELETE')))
            OR (ar.relname = 'admin_audit_archives'
-          AND (NOT has_table_privilege('service_role', ar.oid, 'SELECT')
-            OR NOT has_table_privilege('service_role', ar.oid, 'INSERT')))
+          AND (NOT pg_catalog.has_table_privilege('service_role', ar.oid, 'SELECT')
+            OR NOT pg_catalog.has_table_privilege('service_role', ar.oid, 'INSERT')))
       )
        AND NOT EXISTS (
         SELECT 1 FROM audit_sequence AS s
-        WHERE NOT has_sequence_privilege('service_role', s.oid, 'USAGE')
+        WHERE NOT pg_catalog.has_sequence_privilege('service_role', s.oid, 'USAGE')
       ) THEN 'SUFFICIENT'
       ELSE 'INSUFFICIENT'
     END AS service_role_grant_classification
@@ -489,7 +489,7 @@ WITH expected_relations(relname) AS (
   CROSS JOIN classifications AS c
   CROSS JOIN LATERAL (VALUES
     (1,  'TARGET_ENVIRONMENT_CLASSIFICATION', :'AIFINDER_TARGET_ENVIRONMENT_CLASSIFICATION'),
-    (2,  'EVIDENCE_TIMESTAMP_UTC', to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),
+    (2,  'EVIDENCE_TIMESTAMP_UTC', pg_catalog.to_char(pg_catalog.clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),
     (3,  'SNAPSHOT_IDENTITY_CLASSIFICATION', 'SINGLE_READ_ONLY_TRANSACTION'),
     (4,  'EXPECTED_REPOSITORY_MIGRATION_COUNT', '24'),
     (5,  'EXPECTED_HISTORY_IDENTITY_COUNT', m.expected_history_identity_count::text),
