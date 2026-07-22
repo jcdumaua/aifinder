@@ -1,0 +1,283 @@
+{
+  "title": "AiFinder live-preflight authorization assertion v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protected",
+    "payload",
+    "signature"
+  ],
+  "properties": {
+    "protected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "version",
+        "issuer",
+        "key_id",
+        "algorithm"
+      ],
+      "properties": {
+        "type": {
+          "const": "AIFINDER_LIVE_PREFLIGHT_AUTHORIZATION"
+        },
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "issuer": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9._-])[A-Za-z0-9._-]{1,64}$"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9._-])[A-Za-z0-9._-]{1,64}$"
+        },
+        "algorithm": {
+          "const": "Ed25519"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "assertion_id",
+        "issued_at_epoch",
+        "expiry_epoch",
+        "nonce",
+        "environment_classification",
+        "repository_baseline",
+        "activation_client_sha256",
+        "sql_sha256",
+        "activation_manifest_sha256",
+        "validator_sha256",
+        "output_contract_sha256",
+        "psql_sha256",
+        "output_directory_identity_sha256",
+        "connection_profile_identity_sha256",
+        "execution_scope",
+        "read_only_requirement",
+        "exactly_one_run_requirement",
+        "mutation_authorization",
+        "migration_execution_authorization",
+        "type_generation_authorization",
+        "deployment_authorization",
+        "publishing_authorization",
+        "operational_reactivation_authorization"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[^ -~])[ -~]+$"
+        },
+        "assertion_id": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+        },
+        "issued_at_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999999999
+        },
+        "expiry_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999999999
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+        },
+        "environment_classification": {
+          "enum": [
+            "LOCAL",
+            "PREVIEW",
+            "STAGING",
+            "PRODUCTION"
+          ]
+        },
+        "repository_baseline": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{40}$"
+        },
+        "activation_client_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "sql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "activation_manifest_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "validator_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_contract_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "psql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_directory_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "connection_profile_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "execution_scope": {
+          "const": "SINGLE_READ_ONLY_LIVE_PREFLIGHT"
+        },
+        "read_only_requirement": {
+          "const": true
+        },
+        "exactly_one_run_requirement": {
+          "const": true
+        },
+        "mutation_authorization": {
+          "const": false
+        },
+        "migration_execution_authorization": {
+          "const": false
+        },
+        "type_generation_authorization": {
+          "const": false
+        },
+        "deployment_authorization": {
+          "const": false
+        },
+        "publishing_authorization": {
+          "const": false
+        },
+        "operational_reactivation_authorization": {
+          "const": false
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{85}[AQgw]$"
+    }
+  },
+  "$defs": {
+    "consume_receipt": {
+      "title": "AiFinder replay consume receipt v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protected",
+        "payload",
+        "signature"
+      ],
+      "properties": {
+        "protected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "version",
+            "issuer",
+            "key_id",
+            "algorithm"
+          ],
+          "properties": {
+            "type": {
+              "const": "AIFINDER_LIVE_PREFLIGHT_CONSUME_RECEIPT"
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "issuer": {
+              "type": "string",
+              "pattern": "^(?![\\s\\S]*[^A-Za-z0-9._-])[A-Za-z0-9._-]{1,64}$"
+            },
+            "key_id": {
+              "type": "string",
+              "pattern": "^(?![\\s\\S]*[^A-Za-z0-9._-])[A-Za-z0-9._-]{1,64}$"
+            },
+            "algorithm": {
+              "const": "Ed25519"
+            }
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "assertion_sha256",
+            "nonce_sha256",
+            "consume_request_id",
+            "terminal_state",
+            "consumed_at_epoch",
+            "assertion_expiry_epoch",
+            "result_category"
+          ],
+          "properties": {
+            "assertion_sha256": {
+              "type": "string",
+              "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+            },
+            "nonce_sha256": {
+              "type": "string",
+              "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+            },
+            "consume_request_id": {
+              "type": "string",
+              "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+            },
+            "terminal_state": {
+              "const": "CONSUMED"
+            },
+            "consumed_at_epoch": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9999999999
+            },
+            "assertion_expiry_epoch": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9999999999
+            },
+            "result_category": {
+              "const": "AUTHORIZED_CONSUMED"
+            }
+          }
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{85}[AQgw]$"
+        }
+      }
+    }
+  },
+  "x-aifinder-static-contract": {
+    "classification": "STATIC_NON_SECRET_MODEL_ONLY",
+    "canonical_json": "ASCII_ONLY_SORTED_KEYS_COMPACT_SEPARATORS_NO_TRAILING_LF_NO_DUPLICATES_NO_FLOAT_NULL_OR_ARRAY",
+    "assertion_signature_domain": "AIFINDER-LIVE-PREFLIGHT-AUTHORIZATION-V1",
+    "receipt_signature_domain": "AIFINDER-LIVE-PREFLIGHT-CONSUME-RECEIPT-V1",
+    "binding_digest_domain": "AIFINDER-LIVE-PREFLIGHT-BINDING-V1",
+    "assertion_sha256_definition": "SHA256_OF_EXACT_CANONICAL_ASSERTION_ENVELOPE_BYTES",
+    "nonce_sha256_definition": "SHA256_OF_DECODED_32_BYTE_NONCE",
+    "maximum_assertion_bytes": 16384,
+    "maximum_receipt_bytes": 8192,
+    "maximum_lifetime_seconds": 300,
+    "issuer_and_key_id_ascii_bytes_maximum": 64,
+    "production_signature_acceptance": "EXTERNAL_PROTECTED_VERIFIER_ADAPTER_REQUIRED",
+    "private_key_present": false,
+    "trust_anchor_present": false,
+    "live_execution_authorized": false
+  }
+}

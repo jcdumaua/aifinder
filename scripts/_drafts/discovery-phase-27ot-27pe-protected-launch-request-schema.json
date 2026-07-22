@@ -1,0 +1,281 @@
+{
+  "title": "AiFinder protected launch request v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "version",
+        "phase",
+        "operation",
+        "repository_baseline",
+        "environment_classification",
+        "assertion_fd",
+        "sql_fd",
+        "activation_manifest_fd",
+        "validator_fd",
+        "psql_fd",
+        "output_directory_fd",
+        "activation_client_sha256",
+        "assertion_sha256",
+        "sql_sha256",
+        "activation_manifest_sha256",
+        "validator_sha256",
+        "output_contract_sha256",
+        "psql_sha256",
+        "output_directory_identity_sha256",
+        "connection_profile_identity_sha256",
+        "consume_request_id"
+      ],
+      "properties": {
+        "type": {
+          "const": "AIFINDER_PROTECTED_LAUNCH_REQUEST"
+        },
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[^ -~])[ -~]+$"
+        },
+        "operation": {
+          "const": "CONSUME_AND_CLAIM"
+        },
+        "repository_baseline": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{40}$"
+        },
+        "environment_classification": {
+          "enum": [
+            "LOCAL",
+            "PREVIEW",
+            "STAGING",
+            "PRODUCTION"
+          ]
+        },
+        "assertion_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "sql_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "activation_manifest_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "validator_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "psql_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "output_directory_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "activation_client_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "assertion_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "sql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "activation_manifest_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "validator_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_contract_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "psql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_directory_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "connection_profile_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "consume_request_id": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "version",
+        "phase",
+        "operation",
+        "repository_baseline",
+        "environment_classification",
+        "assertion_fd",
+        "sql_fd",
+        "activation_manifest_fd",
+        "validator_fd",
+        "psql_fd",
+        "output_directory_fd",
+        "activation_client_sha256",
+        "assertion_sha256",
+        "sql_sha256",
+        "activation_manifest_sha256",
+        "validator_sha256",
+        "output_contract_sha256",
+        "psql_sha256",
+        "output_directory_identity_sha256",
+        "connection_profile_identity_sha256",
+        "consume_request_id"
+      ],
+      "properties": {
+        "type": {
+          "const": "AIFINDER_PROTECTED_LAUNCH_REQUEST"
+        },
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[^ -~])[ -~]+$"
+        },
+        "operation": {
+          "const": "RECOVER_AND_CLAIM"
+        },
+        "repository_baseline": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{40}$"
+        },
+        "environment_classification": {
+          "enum": [
+            "LOCAL",
+            "PREVIEW",
+            "STAGING",
+            "PRODUCTION"
+          ]
+        },
+        "assertion_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "sql_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "activation_manifest_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "validator_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "psql_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "output_directory_fd": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1023
+        },
+        "activation_client_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "assertion_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "sql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "activation_manifest_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "validator_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_contract_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "psql_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "output_directory_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "connection_profile_identity_sha256": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^0-9a-f])[0-9a-f]{64}$"
+        },
+        "consume_request_id": {
+          "type": "string",
+          "pattern": "^(?![\\s\\S]*[^A-Za-z0-9_-])[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+        }
+      }
+    }
+  ],
+  "x-aifinder-static-contract": {
+    "classification": "NON_AUTHORITATIVE_UNTRUSTED_REQUEST_MODEL",
+    "maximum_request_bytes": 8192,
+    "descriptor_process_model": "PROTECTED_PARENT_PREOPENS_AND_INHERITS_EXACT_DESCRIPTORS_INTO_THIN_CLIENT",
+    "unrelated_process_numeric_descriptor_labels_accepted": false,
+    "separate_process_descriptor_transfer_implemented": false,
+    "activation_client_identity_source": "PROTECTED_PARENT_MEASUREMENT_NOT_CALLER_DIGEST",
+    "connection_profile_resolution": "PROTECTED_DIGEST_MAPPING_ONLY",
+    "request_channel": "PREOPENED_DESCRIPTOR_NOT_ENCODED_IN_JSON",
+    "launcher_path_accepted": false,
+    "connection_profile_name_or_path_accepted": false,
+    "service_material_accepted": false,
+    "live_execution_authorized": false,
+    "recovery_receipt_source": "PROTECTED_LAUNCHER_QUERIES_REPLAY_AUTHORITY",
+    "caller_supplied_receipt_accepted": false,
+    "psql_identity_source": "PROTECTED_PARENT_PREOPENED_INHERITED_DESCRIPTOR",
+    "protected_launcher_recovery_eligibility_source": "PROTECTED_DURABLE_PENDING_REQUEST_RECORD",
+    "protected_launcher_descriptor_validation": "INDEPENDENT_REQUIRED_FIELDS_BOUNDS_PAIRWISE_DISTINCT_OBJECT_PROPERTIES_AND_MEASUREMENT",
+    "protected_launcher_psql_execution": "EXECUTE_EXACT_OPENED_AND_MEASURED_DESCRIPTOR_NOT_PATH_LOOKUP"
+  }
+}

@@ -1,0 +1,423 @@
+{
+  "fixture_version": 3,
+  "phase": "PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_CORRECTION",
+  "classification": "FABRICATED_STATIC_SECURITY_REPAIR_CORPUS_NO_PRODUCTION_ASSURANCE",
+  "assertion_adapter_role": "ASSERTION_ISSUER",
+  "receipt_adapter_role": "REPLAY_RECEIPT_ISSUER",
+  "deterministic_adapter_label": "AIFINDER_STATIC_DETERMINISTIC_ADAPTER_V1_PUBLIC_NON_SECRET",
+  "consume_request_id": "UlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlI",
+  "alternate_consume_request_id": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M",
+  "base_assertion": {
+    "protected": {
+      "type": "AIFINDER_LIVE_PREFLIGHT_AUTHORIZATION",
+      "version": 1,
+      "issuer": "aifinder-static-issuer",
+      "key_id": "assertion-key-v1",
+      "algorithm": "Ed25519"
+    },
+    "payload": {
+      "phase": "PHASE_27NM_27OL_LIVE_PREFLIGHT_ACTIVATION_READINESS_SYNTHETIC_ASSURANCE_AND_DOWNSTREAM_DEPENDENCY_CONSOLIDATION",
+      "assertion_id": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE",
+      "issued_at_epoch": 2000000000,
+      "expiry_epoch": 2000000300,
+      "nonce": "Tk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk5OTk4",
+      "environment_classification": "STAGING",
+      "repository_baseline": "f7e7bd743a999f691bd30c593617aa191522fec6",
+      "activation_client_sha256": "c487b1b2c48afba66d3d8c49fea1f6575356aa29ca469c046cae53c5d17d6317",
+      "sql_sha256": "9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820",
+      "activation_manifest_sha256": "0a0ad61006e1bc7408e995f29d84d250818773f444095934f83cbd58a21c0d8d",
+      "validator_sha256": "27939a1beefdf3bea72ccdd9af33c4fc3e3f2d86fddeda1a540290cca111449b",
+      "output_contract_sha256": "fdd6b45c5cdeaf4a78f57447faab245acffeb5fc3f259a2051603f3cc98fd7d6",
+      "psql_sha256": "172949f98cb31475e0979bbe14e42fb5e17b0d3f7acc1b0472263ff759cb3a93",
+      "output_directory_identity_sha256": "3c79323e537c0e54fa03617ff7c3337e443240b628454ce9d596195ba9fa466f",
+      "connection_profile_identity_sha256": "d59f28c7fcca7569d9dfb8b51ec876d24318b24bd08c3c946ee83d9c1db18a60",
+      "execution_scope": "SINGLE_READ_ONLY_LIVE_PREFLIGHT",
+      "read_only_requirement": true,
+      "exactly_one_run_requirement": true,
+      "mutation_authorization": false,
+      "migration_execution_authorization": false,
+      "type_generation_authorization": false,
+      "deployment_authorization": false,
+      "publishing_authorization": false,
+      "operational_reactivation_authorization": false
+    },
+    "signature": "STATIC_RUNNER_REPLACES_THIS_WITH_A_DETERMINISTIC_64_BYTE_ADAPTER_VALUE"
+  },
+  "cases": [
+    {
+      "id": "valid_exact_assertion",
+      "kind": "VALID_ASSERTION",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "invalid_signature",
+      "kind": "INVALID_SIGNATURE",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "unknown_key_id",
+      "kind": "UNKNOWN_KEY_ID",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "revoked_key",
+      "kind": "REVOKED_KEY",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "expired_assertion",
+      "kind": "EXPIRED_ASSERTION",
+      "expected": "AUTH_EXPIRED"
+    },
+    {
+      "id": "future_dated_assertion",
+      "kind": "FUTURE_ASSERTION",
+      "expected": "AUTH_EXPIRED"
+    },
+    {
+      "id": "nonce_replay",
+      "kind": "NONCE_REPLAY",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "concurrent_consume_race",
+      "kind": "CONCURRENT_CONSUME_RACE",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "replay_authority_unavailable",
+      "kind": "AUTHORITY_UNAVAILABLE",
+      "expected": "AUTHORITY_UNAVAILABLE"
+    },
+    {
+      "id": "ambiguous_consume_response",
+      "kind": "AUTHORITY_AMBIGUOUS",
+      "expected": "AUTHORITY_AMBIGUOUS"
+    },
+    {
+      "id": "wrong_baseline",
+      "kind": "WRONG_BASELINE",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "wrong_activation_client_hash",
+      "kind": "WRONG_ACTIVATION_CLIENT",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "wrong_sql_hash",
+      "kind": "WRONG_SQL",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "wrong_activation_manifest_hash",
+      "kind": "WRONG_ACTIVATION_MANIFEST",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "wrong_validator_hash",
+      "kind": "WRONG_VALIDATOR",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "wrong_environment",
+      "kind": "WRONG_ENVIRONMENT",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "mutation_flag_true",
+      "kind": "MUTATION_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "migration_flag_true",
+      "kind": "MIGRATION_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "type_generation_flag_true",
+      "kind": "TYPEGEN_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "malformed_canonical_encoding",
+      "kind": "NONCANONICAL",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "duplicate_fields",
+      "kind": "DUPLICATE_FIELDS",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "extra_fields",
+      "kind": "EXTRA_FIELDS",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "algorithm_key_signature_substitution",
+      "kind": "KEY_SUBSTITUTION",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "copied_consumed_receipt",
+      "kind": "COPIED_RECEIPT",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "restored_local_unused_record",
+      "kind": "RESTORED_LOCAL_UNUSED",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "output_directory_substitution",
+      "kind": "WRONG_OUTPUT_DIRECTORY",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "artifact_post_open_mutation",
+      "kind": "POST_OPEN_MUTATION",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "connection_profile_substitution",
+      "kind": "WRONG_CONNECTION_PROFILE",
+      "expected": "BINDING_FAILED"
+    },
+    {
+      "id": "crash_after_consume",
+      "kind": "CRASH_AFTER_CONSUME",
+      "expected": "PROTECTED_LAUNCH_FAILED"
+    },
+    {
+      "id": "crash_after_evidence_publication",
+      "kind": "CRASH_AFTER_PUBLICATION",
+      "expected": "OUTPUT_FAILED"
+    },
+    {
+      "id": "same_request_id_receipt_recovery",
+      "kind": "SAME_REQUEST_RECOVERY",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "different_request_id_replay_rejection",
+      "kind": "DIFFERENT_REQUEST_REPLAY",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "protected_launch_second_claim_rejection",
+      "kind": "SECOND_JOURNAL_CLAIM",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "phase_newline_control",
+      "kind": "PHASE_NEWLINE_CONTROL",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "phase_tab_control",
+      "kind": "PHASE_TAB_CONTROL",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "phase_c0_control",
+      "kind": "PHASE_C0_CONTROL",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "phase_del_control",
+      "kind": "PHASE_DEL_CONTROL",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "valid_consume_launch_request_with_psql_fd",
+      "kind": "VALID_CONSUME_LAUNCH_REQUEST",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "valid_recover_launch_request_without_receipt",
+      "kind": "VALID_RECOVER_LAUNCH_REQUEST",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "leading_zero_descriptor_rejected",
+      "kind": "LEADING_ZERO_DESCRIPTOR",
+      "expected": "PROTECTED_LAUNCH_FAILED"
+    },
+    {
+      "id": "normalized_duplicate_descriptor_rejected",
+      "kind": "NORMALIZED_DUPLICATE_DESCRIPTOR",
+      "expected": "PROTECTED_LAUNCH_FAILED"
+    },
+    {
+      "id": "missing_psql_descriptor_rejected",
+      "kind": "MISSING_PSQL_DESCRIPTOR",
+      "expected": "PROTECTED_LAUNCH_FAILED"
+    },
+    {
+      "id": "caller_receipt_arguments_rejected",
+      "kind": "CALLER_RECEIPT_ARGUMENTS",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "assertion_boolean_version_rejected",
+      "kind": "ASSERTION_BOOLEAN_VERSION",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "assertion_expiry_not_after_issue_rejected",
+      "kind": "ASSERTION_INVALID_LIFETIME_ORDER",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "assertion_lifetime_over_300_seconds_rejected",
+      "kind": "ASSERTION_LIFETIME_TOO_LONG",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "receipt_boolean_version_rejected",
+      "kind": "RECEIPT_BOOLEAN_VERSION",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "replay_request_boolean_version_rejected",
+      "kind": "REPLAY_REQUEST_BOOLEAN_VERSION",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "replay_response_boolean_version_rejected",
+      "kind": "REPLAY_RESPONSE_BOOLEAN_VERSION",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "invalid_receipt_signature",
+      "kind": "INVALID_RECEIPT_SIGNATURE",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "receipt_role_substitution",
+      "kind": "RECEIPT_ROLE_SUBSTITUTION",
+      "expected": "AUTH_SIGNATURE_FAILED"
+    },
+    {
+      "id": "receipt_assertion_binding_mismatch",
+      "kind": "RECEIPT_ASSERTION_BINDING_MISMATCH",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "receipt_nonce_binding_mismatch",
+      "kind": "RECEIPT_NONCE_BINDING_MISMATCH",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "receipt_request_id_mismatch",
+      "kind": "RECEIPT_REQUEST_ID_MISMATCH",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "receipt_expiry_binding_mismatch",
+      "kind": "RECEIPT_EXPIRY_BINDING_MISMATCH",
+      "expected": "AUTH_REPLAY_FAILED"
+    },
+    {
+      "id": "receipt_terminal_state_invalid",
+      "kind": "RECEIPT_TERMINAL_STATE_INVALID",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "receipt_result_category_invalid",
+      "kind": "RECEIPT_RESULT_CATEGORY_INVALID",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "receipt_consumed_after_expiry",
+      "kind": "RECEIPT_CONSUMED_AFTER_EXPIRY",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "deployment_flag_true",
+      "kind": "DEPLOYMENT_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "publishing_flag_true",
+      "kind": "PUBLISHING_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "operational_reactivation_flag_true",
+      "kind": "REACTIVATION_TRUE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "wrong_execution_scope_rejected",
+      "kind": "WRONG_EXECUTION_SCOPE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "read_only_false_rejected",
+      "kind": "READ_ONLY_FALSE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "exactly_one_run_false_rejected",
+      "kind": "EXACTLY_ONE_RUN_FALSE",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "noncanonical_consume_request_id_rejected",
+      "kind": "NONCANONICAL_REQUEST_ID",
+      "expected": "AUTH_SCHEMA_FAILED"
+    },
+    {
+      "id": "noncanonical_consume_request_internal_error_not_masked",
+      "kind": "NONCANONICAL_REQUEST_ID_INTERNAL",
+      "expected": "INTERNAL_FAILED"
+    },
+    {
+      "id": "recovery_binding_substitution_rejected",
+      "kind": "RECOVERY_BINDING_SUBSTITUTION",
+      "expected": "PROTECTED_LAUNCH_FAILED"
+    },
+    {
+      "id": "assertion_schema_phase_controls_rejected",
+      "kind": "ASSERTION_SCHEMA_PHASE_CONTROLS",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "launch_schema_phase_controls_rejected",
+      "kind": "LAUNCH_SCHEMA_PHASE_CONTROLS",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "schema_terminal_controls_rejected",
+      "kind": "SCHEMA_TERMINAL_CONTROLS",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "exact_schema_contracts",
+      "kind": "EXACT_SCHEMA_CONTRACTS",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "protected_output_contract_complete",
+      "kind": "PROTECTED_OUTPUT_CONTRACT",
+      "expected": "PASS_STATIC_MODEL"
+    },
+    {
+      "id": "migration_gate_predecessor_rebound",
+      "kind": "MIGRATION_GATE_REBOUND",
+      "expected": "PASS_STATIC_MODEL"
+    }
+  ],
+  "prohibited_assurance_claims": [
+    "PRODUCTION_CRYPTOGRAPHIC_ASSURANCE",
+    "OPERATING_SYSTEM_ISOLATION",
+    "LIVE_REPLAY_AUTHORITY",
+    "LIVE_PROTECTED_LAUNCH"
+  ],
+  "private_key_present": false,
+  "network_required": false,
+  "service_material_present": false,
+  "service_epoch": 2000000100
+}

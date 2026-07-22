@@ -1,0 +1,481 @@
+{
+  "manifest_version": 3,
+  "phase": "PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_CORRECTION_AND_EXACT_INTEGRATION",
+  "construction_baseline": "f7e7bd743a999f691bd30c593617aa191522fec6",
+  "implementation_authorization": {
+    "initial_token": "APPROVE_PHASE_27QM_27RF_OPTION_A_AUTHORIZATION_TRUST_REDESIGN_REBIND_AND_AUTHORIZE_STATIC_IMPLEMENTATION_SCOPE",
+    "initial_token_state": "CONSUMED_FOR_EXACT_12_PATH_STATIC_IMPLEMENTATION",
+    "controlling_review_determination": "REQUEST_CHANGES_PHASE_27QM_27RF_OPTION_A_STATIC_IMPLEMENTATION",
+    "repair_token": "APPROVE_PHASE_27RG_27RN_OPTION_A_STATIC_IMPLEMENTATION_EXACT_11_PATH_REPAIR_SCOPE",
+    "repair_token_state": "CONSUMED_FOR_EXACT_11_PATH_STATIC_REPAIR",
+    "prior_token_state": "SUPERSEDED_UNCONSUMED_NON_EXECUTABLE",
+    "full_load_token": "APPROVE_PHASE_27RO_27RZ_OPTION_A_STATIC_REPAIR_FULL_LOAD_REVIEW_FIX_EXACT_16_PATH_COMMIT_PUSH_AND_REMOTE_VERIFICATION",
+    "full_load_token_state": "CONSUMED_EXACTLY_ONCE_FOR_AUTHORIZED_FULL_LOAD_WORKFLOW",
+    "staging_commit_push_authorized": true
+  },
+  "architecture_selection": {
+    "architecture": "OPTION_A_EXTERNAL_AUTHORIZATION_SERVICE_WITH_PROTECTED_LOCAL_LAUNCHER",
+    "execution_boundary": "PROTECTED_LOCAL_LAUNCHER",
+    "launch_owner": "ROOT_OR_ADMIN_OUTSIDE_ORDINARY_USER_WRITE_DOMAIN",
+    "trust_anchors": "PROTECTED_LOCAL_CONFIGURATION",
+    "replay_authority": "EXTERNAL_ATOMIC_DURABLE_NO_OFFLINE_FALLBACK",
+    "signature_algorithm": "ED25519",
+    "connection_profile": "PROTECTED_AND_NOT_CALLER_SUBSTITUTABLE",
+    "ci_oidc_requirement": "OPTIONAL_NOT_MANDATORY",
+    "ambiguous_consume_recovery": "SAME_REQUEST_ID_SIGNED_RECEIPT_ONLY_WITH_PROTECTED_DURABLE_AMBIGUOUS_STATE",
+    "lifetime_authority": "EXTERNAL_REPLAY_SERVICE_TIME_TERMINAL_EXPIRED",
+    "psql_identity": "PROTECTED_PARENT_PREOPENED_INHERITED_DESCRIPTOR"
+  },
+  "artifacts": {
+    "scripts/_drafts/discovery-phase-27ot-27pe-signed-authorization-assertion-schema.json": {
+      "sha256": "c7dbf4abfc4e7341ad1272ce6ea0d30085848be0c0c9d4a234bb24209f75e543",
+      "bytes": 8363,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "FULL_LOAD_REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-signed-authorization-verifier-candidate.py": {
+      "sha256": "ad846ba1eac022642459d1fa1e1c53b023d83df41ab374931781f4b5c2e8a122",
+      "bytes": 18048,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-replay-authority-client-candidate.py": {
+      "sha256": "188f2ca33228b918d9c99cc406cf69904f9061d7979175c5c86fa1a329f7e9c8",
+      "bytes": 10350,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-protected-launch-request-schema.json": {
+      "sha256": "282137e69a6a728237c145e6103cf828ad10dbadf3385d8bf9f2027e7770a7e7",
+      "bytes": 8455,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-authorization-security-fixtures.json": {
+      "sha256": "d90d7442100d9ee48f783338d9094085ca1add633ad38e7a47fc7612e0079151",
+      "bytes": 12730,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-authorization-security-runner-candidate.py": {
+      "sha256": "4655ea879a0e590b45da1b0be0ffd23b265f0d0247778b0b840bbd41c648f329",
+      "bytes": 78596,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ot-27pe-authenticated-activation-client-candidate.sh": {
+      "sha256": "aa61ff84256a7f8e7b7ab8c02857fe82fafeb30e40eefe040d2c361900227aa5",
+      "bytes": 6246,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": {
+      "sha256": "57a8ccdeff2f80f8ddaaaccb73965281d3740ef5ddc4968de03ff45b1cdc4cf4",
+      "bytes": 17888,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
+    },
+    "scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-candidate.sql": {
+      "sha256": "9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820",
+      "bytes": 30940,
+      "filesystem_mode": "0644",
+      "git_mode": "100644",
+      "classification": "COMMITTED_STATIC_BINDING_ONLY"
+    },
+    "scripts/_drafts/discovery-phase-27ng-27nl-static-identity-manifest.json": {
+      "sha256": "e36bc2e44361db5a660e73075888b1c328d1476cea5f06a0f5aceb8c42ec5f43",
+      "bytes": 38907,
+      "filesystem_mode": "0644",
+      "git_mode": "100644",
+      "classification": "COMMITTED_IDENTITY_SOURCE"
+    },
+    "docs/discovery-phase-27ng-27nl-secret-safe-live-preflight-static-repair-gate.md": {
+      "sha256": "4e13e4cb508b6ed3ccbd5897e09bbf7c8c5a1a5ff7d893bde39153ef642b5ae0",
+      "bytes": 31312,
+      "filesystem_mode": "0644",
+      "git_mode": "100644",
+      "classification": "COMMITTED_DOCUMENTATION_PROVENANCE"
+    },
+    "scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-wrapper-candidate.sh": {
+      "sha256": "f7f989e92df1bb3f36a75dabbb62f71b55cf2fc55f59be534903aa0a713376fc",
+      "bytes": 43318,
+      "filesystem_mode": "0644",
+      "git_mode": "100644",
+      "classification": "HISTORICAL_HARD_INERT_EXCLUDED"
+    },
+    "scripts/_drafts/discovery-phase-27nm-27ol-bounded-evidence-validator-candidate.py": {
+      "sha256": "27939a1beefdf3bea72ccdd9af33c4fc3e3f2d86fddeda1a540290cca111449b",
+      "bytes": 17139,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
+    },
+    "scripts/_drafts/discovery-phase-27nm-27ol-bounded-evidence-fixtures.json": {
+      "sha256": "99bdbb6fa49c359c84e2591249dc412a96a23ad04cd3c1aeaad3727a3f96ad5d",
+      "bytes": 8580,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
+    },
+    "scripts/_drafts/discovery-phase-27nm-27ol-synthetic-validation-runner-candidate.py": {
+      "sha256": "63d940b82d68672eaeec60abde81f79c27e3545bf4570bbc7fe22c7b13d90936",
+      "bytes": 10971,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
+    },
+    "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
+      "sha256": "4174c6796e84d046f32c9a9273ef4a339c2d80c49c6e9f6deb3c444a8562b476",
+      "bytes": 9116,
+      "filesystem_mode": "0644",
+      "expected_git_mode": "100644",
+      "classification": "FULL_LOAD_REPAIRED_GOVERNANCE_ELIGIBLE"
+    }
+  },
+  "self_binding": {
+    "self_sha256": "EXTERNALLY_BOUND_NO_SELF_REFERENCE",
+    "self_bytes": "EXTERNALLY_BOUND_NO_SELF_REFERENCE",
+    "filesystem_mode": "0644",
+    "expected_git_mode": "100644"
+  },
+  "output_contract": {
+    "sha256": "fdd6b45c5cdeaf4a78f57447faab245acffeb5fc3f259a2051603f3cc98fd7d6",
+    "line_count": 56,
+    "delimiter": "|",
+    "encoding": "UTF-8_ASCII_VALUES",
+    "line_endings": "LF_WITH_FINAL_LF",
+    "maximum_bytes": 16384,
+    "ordered_keys": [
+      "TARGET_ENVIRONMENT_CLASSIFICATION",
+      "EVIDENCE_TIMESTAMP_UTC",
+      "SNAPSHOT_IDENTITY_CLASSIFICATION",
+      "EXPECTED_REPOSITORY_MIGRATION_COUNT",
+      "EXPECTED_HISTORY_IDENTITY_COUNT",
+      "LIVE_HISTORY_ENTRY_COUNT",
+      "MATCHED_HISTORY_IDENTITY_COUNT",
+      "MISSING_HISTORY_IDENTITY_COUNT",
+      "UNEXPECTED_HISTORY_IDENTITY_COUNT",
+      "DUPLICATED_HISTORY_IDENTITY_COUNT",
+      "RENAMED_SAME_CONTENT_COUNT",
+      "DIFFERENT_CONTENT_COUNT",
+      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION",
+      "EXPECTED_RELATION_COUNT",
+      "PRESENT_RELATION_COUNT",
+      "MISSING_RELATION_COUNT",
+      "RLS_ENABLED_COUNT",
+      "RLS_FORCED_COUNT",
+      "EXPECTED_POLICY_COUNT",
+      "MATCHED_POLICY_COUNT",
+      "UNEXPECTED_POLICY_COUNT",
+      "TOOLS_LEGACY_POLICY_COUNT",
+      "TOOLS_APPROVED_ONLY_POLICY_COUNT",
+      "POLICY_CLASSIFICATION",
+      "EXPECTED_GRANT_CLASS_COUNT",
+      "MATCHED_GRANT_CLASS_COUNT",
+      "UNEXPECTED_GRANT_CLASS_COUNT",
+      "PUBLIC_GRANT_CLASSIFICATION",
+      "ANON_GRANT_CLASSIFICATION",
+      "AUTHENTICATED_GRANT_CLASSIFICATION",
+      "SERVICE_ROLE_GRANT_CLASSIFICATION",
+      "OWNERSHIP_CLASSIFICATION",
+      "SEQUENCE_DEPENDENCY_CLASSIFICATION",
+      "FUNCTION_SECURITY_CLASSIFICATION",
+      "TRIGGER_DEPENDENCY_CLASSIFICATION",
+      "OUT_OF_BAND_DRIFT_CLASSIFICATION",
+      "FORWARD_PRECONDITION_CLASSIFICATION",
+      "ROLLBACK_PRECONDITION_CLASSIFICATION",
+      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION",
+      "ROW_VALUES_PRINTED",
+      "RAW_CATALOG_ROWS_PRINTED",
+      "RAW_MIGRATION_HISTORY_ROWS_PRINTED",
+      "POLICY_EXPRESSIONS_PRINTED",
+      "GRANT_ROWS_PRINTED",
+      "OWNER_IDENTITIES_PRINTED",
+      "FUNCTION_BODIES_PRINTED",
+      "TRIGGER_DEFINITIONS_PRINTED",
+      "INDEX_DEFINITIONS_PRINTED",
+      "CONSTRAINT_DEFINITIONS_PRINTED",
+      "DATABASE_URL_PRINTED",
+      "HOSTNAMES_PRINTED",
+      "PROJECT_REFERENCE_PRINTED",
+      "CREDENTIALS_PRINTED",
+      "SECRETS_PRINTED",
+      "RAW_ERROR_TEXT_PRINTED",
+      "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED"
+    ],
+    "literal_values": {
+      "SNAPSHOT_IDENTITY_CLASSIFICATION": "SINGLE_READ_ONLY_TRANSACTION",
+      "EXPECTED_REPOSITORY_MIGRATION_COUNT": "24",
+      "EXPECTED_GRANT_CLASS_COUNT": "4"
+    },
+    "categorical_allowlists": {
+      "TARGET_ENVIRONMENT_CLASSIFICATION": [
+        "LOCAL",
+        "PREVIEW",
+        "STAGING",
+        "PRODUCTION"
+      ],
+      "MIGRATION_HISTORY_OVERALL_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "DUPLICATED",
+        "OUT_OF_BAND",
+        "DRIFT",
+        "EXACT_MATCH"
+      ],
+      "POLICY_CLASSIFICATION": [
+        "SEMANTIC_MISMATCH",
+        "MISSING",
+        "UNEXPECTED",
+        "EXACT_MATCH",
+        "UNAVAILABLE"
+      ],
+      "PUBLIC_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "ANON_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "AUTHENTICATED_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_NONE",
+        "UNEXPECTED_PRESENT"
+      ],
+      "SERVICE_ROLE_GRANT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "INSUFFICIENT",
+        "SUFFICIENT",
+        "UNEXPECTED"
+      ],
+      "OWNERSHIP_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISMATCH"
+      ],
+      "SEQUENCE_DEPENDENCY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "MISSING",
+        "EXPECTED_MATCH",
+        "MISMATCH"
+      ],
+      "FUNCTION_SECURITY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISSING",
+        "UNSAFE_DEFINER_OR_SEARCH_PATH",
+        "UNEXPECTED_EXECUTE_GRANT"
+      ],
+      "TRIGGER_DEPENDENCY_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "EXPECTED_MATCH",
+        "MISSING",
+        "UNEXPECTED"
+      ],
+      "OUT_OF_BAND_DRIFT_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "MULTIPLE",
+        "MIGRATION_HISTORY",
+        "SCHEMA",
+        "POLICY",
+        "GRANT",
+        "FUNCTION_OR_TRIGGER",
+        "NONE"
+      ],
+      "FORWARD_PRECONDITION_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "PASS",
+        "FAIL"
+      ],
+      "ROLLBACK_PRECONDITION_CLASSIFICATION": [
+        "UNAVAILABLE",
+        "PASS",
+        "FAIL"
+      ],
+      "TYPE_GENERATION_ELIGIBILITY_CLASSIFICATION": [
+        "BLOCKED",
+        "UNAVAILABLE"
+      ]
+    },
+    "mandatory_negative_assertions": {
+      "ROW_VALUES_PRINTED": "false",
+      "RAW_CATALOG_ROWS_PRINTED": "false",
+      "RAW_MIGRATION_HISTORY_ROWS_PRINTED": "false",
+      "POLICY_EXPRESSIONS_PRINTED": "false",
+      "GRANT_ROWS_PRINTED": "false",
+      "OWNER_IDENTITIES_PRINTED": "false",
+      "FUNCTION_BODIES_PRINTED": "false",
+      "TRIGGER_DEFINITIONS_PRINTED": "false",
+      "INDEX_DEFINITIONS_PRINTED": "false",
+      "CONSTRAINT_DEFINITIONS_PRINTED": "false",
+      "DATABASE_URL_PRINTED": "false",
+      "HOSTNAMES_PRINTED": "false",
+      "PROJECT_REFERENCE_PRINTED": "false",
+      "CREDENTIALS_PRINTED": "false",
+      "SECRETS_PRINTED": "false",
+      "RAW_ERROR_TEXT_PRINTED": "false",
+      "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED": "false"
+    }
+  },
+  "migration_inventory": {
+    "active_directory_sql_count": 24,
+    "expected_history_identity_count": 22,
+    "quarantined_nonstandard_candidate_count": 2,
+    "eligibility_classes": [
+      "EXPECTED_HISTORY_IDENTITY",
+      "QUARANTINED_NONSTANDARD_CANDIDATE",
+      "REPOSITORY_ONLY_ARTIFACT"
+    ],
+    "history_content_identity": "UNAVAILABLE",
+    "placement_status": "NO_MOVEMENT_AUTHORIZED"
+  },
+  "guarded_migrations": [
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "guard_count": 1,
+      "guard_before_begin": true,
+      "order": 1
+    },
+    {
+      "path": "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "guard_count": 1,
+      "guard_before_begin": true,
+      "order": 2
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
+      "guard_count": 1,
+      "guard_before_begin": true,
+      "order": 3
+    },
+    {
+      "path": "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
+      "guard_count": 1,
+      "guard_before_begin": true,
+      "order": 4
+    }
+  ],
+  "generated_type_target": {
+    "path": "lib/supabase/database.types.ts",
+    "sha256": "7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c",
+    "bytes": 42654,
+    "git_mode": "100644",
+    "filesystem_mode": "0600",
+    "status": "PRESERVED_TYPE_GENERATION_BLOCKED"
+  },
+  "external_protected_dependencies": {
+    "issuer": "REQUIRED_NOT_IMPLEMENTED",
+    "replay_authority": "REQUIRED_NOT_IMPLEMENTED",
+    "assertion_trust_role": "REQUIRED_NOT_IMPLEMENTED",
+    "receipt_trust_role": "REQUIRED_NOT_IMPLEMENTED",
+    "protected_transport": "REQUIRED_NOT_IMPLEMENTED",
+    "protected_launcher": "REQUIRED_NOT_IMPLEMENTED",
+    "protected_connection_profile_mapping": "REQUIRED_NOT_IMPLEMENTED",
+    "protected_atomic_launch_journal": "REQUIRED_NOT_IMPLEMENTED",
+    "journal_claim_identity": "SHA256_OF_EXACT_CANONICAL_RECEIPT_BYTES",
+    "protected_durable_pending_request_state": "REQUIRED_NOT_IMPLEMENTED",
+    "recovery_eligibility": "PROTECTED_AMBIGUOUS_STATE_ONLY",
+    "psql_execution_identity": "EXACT_OPENED_AND_MEASURED_DESCRIPTOR_REQUIRED",
+    "lifetime_authority": "REPLAY_SERVICE_TIME_TERMINAL_STATE_REQUIRED"
+  },
+  "superseded_excluded_artifacts": [
+    "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-schema.json",
+    "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-generator-candidate.py",
+    "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh"
+  ],
+  "authorization_flags": {
+    "assertion_issuance_authorized": false,
+    "record_generation_authorized": false,
+    "live_execution_authorized": false,
+    "migration_execution_authorized": false,
+    "mutation_authorized": false,
+    "type_generation_authorized": false,
+    "deployment_authorized": false,
+    "publishing_authorized": false,
+    "operational_reactivation_authorized": false,
+    "public_launch_authorized": false
+  },
+  "audit_classifications": {
+    "assertion_schema": "PASS_STATIC_EXACT_FIELDS_INTEGER_VERSION_CONTROL_SAFE_PATTERNS_CANONICAL_BASE64URL_AND_FALSE_FLAGS",
+    "verifier": "PASS_STATIC_NONBOOLEAN_VERSION_PRINTABLE_PHASE_CANONICAL_BASE64URL_SCOPE_LIFETIME_AND_RECEIPT_TERMINAL_SEMANTICS",
+    "replay_client": "PASS_STATIC_CANONICAL_REQUEST_ID_NONBOOLEAN_VERSION_EXPIRED_STATUS_NO_TRANSPORT",
+    "protected_launch_request": "PASS_STATIC_EXACT_SCHEMA_CONTROL_SAFE_PATTERNS_PSQL_DESCRIPTOR_NO_CALLER_RECEIPT",
+    "activation_client": "PASS_CANONICAL_REQUEST_ID_FD_AND_BASH_SYNTAX_ONLY",
+    "synthetic_security_corpus": "PASS_73_OF_73",
+    "protected_output_publication_model": "PASS_FABRICATED_DESCRIPTOR_RELATIVE_DURABILITY_SEQUENCE_ONLY",
+    "protected_recovery_state_model": "PASS_FABRICATED_FULL_BINDING_AND_AMBIGUOUS_STATE_ONLY",
+    "protected_recovery_state": "EXTERNAL_NOT_IMPLEMENTED",
+    "protected_launcher": "EXTERNAL_NOT_IMPLEMENTED",
+    "production_cryptography": "EXTERNAL_NOT_IMPLEMENTED",
+    "live_readiness": "BLOCKED",
+    "primary_final_classification": "OPTION_A_STATIC_FULL_LOAD_CORRECTED_PENDING_EXACT_INTEGRATION"
+  },
+  "synthetic_assurance": {
+    "fixture_count": 73,
+    "pass_count": 73,
+    "failure_count": 0,
+    "runner_output_sha256": "e02bad33e2fae1efb717710a37316cd4e5501aecb803ac38698a2cd2711627c5",
+    "runner_output_bytes": 5212,
+    "red_pass_count": 31,
+    "red_failure_count": 12,
+    "verifier_stage_pass_count": 35,
+    "replay_stage_pass_count": 37,
+    "full_load_red_pass_count": 48,
+    "full_load_red_failure_count": 13,
+    "closing_review_cycle_1_red_pass_count": 60,
+    "closing_review_cycle_1_red_failure_count": 1,
+    "closing_review_cycle_2_red_pass_count": 60,
+    "closing_review_cycle_2_red_failure_count": 4,
+    "closing_review_cycle_3_red_pass_count": 63,
+    "closing_review_cycle_3_red_failure_count": 2,
+    "closing_review_cycle_4_mutant_red_pass_count": 65,
+    "closing_review_cycle_4_mutant_red_failure_count": 3,
+    "closing_review_cycle_5_concurrency_red_pass_count": 67,
+    "closing_review_cycle_5_concurrency_red_failure_count": 1,
+    "closing_review_cycle_6_receipt_mutant_red_pass_count": 68,
+    "closing_review_cycle_6_receipt_mutant_red_failure_count": 3,
+    "closing_review_cycle_7_lifetime_mutant_red_pass_count": 71,
+    "closing_review_cycle_7_lifetime_mutant_red_failure_count": 2,
+    "classification": "STATIC_ADAPTER_AND_FABRICATED_PROTECTED_STATE_ASSURANCE_ONLY",
+    "private_key_generated": false,
+    "network_contacted": false,
+    "application_imported": false,
+    "sql_executed": false
+  },
+  "future_execution": {
+    "live_execution_authorized": false,
+    "future_gemini_final_review_required": false,
+    "future_exact_commit_push_token_required": false,
+    "real_keys_or_trust_installation_separately_authorized": false,
+    "protected_launcher_installation_separately_authorized": false,
+    "connection_profile_creation_separately_authorized": false,
+    "network_replay_call_separately_authorized": false,
+    "sql_or_database_access_separately_authorized": false
+  },
+  "repair_scope": {
+    "changed_path_count": 13,
+    "behavior_path_count": 7,
+    "governance_and_manifest_path_count": 6,
+    "eligible_unchanged_path_count": 3,
+    "excluded_unchanged_path_count": 3,
+    "authorized_integration_path_count": 16,
+    "expected_post_commit_untracked_count": 3,
+    "final_untracked_count_before_integration": 19,
+    "tracked_modification_count": 0,
+    "index_state": "EMPTY"
+  }
+}
