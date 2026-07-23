@@ -1,0 +1,4 @@
+Contact: mailto:security@aifinder.to
+Expires: 2027-07-21T23:59:59Z
+Canonical: https://aifinder.to/.well-known/security.txt
+Preferred-Languages: en

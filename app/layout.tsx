@@ -4,7 +4,7 @@ import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 import { GlobalToaster } from "@/components/ui/global-toaster";
 
-const siteUrl = "https://aifinder-eight.vercel.app";
+const siteUrl = "https://aifinder.to";
 
 const jsonLd = {
   "@context": "https://schema.org",

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const siteUrl = "https://aifinder-eight.vercel.app";
+const siteUrl = "https://aifinder.to";
 
 export default function robots(): MetadataRoute.Robots {
   return {

@@ -85,11 +85,11 @@
       "classification": "REPAIRED_OPTION_A_STATIC_CANDIDATE"
     },
     "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": {
-      "sha256": "9a01afa909248ce5d31dd066e94e9669ec15ac0b49b5447bfb8e8b12bda1369e",
-      "bytes": 20674,
+      "sha256": "72a3025363f23b9e678448d146430fb2710c32a2cd11c358d818c7bdc3823eb8",
+      "bytes": 21025,
       "filesystem_mode": "0644",
       "expected_git_mode": "100644",
-      "classification": "FINAL_GOVERNANCE_RECONCILIATION"
+      "classification": "FINAL_GOVERNANCE_RECONCILIATION_WITH_PHASE_29_ACCESS_RETENTION_ERRATUM"
     },
     "scripts/_drafts/discovery-phase-27ng-27nl-secret-safe-live-preflight-candidate.sql": {
       "sha256": "9d5d08ce4b279cf7d8143227603e6e8875f811459221fdfd7c63322cb17b4820",
@@ -183,8 +183,8 @@
     },
     "final_nonself_path_identities": {
       "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md": {
-        "sha256": "9a01afa909248ce5d31dd066e94e9669ec15ac0b49b5447bfb8e8b12bda1369e",
-        "bytes": 20674,
+        "sha256": "72a3025363f23b9e678448d146430fb2710c32a2cd11c358d818c7bdc3823eb8",
+        "bytes": 21025,
         "filesystem_mode": "0644",
         "git_mode": "100644"
       },
@@ -225,6 +225,9 @@
   "vercel_status": {
     "context": "Vercel",
     "state": "READY",
+    "bound_git_commit": "31a684294fa9f5d0c375a3457f601e78faf07833",
+    "observation_stage": "PRE_PUSH_BASELINE_OBSERVATION",
+    "observation_scope": "HISTORICAL_PARENT_BOUND_NOT_CURRENT_DEPLOYMENT",
     "target_sha256": "d4fab4b57864a81d8c3a385403afc7b8929ddc26729507cee4fc7175c28c9e1b",
     "team_identity_sha256": "299417c8096086e991c8474361389bea8282805ea14adcf06db8750aa89e9997",
     "project_identity_sha256": "784394aa367eeba9a87d329b9f500b0463d8502559047f8f487941139d8f4fb4",

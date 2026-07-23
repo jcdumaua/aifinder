@@ -3,15 +3,34 @@ import { supabaseAdmin } from "../lib/supabase-admin";
 import { categories, slugify } from "./data/tools";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 300;
 
-const siteUrl = "https://aifinder-eight.vercel.app";
+const siteUrl = "https://aifinder.to";
 
 type ToolSitemapRow = {
   slug?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
+
+const canonicalToolSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function hasCanonicalToolSlug(
+  tool: ToolSitemapRow,
+): tool is ToolSitemapRow & { slug: string } {
+  return (
+    typeof tool.slug === "string" && canonicalToolSlugPattern.test(tool.slug)
+  );
+}
+
+function getPersistedDate(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    if (!value) continue;
+    const candidate = new Date(value);
+    if (!Number.isNaN(candidate.getTime())) return candidate;
+  }
+
+  return undefined;
+}
 
 async function getToolUrls() {
   const { data, error } = await supabaseAdmin
@@ -25,22 +44,24 @@ async function getToolUrls() {
   }
 
   return ((data || []) as ToolSitemapRow[])
-    .filter((tool) => Boolean(tool.slug))
-    .map((tool) => ({
-      url: `${siteUrl}/tool/${tool.slug}`,
-      lastModified: tool.updated_at || tool.created_at || new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    }));
+    .filter(hasCanonicalToolSlug)
+    .map((tool) => {
+      const persistedDate = getPersistedDate(tool.updated_at, tool.created_at);
+
+      return {
+        url: `${siteUrl}/tool/${tool.slug}`,
+        ...(persistedDate ? { lastModified: persistedDate } : {}),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      };
+    });
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
   const toolUrls = await getToolUrls();
 
   const categoryUrls = categories.map((category) => ({
     url: `${siteUrl}/category/${slugify(category)}`,
-    lastModified: now,
     changeFrequency: "weekly" as const,
     priority: 0.75,
   }));
@@ -48,19 +69,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: siteUrl,
-      lastModified: now,
       changeFrequency: "daily",
       priority: 1,
     },
     {
       url: `${siteUrl}/submit`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: `${siteUrl}/compare`,
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.75,
     },
