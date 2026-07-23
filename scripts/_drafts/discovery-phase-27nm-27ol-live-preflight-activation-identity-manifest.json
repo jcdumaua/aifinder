@@ -1,5 +1,5 @@
 {
-  "manifest_version": 5,
+  "manifest_version": 6,
   "phase": "PHASE_28AR_28AZ_EXACT_6_PATH_GOVERNANCE_FINALIZATION",
   "construction_baseline": "31a684294fa9f5d0c375a3457f601e78faf07833",
   "implementation_authorization": {
@@ -141,11 +141,11 @@
       "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
     },
     "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
-      "sha256": "5f03f1a2b2ee970ed8df4e098eec754468be386ad819d9f18598d6a7c6dd6a27",
-      "bytes": 11176,
+      "sha256": "b922969d0f5655e3c90b7b22f6be7c4da225544a940feab15db9d17321e9889c",
+      "bytes": 16709,
       "filesystem_mode": "0644",
       "expected_git_mode": "100644",
-      "classification": "FINAL_GOVERNANCE_RECONCILIATION"
+      "classification": "PHASE_30BE_30BH_MIGRATION_STREAM_PLACEMENT_FINALIZED"
     }
   },
   "self_binding": {
@@ -207,8 +207,8 @@
         "git_mode": "100644"
       },
       "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
-        "sha256": "5f03f1a2b2ee970ed8df4e098eec754468be386ad819d9f18598d6a7c6dd6a27",
-        "bytes": 11176,
+        "sha256": "c9f68d3191999f59788309655a76ae50c4742cecb22f04c40c2cc35f61163b95",
+        "bytes": 13496,
         "filesystem_mode": "0644",
         "git_mode": "100644"
       }
@@ -221,6 +221,98 @@
     "ahead_count": 0,
     "behind_count": 0,
     "subsequent_repository_modification_requires_new_review_and_authorization": true
+  },
+  "migration_stream_placement_correction": {
+    "phase": "PHASE_30AY_30BD_EXACT_5_PATH_ACTIVE_MIGRATION_STREAM_PLACEMENT_CORRECTION",
+    "prior_capability_preflight_token": "APPROVE_PHASE_30AU_30AX_SUPABASE_READ_ONLY_METADATA_CAPABILITY_PREFLIGHT_FOR_BRANCH_AND_LIVE_CATALOG_EVIDENCE_NO_PROJECT_CALLS_NO_SQL_NO_ROWS_NO_LOGS_NO_KEYS_NO_WRITES",
+    "prior_capability_preflight_token_state": "SPENT_NON_REUSABLE",
+    "authorization_token": "APPROVE_PHASE_30AY_30BD_EXACT_5_PATH_ACTIVE_MIGRATION_STREAM_PLACEMENT_CORRECTION_DELETE_2_ACTIVE_DUPLICATES_UPDATE_3_GOVERNANCE_IDENTITY_PATHS_PRESERVE_2_DRAFT_AUTHORITIES_REVIEW_NO_SUPABASE_NO_SQL_NO_STAGE_NO_COMMIT_NO_PUSH",
+    "authorization_state": "CONSUMED_EXACTLY_ONCE_FOR_EXACT_5_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH",
+    "parent_precommit_baseline": "e3672e2820484a29817efd3ab6bc9f75a9dc670f",
+    "resulting_commit": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "scope_path_count": 5,
+    "scope_paths": [
+      "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md",
+      "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json",
+      "docs/discovery-phase-29aa-29at-production-perimeter-audit-and-repair-gate.md"
+    ],
+    "deleted_active_paths": [
+      "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql"
+    ],
+    "preserved_draft_paths": [
+      "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql"
+    ],
+    "active_migration_count": 22,
+    "active_migration_filename_class": "CANONICAL_14_DIGIT_ONLY",
+    "applied_sql_content_identity": "PROVIDER_NATIVE_ATTESTATION_REQUIRED_OR_CONTENT_IDENTITY_UNAVAILABLE",
+    "SUPABASE_ACTIONS": 0,
+    "SQL_EXECUTION": 0,
+    "MIGRATION_EXECUTION": 0,
+    "stage_authorized": false,
+    "commit_authorized": false,
+    "push_authorized": false,
+    "database_mutation_authorized": false,
+    "type_generation_authorized": false,
+    "deployment_authorized": false,
+    "public_launch_authorized": false,
+    "final_review_commit_push_requires_separate_exact_token": true
+  },
+  "migration_stream_placement_finalization": {
+    "phase": "PHASE_30BE_30BH_EXACT_5_PATH_MIGRATION_STREAM_PLACEMENT_FINALIZATION",
+    "implementation_review_token": "APPROVE_PHASE_30AY_30BD_EXACT_5_PATH_ACTIVE_MIGRATION_STREAM_PLACEMENT_CORRECTION_DELETE_2_ACTIVE_DUPLICATES_UPDATE_3_GOVERNANCE_IDENTITY_PATHS_PRESERVE_2_DRAFT_AUTHORITIES_REVIEW_NO_SUPABASE_NO_SQL_NO_STAGE_NO_COMMIT_NO_PUSH",
+    "implementation_review_token_state": "SPENT_FOR_EXACT_5_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH",
+    "authorization_token": "APPROVE_PHASE_30BE_30BH_EXACT_5_PATH_MIGRATION_STREAM_PLACEMENT_CORRECTION_FINAL_REVIEW_STABLE_REBIND_STAGE_COMMIT_PUSH_AUTOMATIC_VERCEL_GIT_SIDE_EFFECT_AND_BOUNDED_REMOTE_VERIFICATION_PRESERVE_2_DRAFT_AUTHORITIES_NO_SUPABASE_NO_SQL",
+    "authorization_state": "CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE",
+    "authorization_purpose": "FINAL_REVIEW_STABLE_REBIND_EXACT_5_PATH_STAGE_ONE_COMMIT_ONE_PUSH_AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_GITHUB_VERCEL_READ_ONLY_VERIFICATION",
+    "parent_precommit_baseline": "e3672e2820484a29817efd3ab6bc9f75a9dc670f",
+    "resulting_commit": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "commit_subject": "Correct active migration stream placement governance",
+    "scope_path_count": 5,
+    "scope_paths": [
+      "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql",
+      "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md",
+      "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json",
+      "docs/discovery-phase-29aa-29at-production-perimeter-audit-and-repair-gate.md"
+    ],
+    "deleted_active_paths": [
+      "supabase/migrations/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/20260715_rls_drift_reconciliation_rollback_candidate.sql"
+    ],
+    "preserved_draft_paths": [
+      "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_forward_candidate.sql",
+      "supabase/migrations/_drafts/20260715_rls_drift_reconciliation_rollback_candidate.sql"
+    ],
+    "migration_gate_sha256": "b922969d0f5655e3c90b7b22f6be7c4da225544a940feab15db9d17321e9889c",
+    "migration_gate_bytes": 16709,
+    "active_migration_count": 22,
+    "active_migration_filename_class": "CANONICAL_14_DIGIT_ONLY",
+    "post_commit_tracked_modifications": 0,
+    "post_commit_index_state": "EMPTY",
+    "post_commit_excluded_untracked_count": 3,
+    "post_commit_ahead_count": 0,
+    "post_commit_behind_count": 0,
+    "post_commit_state": "CLEAN_EMPTY_3_0_0",
+    "github_verification_scope": "READ_ONLY",
+    "vercel_verification_scope": "BOUNDED_READ_ONLY_COMMIT_CORRELATION",
+    "direct_vercel_write_authorized": false,
+    "automatic_git_integration_production_deployment_side_effect_is_sole_authorized_vercel_write": true,
+    "supabase_access_authorized": false,
+    "sql_execution_authorized": false,
+    "migration_execution_authorized": false,
+    "database_mutation_authorized": false,
+    "schema_rls_policy_grant_mutation_authorized": false,
+    "type_generation_authorized": false,
+    "deployment_control_authorized": false,
+    "live_catalog_evidence_authorized": false,
+    "operational_reactivation_authorized": false,
+    "public_launch_authorized": false,
+    "applied_sql_content_identity": "PROVIDER_NATIVE_ATTESTATION_REQUIRED_OR_CONTENT_IDENTITY_UNAVAILABLE",
+    "subsequent_repository_or_platform_mutation_requires_new_gemini_review_and_exact_authorization": true
   },
   "vercel_status": {
     "context": "Vercel",
@@ -429,6 +521,7 @@
     }
   },
   "migration_inventory": {
+    "record_state": "HISTORICAL_PRE_PHASE30_PLACEMENT_SNAPSHOT",
     "active_directory_sql_count": 24,
     "expected_history_identity_count": 22,
     "quarantined_nonstandard_candidate_count": 2,
@@ -446,6 +539,7 @@
       "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
       "guard_count": 1,
       "guard_before_begin": true,
+      "path_state": "HISTORICAL_ACTIVE_DUPLICATE_DELETED_PHASE30AY_30BD",
       "order": 1
     },
     {
@@ -453,6 +547,7 @@
       "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
       "guard_count": 1,
       "guard_before_begin": true,
+      "path_state": "HISTORICAL_ACTIVE_DUPLICATE_DELETED_PHASE30AY_30BD",
       "order": 2
     },
     {
@@ -460,6 +555,7 @@
       "sha256": "0671935382fa31e58b853b1706ccdc3fa8a71cb15f181801ed3ed1e7053911b9",
       "guard_count": 1,
       "guard_before_begin": true,
+      "path_state": "PRESERVED_GUARDED_DRAFT_AUTHORITY",
       "order": 3
     },
     {
@@ -467,6 +563,7 @@
       "sha256": "9c04fa449eeb1e18d37ccecb1794bbe570a0322d85104dfc2950ed6c1469a66f",
       "guard_count": 1,
       "guard_before_begin": true,
+      "path_state": "PRESERVED_GUARDED_DRAFT_AUTHORITY",
       "order": 4
     }
   ],

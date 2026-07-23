@@ -124,7 +124,7 @@ All three assets have a valid PNG signature, expected RGBA IHDR dimensions, non-
 | `app/sitemap.ts` | modified | `02034aa50cbcd46f07faca5c9b83bd67ed312c9fa31f4453f9e3116ca59d0202` | 2192 | `0644` |
 | `app/manifest.ts` | modified | `f408dc12c136e612e559cdf062c2ad616dc1f71fadc8d39f7c1afba6b23cf116` | 971 | `0644` |
 | `docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md` | modified | `72a3025363f23b9e678448d146430fb2710c32a2cd11c358d818c7bdc3823eb8` | 21025 | `0644` |
-| `scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json` | modified | `7fcd0a2dad98669ca8361862fce47779d147664041a3d56691202e4b5a48c458` | 26082 | `0644` |
+| `scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json` | modified | `75fe04d1a38c77e2efe50df04373e41915655eb81d3bce2ab9f385644963c34c` | 32547 | `0644` |
 | `public/icon-192x192.png` | created | `1a14d909232fc280b8f606ad551ed04df84bece78724070203adb365c750c2e7` | 1717 | `0644` |
 | `public/icon-512x512.png` | created | `f2d4c7c432cbddc5197812c798b9af9309075a8911c2daed64797cbc7de9bef2` | 5049 | `0644` |
 | `public/icon-maskable-512x512.png` | created | `f2d4c7c432cbddc5197812c798b9af9309075a8911c2daed64797cbc7de9bef2` | 5049 | `0644` |
@@ -133,6 +133,29 @@ All three assets have a valid PNG signature, expected RGBA IHDR dimensions, non-
 | `docs/discovery-phase-29aa-29at-production-perimeter-audit-and-repair-gate.md` | created | `EXTERNALLY_BOUND_NO_SELF_REFERENCE` | externally bound | `0644` |
 
 The final CCR is authoritative for final path identities if a test-first in-scope correction changes any non-self path after this snapshot.
+
+## Subsequent Phase 30AY–30BH migration-stream placement finalization
+
+Phase 30AY–30BD changed only migration-stream placement governance and its non-circular identity chain. It deleted two nonstandard active migration duplicates, preserved both guarded `_drafts` authorities byte-for-byte, and updated the three exact governance/identity paths in the five-path scope. Its token is now spent for implementation and review only. Phase 30BE–30BH changed no application or runtime production-perimeter behavior.
+
+- Phase 30AY–30BD authorization: `APPROVE_PHASE_30AY_30BD_EXACT_5_PATH_ACTIVE_MIGRATION_STREAM_PLACEMENT_CORRECTION_DELETE_2_ACTIVE_DUPLICATES_UPDATE_3_GOVERNANCE_IDENTITY_PATHS_PRESERVE_2_DRAFT_AUTHORITIES_REVIEW_NO_SUPABASE_NO_SQL_NO_STAGE_NO_COMMIT_NO_PUSH`
+- Phase 30AY–30BD authorization state: `SPENT_FOR_EXACT_5_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH`
+- Phase 30BE–30BH authorization: `APPROVE_PHASE_30BE_30BH_EXACT_5_PATH_MIGRATION_STREAM_PLACEMENT_CORRECTION_FINAL_REVIEW_STABLE_REBIND_STAGE_COMMIT_PUSH_AUTOMATIC_VERCEL_GIT_SIDE_EFFECT_AND_BOUNDED_REMOTE_VERIFICATION_PRESERVE_2_DRAFT_AUTHORITIES_NO_SUPABASE_NO_SQL`
+- Phase 30BE–30BH authorization state: `CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE`
+- Parent/pre-commit baseline: `e3672e2820484a29817efd3ab6bc9f75a9dc670f`
+- Resulting commit: `EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR`
+- Exact commit subject: `Correct active migration stream placement governance`
+- Exact committed scope: two deletions and three modifications across the same five paths.
+- Stable post-commit repository state: `CLEAN / EMPTY / 3 / 0/0`
+- Active migration stream: exactly `22` canonical 14-digit SQL files.
+- Both guarded `_drafts` authorities: preserved byte-for-byte.
+- `PHASE29_PERIMETER_BEHAVIOR_CHANGED=false`
+- `SUPABASE_ACTIONS=0`
+- `SQL_EXECUTION=0`
+- `DATABASE_MUTATION=0`
+- `DIRECT_VERCEL_WRITES=0`
+
+The automatic Vercel production deployment is solely the Git-integration side effect of the exact push. Direct Vercel writes remain prohibited. The automatic side effect does not change any Phase-29 perimeter conclusion, stable finalization binding, application/runtime behavior, live-readiness denial, or future-authorization boundary. Every subsequent repository or platform mutation requires new Gemini review and a separately named exact authorization.
 
 ## Explicit denials and stop boundary
 
