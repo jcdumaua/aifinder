@@ -203,6 +203,95 @@ Current target binding remains:
 
 The target was neither read for secrets nor modified/chmodded. Type generation is blocked because migration placement, exact deployed history, bounded live dependency evidence, and any required schema action remain unresolved or unauthorized. Phase 27NM-27OL creates no type-generation record, runs no type-generation command, and makes no type claim beyond preservation of the bound file identity.
 
+## Phase 30BW–30CE recovered v2 catalog-evidence contract
+
+The earlier 56-line output contract, its 24-migration literal, and its
+16,384-byte ceiling are `HISTORICAL_NON_EXECUTABLE`. They remain preserved as
+history in the activation manifest and cannot be selected by a future
+execution workflow. Exactly one active catalog-evidence design is now bound:
+`ACTIVE_RECOVERED_V2_STATIC_CONTRACT`.
+
+The recovered package was atomically finalized after controlled rebuild and
+passed its completion gate. Its final CCR identity is
+`e9d3a385f440190b7fa7986109f3228cadbac068459765bb5dfdc50801f3548f`
+at `213551` bytes, mode `0600`. All 13 immutable components are:
+
+| Artifact | SHA-256 | Bytes | Mode |
+|---|---|---:|---:|
+| `RECOVERY-APPROVAL-CONSUMPTION-RECEIPT.md` | `6c33e81460b374bb0258a5dbefeeff94cd6e5c2221a9650e3aa630ab4e49ee26` | 1713 | `0600` |
+| `01-approval-consumption-receipt.md` | `fd76c5ede3392853bd097af5dd85a2f8ca4281c6ef0e3b21296a6281e3ee7acf` | 1163 | `0600` |
+| `02-catalog-target-and-source-allowlist.json` | `6bd26ccaa89913070aa93e5cd322f7544ff7670faad2a130845fbdf65dc54134` | 7654 | `0600` |
+| `03-catalog-evidence-query.sql` | `96f292040a0b2927db49aa16990e13e242f3a2e7d22d018664d021aa163c262b` | 66881 | `0600` |
+| `04-catalog-evidence-output-schema.json` | `20ce04569e8ddd2a9ba3c550027022db6445855c03042f0f2c3a21a5fc60d34b` | 20817 | `0600` |
+| `05-catalog-evidence-checker.py` | `b31f75f9ba52923068e98edbbb9afabe6986e012580a7867986a6b4f345983bf` | 19563 | `0600` |
+| `06-catalog-evidence-fixtures.json` | `049b06edf806837e0099b68b030ba7d2766ad427331ce8064e133b28c0bc762a` | 21626 | `0600` |
+| `07-catalog-evidence-fixture-runner.py` | `1dfa3dda523c3d709bd9056683f8eeeead448c4daecd8ce6a9844664487b447b` | 14685 | `0600` |
+| `08-static-read-only-sql-validator.py` | `25caf987e7600e5efa25a47d03621654dd6091ff2d3e3970866fbf304709dd11` | 13045 | `0600` |
+| `09-query-and-output-contract.md` | `8e4eef277ecd231629c2fdc06ffe3046c2fbe4f5741e952ed53f6c90450358a4` | 7984 | `0600` |
+| `10-one-use-execution-handoff.md` | `ffd24380cf6209f81a80f30223308421fa37624d091bddc8e144a95e59857793` | 6798 | `0600` |
+| `11-independent-security-review.md` | `8a10bbabb09db7330aa00a1f1652a6549cc5357cd8dcdc61a8f8b675c2693990` | 8187 | `0600` |
+| `CCR-REPORT.md` | `e9d3a385f440190b7fa7986109f3228cadbac068459765bb5dfdc50801f3548f` | 213551 | `0600` |
+
+The active recovered v2 contract binds contract version `2`, exactly `22/22`
+migration identities, `139` output rows, `138` pre-terminal rows, a hard
+ceiling of `192` rows, a maximum value size of `256` bytes, a maximum
+normalized payload of `32768` bytes, and exactly one statement/result set.
+Snapshot classification is `SINGLE_STATEMENT_READ_ONLY_SNAPSHOT`; applied SQL
+content identity is `PROVIDER_NATIVE_ATTESTATION_REQUIRED`; exact
+provider-applied SQL bytes remain `UNAVAILABLE`.
+
+Static requalification is exact:
+
+- fixture result: `PASS SUMMARY CASES=121 FAILURES=0`;
+- static SQL result:
+  `PASS STATIC_SQL_V2 SHA256=96f292040a0b2927db49aa16990e13e242f3a2e7d22d018664d021aa163c262b LINES=1154 STATEMENTS=1`;
+- SQL executions: `0`;
+- Supabase calls: `0`;
+- live catalog executions: `0`.
+
+The in-query `5000ms` timeout declaration is
+`NON_ENFORCING_FOR_CURRENT_STATEMENT`. A future authorized execution must
+independently pre-arm and prove an external connector/session `5000ms`
+timeout. That capability is
+`REQUIRED_UNRESOLVED_BLOCKING_LIVE_EXECUTION`; no offline or in-query-only
+fallback is permitted.
+
+The Phase 30BW–30CE recovery authorization is
+`CONSUMED_EXACTLY_ONCE_SPENT_FOR_RECOVERY_AND_STATIC_REVIEW_ONLY`. It does not
+authorize repository rebind or execution. The superseded Phase 30BQ–30BV
+authorization remains `SUPERSEDED_UNCONSUMED_NON_EXECUTABLE`.
+
+```text
+AIFINDER_PHASE_30CF_30CK_CATALOG_GOVERNANCE_REBIND_FINALIZATION_BEGIN
+PHASE_30CF_30CK_AUTHORIZATION=APPROVE_PHASE_30CF_30CK_EXACT_3_PATH_RECOVERED_V2_CATALOG_EVIDENCE_GOVERNANCE_REBIND_IMPLEMENT_REVIEW_STAGE_COMMIT_PUSH_AUTOMATIC_VERCEL_GIT_SIDE_EFFECT_AND_BOUNDED_GITHUB_VERCEL_READ_ONLY_VERIFICATION_NO_DIRECT_VERCEL_WRITE_NO_SUPABASE_NO_SQL_NO_DATABASE_WRITE_NO_LIVE_CATALOG_EXECUTION
+PHASE_30CF_30CK_AUTHORIZATION_STATE=CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE
+PHASE_30CF_30CK_AUTHORIZED_WORKFLOW=EXACT_3_PATH_RECOVERED_V2_REBIND_REVIEW_STAGE_ONE_COMMIT_ONE_PUSH_AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_GITHUB_VERCEL_READ_ONLY_VERIFICATION
+PARENT_PRECOMMIT_BASELINE=a343f3740be5a1d95b5bc62fffee44630b2bd92c
+RESULTING_COMMIT=EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR
+COMMIT_SUBJECT=Rebind catalog evidence execution governance
+COMMITTED_PATH_COUNT=3
+ACTIVE_RECOVERED_V2_CONTRACT_COUNT=1
+ACTIVE_MIGRATION_COUNT=22
+DIRECT_VERCEL_WRITE_AUTHORIZED=false
+AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_IS_SOLE_AUTHORIZED_VERCEL_WRITE=true
+SUPABASE_ACCESS_AUTHORIZED=false
+SQL_EXECUTION_AUTHORIZED=false
+LIVE_CATALOG_EXECUTION_AUTHORIZED=false
+DATABASE_MUTATION_AUTHORIZED=false
+MIGRATION_EXECUTION_AUTHORIZED=false
+SCHEMA_RLS_POLICY_GRANT_MUTATION_AUTHORIZED=false
+TYPE_GENERATION_AUTHORIZED=false
+OPERATIONAL_REACTIVATION_AUTHORIZED=false
+PUBLIC_LAUNCH_AUTHORIZED=false
+SUBSEQUENT_REPOSITORY_OR_PLATFORM_MUTATION_REQUIRES_NEW_GEMINI_REVIEW_AND_EXACT_AUTHORIZATION=true
+AIFINDER_PHASE_30CF_30CK_CATALOG_GOVERNANCE_REBIND_FINALIZATION_END
+```
+
+This rebind changes repository governance only. It does not establish
+connector timeout capability, wrapper compatibility, live catalog evidence,
+database truth, live readiness, operational readiness, or public-launch
+readiness.
+
 ## Next decision boundary
 
 `HISTORICAL_PHASE_27NM_27OL_BOUNDARY_SUPERSEDED`: the earlier redesign-required and predecessor-repair-required classification described the pre-Option-A, pre-`f7e7bd743a999f691bd30c593617aa191522fec6` state. The committed predecessor repair and the separately reviewed Option A static integration are complete at their bound commits. This supersession does not promote any static artifact to live readiness.

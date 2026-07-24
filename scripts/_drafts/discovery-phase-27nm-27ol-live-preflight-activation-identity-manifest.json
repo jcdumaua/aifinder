@@ -141,11 +141,11 @@
       "classification": "PRESERVED_UNCHANGED_ELIGIBLE"
     },
     "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md": {
-      "sha256": "b922969d0f5655e3c90b7b22f6be7c4da225544a940feab15db9d17321e9889c",
-      "bytes": 16709,
+      "sha256": "d303bcc7db62b6b354924b966f0221301b079fd77ec090476d796fcb39d7911f",
+      "bytes": 22248,
       "filesystem_mode": "0644",
       "expected_git_mode": "100644",
-      "classification": "PHASE_30BE_30BH_MIGRATION_STREAM_PLACEMENT_FINALIZED"
+      "classification": "PHASE_30CF_30CK_RECOVERED_V2_CATALOG_GOVERNANCE_REBOUND"
     }
   },
   "self_binding": {
@@ -314,6 +314,47 @@
     "applied_sql_content_identity": "PROVIDER_NATIVE_ATTESTATION_REQUIRED_OR_CONTENT_IDENTITY_UNAVAILABLE",
     "subsequent_repository_or_platform_mutation_requires_new_gemini_review_and_exact_authorization": true
   },
+  "catalog_evidence_governance_rebind_finalization": {
+    "phase": "PHASE_30CF_30CK_EXACT_3_PATH_RECOVERED_V2_CATALOG_EVIDENCE_GOVERNANCE_REBIND",
+    "recovery_authorization_state": "CONSUMED_EXACTLY_ONCE_SPENT_FOR_RECOVERY_AND_STATIC_REVIEW_ONLY",
+    "superseded_phase_30bq_30bv_authorization_state": "SUPERSEDED_UNCONSUMED_NON_EXECUTABLE",
+    "authorization_token": "APPROVE_PHASE_30CF_30CK_EXACT_3_PATH_RECOVERED_V2_CATALOG_EVIDENCE_GOVERNANCE_REBIND_IMPLEMENT_REVIEW_STAGE_COMMIT_PUSH_AUTOMATIC_VERCEL_GIT_SIDE_EFFECT_AND_BOUNDED_GITHUB_VERCEL_READ_ONLY_VERIFICATION_NO_DIRECT_VERCEL_WRITE_NO_SUPABASE_NO_SQL_NO_DATABASE_WRITE_NO_LIVE_CATALOG_EXECUTION",
+    "authorization_state": "CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE",
+    "authorization_purpose": "EXACT_3_PATH_RECOVERED_V2_REBIND_REVIEW_STAGE_ONE_COMMIT_ONE_PUSH_AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_GITHUB_VERCEL_READ_ONLY_VERIFICATION",
+    "parent_precommit_baseline": "a343f3740be5a1d95b5bc62fffee44630b2bd92c",
+    "resulting_commit": "EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR",
+    "commit_subject": "Rebind catalog evidence execution governance",
+    "scope_path_count": 3,
+    "scope_paths": [
+      "docs/discovery-phase-27nm-27ol-migration-history-placement-grant-and-typegen-dependency-gate.md",
+      "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json",
+      "docs/discovery-phase-29aa-29at-production-perimeter-audit-and-repair-gate.md"
+    ],
+    "migration_gate_sha256": "d303bcc7db62b6b354924b966f0221301b079fd77ec090476d796fcb39d7911f",
+    "migration_gate_bytes": 22248,
+    "manifest_self_binding": "EXTERNALLY_BOUND_NO_SELF_REFERENCE",
+    "post_commit_tracked_modifications": 0,
+    "post_commit_index_state": "EMPTY",
+    "post_commit_excluded_untracked_count": 3,
+    "post_commit_ahead_count": 0,
+    "post_commit_behind_count": 0,
+    "post_commit_state": "CLEAN_EMPTY_3_0_0",
+    "github_verification_scope": "READ_ONLY",
+    "vercel_verification_scope": "BOUNDED_READ_ONLY_COMMIT_CORRELATION",
+    "direct_vercel_write_authorized": false,
+    "automatic_git_integration_production_deployment_side_effect_is_sole_authorized_vercel_write": true,
+    "supabase_access_authorized": false,
+    "sql_execution_authorized": false,
+    "live_catalog_execution_authorized": false,
+    "database_mutation_authorized": false,
+    "migration_execution_authorized": false,
+    "schema_rls_policy_grant_mutation_authorized": false,
+    "type_generation_authorized": false,
+    "deployment_control_authorized": false,
+    "operational_reactivation_authorized": false,
+    "public_launch_authorized": false,
+    "subsequent_repository_or_platform_mutation_requires_new_gemini_review_and_exact_authorization": true
+  },
   "vercel_status": {
     "context": "Vercel",
     "state": "READY",
@@ -340,6 +381,7 @@
     "cleartext_target_retained": false
   },
   "output_contract": {
+    "classification": "HISTORICAL_NON_EXECUTABLE",
     "sha256": "fdd6b45c5cdeaf4a78f57447faab245acffeb5fc3f259a2051603f3cc98fd7d6",
     "line_count": 56,
     "delimiter": "|",
@@ -519,6 +561,124 @@
       "RAW_ERROR_TEXT_PRINTED": "false",
       "UNAPPROVED_DATABASE_IDENTIFIERS_PRINTED": "false"
     }
+  },
+  "recovered_v2_output_contract": {
+    "classification": "ACTIVE_RECOVERED_V2_STATIC_CONTRACT",
+    "active_contract_count": 1,
+    "recovery_phase": "PHASE_30BW_30CE",
+    "recovery_mode": "CONTROLLED_REBUILD",
+    "recovery_authorization_state": "CONSUMED_EXACTLY_ONCE_SPENT_FOR_RECOVERY_AND_STATIC_REVIEW_ONLY",
+    "package_file_count": 13,
+    "package_finalization": "ATOMIC_IMMUTABLE_FINALIZATION_VERIFIED",
+    "package_verification": "PASS_PACKAGE_FILES_13_JSON_STRICT_3_FIXTURES_121_CCR_EMBEDS_12",
+    "component_identities": {
+      "RECOVERY-APPROVAL-CONSUMPTION-RECEIPT.md": {
+        "sha256": "6c33e81460b374bb0258a5dbefeeff94cd6e5c2221a9650e3aa630ab4e49ee26",
+        "bytes": 1713,
+        "mode": "0600"
+      },
+      "01-approval-consumption-receipt.md": {
+        "sha256": "fd76c5ede3392853bd097af5dd85a2f8ca4281c6ef0e3b21296a6281e3ee7acf",
+        "bytes": 1163,
+        "mode": "0600"
+      },
+      "02-catalog-target-and-source-allowlist.json": {
+        "sha256": "6bd26ccaa89913070aa93e5cd322f7544ff7670faad2a130845fbdf65dc54134",
+        "bytes": 7654,
+        "mode": "0600"
+      },
+      "03-catalog-evidence-query.sql": {
+        "sha256": "96f292040a0b2927db49aa16990e13e242f3a2e7d22d018664d021aa163c262b",
+        "bytes": 66881,
+        "mode": "0600"
+      },
+      "04-catalog-evidence-output-schema.json": {
+        "sha256": "20ce04569e8ddd2a9ba3c550027022db6445855c03042f0f2c3a21a5fc60d34b",
+        "bytes": 20817,
+        "mode": "0600"
+      },
+      "05-catalog-evidence-checker.py": {
+        "sha256": "b31f75f9ba52923068e98edbbb9afabe6986e012580a7867986a6b4f345983bf",
+        "bytes": 19563,
+        "mode": "0600"
+      },
+      "06-catalog-evidence-fixtures.json": {
+        "sha256": "049b06edf806837e0099b68b030ba7d2766ad427331ce8064e133b28c0bc762a",
+        "bytes": 21626,
+        "mode": "0600"
+      },
+      "07-catalog-evidence-fixture-runner.py": {
+        "sha256": "1dfa3dda523c3d709bd9056683f8eeeead448c4daecd8ce6a9844664487b447b",
+        "bytes": 14685,
+        "mode": "0600"
+      },
+      "08-static-read-only-sql-validator.py": {
+        "sha256": "25caf987e7600e5efa25a47d03621654dd6091ff2d3e3970866fbf304709dd11",
+        "bytes": 13045,
+        "mode": "0600"
+      },
+      "09-query-and-output-contract.md": {
+        "sha256": "8e4eef277ecd231629c2fdc06ffe3046c2fbe4f5741e952ed53f6c90450358a4",
+        "bytes": 7984,
+        "mode": "0600"
+      },
+      "10-one-use-execution-handoff.md": {
+        "sha256": "ffd24380cf6209f81a80f30223308421fa37624d091bddc8e144a95e59857793",
+        "bytes": 6798,
+        "mode": "0600"
+      },
+      "11-independent-security-review.md": {
+        "sha256": "8a10bbabb09db7330aa00a1f1652a6549cc5357cd8dcdc61a8f8b675c2693990",
+        "bytes": 8187,
+        "mode": "0600"
+      },
+      "CCR-REPORT.md": {
+        "sha256": "e9d3a385f440190b7fa7986109f3228cadbac068459765bb5dfdc50801f3548f",
+        "bytes": 213551,
+        "mode": "0600"
+      }
+    },
+    "contract_version": 2,
+    "expected_repository_migration_count": 22,
+    "expected_history_identity_count": 22,
+    "output_rows": 139,
+    "preterminal_rows": 138,
+    "hard_row_ceiling": 192,
+    "maximum_value_bytes": 256,
+    "maximum_normalized_payload_bytes": 32768,
+    "statement_count": 1,
+    "result_set_count": 1,
+    "snapshot_classification": "SINGLE_STATEMENT_READ_ONLY_SNAPSHOT",
+    "applied_sql_content_identity": "PROVIDER_NATIVE_ATTESTATION_REQUIRED",
+    "exact_provider_applied_sql_bytes": "UNAVAILABLE",
+    "fixture_count": 121,
+    "fixture_positive_count": 4,
+    "fixture_expected_rejection_count": 117,
+    "fixture_pass_count": 121,
+    "fixture_failure_count": 0,
+    "fixture_result": "PASS SUMMARY CASES=121 FAILURES=0",
+    "static_sql_result": "PASS STATIC_SQL_V2 SHA256=96f292040a0b2927db49aa16990e13e242f3a2e7d22d018664d021aa163c262b LINES=1154 STATEMENTS=1",
+    "timeout_boundary": {
+      "in_query_declaration": "5000ms",
+      "current_statement_enforcement": "NON_ENFORCING_FOR_CURRENT_STATEMENT",
+      "future_external_prearm": "REQUIRED_UNRESOLVED_BLOCKING_LIVE_EXECUTION"
+    },
+    "future_capability_boundary": {
+      "connector_session_timeout_prearm": "REQUIRED_UNRESOLVED",
+      "wrapper_compatibility": "UNRESOLVED_BLOCKING_LIVE_EXECUTION",
+      "same_statement_timeout_fallback": "PROHIBITED",
+      "live_catalog_execution_authorized": false
+    },
+    "raw_output_authorized": false,
+    "supabase_access_authorized": false,
+    "sql_execution_authorized": false,
+    "live_catalog_execution_authorized": false,
+    "database_mutation_authorized": false,
+    "migration_execution_authorized": false,
+    "schema_rls_policy_grant_mutation_authorized": false,
+    "type_generation_authorized": false,
+    "operational_reactivation_authorized": false,
+    "public_launch_authorized": false
   },
   "migration_inventory": {
     "record_state": "HISTORICAL_PRE_PHASE30_PLACEMENT_SNAPSHOT",

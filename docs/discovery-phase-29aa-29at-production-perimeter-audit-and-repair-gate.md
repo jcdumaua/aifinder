@@ -124,7 +124,7 @@ All three assets have a valid PNG signature, expected RGBA IHDR dimensions, non-
 | `app/sitemap.ts` | modified | `02034aa50cbcd46f07faca5c9b83bd67ed312c9fa31f4453f9e3116ca59d0202` | 2192 | `0644` |
 | `app/manifest.ts` | modified | `f408dc12c136e612e559cdf062c2ad616dc1f71fadc8d39f7c1afba6b23cf116` | 971 | `0644` |
 | `docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md` | modified | `72a3025363f23b9e678448d146430fb2710c32a2cd11c358d818c7bdc3823eb8` | 21025 | `0644` |
-| `scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json` | modified | `75fe04d1a38c77e2efe50df04373e41915655eb81d3bce2ab9f385644963c34c` | 32547 | `0644` |
+| `scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-identity-manifest.json` | modified | `90a217d9a96a0d28efd17295b3d5aa96bc39f2109ae56a5f2db2edd0ac322a00` | 40186 | `0644` |
 | `public/icon-192x192.png` | created | `1a14d909232fc280b8f606ad551ed04df84bece78724070203adb365c750c2e7` | 1717 | `0644` |
 | `public/icon-512x512.png` | created | `f2d4c7c432cbddc5197812c798b9af9309075a8911c2daed64797cbc7de9bef2` | 5049 | `0644` |
 | `public/icon-maskable-512x512.png` | created | `f2d4c7c432cbddc5197812c798b9af9309075a8911c2daed64797cbc7de9bef2` | 5049 | `0644` |
@@ -156,6 +156,41 @@ Phase 30AY–30BD changed only migration-stream placement governance and its non
 - `DIRECT_VERCEL_WRITES=0`
 
 The automatic Vercel production deployment is solely the Git-integration side effect of the exact push. Direct Vercel writes remain prohibited. The automatic side effect does not change any Phase-29 perimeter conclusion, stable finalization binding, application/runtime behavior, live-readiness denial, or future-authorization boundary. Every subsequent repository or platform mutation requires new Gemini review and a separately named exact authorization.
+
+## Phase 30CF–30CK subsequent-phase catalog-governance note
+
+```text
+AIFINDER_PHASE_30CF_30CK_SUBSEQUENT_PHASE_NOTE_BEGIN
+PHASE_30CF_30CK_AUTHORIZATION=APPROVE_PHASE_30CF_30CK_EXACT_3_PATH_RECOVERED_V2_CATALOG_EVIDENCE_GOVERNANCE_REBIND_IMPLEMENT_REVIEW_STAGE_COMMIT_PUSH_AUTOMATIC_VERCEL_GIT_SIDE_EFFECT_AND_BOUNDED_GITHUB_VERCEL_READ_ONLY_VERIFICATION_NO_DIRECT_VERCEL_WRITE_NO_SUPABASE_NO_SQL_NO_DATABASE_WRITE_NO_LIVE_CATALOG_EXECUTION
+PHASE_30CF_30CK_AUTHORIZATION_STATE=CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE
+PARENT_PRECOMMIT_BASELINE=a343f3740be5a1d95b5bc62fffee44630b2bd92c
+RESULTING_COMMIT=EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR
+COMMIT_SUBJECT=Rebind catalog evidence execution governance
+ACTIVATION_MANIFEST_SHA256=90a217d9a96a0d28efd17295b3d5aa96bc39f2109ae56a5f2db2edd0ac322a00
+ACTIVATION_MANIFEST_BYTES=40186
+ACTIVE_RECOVERED_V2_STATIC_CONTRACT_COUNT=1
+PHASE29_STABLE_FINALIZATION_BLOCK_PRESERVED_BYTE_IDENTICAL=true
+PHASE29_PERIMETER_BEHAVIOR_CHANGED=false
+APPLICATION_RUNTIME_BEHAVIOR_CHANGED=false
+DIRECT_VERCEL_WRITE_AUTHORIZED=false
+AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_IS_SOLE_AUTHORIZED_VERCEL_WRITE=true
+SUPABASE_ACCESS_AUTHORIZED=false
+SQL_EXECUTION_AUTHORIZED=false
+LIVE_CATALOG_EXECUTION_AUTHORIZED=false
+DATABASE_MUTATION_AUTHORIZED=false
+LIVE_READINESS=false
+OPERATIONAL_REACTIVATION_AUTHORIZED=false
+PUBLIC_LAUNCH_AUTHORIZED=false
+SUBSEQUENT_REPOSITORY_OR_PLATFORM_MUTATION_REQUIRES_NEW_GEMINI_REVIEW_AND_EXACT_AUTHORIZATION=true
+AIFINDER_PHASE_30CF_30CK_SUBSEQUENT_PHASE_NOTE_END
+```
+
+Phase 30CF–30CK rebinds only static catalog-evidence execution governance. It
+does not change canonical, disclosure, SEO, PWA, security-header, application,
+route, or runtime behavior. Any automatic Vercel production deployment is
+solely the Git-integration side effect of the exact governance-only push; zero
+direct Vercel write authority is granted. Live readiness and public launch
+remain blocked.
 
 ## Explicit denials and stop boundary
 
