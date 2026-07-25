@@ -25,6 +25,7 @@ import {
   getSearchSuggestionsForQuery,
   rankToolsForQueryWithDirectMatches,
 } from "@/lib/search-relevance";
+import { readPersistedStringArray } from "@/lib/public-persistence";
 import { getIcon } from "../../data/tools";
 import { useCompare } from "../../compare-provider";
 
@@ -81,16 +82,18 @@ export default function CategoryDetailClient({
   const searchQuery = search.trim();
 
   useEffect(() => {
-  const loadTimer = window.setTimeout(() => {
-    const savedFavorites = localStorage.getItem("aifinder-favorites");
+    const loadTimer = window.setTimeout(() => {
+      setFavoriteSlugs(
+        readPersistedStringArray(localStorage, "aifinder-favorites", {
+          maxSerializedLength: 16384,
+          maxItems: 100,
+          maxItemLength: 128,
+        }),
+      );
+    }, 0);
 
-    if (savedFavorites) {
-      setFavoriteSlugs(JSON.parse(savedFavorites));
-    }
-  }, 0);
-
-  return () => window.clearTimeout(loadTimer);
-}, []);
+    return () => window.clearTimeout(loadTimer);
+  }, []);
 
   const filteredTools = useMemo(() => {
     const filteredByControls = tools.filter((tool) => {

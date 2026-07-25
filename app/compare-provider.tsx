@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { readPersistedStringArray } from "@/lib/public-persistence";
 
 type CompareContextType = {
   compareSlugs: string[];
@@ -26,12 +27,14 @@ export function CompareProvider({
   );
 
   useEffect(() => {
-    const savedCompare = localStorage.getItem("aifinder-compare");
-
     const loadTimer = window.setTimeout(() => {
-      if (savedCompare) {
-        setCompareSlugs(JSON.parse(savedCompare));
-      }
+      setCompareSlugs(
+        readPersistedStringArray(localStorage, "aifinder-compare", {
+          maxSerializedLength: 2048,
+          maxItems: 3,
+          maxItemLength: 128,
+        }),
+      );
     }, 0);
 
     return () => window.clearTimeout(loadTimer);

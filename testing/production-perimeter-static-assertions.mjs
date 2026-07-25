@@ -32,12 +32,25 @@ const AUDIT_LEDGER_SHA256 =
   "c003049db73d60d8c15006792f1f56b2d3dcd560a07ab23e3e60814b3b4cf6f7";
 const PROXY_SHA256 =
   "d032aaff869000464d7b320191e1ed9f5c9d7c519e8a058c4673750a6a8117bb";
+const PHASE29_SUCCESSOR_MUTABLE_IDENTITIES = {
+  "app/sitemap.ts": {
+    sha256: "02034aa50cbcd46f07faca5c9b83bd67ed312c9fa31f4453f9e3116ca59d0202",
+    bytes: 2192,
+  },
+  "testing/production-perimeter-static-assertions.mjs": {
+    sha256: "1dbad2521aba73641ef1e6bbd252e198d6dfe7abc933c08fa212aa56392df26d",
+    bytes: 34648,
+  },
+};
 
 const paths = {
   config: "next.config.ts",
   layout: "app/layout.tsx",
   robots: "app/robots.ts",
   sitemap: "app/sitemap.ts",
+  comparePage: "app/compare/page.tsx",
+  categoryPage: "app/category/[slug]/page.tsx",
+  toolPage: "app/tool/[slug]/page.tsx",
   manifest: "app/manifest.ts",
   architecture:
     "docs/discovery-phase-27ot-27pe-authorization-trust-architecture-and-static-assurance-gate.md",
@@ -376,6 +389,9 @@ let activation;
 const layoutAst = parseTypeScript(paths.layout, ts.ScriptKind.TSX);
 const robotsAst = parseTypeScript(paths.robots);
 const sitemapAst = parseTypeScript(paths.sitemap);
+const comparePageAst = parseTypeScript(paths.comparePage, ts.ScriptKind.TSX);
+const categoryPageAst = parseTypeScript(paths.categoryPage, ts.ScriptKind.TSX);
+const toolPageAst = parseTypeScript(paths.toolPage, ts.ScriptKind.TSX);
 const manifestAst = parseTypeScript(paths.manifest);
 const configAst = parseTypeScript(paths.config);
 
@@ -408,6 +424,24 @@ for (const [key, expected] of [
 ]) {
   check(`MANIFEST.${key.toUpperCase()}`, () =>
     equal(literalString(manifestProperties.get(key), `manifest ${key}`), expected, `manifest ${key}`),
+  );
+}
+
+for (const [label, path, sourceFile] of [
+  ["compare", paths.comparePage, comparePageAst],
+  ["category", paths.categoryPage, categoryPageAst],
+  ["tool", paths.toolPage, toolPageAst],
+]) {
+  const source = text(path);
+  check(`CANONICAL.${label}.ASSIGNED`, () =>
+    equal(
+      literalString(findVariableInitializer(sourceFile, "siteUrl"), `${label} siteUrl`),
+      CANONICAL_ORIGIN,
+      `${label} siteUrl`,
+    ),
+  );
+  check(`CANONICAL.${label}.OLD_ORIGIN_ABSENT`, () =>
+    excludes(source, OLD_ORIGIN, label),
   );
 }
 
@@ -736,6 +770,12 @@ check("PHASE29.GATE.NONSELF_IDENTITIES", () => {
     const identity = identityRows.get(path);
     if (!identity) throw new Error(`missing gate identity row: ${path}`);
     regularMode0644(path);
+    const historicalIdentity = PHASE29_SUCCESSOR_MUTABLE_IDENTITIES[path];
+    if (historicalIdentity) {
+      equal(identity.sha256, historicalIdentity.sha256, `${path} historical gate SHA-256`);
+      equal(identity.bytes, historicalIdentity.bytes, `${path} historical gate byte count`);
+      continue;
+    }
     equal(identity.sha256, sha256(bytes(path)), `${path} gate SHA-256`);
     equal(identity.bytes, bytes(path).length, `${path} gate byte count`);
   }
@@ -863,10 +903,16 @@ check("HARNESS.PHASE29AU_ASSERTION_INVENTORY_PRESERVED", () => {
   const expectedIds = [
     "CANONICAL.layout.ASSIGNED",
     "CANONICAL.layout.OLD_ORIGIN_ABSENT",
+    "CANONICAL.compare.ASSIGNED",
+    "CANONICAL.compare.OLD_ORIGIN_ABSENT",
+    "CANONICAL.category.ASSIGNED",
+    "CANONICAL.category.OLD_ORIGIN_ABSENT",
     "CANONICAL.robots.ASSIGNED",
     "CANONICAL.robots.OLD_ORIGIN_ABSENT",
     "CANONICAL.sitemap.ASSIGNED",
     "CANONICAL.sitemap.OLD_ORIGIN_ABSENT",
+    "CANONICAL.tool.ASSIGNED",
+    "CANONICAL.tool.OLD_ORIGIN_ABSENT",
     "GOVERNANCE.ACCESS_VS_RETENTION",
     "GOVERNANCE.ACTIVATION_JSON_UNIQUE_KEYS",
     "GOVERNANCE.ARCHITECTURE_IDENTITY",

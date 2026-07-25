@@ -4,6 +4,7 @@ import {
   normalizePublicToolRow,
   type PublicToolRow,
 } from "../../../lib/public-tool-adapter";
+import { logPublicDiagnosticEvent } from "@/lib/public-diagnostics";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import {
   categories,
@@ -19,7 +20,7 @@ import CategoryDetailClient, {
 
 export const revalidate = 300;
 
-const siteUrl = "https://aifinder-eight.vercel.app";
+const siteUrl = "https://aifinder.to";
 
 type PageProps = {
   params: Promise<{
@@ -128,7 +129,7 @@ async function getTools() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Category page tools load error:", error.message);
+    logPublicDiagnosticEvent("PUBLIC_CATEGORY_TOOLS_LOAD_FAILED");
     return [];
   }
 

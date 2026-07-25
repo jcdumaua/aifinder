@@ -10,6 +10,9 @@
     "qa:responsive": "playwright test testing/responsive-qa.spec.ts",
     "qa:accessibility": "playwright test -c playwright.accessibility.config.ts",
     "check": "npm run lint -- --quiet && npm run build",
+    "test:public-launch-resilience": "node testing/public-launch-resilience-static-assertions.mjs",
+    "test:public-persistence": "node testing/public-persistence.test.mjs",
+    "test:public-launch-static": "npm run test:public-launch-resilience && npm run test:public-persistence && node testing/production-perimeter-static-assertions.mjs",
     "smoke:discovery": "node scripts/smoke-discovery-flow.mjs",
     "smoke:discovery-candidate-staging:live": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-live-smoke.mjs",
     "smoke:discovery-candidate-staging:rls": "node --import ./testing/register-typescript-test-loader.mjs testing/discovery-candidate-staging-rls-smoke.mjs"

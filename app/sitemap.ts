@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { logPublicDiagnosticEvent } from "@/lib/public-diagnostics";
 import { supabaseAdmin } from "../lib/supabase-admin";
 import { categories, slugify } from "./data/tools";
 
@@ -39,7 +40,7 @@ async function getToolUrls() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Sitemap tools load error:", error.message);
+    logPublicDiagnosticEvent("PUBLIC_SITEMAP_TOOLS_LOAD_FAILED");
     return [];
   }
 

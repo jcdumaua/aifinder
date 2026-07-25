@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { logPublicDiagnosticEvent } from "@/lib/public-diagnostics";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { normalizeToolCategory } from "../../../lib/tool-categories";
 import {
@@ -13,7 +14,7 @@ import ToolDetailClient, { ToolPageData } from "./tool-detail-client";
 
 export const revalidate = 300;
 
-const siteUrl = "https://aifinder-eight.vercel.app";
+const siteUrl = "https://aifinder.to";
 
 type PageProps = {
   params: Promise<{
@@ -115,7 +116,7 @@ async function getTools() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Tool detail page load error:", error.message);
+    logPublicDiagnosticEvent("PUBLIC_TOOL_DETAIL_LOAD_FAILED");
     return [];
   }
 

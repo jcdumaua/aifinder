@@ -26,6 +26,8 @@ import {
   normalizePublicToolRow,
   toPublicToolCardData,
 } from "@/lib/public-tool-adapter";
+import { logPublicDiagnosticEvent } from "@/lib/public-diagnostics";
+import { readPersistedStringArray } from "@/lib/public-persistence";
 import type { PublicHomepageControlConfig } from "@/lib/homepage-control-public";
 import { TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
@@ -269,7 +271,7 @@ export default function Home() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Supabase tools error:", error.message);
+        logPublicDiagnosticEvent("PUBLIC_HOMEPAGE_TOOLS_LOAD_FAILED");
         setIsLoadingTools(false);
         return;
       }
@@ -336,12 +338,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const savedFavorites = localStorage.getItem("aifinder-favorites");
-    const savedSearches = localStorage.getItem("aifinder-recent-searches");
-
     const loadTimer = window.setTimeout(() => {
-      if (savedFavorites) setFavoriteSlugs(JSON.parse(savedFavorites));
-      if (savedSearches) setRecentSearches(JSON.parse(savedSearches));
+      setFavoriteSlugs(
+        readPersistedStringArray(localStorage, "aifinder-favorites", {
+          maxSerializedLength: 16384,
+          maxItems: 100,
+          maxItemLength: 128,
+        }),
+      );
+      setRecentSearches(
+        readPersistedStringArray(localStorage, "aifinder-recent-searches", {
+          maxSerializedLength: 2048,
+          maxItems: 5,
+          maxItemLength: 120,
+        }),
+      );
     }, 0);
 
     return () => window.clearTimeout(loadTimer);
