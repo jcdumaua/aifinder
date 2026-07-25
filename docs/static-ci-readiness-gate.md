@@ -1,0 +1,24 @@
+# Static CI Readiness Gate
+
+The proposed `.github/workflows/static-readiness.yml` is a static-only,
+read-only GitHub Actions gate. It triggers on pull requests, pushes to `main`,
+and manual dispatch, with top-level `contents: read` permission and concurrency
+cancellation.
+
+It contains exactly four jobs:
+
+1. `policy` validates the safety manifest, coverage matrix, and workflow.
+2. `lint` depends on `policy`.
+3. `typecheck` depends on `policy`.
+4. `static-readiness` depends on `policy` and executes only the manifest-bound
+   core runner.
+
+Every job pins Node `24.15.0`, uses `actions/checkout` and
+`actions/setup-node` by exact official 40-character commit, disables checkout
+credential persistence, uses a bounded timeout, and installs the lockfile with
+scripts, audit, and funding calls disabled.
+
+The workflow contains no build, browser, route, database, Supabase, secret,
+service, cache, artifact, deployment, or write step. Static creation and local
+validation do not dispatch it. A later commit or workflow run needs its own
+authorization and must revalidate the pinned actions and repository baseline.

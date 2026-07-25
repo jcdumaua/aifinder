@@ -1,0 +1,970 @@
+{
+  "matrix_version": 1,
+  "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
+  "route_inventory_digest": "e824bbed2bda0f4c6f3ecd0d47ac04177a817d3509f30b23bacd9a431720afa2",
+  "entries": [
+    {
+      "path": "app/admin-login/layout.tsx",
+      "surface_kind": "layout",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin-login",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin-login/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin-login",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/analytics/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/analytics",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/discovered-tools/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/discovered-tools",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/discovery/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/discovery",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/discovery/tools/[id]/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/discovery/tools/[id]",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/discovery/tools/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/discovery/tools",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/homepage-control/[id]/edit/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/homepage-control/[id]/edit",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/homepage-control/[id]/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/homepage-control/[id]",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/homepage-control/[id]/preview/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/homepage-control/[id]/preview",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/homepage-control/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/homepage-control",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/layout.tsx",
+      "surface_kind": "layout",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/moderation/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/moderation",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/notifications/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/notifications",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/security/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/security",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/settings/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/settings",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/admin/tools/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/admin/tools",
+      "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/audit-logs/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/audit-logs",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/csrf/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/csrf",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/candidate-extraction/invoke/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/candidate-extraction/invoke",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/candidate-staging-queue/[id]/decision",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/candidate-staging-queue/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/candidate-staging-queue",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]/approve",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]/duplicate",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/discovered-tools/[id]/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/discovered-tools/bulk-status/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/bulk-status",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/discovered-tools/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/intake/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/intake",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/runs/[id]/candidate-preview",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/runs/manual/claim/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/runs/manual/claim",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/runs/manual/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/runs/manual",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/runs/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/runs",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/sources/[id]/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/sources/[id]",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/discovery/sources/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/discovery/sources",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/mark-preview",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/preview-checklist",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/homepage-control/drafts/[id]/publish/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/publish",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/homepage-control/drafts/[id]/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/homepage-control/drafts/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/homepage-control/drafts",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/login/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/login",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/logout/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/logout",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/session/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/session",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/submissions/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/submissions",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/tools/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/tools",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/admin/upload-logo/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "ADMIN",
+      "url_pattern_or_special_role": "/api/admin/upload-logo",
+      "security_boundary_class": "ADMIN_AUTHENTICATED_API",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/homepage-control/published/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/api/homepage-control/published",
+      "security_boundary_class": "PUBLIC_API_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/submit-tool/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/api/submit-tool",
+      "security_boundary_class": "PUBLIC_API_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/api/upload-logo/route.ts",
+      "surface_kind": "route",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/api/upload-logo",
+      "security_boundary_class": "PUBLIC_API_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/category/[slug]/error.tsx",
+      "surface_kind": "error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/category/[slug]/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/category/[slug]",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/compare/error.tsx",
+      "surface_kind": "error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/compare/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/compare",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/error.tsx",
+      "surface_kind": "error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/global-error.tsx",
+      "surface_kind": "global-error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_GLOBAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/layout.tsx",
+      "surface_kind": "layout",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/loading.tsx",
+      "surface_kind": "loading",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_LOADING",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/manifest.ts",
+      "surface_kind": "manifest",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_MANIFEST",
+      "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/not-found.tsx",
+      "surface_kind": "not-found",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_NOT_FOUND",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/opengraph-image.tsx",
+      "surface_kind": "opengraph-image",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_OPENGRAPH_IMAGE",
+      "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/robots.ts",
+      "surface_kind": "robots",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ROBOTS",
+      "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/sitemap.ts",
+      "surface_kind": "sitemap",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_SITEMAP",
+      "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/submit/error.tsx",
+      "surface_kind": "error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/submit/layout.tsx",
+      "surface_kind": "layout",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/submit",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/submit/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/submit",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/tool/[slug]/error.tsx",
+      "surface_kind": "error",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_ERROR",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/tool/[slug]/page.tsx",
+      "surface_kind": "page",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "/tool/[slug]",
+      "security_boundary_class": "PUBLIC_UI_BOUNDARY",
+      "static_evidence_paths": [
+        "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "future_evidence_paths": [
+        "testing/accessibility-qa.spec.ts",
+        "testing/responsive-qa.spec.ts"
+      ],
+      "coverage_state": "PARTIAL_STATIC",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "app/twitter-image.tsx",
+      "surface_kind": "twitter-image",
+      "public_or_admin": "PUBLIC",
+      "url_pattern_or_special_role": "SPECIAL_TWITTER_IMAGE",
+      "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
+      "static_evidence_paths": [],
+      "future_evidence_paths": [],
+      "coverage_state": "NO_STATIC_EVIDENCE",
+      "launch_blocking": true,
+      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+    }
+  ]
+}

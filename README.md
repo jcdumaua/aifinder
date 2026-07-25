@@ -1,71 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AiFinder
 
-## Getting Started
+AiFinder is a Next.js and React directory for discovering, comparing, and
+submitting AI tools. Supabase backs the project data and protected
+administrative workflows. Static repository assurance does not imply live,
+database, deployment, or public-launch readiness.
 
-First, run the development server:
+## Command classes
+
+- **Static:** `npm run check:static` is the default local static gate. It runs
+  lint, TypeScript, policy validation, and the sandboxed manifest-approved
+  static suites without invoking the application.
+- **Build/environment-aware:** `npm run check` includes `next build`.
+  Static-only phases do not authorize it.
+- **Browser/live:** development, responsive, accessibility, route, and live
+  smoke commands require separate browser or live-runtime authority.
+- **Database/live:** Supabase, SQL, migrations, schema, RLS, and live-catalog
+  commands require separate database authority.
+- **Operational:** deployment, publishing, operational reactivation, and
+  public launch require explicit operational authorization.
+
+## Deterministic static assurance
+
+`testing/static-test-safety-manifest.json` classifies every file under
+`testing/` and fail-closes anything not proven safe. The manifest-driven runner
+uses `testing/static-readiness-sandbox.mjs` to deny network, child-process, and
+filesystem-mutation capabilities inside approved test processes.
+
+`testing/readiness-coverage-matrix.json` inventories application surfaces and
+records static evidence separately from unresolved browser, live-route, and
+database gaps. `.github/workflows/static-readiness.yml` applies the same
+read-only policy in four dependency-pinned CI jobs. The workflow is a proposed
+static gate; its presence does not authorize a run or deployment.
+
+Useful static commands:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run test:static-readiness
+npm run check:static
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Exact-scope Git workflow
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Inspect the worktree and review only the authorized paths:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+git status --short
+git diff -- <authorized paths>
+git diff --check -- <authorized paths>
+```
 
-## Learn More
+Never use `git add .`. When staging is separately authorized, stage only the
+approved scope:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+git add -- <authorized paths>
+git diff --cached --name-only
+git diff --cached --check
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Developer Commands
-
-Use these commands during AiFinder development:
-
-### Start local development
-
-npm run dev
-
-### Run full project check
-
-npm run check
-
-Runs lint and production build together. Use this before committing.
-
-### Run lint only
-
-npm run lint -- --quiet
-
-### Run production build only
-
-npm run build
-
-### Check git status
-
-git status
-
-### Safe Commit Flow
-
-npm run check
-git status
-git add .
-git commit -m "Describe the change"
-git push
-git status
+Verify the staged path set and inspect the complete cached diff before
+committing. Commit, push, deployment, database access, Supabase actions,
+operational reactivation, and public launch each remain separate authorization
+boundaries.

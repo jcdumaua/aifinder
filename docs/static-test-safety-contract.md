@@ -1,0 +1,27 @@
+# Static Test Safety Contract
+
+`testing/static-test-safety-manifest.json` is a complete, sorted, strict-JSON
+inventory of every regular file in `testing/**`. It binds the Phase 30FG–30FR
+repository baseline and a self-excluding digest of path, SHA-256, byte count,
+and mode.
+
+Only these execution dispositions exist:
+
+- `RUN_CORE` for proven `SAFE_STATIC_CORE` executables;
+- `RUN_POLICY` for governance-policy executables;
+- `VALIDATE_ONLY` for non-executable support, fixtures, and configuration;
+- `DENY` for browser, live-route, database, network, operational, or unproven
+  files.
+
+Commands are two-element JSON argv arrays beginning with `node`; shell strings,
+package commands, and indirect command construction are rejected. The policy
+test validates the complete filesystem inventory, duplicate keys and paths,
+ordering, modes, classes, dispositions, command shape, required suites, and
+recursive executable-source safety.
+
+The core runner revalidates the manifest, launches without a shell, supplies a
+minimal fixed environment, enforces per-command and total timeouts, bounds and
+hashes output, and compares the complete repository state before and after
+each child. Its preload denies global and module network access, child
+processes, and filesystem mutation. The sandbox is defense in depth; a denied
+test does not become safe merely because it would be blocked at runtime.

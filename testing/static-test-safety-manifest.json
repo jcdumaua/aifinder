@@ -1,0 +1,737 @@
+{
+  "manifest_version": 1,
+  "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
+  "testing_tree_digest": "d38c3965b740109c15104615412d7f22d1bce1061cfb7801e890fdd02ab238f1",
+  "entries": [
+    {
+      "path": "testing/accessibility-qa.spec.ts",
+      "role": "EXECUTABLE",
+      "safety_class": "BROWSER_OR_PLAYWRIGHT",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "BROWSER_AUTOMATION_REQUIRED"
+    },
+    {
+      "path": "testing/admin-catalog-route-error-boundary-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-intake-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-manual-claim-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-manual-trigger-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-read-route-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-source-status-mutation-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-discovery-wrapper-server-only-boundary-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-login-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-mutation-diagnostic-logging-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-rate-limit.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/admin-shell-supabase-read-hardening.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "DATABASE_OR_SUPABASE",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "DATABASE_OR_SUPABASE_CAPABILITY"
+    },
+    {
+      "path": "testing/audit-logs-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovered-tool-approve-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovered-tool-duplicate-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-admin-route-read-only-dependency-inventory-source-harness.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-bounded-html-acquisition.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-decision-admin-ui.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-decision-api-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-decision-execution-preflight.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "OPERATIONAL_OR_ARTIFACT_MUTATION"
+    },
+    {
+      "path": "testing/discovery-candidate-decision-read-only-listing-gate.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-decision-route-export-contract-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-dry-run-panel.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-invocation-route.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-invocation.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-invoke-route-export-contract-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-live-staging-panel.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-mapper.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-staging-pipeline-smoke.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-extraction-staging-pipeline.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-normalizer.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-preview-live-staging-resolver.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-preview-provider.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-preview-read-only-auth-contract-source-harness.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-preview-route-export-contract-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-preview-route.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-queue-aggregate-bucket-breakdown.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-queue-fail-closed-presentation-smoke.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-queue-fail-closed-ui-wiring-smoke.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-admin.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-live-smoke.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-admin-ui.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-api-read-route.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-cursor.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-detail-drawer-ui.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-read-model.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-queue-read-route-export-contract-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-candidate-staging-rls-smoke.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "DATABASE_OR_SUPABASE",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "DATABASE_OR_SUPABASE_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-fetch-adapter.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-manual-metadata-fetch.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-other-bucket-bounded-read-only-inspection.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-read-only-live-inspection.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-evidence-validator.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-execution-contract.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-execution-supervisor.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-execution-wrapper-candidate.sh",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "SHELL_OR_OPERATIONAL_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-harness-static-contract.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-validation-harness.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-read-only-runtime-verification.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "LIVE_ROUTE_OR_RUNTIME_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-request-plan.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-run-results-review.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/discovery-static-html-evidence-audit-review.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-static-html-evidence-executor.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-static-html-evidence-results-review.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-static-html-evidence.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-supabase-admin-noop-smoke.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "DATABASE_OR_SUPABASE",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "DATABASE_OR_SUPABASE_CAPABILITY"
+    },
+    {
+      "path": "testing/discovery-url-safety.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "NETWORK_OR_EXTERNAL",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NETWORK_OR_EXTERNAL_INPUT_CAPABILITY"
+    },
+    {
+      "path": "testing/homepage-draft-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/phase14k-a-controlled-preview-artifact-preparation.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "OPERATIONAL_OR_ARTIFACT_MUTATION"
+    },
+    {
+      "path": "testing/phase14k-a-controlled-preview-artifact-preparation.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "OPERATIONAL_OR_ARTIFACT_MUTATION"
+    },
+    {
+      "path": "testing/phase14p-controlled-exact-id-archive-cleanup.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "OPERATIONAL_OR_ARTIFACT_MUTATION"
+    },
+    {
+      "path": "testing/phase14p-controlled-exact-id-archive-cleanup.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "OPERATIONAL_MUTATION",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "OPERATIONAL_OR_ARTIFACT_MUTATION"
+    },
+    {
+      "path": "testing/production-perimeter-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_CORE",
+      "ci_disposition": "RUN_CORE",
+      "command_argv": [
+        "node",
+        "testing/production-perimeter-static-assertions.mjs"
+      ],
+      "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/public-launch-resilience-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_CORE",
+      "ci_disposition": "RUN_CORE",
+      "command_argv": [
+        "node",
+        "testing/public-launch-resilience-static-assertions.mjs"
+      ],
+      "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/public-persistence.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_CORE",
+      "ci_disposition": "RUN_CORE",
+      "command_argv": [
+        "node",
+        "testing/public-persistence.test.mjs"
+      ],
+      "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/qa-device-matrix.ts",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    },
+    {
+      "path": "testing/readiness-coverage-matrix.json",
+      "role": "CONFIG",
+      "safety_class": "STATIC_FIXTURE",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "STATIC_GOVERNANCE_CONFIGURATION"
+    },
+    {
+      "path": "testing/readiness-coverage-matrix.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/readiness-coverage-matrix.test.mjs"
+      ],
+      "reason_code": "STATIC_GOVERNANCE_POLICY"
+    },
+    {
+      "path": "testing/register-typescript-test-loader.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    },
+    {
+      "path": "testing/remediation-a1-admin-session-boundary.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/responsive-qa.spec.ts",
+      "role": "EXECUTABLE",
+      "safety_class": "BROWSER_OR_PLAYWRIGHT",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "BROWSER_AUTOMATION_REQUIRED"
+    },
+    {
+      "path": "testing/run-static-readiness.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    },
+    {
+      "path": "testing/static-governance-utils.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    },
+    {
+      "path": "testing/static-readiness-sandbox.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    },
+    {
+      "path": "testing/static-readiness-workflow-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/static-readiness-workflow-static-assertions.mjs"
+      ],
+      "reason_code": "STATIC_GOVERNANCE_POLICY"
+    },
+    {
+      "path": "testing/static-test-safety-manifest.json",
+      "role": "CONFIG",
+      "safety_class": "STATIC_FIXTURE",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "STATIC_GOVERNANCE_CONFIGURATION"
+    },
+    {
+      "path": "testing/static-test-safety-manifest.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/static-test-safety-manifest.test.mjs"
+      ],
+      "reason_code": "STATIC_GOVERNANCE_POLICY"
+    },
+    {
+      "path": "testing/submit-tool-secret-safe-boundary-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/typescript-extension-loader.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
+    }
+  ]
+}
