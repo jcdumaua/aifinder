@@ -7,6 +7,7 @@ import {
   compareExactPathSets,
   readStrictJson,
   stableSortedPaths,
+  worktreeGitIdentity,
 } from "./static-governance-utils.mjs";
 
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
@@ -92,6 +93,12 @@ function validateMatrix() {
     "MATRIX_PATH_ORDER",
   );
   assert(compareExactPathSets(paths, inventory).equal, "MATRIX_INVENTORY");
+  for (const repositoryPath of inventory) {
+    assert(
+      /^git:[0-9a-f]{40}$/.test(worktreeGitIdentity(repositoryPath)),
+      "MATRIX_ROUTE_IDENTITY_FORMAT",
+    );
+  }
   assert(
     matrix.route_inventory_digest === appSurfaceDigest(),
     "MATRIX_ROUTE_DIGEST",

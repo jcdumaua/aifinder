@@ -736,25 +736,12 @@ export function appSurfaceInventory() {
 }
 
 export function worktreeGitIdentity(repositoryPath) {
+  assertRegularFile(repositoryPath, null);
   const worktreeBlob = gitOutput(["hash-object", "--", repositoryPath]).trim();
-  let indexBlob = null;
-  try {
-    const output = execFileSync(
-      "git",
-      ["ls-files", "-s", "--", repositoryPath],
-      {
-        cwd: repositoryRoot,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    ).trim();
-    indexBlob = output ? output.split(/\s+/)[1] : null;
-  } catch {
-    indexBlob = null;
+  if (!/^[0-9a-f]{40}$/.test(worktreeBlob)) {
+    throw new GovernanceError("GIT_BLOB_IDENTITY_INVALID");
   }
-  return indexBlob === worktreeBlob
-    ? `git:${indexBlob}`
-    : `worktree:${fileIdentity(repositoryPath).sha256}`;
+  return `git:${worktreeBlob}`;
 }
 
 export function appSurfaceDigest() {
