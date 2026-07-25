@@ -1,0 +1,98 @@
+# Phase 30GD–30GP Accessibility and Responsive Synthetic Browser QA Gate
+
+## Scope
+
+This gate binds the exact 28-path candidate at baseline
+`b46f719b2a7deeaefc5661006d771484b2ddd082`. It covers a shared skip link,
+topmost nested-dialog focus containment/restoration, six fabricated public
+routes, the complete current 21-entry responsive device source, same-origin
+installability assertions, static governance, and an isolated loopback-only
+browser runtime.
+
+## Isolation contract
+
+- Build and app start occur only in a mode-0700 external temporary copy.
+- Every `.env*` path, `.git`, `.next`, repository `node_modules`, and the three
+  frozen exclusions are absent from copied file content.
+- Existing `node_modules` is linked read-only; package installation is zero.
+- Child environments are minimal and contain only synthetic Supabase values.
+- Node, browser, and stub traffic is restricted to loopback.
+- The stub accepts only bounded GET/read requests and rejects writes/unknown
+  routes.
+- Screenshots, traces, videos, raw console artifacts, and temporary build
+  output are not retained.
+- Repository state is compared before and after each isolated run.
+
+## Evidence boundary
+
+Static assurance and synthetic browser success do not prove a deployed or
+public runtime, real Supabase or database state, SQL, authentication,
+submission/upload mutation, migration readiness, operational reactivation, or
+public launch. Relevant matrix entries remain launch-blocking with:
+
+`SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED`
+
+## Required final verification
+
+Before this candidate may be returned for Gemini final review, require:
+
+- every prescribed static, TypeScript, lint, and synthetic browser command
+  GREEN;
+- all 14 bounded mutations detected and restored byte-exactly;
+- exact `20 modified / 8 new / 0 deleted` authorized path composition;
+- empty index, unchanged refs, package lock, migrations, and protected files;
+- unresolved Critical `0` and Important `0`.
+
+The successful classification, once those gates are freshly proven, is:
+
+`PASSED_PHASE_30GD_30GP_EXACT_28_PATH_ACCESSIBILITY_RESPONSIVE_SYNTHETIC_BROWSER_ASSURANCE_IMPLEMENTATION_READY_FOR_GEMINI_FINAL_REVIEW`
+
+No staging, commit, push, workflow dispatch, deployment, real environment,
+Supabase, SQL, database, operational reactivation, or public-launch authority
+is included.
+
+AIFINDER_PHASE_30GQ_30HB_STABLE_FINALIZATION_BINDING_BEGIN
+PHASE_30GD_30GP_AUTHORIZATION=APPROVE_PHASE_30GD_30GP_EXACT_28_PATH_ACCESSIBILITY_SKIP_LINK_DIALOG_FOCUS_RESPONSIVE_INSTALLABILITY_AND_LOOPBACK_ONLY_SYNTHETIC_BROWSER_QA_IMPLEMENT_REVIEW_ISOLATED_TEMP_BUILD_AND_APP_START_SYNTHETIC_ENV_ONLY_NO_ENV_FILE_READ_NO_EXTERNAL_NETWORK_NO_SUPABASE_NO_SQL_NO_DATABASE_NO_STAGE_NO_COMMIT_NO_PUSH
+PHASE_30GD_30GP_AUTHORIZATION_STATE=SPENT_FOR_EXACT_28_PATH_IMPLEMENTATION_AND_REVIEW_ONLY_NO_STAGE_COMMIT_PUSH
+PHASE_30GQ_30HB_AUTHORIZATION=APPROVE_PHASE_30GQ_30HB_EXACT_28_PATH_ACCESSIBILITY_RESPONSIVE_SYNTHETIC_BROWSER_ASSURANCE_FINAL_REVIEW_LOOPBACK_ONLY_SYNTHETIC_BROWSER_REVERIFICATION_STAGE_COMMIT_PUSH_AUTOMATIC_GITHUB_ACTIONS_AND_VERCEL_GIT_SIDE_EFFECTS_BOUNDED_REMOTE_VERIFICATION_NO_REAL_ENV_READ_NO_PUBLIC_HTTP_NO_SUPABASE_NO_SQL_NO_DATABASE_NO_DIRECT_VERCEL_WRITE
+PHASE_30GQ_30HB_AUTHORIZATION_STATE=CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE
+PHASE_30GQ_30HB_AUTHORIZED_WORKFLOW=FINAL_REVIEW_STABLE_REBIND_LOOPBACK_ONLY_SYNTHETIC_BROWSER_REVERIFICATION_EXACT_28_PATH_STAGE_ONE_COMMIT_ONE_PUSH_AUTOMATIC_GITHUB_ACTIONS_PUSH_RUN_AUTOMATIC_VERCEL_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECTS_BOUNDED_GITHUB_VERCEL_READ_ONLY_VERIFICATION
+PARENT_PRECOMMIT_BASELINE=b46f719b2a7deeaefc5661006d771484b2ddd082
+RESULTING_COMMIT=EXTERNALLY_BOUND_BY_GIT_AND_FINAL_CCR
+COMMIT_SUBJECT=Expand accessibility and responsive synthetic browser assurance
+COMMITTED_PATH_COUNT=28
+COMMITTED_COMPOSITION=8_ADDED_20_MODIFIED_0_DELETED
+TRACKED_MODIFICATIONS=0
+INDEX=EMPTY
+EXCLUDED_UNTRACKED=3
+AHEAD_BEHIND=0/0
+ACTIVE_CANONICAL_MIGRATIONS=22
+SYNTHETIC_BROWSER_REVERIFICATION_AUTHORIZED=true
+SYNTHETIC_BROWSER_RUNTIME=EXTERNAL_TEMP_COPY_LOOPBACK_ONLY_SYNTHETIC_VALUES
+REAL_ENV_FILE_READ_AUTHORIZED=false
+NON_LOOPBACK_SYNTHETIC_RUNTIME_NETWORK_AUTHORIZED=false
+PUBLIC_OR_DEPLOYED_BROWSER_TARGET_AUTHORIZED=false
+PUBLIC_HTTP_VERIFICATION_AUTHORIZED=false
+STATIC_READINESS_WORKFLOW_PATH=.github/workflows/static-readiness.yml
+STATIC_READINESS_WORKFLOW_EVENT=PUSH_MAIN
+STATIC_READINESS_WORKFLOW_EXPECTED_JOBS=policy,lint,typecheck,static-readiness
+STATIC_READINESS_WORKFLOW_REQUIRED_CONCLUSION=SUCCESS
+MANUAL_WORKFLOW_DISPATCH_AUTHORIZED=false
+AUTOMATIC_GITHUB_ACTIONS_PUSH_SIDE_EFFECT_AUTHORIZED=true
+LOCAL_PACKAGE_INSTALL_AUTHORIZED=false
+AUTOMATIC_GITHUB_ACTIONS_NPM_CI_SIDE_EFFECT_AUTHORIZED=true
+DIRECT_VERCEL_WRITE_AUTHORIZED=false
+AUTOMATIC_GIT_INTEGRATION_PRODUCTION_DEPLOYMENT_SIDE_EFFECT_IS_SOLE_AUTHORIZED_VERCEL_WRITE=true
+BOUNDED_GITHUB_ACTIONS_READ_ONLY_VERIFICATION_WAS_AUTHORIZED=true
+BOUNDED_VERCEL_READ_ONLY_VERIFICATION_WAS_AUTHORIZED=true
+SUPABASE_ACCESS_AUTHORIZED=false
+SQL_EXECUTION_AUTHORIZED=false
+DATABASE_ACCESS_AUTHORIZED=false
+ENVIRONMENT_OR_SECRET_READ_AUTHORIZED=false
+LOCAL_REAL_REPOSITORY_BUILD_OR_START_AUTHORIZED=false
+LIVE_READINESS=false
+OPERATIONAL_REACTIVATION_AUTHORIZED=false
+PUBLIC_LAUNCH_AUTHORIZED=false
+SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED=true
+SUBSEQUENT_REPOSITORY_OR_PLATFORM_MUTATION_REQUIRES_NEW_GEMINI_REVIEW_AND_EXACT_AUTHORIZATION=true
+AIFINDER_PHASE_30GQ_30HB_STABLE_FINALIZATION_BINDING_END

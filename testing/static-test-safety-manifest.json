@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "d38c3965b740109c15104615412d7f22d1bce1061cfb7801e890fdd02ab238f1",
+  "testing_tree_digest": "a4c33d711979d4785337f0d29c0994ee64eb5c495311c9b30d3c71313d5e8a88",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -10,6 +10,17 @@
       "ci_disposition": "DENY",
       "command_argv": null,
       "reason_code": "BROWSER_AUTOMATION_REQUIRED"
+    },
+    {
+      "path": "testing/accessibility-responsive-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/accessibility-responsive-static-assertions.mjs"
+      ],
+      "reason_code": "STATIC_ACCESSIBILITY_RESPONSIVE_POLICY"
     },
     {
       "path": "testing/admin-catalog-route-error-boundary-static-assertions.mjs",
@@ -106,6 +117,14 @@
       "ci_disposition": "DENY",
       "command_argv": null,
       "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/browser-qa-fixtures.ts",
+      "role": "SUPPORT",
+      "safety_class": "BROWSER_OR_PLAYWRIGHT",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "BROWSER_AUTOMATION_SUPPORT"
     },
     {
       "path": "testing/discovered-tool-approve-route-security-static-assertions.mjs",
@@ -672,6 +691,14 @@
       "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
     },
     {
+      "path": "testing/run-synthetic-browser-qa.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "ISOLATED_BROWSER_RUNTIME_CAPABILITY"
+    },
+    {
       "path": "testing/static-governance-utils.mjs",
       "role": "SUPPORT",
       "safety_class": "SAFE_STATIC_SUPPORT",
@@ -724,6 +751,14 @@
       "ci_disposition": "DENY",
       "command_argv": null,
       "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/synthetic-supabase-stub.mjs",
+      "role": "SUPPORT",
+      "safety_class": "LIVE_ROUTE_OR_SERVER",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "ISOLATED_FABRICATED_SERVER_SUPPORT"
     },
     {
       "path": "testing/typescript-extension-loader.mjs",

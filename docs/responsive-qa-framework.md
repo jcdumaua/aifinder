@@ -8,15 +8,19 @@ For dedicated Axe, keyboard, focus, and dialog checks, use
 ## Commands
 
 ```bash
-npm run qa:responsive
-npm run qa:accessibility
-npm run build
-npm run lint
+npm run test:accessibility-responsive-static
+npm run qa:synthetic-browser:responsive
+npm run qa:synthetic-browser
 ```
 
-Use `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_SKIP_WEB_SERVER=1 npm run qa:responsive` when a server is already running.
+The synthetic runner builds and starts only an external temporary copy with
+fabricated data and loopback-only networking. It never reads `.env*`, installs
+packages, or targets a deployed/public URL.
 
 ## Device Matrix
+
+The current reusable source contains exactly 21 entries. Synthetic responsive
+QA covers all six authorized routes across all 21 entries.
 
 ### Desktop
 
@@ -65,7 +69,9 @@ Use `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_SKIP_WEB_SERVER=1 npm 
 
 ## Modal Checks
 
-Cover Tool Details Modal, Search Results Modal, Submit Tool Modal, and Admin Modals when the changed area affects them.
+Cover Tool Details Modal and Search Results Modal on the bounded representative
+desktop, tablet, mobile, and foldable subset. Accessibility QA separately
+covers the Submit Tool Modal and nested popup.
 
 - Open
 - Close
@@ -113,3 +119,6 @@ Every future UI CCR should include:
 - Accessibility Result
 - Animation Result
 - Responsive Issues Found
+
+Synthetic responsive success does not establish production-runtime or public
+launch readiness.

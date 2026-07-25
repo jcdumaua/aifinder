@@ -6,33 +6,29 @@ It complements `docs/responsive-qa-framework.md` and uses Playwright plus Axe.
 ## Commands
 
 ```bash
-npm run build
-npm run qa:accessibility
+npm run test:accessibility-responsive-static
+npm run qa:synthetic-browser:accessibility
 ```
 
-Use this form when a built server is already running:
+The synthetic command owns its isolated temporary build and app process. It
+must not run in a static-only phase or against an already running, deployed,
+or public server.
 
-```bash
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_SKIP_WEB_SERVER=1 npm run qa:accessibility
-```
-
-The accessibility config is `playwright.accessibility.config.ts`. It runs
-against a focused matrix:
-
-- Desktop: 1440x900
-- iPad portrait: 768x1024
-- iPad landscape: 1024x768
-- Mobile: iPhone 15, 393x852
+`playwright.synthetic.config.ts` accepts only a loopback base URL, retains no
+screenshot, trace, video, or raw console artifact, and runs with fabricated
+Supabase-compatible data under strict non-loopback network denial.
 
 ## Pages Covered
 
 - Homepage: `/`
 - Submit page: `/submit`
-- Admin login page: `/admin-login`
 - Compare page: `/compare`
+- Chatbots category: `/category/chatbots`
+- Fabricated tool detail: `/tool/synthetic-tool`
+- Not found: `/this-route-does-not-exist`
 - Search Results Modal
 - Tool Details Modal
-- Submit Tool Modal
+- Submit Tool Modal and nested status/error popup
 
 ## Checks
 
@@ -40,6 +36,10 @@ against a focused matrix:
 - Hydration warnings
 - Keyboard navigation smoke checks
 - Focus visibility smoke checks
+- Skip link as the first keyboard stop and focus transfer to the shared target
+- Initial focus, forward/reverse Tab containment, topmost Escape handling, and
+  connected-opener focus restoration
+- Nested search-to-tool-details ordering without closing both dialogs
 - Dialog accessible names
 - Button and link labels
 - Escape key behavior for dismissible modals
@@ -69,3 +69,7 @@ Every UI-facing accessibility CCR should include:
 - Mobile result
 - Accessibility QA result
 - Known accessibility gaps
+
+Synthetic success is recorded as
+`SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED` and remains
+launch-blocking.

@@ -35,9 +35,24 @@ static gate; its presence does not authorize a run or deployment.
 Useful static commands:
 
 ```bash
+npm run test:accessibility-responsive-static
 npm run test:static-readiness
 npm run check:static
 ```
+
+The Phase 30GD–30GP browser commands are intentionally separate:
+
+```bash
+npm run qa:synthetic-browser:accessibility
+npm run qa:synthetic-browser:responsive
+npm run qa:synthetic-browser
+```
+
+They may run only under explicit browser-runtime authority. The runner creates
+an external temporary copy, excludes every `.env*` path, uses fabricated data
+and loopback-only services, denies non-loopback traffic, and removes the copy
+afterward. Synthetic success remains launch-blocking and is not production,
+deployed-runtime, Supabase, SQL, database, or public-HTTP evidence.
 
 ## Exact-scope Git workflow
 

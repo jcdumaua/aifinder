@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { isToolCategory, TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 const PRICING_OPTIONS = ["Free + Paid", "Free", "Paid"];
 const SELECT_EMPTY_VALUE = "__empty";
@@ -42,15 +43,6 @@ const BLOCKED_FILE_EXTENSIONS = [
 
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled]):not([type='hidden'])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
-
 type PopupMessage = {
   type: "success" | "error";
   title: string;
@@ -312,76 +304,25 @@ export default function SubmitToolPage() {
     window.setTimeout(navigateAway, 240);
   }, [router, shouldReduceMotion]);
 
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (popup) {
-      popupOkButtonRef.current?.focus();
-    }
-  }, [popup]);
-
-  useEffect(() => {
-    function getFocusableElements(container: HTMLElement) {
-      return Array.from(
-        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      ).filter(
-        (element) =>
-          !element.hasAttribute("disabled") &&
-          element.getAttribute("aria-hidden") !== "true" &&
-          element.offsetParent !== null
-      );
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (isClosing) return;
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeSubmitPage();
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-
-      const trapContainer = popupRef.current || dialogRef.current;
-      if (!trapContainer) return;
-
-      const focusableElements = getFocusableElements(trapContainer);
-      const firstFocusable = focusableElements[0];
-      const lastFocusable = focusableElements[focusableElements.length - 1];
-
-      if (!firstFocusable || !lastFocusable) {
-        event.preventDefault();
-        trapContainer.focus();
-        return;
-      }
-
-      const activeElement = document.activeElement;
-
-      if (!trapContainer.contains(activeElement)) {
-        event.preventDefault();
-        firstFocusable.focus();
-        return;
-      }
-
-      if (event.shiftKey && activeElement === firstFocusable) {
-        event.preventDefault();
-        lastFocusable.focus();
-        return;
-      }
-
-      if (!event.shiftKey && activeElement === lastFocusable) {
-        event.preventDefault();
-        firstFocusable.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
+  const closePopup = useCallback(() => setPopup(null), []);
+  const closeSubmitWithFocusGuard = useCallback(() => {
+    if (!isClosing) closeSubmitPage();
   }, [closeSubmitPage, isClosing]);
+
+  useDialogFocus({
+    isOpen: true,
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    onEscape: closeSubmitWithFocusGuard,
+    restoreFocus: false,
+  });
+  useDialogFocus({
+    isOpen: Boolean(popup),
+    containerRef: popupRef,
+    initialFocusRef: popupOkButtonRef,
+    onEscape: closePopup,
+    restoreFocus: true,
+  });
 
   const isSuccessPopup = popup?.type === "success";
   const inputClass =

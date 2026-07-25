@@ -1,4 +1,37 @@
 @import "tailwindcss";
+
+.aifinder-skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 2147483647;
+  transform: translateY(calc(-100% - 1.5rem));
+  border: 2px solid rgb(34 211 238);
+  border-radius: 0.75rem;
+  background: rgb(15 23 42);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-weight: 800;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.35);
+  transition: transform 120ms ease-out;
+}
+
+.aifinder-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 3px solid rgb(255 255 255);
+  outline-offset: 3px;
+}
+
+.theme-light .aifinder-skip-link {
+  border-color: rgb(8 145 178);
+  background: white;
+  color: rgb(15 23 42);
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.2);
+}
+
+.theme-light .aifinder-skip-link:focus-visible {
+  outline-color: rgb(15 23 42);
+}
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

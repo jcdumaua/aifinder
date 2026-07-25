@@ -3,6 +3,7 @@ import { CompareProvider } from "./compare-provider";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 import { GlobalToaster } from "@/components/ui/global-toaster";
+import { SkipLink } from "@/components/public/skip-link";
 
 const siteUrl = "https://aifinder.to";
 
@@ -104,6 +105,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="font-sans">
       <body className="bg-slate-50 text-slate-950 antialiased">
+        <SkipLink />
         <ThemeProvider>
           <CompareProvider>
             <script
@@ -112,8 +114,9 @@ export default function RootLayout({
                 __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
               }}
             />
-
-            {children}
+            <div id="aifinder-main-content" tabIndex={-1}>
+              {children}
+            </div>
           </CompareProvider>
           <GlobalToaster />
         </ThemeProvider>

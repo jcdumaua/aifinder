@@ -8,10 +8,11 @@ import {
 } from "framer-motion";
 import { ExternalLink, GitCompare, Star, X } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useEffect, useId, useState } from "react";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "@/app/theme-provider";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 export type ToolDetailsModalData = {
   name: string;
@@ -55,6 +56,8 @@ export function ToolDetailsModal({
     null,
   );
   const [visualViewportHeight, setVisualViewportHeight] = useState<number>(0);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
 
@@ -115,22 +118,13 @@ export function ToolDetailsModal({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
-    };
-  }, [isOpen, onClose]);
+  useDialogFocus({
+    isOpen,
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    onEscape: onClose,
+    restoreFocus: true,
+  });
 
   const platforms = tool?.platforms?.filter(Boolean) ?? [];
   const useCases = tool?.useCases?.filter(Boolean) ?? [];
@@ -166,10 +160,12 @@ export function ToolDetailsModal({
           <div className="tool-details-modal-backdrop-layer pointer-events-none fixed inset-x-0 -inset-y-[100lvh] w-screen" />
 
           <motion.section
+            ref={dialogRef}
             aria-modal="true"
             role="dialog"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
+            tabIndex={-1}
             className="aifinder-responsive-modal-panel tool-details-modal-panel ai-corner-safe-panel relative isolate flex flex-col overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-slate-950 text-white outline-none [.theme-light_&]:border-cyan-900/10 [.theme-light_&]:bg-white [.theme-light_&]:text-slate-950 sm:rounded-3xl md:max-w-[min(48rem,calc(100vw-2rem))] xl:max-w-[min(56rem,calc(100vw-2rem))]"
             initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -193,6 +189,7 @@ export function ToolDetailsModal({
 
               <div className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4">
                 <button
+                  ref={closeButtonRef}
                   type="button"
                   aria-label={`Close ${tool.name} details`}
                   onClick={onClose}

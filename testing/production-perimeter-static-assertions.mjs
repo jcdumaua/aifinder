@@ -33,6 +33,10 @@ const AUDIT_LEDGER_SHA256 =
 const PROXY_SHA256 =
   "d032aaff869000464d7b320191e1ed9f5c9d7c519e8a058c4673750a6a8117bb";
 const PHASE29_SUCCESSOR_MUTABLE_IDENTITIES = {
+  "app/layout.tsx": {
+    sha256: "0e41d168fb89e774a7f79d295e47679ce148dfa12c74c20d24e3490c06145ead",
+    bytes: 3181,
+  },
   "app/sitemap.ts": {
     sha256: "02034aa50cbcd46f07faca5c9b83bd67ed312c9fa31f4453f9e3116ca59d0202",
     bytes: 2192,
@@ -382,6 +386,7 @@ const layout = text(paths.layout);
 const robots = text(paths.robots);
 const sitemap = text(paths.sitemap);
 const manifestSource = text(paths.manifest);
+const INSTALLABILITY_PUBLIC_PERIMETER_ASSERTIONS = true;
 const config = text(paths.config);
 const architecture = text(paths.architecture);
 let activation;
@@ -468,6 +473,55 @@ check("MANIFEST.EXACT_ICON_OBJECTS", () => {
     { src: "/icon-maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   ];
   equal(JSON.stringify(actual), JSON.stringify(expected), "manifest icon objects");
+});
+
+function manifestInstallabilityPaths() {
+  const icons = manifestProperties.get("icons");
+  if (!ts.isArrayLiteralExpression(icons)) {
+    throw new Error("manifest icons is not an array literal");
+  }
+
+  return [
+    literalString(manifestProperties.get("id"), "manifest id"),
+    literalString(manifestProperties.get("start_url"), "manifest start_url"),
+    literalString(manifestProperties.get("scope"), "manifest scope"),
+    ...icons.elements.map((icon, index) =>
+      literalString(
+        objectPropertyMap(icon, `manifest icon ${index}`).get("src"),
+        `manifest icon ${index} src`,
+      ),
+    ),
+  ];
+}
+
+check("MANIFEST.PUBLIC_PATHS_ONLY", () => {
+  for (const publicPath of manifestInstallabilityPaths()) {
+    if (!/^\/(?:[A-Za-z0-9._~-]+\/?)*$/.test(publicPath)) {
+      throw new Error("manifest path is not a bounded root-relative public path");
+    }
+  }
+});
+
+check("MANIFEST.NO_EXTERNAL_OR_PRIVATE_PATHS", () => {
+  for (const publicPath of manifestInstallabilityPaths()) {
+    if (
+      publicPath.startsWith("//") ||
+      publicPath.includes("..") ||
+      publicPath.includes("?") ||
+      publicPath.includes("#") ||
+      /^\/(?:api|admin)(?:\/|$)/.test(publicPath)
+    ) {
+      throw new Error("manifest path crosses the public installability perimeter");
+    }
+  }
+});
+
+check("MANIFEST.SAME_ORIGIN_INSTALLABILITY", () => {
+  equal(INSTALLABILITY_PUBLIC_PERIMETER_ASSERTIONS, true, "installability assertion binding");
+  for (const publicPath of manifestInstallabilityPaths()) {
+    const resolved = new URL(publicPath, CANONICAL_ORIGIN);
+    equal(resolved.origin, CANONICAL_ORIGIN, "manifest same-origin path");
+  }
 });
 
 for (const [label, path, dimension, expectedSha256, expectedBytes] of [
@@ -926,6 +980,9 @@ check("HARNESS.PHASE29AU_ASSERTION_INVENTORY_PRESERVED", () => {
     "MANIFEST.DISPLAY",
     "MANIFEST.EXACT_ICON_OBJECTS",
     "MANIFEST.ID",
+    "MANIFEST.NO_EXTERNAL_OR_PRIVATE_PATHS",
+    "MANIFEST.PUBLIC_PATHS_ONLY",
+    "MANIFEST.SAME_ORIGIN_INSTALLABILITY",
     "MANIFEST.SCOPE",
     "MANIFEST.START_URL",
     "MANIFEST.THEME_COLOR",

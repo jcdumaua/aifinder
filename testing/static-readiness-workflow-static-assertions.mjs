@@ -24,6 +24,8 @@ const EXPECTED_SCRIPTS = {
     "node testing/readiness-coverage-matrix.test.mjs",
   "test:static-readiness-workflow":
     "node testing/static-readiness-workflow-static-assertions.mjs",
+  "test:accessibility-responsive-static":
+    "node testing/accessibility-responsive-static-assertions.mjs",
   "test:static-readiness-core": "node testing/run-static-readiness.mjs",
 };
 const INSTALL = "npm ci --ignore-scripts --no-audit --no-fund";
@@ -33,6 +35,7 @@ const EXPECTED_RUNS = {
     "npm run test:static-safety-manifest",
     "npm run test:readiness-coverage",
     "npm run test:static-readiness-workflow",
+    "npm run test:accessibility-responsive-static",
   ],
   lint: [INSTALL, "npm run lint -- --quiet"],
   typecheck: [INSTALL, "npm run typecheck"],

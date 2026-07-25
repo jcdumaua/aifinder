@@ -1,7 +1,7 @@
 {
   "matrix_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "route_inventory_digest": "e824bbed2bda0f4c6f3ecd0d47ac04177a817d3509f30b23bacd9a431720afa2",
+  "route_inventory_digest": "bd46fa1a5c4c3dcd0535e693bf46a09f1c1e98390fd95895ef6286fc6ca3de96",
   "entries": [
     {
       "path": "app/admin-login/layout.tsx",
@@ -669,6 +669,7 @@
       "url_pattern_or_special_role": "/category/[slug]",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
@@ -678,7 +679,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/compare/error.tsx",
@@ -704,6 +705,7 @@
       "url_pattern_or_special_role": "/compare",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
@@ -713,7 +715,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/error.tsx",
@@ -756,6 +758,7 @@
       "url_pattern_or_special_role": "/",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs"
       ],
       "future_evidence_paths": [
@@ -764,7 +767,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/loading.tsx",
@@ -804,6 +807,7 @@
       "url_pattern_or_special_role": "SPECIAL_NOT_FOUND",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
@@ -812,7 +816,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/opengraph-image.tsx",
@@ -833,6 +837,7 @@
       "url_pattern_or_special_role": "/",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
@@ -841,7 +846,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/robots.ts",
@@ -910,14 +915,16 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "/submit",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/tool/[slug]/error.tsx",
@@ -943,6 +950,7 @@
       "url_pattern_or_special_role": "/tool/[slug]",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
@@ -952,7 +960,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
     },
     {
       "path": "app/twitter-image.tsx",

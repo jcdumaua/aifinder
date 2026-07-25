@@ -25,3 +25,9 @@ hashes output, and compares the complete repository state before and after
 each child. Its preload denies global and module network access, child
 processes, and filesystem mutation. The sandbox is defense in depth; a denied
 test does not become safe merely because it would be blocked at runtime.
+
+The Phase 30GD–30GP static accessibility/responsive assertion is policy-only.
+Its browser fixtures are support-denied, its fabricated stub is
+live-server-support-denied, and its isolated orchestrator is
+live-route-executable-denied. Direct browser execution requires a separate
+runtime authorization and cannot enter `RUN_CORE`.

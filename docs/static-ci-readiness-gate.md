@@ -7,7 +7,8 @@ cancellation.
 
 It contains exactly four jobs:
 
-1. `policy` validates the safety manifest, coverage matrix, and workflow.
+1. `policy` validates the safety manifest, coverage matrix, workflow, and
+   accessibility/responsive static contract.
 2. `lint` depends on `policy`.
 3. `typecheck` depends on `policy`.
 4. `static-readiness` depends on `policy` and executes only the manifest-bound
@@ -22,3 +23,7 @@ The workflow contains no build, browser, route, database, Supabase, secret,
 service, cache, artifact, deployment, or write step. Static creation and local
 validation do not dispatch it. A later commit or workflow run needs its own
 authorization and must revalidate the pinned actions and repository baseline.
+
+The policy step is exactly
+`npm run test:accessibility-responsive-static`; no synthetic browser command is
+present in any of the four jobs.

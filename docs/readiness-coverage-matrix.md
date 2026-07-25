@@ -22,3 +22,9 @@ Every incomplete entry is launch-blocking and carries an explicit gap code.
 The matrix therefore exposes work that still needs browser, live-route,
 authentication, database, or operational evidence rather than converting
 absence of evidence into readiness.
+
+Phase 30GD–30GP adds bounded static evidence and non-static browser evidence
+for the shared layout and the six fabricated public routes. Those entries use
+`SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED`, remain
+`launch_blocking=true`, and do not represent deployed/public runtime,
+authentication, Supabase, SQL, database, or operational proof.

@@ -21,3 +21,9 @@ entries are never invoked directly. Any uncertainty is classified
 
 `npm run check` remains unchanged and includes a production build. It is not a
 substitute for `npm run check:static` and is outside static-only authority.
+
+`testing/accessibility-responsive-static-assertions.mjs` is a
+`SAFE_STATIC_POLICY / RUN_POLICY` executable. The fabricated browser fixtures
+and specs remain `BROWSER_OR_PLAYWRIGHT / DENY`; the synthetic stub and runner
+remain `LIVE_ROUTE_OR_SERVER / DENY`. The static core runner must never invoke
+the browser runner.

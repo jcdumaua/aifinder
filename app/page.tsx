@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AIGuidedSuggestions } from "../components/home/AIGuidedSuggestions";
 import { AIOnboardingSteps } from "../components/home/AIOnboardingSteps";
 import { CompareAssistant } from "../components/home/CompareAssistant";
@@ -31,6 +31,7 @@ import { readPersistedStringArray } from "@/lib/public-persistence";
 import type { PublicHomepageControlConfig } from "@/lib/homepage-control-public";
 import { TOOL_CATEGORIES } from "@/lib/tool-categories";
 import { useOverlayScrollLock } from "@/lib/use-overlay-scroll-lock";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import {
   categories,
   getIcon,
@@ -277,7 +278,9 @@ export default function Home() {
       }
 
       const formattedTools: Tool[] =
-        data?.map((tool) => normalizePublicToolRow(tool)) || [];
+        data?.map((tool) =>
+          normalizePublicToolRow(tool, { logoFallback: getLogoUrl }),
+        ) || [];
 
       setDatabaseTools(formattedTools);
       setIsLoadingTools(false);
@@ -1131,26 +1134,25 @@ function SearchResultsModal({
   mutedText: string;
 }) {
   const aiSearchResponse = getConversationalSearchResponse(search, filteredTools.length);
+  const searchDialogRef = useRef<HTMLElement | null>(null);
+  const searchCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   useOverlayScrollLock(true);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useDialogFocus({
+    isOpen: true,
+    containerRef: searchDialogRef,
+    initialFocusRef: searchCloseButtonRef,
+    onEscape: onClose,
+    restoreFocus: true,
+  });
 
   return (
     <div suppressHydrationWarning={true} className="aifinder-responsive-modal-backdrop ai-modal-backdrop fixed inset-0 z-[80] flex w-screen items-center justify-center">
       <motion.section
+        ref={searchDialogRef}
         aria-label="AI search results"
         aria-modal="true"
         role="dialog"
+        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
@@ -1160,6 +1162,7 @@ function SearchResultsModal({
         <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-[radial-gradient(circle_at_18%_0%,rgba(14,116,144,0.10),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.72),rgba(255,255,255,0.20),rgba(248,250,252,0))] [.theme-dark_&]:bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.14),transparent_34%),linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.04),rgba(15,23,42,0))]" />
 
         <button
+          ref={searchCloseButtonRef}
           type="button"
           aria-label="Close search results"
           onClick={onClose}
