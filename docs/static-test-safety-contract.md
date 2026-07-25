@@ -38,6 +38,13 @@ The public-launch blocker registry is a `STATIC_FIXTURE` with
 rejects source drift, partition drift, authority promotion, execution
 authority, and no-go decision changes.
 
-The complete manifest contains 95 entries: 3 `RUN_CORE`, 5 `RUN_POLICY`, 9
-`VALIDATE_ONLY`, and 78 `DENY`. These classifications do not authorize any
-blocked runtime or operational capability.
+The public-production-runtime plan is a `STATIC_FIXTURE` with `VALIDATE_ONLY`;
+its validator is a required `SAFE_STATIC_POLICY` with `RUN_POLICY`. The
+validator performs source-only AST/import analysis and rejects source,
+dependency-graph, capability, target-strategy, authority, live-evidence,
+origin, and no-go boundary drift. It never imports application modules.
+
+The complete manifest contains 97 entries: 3 `RUN_CORE`, 6 `RUN_POLICY`, 10
+`VALIDATE_ONLY`, and 78 `DENY`. These classifications do not authorize target
+resolution, HTTP, browser, production-data, form-submission, mutation, or any
+other blocked runtime or operational capability.

@@ -24,6 +24,8 @@ const EXPECTED_SCRIPTS = {
     "node testing/readiness-coverage-matrix.test.mjs",
   "test:public-launch-blockers":
     "node testing/public-launch-blocker-registry.test.mjs",
+  "test:public-production-runtime-planning":
+    "node testing/public-production-runtime-planning-manifest.test.mjs",
   "test:static-readiness-workflow":
     "node testing/static-readiness-workflow-static-assertions.mjs",
   "test:accessibility-responsive-static":
@@ -37,6 +39,7 @@ const EXPECTED_RUNS = {
     "npm run test:static-safety-manifest",
     "npm run test:readiness-coverage",
     "npm run test:public-launch-blockers",
+    "npm run test:public-production-runtime-planning",
     "npm run test:static-readiness-workflow",
     "npm run test:accessibility-responsive-static",
   ],
@@ -328,6 +331,7 @@ function validateWorkflow() {
       "npm run test:static-safety-manifest",
       "npm run test:readiness-coverage",
       "npm run test:public-launch-blockers",
+      "npm run test:public-production-runtime-planning",
       "npm run test:static-readiness-workflow",
     ].every((command) => policyRuns.includes(command)),
     "WORKFLOW_POLICY_COMMANDS",

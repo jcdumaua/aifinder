@@ -40,3 +40,18 @@ the overall decision remains `NO_GO_PENDING_SEPARATE_AUTHORITIES`.
 The seven synthetic-evidence surfaces are only the first planning candidate.
 They are not production-runtime proof. Static policy, synthetic evidence, or a
 Vercel `READY` deployment cannot promote an entry to launch readiness.
+
+## Public production runtime planning
+
+The strict planning manifest covers exactly seven source-bound surfaces and
+derives their local import closures and categorical capability signals without
+importing or executing application modules. Planning is complete; live
+evidence remains `NOT_EXECUTED`, no public/deployed target was contacted, no
+target origin was resolved, no application or browser runtime occurred, and
+indirect production data access was not exercised.
+
+All 69 matrix entries remain launch-blocking. Actual HTTP, browser,
+dynamic-target, and indirect production-data-read evidence require a separate
+exact Gemini authority. Form submission and mutation remain prohibited, as do
+authenticated runtime, Supabase, SQL, database access, migrations, deployment
+control, reactivation, publishing, and public launch.

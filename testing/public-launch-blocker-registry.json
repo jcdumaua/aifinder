@@ -30,6 +30,14 @@
     "SUPABASE"
   ],
   "planning_sequence_semantics": "PLANNING_PRIORITY_ONLY_NOT_EXECUTION_AUTHORITY",
+  "planning_artifacts": [
+    {
+      "workstream_id": "PUBLIC_PRODUCTION_RUNTIME",
+      "path": "testing/public-production-runtime-planning-manifest.json",
+      "state": "STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED",
+      "execution_authorized": false
+    }
+  ],
   "workstreams": [
     {
       "id": "PUBLIC_PRODUCTION_RUNTIME",
@@ -68,7 +76,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_PRODUCTION_RUNTIME"
+      "next_gate": "SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME"
     },
     {
       "id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",

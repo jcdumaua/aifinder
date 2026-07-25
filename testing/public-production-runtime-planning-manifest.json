@@ -1,0 +1,493 @@
+{
+  "planning_version": 1,
+  "source_commit": "05bcc50605809c6fb934d0bea914bf417758a457",
+  "source_registry": {
+    "path": "testing/public-launch-blocker-registry.json",
+    "sha256": "6808627391c8383924d72d2931cf36937b894edaab6da83d1bd04d481f612475",
+    "git_blob": "426cb7c8d51711474af99e0473dcf92bcc0cebef",
+    "bytes": 9489,
+    "lines": 264,
+    "mode": "0644"
+  },
+  "source_matrix": {
+    "path": "testing/readiness-coverage-matrix.json",
+    "sha256": "4a770a73b9b10bbcd8f4bd7931e1ca8b05f41e46395a23e92e1d82ad45b734fb",
+    "git_blob": "fcd1277d33aa1eb366c332fd14b396234550ac1a",
+    "bytes": 37588,
+    "lines": 978,
+    "mode": "0644",
+    "route_inventory_digest": "9409898f384e89f3a1cc99a87a154a3764d17edc450263b8e577d5533ecd6350",
+    "entry_count": 69,
+    "launch_blocking_count": 69
+  },
+  "workstream": {
+    "id": "PUBLIC_PRODUCTION_RUNTIME",
+    "gap_code": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED",
+    "entry_count": 7
+  },
+  "decision": "STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED",
+  "current_authority": "STATIC_ONLY",
+  "execution_authorized": false,
+  "live_evidence_status": "NOT_EXECUTED",
+  "target_origin": null,
+  "target_origin_resolution": "NOT_PERFORMED",
+  "blocked_capabilities": [
+    "AUTHENTICATED_RUNTIME",
+    "DATABASE",
+    "DEPLOYMENT_CONTROL",
+    "DIRECT_OR_INDIRECT_PRODUCTION_DATA_RETRIEVAL",
+    "DIRECT_VERCEL_WRITE",
+    "MIGRATIONS_OR_GENERATED_TYPES",
+    "OPERATIONAL_REACTIVATION",
+    "PUBLIC_LAUNCH",
+    "PUBLIC_OR_DEPLOYED_BROWSER",
+    "PUBLIC_OR_DEPLOYED_HTTP",
+    "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+    "RUNTIME_TARGET_RESOLUTION",
+    "SQL",
+    "SUPABASE",
+    "USER_VISIBLE_MUTATION"
+  ],
+  "future_authority_classes": [
+    "INDIRECT_PRODUCTION_DATA_READ",
+    "PUBLIC_DYNAMIC_TARGET_RESOLUTION",
+    "PUBLIC_FORM_NON_MUTATING_EVIDENCE",
+    "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+    "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+  ],
+  "surfaces": [
+    {
+      "source_path": "app/category/[slug]/page.tsx",
+      "surface_kind": "DYNAMIC_CATEGORY_PAGE",
+      "url_pattern_or_special_role": "/category/[slug]",
+      "source_identity": {
+        "path": "app/category/[slug]/page.tsx",
+        "sha256": "1eb41ff12e344844adce52132054bcd52e1ce25b1fd4a0e9f4d283bb0053a156",
+        "git_blob": "d5bc48d2d28704f722b874ee1a056927f667c691",
+        "bytes": 9095,
+        "lines": 329,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/category/[slug]/category-detail-client.tsx",
+        "app/category/[slug]/page.tsx",
+        "app/compare-provider.tsx",
+        "app/data/tools.ts",
+        "app/theme-provider.tsx",
+        "components/public/tool-card.tsx",
+        "components/tool-details-modal.tsx",
+        "components/ui/badge.tsx",
+        "components/ui/button.tsx",
+        "components/ui/card.tsx",
+        "components/ui/input.tsx",
+        "components/ui/label.tsx",
+        "components/ui/select.tsx",
+        "lib/public-diagnostics.ts",
+        "lib/public-persistence.ts",
+        "lib/public-tool-adapter.ts",
+        "lib/search-relevance.ts",
+        "lib/supabase-admin.ts",
+        "lib/tool-categories.ts",
+        "lib/use-dialog-focus.ts",
+        "lib/use-overlay-scroll-lock.ts",
+        "lib/utils.ts"
+      ],
+      "direct_capability_signals": [
+        "DYNAMIC_ROUTE_PARAMETER",
+        "METADATA_GENERATION",
+        "NEXT_NAVIGATION",
+        "PUBLIC_DIAGNOSTICS",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "CLIENT_STORAGE_DEPENDENCY",
+        "PUBLIC_DATA_ADAPTER_DEPENDENCY",
+        "PUBLIC_DIAGNOSTICS_DEPENDENCY",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "runtime_target_strategy": "DYNAMIC_CATEGORY_TARGET_REQUIRES_SEPARATE_RESOLUTION",
+      "future_authority_classes": [
+        "INDIRECT_PRODUCTION_DATA_READ",
+        "PUBLIC_DYNAMIC_TARGET_RESOLUTION",
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "DYNAMIC_TARGET_RESOLUTION_RECEIPT",
+        "HTTP_RESPONSE_STATUS",
+        "INDIRECT_PRODUCTION_DATA_READ_RECEIPT",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "RENDERED_PUBLIC_CONTENT"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "INDIRECT_DATA_READ_FAILED",
+        "TARGET_RESOLUTION_FAILED",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/compare/page.tsx",
+      "surface_kind": "FIXED_PUBLIC_PAGE",
+      "url_pattern_or_special_role": "/compare",
+      "source_identity": {
+        "path": "app/compare/page.tsx",
+        "sha256": "2c4aaa4b8037bd8f677649564df3b74ddace7bf5e5d00ff679dd1bd7264cf7ad",
+        "git_blob": "bf0a18d6123a4f70e22c4d81e9ae19ee932aea9c",
+        "bytes": 3860,
+        "lines": 154,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/compare-provider.tsx",
+        "app/compare/compare-client.tsx",
+        "app/compare/page.tsx",
+        "app/data/tools.ts",
+        "components/public/tool-card.tsx",
+        "components/ui/badge.tsx",
+        "components/ui/button.tsx",
+        "components/ui/card.tsx",
+        "lib/public-diagnostics.ts",
+        "lib/public-persistence.ts",
+        "lib/public-tool-adapter.ts",
+        "lib/search-relevance.ts",
+        "lib/supabase-admin.ts",
+        "lib/tool-categories.ts",
+        "lib/utils.ts"
+      ],
+      "direct_capability_signals": [
+        "METADATA_GENERATION",
+        "PUBLIC_DIAGNOSTICS",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "CLIENT_STORAGE_DEPENDENCY",
+        "PUBLIC_DATA_ADAPTER_DEPENDENCY",
+        "PUBLIC_DIAGNOSTICS_DEPENDENCY",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "runtime_target_strategy": "FIXED_PUBLIC_PATH",
+      "future_authority_classes": [
+        "INDIRECT_PRODUCTION_DATA_READ",
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "HTTP_RESPONSE_STATUS",
+        "INDIRECT_PRODUCTION_DATA_READ_RECEIPT",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "RENDERED_PUBLIC_CONTENT"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "INDIRECT_DATA_READ_FAILED",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/layout.tsx",
+      "surface_kind": "ROOT_LAYOUT",
+      "url_pattern_or_special_role": "SHARED_ROOT_LAYOUT",
+      "source_identity": {
+        "path": "app/layout.tsx",
+        "sha256": "b2a095d48d705cb95a364da0f73711bf6a1b199d37476af7656093d65a12469d",
+        "git_blob": "400c6c189c4a21c66a1905ff98f02664b297b103",
+        "bytes": 3339,
+        "lines": 126,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/compare-provider.tsx",
+        "app/globals.css",
+        "app/layout.tsx",
+        "app/theme-provider.tsx",
+        "components/public/skip-link.tsx",
+        "components/ui/global-toaster.tsx",
+        "lib/public-persistence.ts"
+      ],
+      "direct_capability_signals": [
+        "METADATA_GENERATION",
+        "ROOT_LAYOUT_BOUNDARY"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "CLIENT_STORAGE_DEPENDENCY"
+      ],
+      "runtime_target_strategy": "SHARED_LAYOUT_OBSERVED_THROUGH_PUBLIC_SURFACES",
+      "future_authority_classes": [
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "CANONICAL_METADATA",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "SHARED_LAYOUT_RENDERED"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "CANONICAL_METADATA_MISMATCH",
+        "SHARED_LAYOUT_FAILURE",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/not-found.tsx",
+      "surface_kind": "NOT_FOUND_PAGE",
+      "url_pattern_or_special_role": "UNRESOLVED_NOT_FOUND_PATH",
+      "source_identity": {
+        "path": "app/not-found.tsx",
+        "sha256": "9847eb8ec32284f3d86980db33e656716aa0a695ccd3e2c10b65f717c67c7beb",
+        "git_blob": "c1c349187a8d4e00867e3f305fdee4380f8d4cf2",
+        "bytes": 165,
+        "lines": 5,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/not-found.tsx",
+        "components/public/public-route-error.tsx"
+      ],
+      "direct_capability_signals": [
+        "NOT_FOUND_BOUNDARY"
+      ],
+      "transitive_capability_signals": [],
+      "runtime_target_strategy": "NOT_FOUND_RESPONSE_REQUIRES_SEPARATE_SYNTHETIC_PATH_AUTHORITY",
+      "future_authority_classes": [
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "HTTP_RESPONSE_STATUS",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "NOT_FOUND_RESPONSE_SEMANTICS"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "NOT_FOUND_SEMANTICS_MISMATCH",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/page.tsx",
+      "surface_kind": "HOMEPAGE",
+      "url_pattern_or_special_role": "/",
+      "source_identity": {
+        "path": "app/page.tsx",
+        "sha256": "09ba81c12053a2a129cb55ff08e889144c41412edb7e8cdce84d36973a7ac3cb",
+        "git_blob": "6dd64e9320c822ae53a9c51d5457490f2c608b20",
+        "bytes": 58406,
+        "lines": 1726,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/compare-provider.tsx",
+        "app/data/tools.ts",
+        "app/page.tsx",
+        "app/theme-provider.tsx",
+        "components/home/AIGuidedSuggestions.tsx",
+        "components/home/AIOnboardingSteps.tsx",
+        "components/home/CompareAssistant.tsx",
+        "components/home/SearchBar.tsx",
+        "components/public/tool-card.tsx",
+        "components/tool-details-modal.tsx",
+        "components/ui/badge.tsx",
+        "components/ui/button.tsx",
+        "components/ui/card.tsx",
+        "components/ui/input.tsx",
+        "components/ui/label.tsx",
+        "components/ui/select.tsx",
+        "lib/homepage-control-parser.ts",
+        "lib/homepage-control-public.ts",
+        "lib/homepage-control-schema.ts",
+        "lib/homepage-control-types.ts",
+        "lib/homepage-control-validation.ts",
+        "lib/public-diagnostics.ts",
+        "lib/public-persistence.ts",
+        "lib/public-tool-adapter.ts",
+        "lib/search-relevance.ts",
+        "lib/supabase-admin.ts",
+        "lib/supabase.ts",
+        "lib/tool-categories.ts",
+        "lib/use-dialog-focus.ts",
+        "lib/use-overlay-scroll-lock.ts",
+        "lib/utils.ts"
+      ],
+      "direct_capability_signals": [
+        "CLIENT_COMPONENT",
+        "FORM_SUBMISSION_SURFACE",
+        "PUBLIC_CLIENT_STORAGE",
+        "PUBLIC_DIAGNOSTICS",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "CLIENT_STORAGE_DEPENDENCY",
+        "PUBLIC_DATA_ADAPTER_DEPENDENCY",
+        "PUBLIC_DIAGNOSTICS_DEPENDENCY",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "runtime_target_strategy": "FIXED_PUBLIC_PATH",
+      "future_authority_classes": [
+        "INDIRECT_PRODUCTION_DATA_READ",
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "HTTP_RESPONSE_STATUS",
+        "INDIRECT_PRODUCTION_DATA_READ_RECEIPT",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "RENDERED_PUBLIC_CONTENT"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "INDIRECT_DATA_READ_FAILED",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/submit/page.tsx",
+      "surface_kind": "PUBLIC_FORM_PAGE",
+      "url_pattern_or_special_role": "/submit",
+      "source_identity": {
+        "path": "app/submit/page.tsx",
+        "sha256": "325073fd9aba0b9fd630a6f1604b0eff84ddd1033478fd244d8bce4884ae0519",
+        "git_blob": "025f7d8e4576b1a13117edf7d196a2b0abfdb50c",
+        "bytes": 32654,
+        "lines": 802,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/submit/page.tsx",
+        "components/ui/button.tsx",
+        "components/ui/input.tsx",
+        "components/ui/label.tsx",
+        "components/ui/select.tsx",
+        "components/ui/textarea.tsx",
+        "lib/tool-categories.ts",
+        "lib/use-dialog-focus.ts",
+        "lib/use-overlay-scroll-lock.ts",
+        "lib/utils.ts"
+      ],
+      "direct_capability_signals": [
+        "CLIENT_COMPONENT",
+        "FORM_SUBMISSION_SURFACE",
+        "NEXT_NAVIGATION"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "FORM_MUTATION_CODE_PRESENT"
+      ],
+      "runtime_target_strategy": "FIXED_PUBLIC_PATH_NON_MUTATING_ONLY",
+      "future_authority_classes": [
+        "PUBLIC_FORM_NON_MUTATING_EVIDENCE",
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "FORM_RENDERED_WITHOUT_SUBMISSION",
+        "HTTP_RESPONSE_STATUS",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "ZERO_MUTATION_ATTEMPTS"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "FORM_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "MUTATION_ATTEMPT_BLOCKED",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    },
+    {
+      "source_path": "app/tool/[slug]/page.tsx",
+      "surface_kind": "DYNAMIC_TOOL_PAGE",
+      "url_pattern_or_special_role": "/tool/[slug]",
+      "source_identity": {
+        "path": "app/tool/[slug]/page.tsx",
+        "sha256": "92f4fe978a2e043363c1363945da9da65ba0bdf9a9b303c403fbc42755a3f395",
+        "git_blob": "4f1bcb9ef3660182a3592f2439e12a51d07fe8c7",
+        "bytes": 7225,
+        "lines": 296,
+        "mode": "0644"
+      },
+      "local_import_closure": [
+        "app/compare-provider.tsx",
+        "app/data/tools.ts",
+        "app/tool/[slug]/page.tsx",
+        "app/tool/[slug]/tool-detail-client.tsx",
+        "lib/public-diagnostics.ts",
+        "lib/public-persistence.ts",
+        "lib/supabase-admin.ts",
+        "lib/tool-categories.ts"
+      ],
+      "direct_capability_signals": [
+        "DYNAMIC_ROUTE_PARAMETER",
+        "METADATA_GENERATION",
+        "NEXT_NAVIGATION",
+        "PUBLIC_DIAGNOSTICS",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "transitive_capability_signals": [
+        "CLIENT_RENDERING_DEPENDENCY",
+        "CLIENT_STORAGE_DEPENDENCY",
+        "PUBLIC_DATA_ADAPTER_DEPENDENCY",
+        "PUBLIC_DIAGNOSTICS_DEPENDENCY",
+        "SUPABASE_DATA_DEPENDENCY"
+      ],
+      "runtime_target_strategy": "DYNAMIC_TOOL_TARGET_REQUIRES_SEPARATE_RESOLUTION",
+      "future_authority_classes": [
+        "INDIRECT_PRODUCTION_DATA_READ",
+        "PUBLIC_DYNAMIC_TARGET_RESOLUTION",
+        "PUBLIC_PRODUCTION_RUNTIME_BROWSER",
+        "PUBLIC_PRODUCTION_RUNTIME_HTTP"
+      ],
+      "evidence_requirements": [
+        "BROWSER_RENDER_COMPLETION",
+        "DYNAMIC_TARGET_RESOLUTION_RECEIPT",
+        "HTTP_RESPONSE_STATUS",
+        "INDIRECT_PRODUCTION_DATA_READ_RECEIPT",
+        "NO_UNEXPECTED_RUNTIME_ERROR",
+        "RENDERED_PUBLIC_CONTENT"
+      ],
+      "failure_categories": [
+        "BROWSER_RENDER_FAILURE",
+        "HTTP_UNAVAILABLE",
+        "INDIRECT_DATA_READ_FAILED",
+        "TARGET_RESOLUTION_FAILED",
+        "UNEXPECTED_RUNTIME_ERROR"
+      ],
+      "mutation_prohibited": true,
+      "execution_authorized": false,
+      "live_evidence_status": "NOT_EXECUTED"
+    }
+  ],
+  "next_gate": "SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME"
+}

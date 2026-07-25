@@ -13,6 +13,8 @@ import {
 
 const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
+const RUNTIME_PLAN_PATH =
+  "testing/public-production-runtime-planning-manifest.json";
 const SOURCE_COMMIT = "9841a4ce19b12e9c55a24cdd02ca1292667949c9";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
@@ -35,7 +37,14 @@ const TOP_LEVEL_KEYS = [
   "execution_authorized",
   "blocked_capabilities",
   "planning_sequence_semantics",
+  "planning_artifacts",
   "workstreams",
+];
+const PLANNING_ARTIFACT_KEYS = [
+  "workstream_id",
+  "path",
+  "state",
+  "execution_authorized",
 ];
 const SOURCE_MATRIX_KEYS = [
   "path",
@@ -88,7 +97,7 @@ const WORKSTREAMS = [
     entry_count: 7,
     authority_class: "PUBLIC_PRODUCTION_RUNTIME",
     planning_priority: 1,
-    next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_PRODUCTION_RUNTIME",
+    next_gate: "SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME",
   },
   {
     id: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
@@ -305,6 +314,26 @@ function validateRegistry() {
     "BLOCKER_REGISTRY_SEQUENCE",
   );
   assert(
+    Array.isArray(registry.planning_artifacts) &&
+      registry.planning_artifacts.length === 1 &&
+      exactKeys(registry.planning_artifacts[0], PLANNING_ARTIFACT_KEYS),
+    "BLOCKER_REGISTRY_SEQUENCE",
+  );
+  const planningArtifact = registry.planning_artifacts[0];
+  const runtimePlan = readStrictJson(RUNTIME_PLAN_PATH);
+  assert(
+    planningArtifact.workstream_id === "PUBLIC_PRODUCTION_RUNTIME" &&
+      planningArtifact.path === RUNTIME_PLAN_PATH &&
+      planningArtifact.state ===
+        "STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED" &&
+      planningArtifact.execution_authorized === false &&
+      runtimePlan.workstream?.id === planningArtifact.workstream_id &&
+      runtimePlan.decision === planningArtifact.state &&
+      runtimePlan.execution_authorized === false &&
+      runtimePlan.live_evidence_status === "NOT_EXECUTED",
+    "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
+  );
+  assert(
     Array.isArray(registry.workstreams) &&
       registry.workstreams.length === WORKSTREAMS.length,
     "BLOCKER_REGISTRY_GAP_SET",
@@ -371,7 +400,9 @@ function validateRegistry() {
     );
     assert(
       actual.next_gate === expected.next_gate &&
-        actual.next_gate.startsWith("SEPARATE_PLANNING_REVIEW_") &&
+        /^SEPARATE_(?:PLANNING|RUNTIME_AUTHORITY)_REVIEW_/.test(
+          actual.next_gate,
+        ) &&
         !actual.next_gate
           .split("_")
           .some((part) =>

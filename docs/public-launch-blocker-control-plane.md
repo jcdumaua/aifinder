@@ -38,9 +38,17 @@ readiness.
 | 4 | `AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED` | 18 | `AUTHENTICATED_BROWSER_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
 | 5 | `AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED` | 28 | `AUTHENTICATED_LIVE_ROUTE_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
 
-`PUBLIC_PRODUCTION_RUNTIME` is the first planning candidate only because its
-seven surfaces have the strongest current synthetic evidence. That ordering
-does not authorize a production-runtime check or reduce any blocker.
+`PUBLIC_PRODUCTION_RUNTIME` is the first planning workstream because its seven
+surfaces have the strongest current synthetic evidence. Its strict static plan
+is now complete at
+`testing/public-production-runtime-planning-manifest.json`, and the registry
+binds that artifact with
+`STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED`. The first next gate is
+`SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME`.
+
+That planning completion does not authorize a production-runtime check,
+resolve or contact a target origin, promote live evidence, or reduce any of
+the 69 blockers.
 
 ## Persistent blocks
 
@@ -59,8 +67,10 @@ Each workstream requires a separately reviewed exact path scope, external
 review, rollback and stop boundaries, and separate human authority. The
 registry validator checks the immutable source identity, exact 69-path
 partition, five gap counts, workstream order and authority classes, blocked
-states, no-go decision, prohibited capabilities, and absence of execution
-authority.
+states, the runtime-plan binding, no-go decision, prohibited capabilities, and
+absence of execution authority. Actual HTTP, browser, dynamic-target, and
+indirect production-data-read evidence require a separate exact Gemini
+authority. Form submission and all mutation remain prohibited.
 
 ## Stable finalization binding
 

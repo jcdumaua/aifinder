@@ -42,10 +42,17 @@ Useful static commands:
 
 ```bash
 npm run test:public-launch-blockers
+npm run test:public-production-runtime-planning
 npm run test:accessibility-responsive-static
 npm run test:static-readiness
 npm run check:static
 ```
+
+The production-runtime planning command statically validates exactly seven
+public surfaces, their source identities, local import closures, capability
+signals, future evidence classes, and fail-closed authority boundaries. It
+does not resolve or contact a public/deployed origin, run the application or a
+browser, read production data, submit a form, or grant runtime authority.
 
 The Phase 30GD–30GP browser commands are intentionally separate:
 
@@ -84,3 +91,17 @@ Verify the staged path set and inspect the complete cached diff before
 committing. Commit, push, deployment, database access, Supabase actions,
 operational reactivation, and public launch each remain separate authorization
 boundaries.
+
+## Public production runtime evidence boundary
+
+`testing/public-production-runtime-planning-manifest.json` is the static,
+strict-JSON plan for the first seven launch-blocking public surfaces. Planning
+is complete, but all 69 matrix surfaces remain launch-blocking and live
+evidence remains `NOT_EXECUTED`. Actual HTTP, browser, dynamic-target, or
+indirect production-data-read evidence requires a separate exact Gemini
+authority.
+
+Form submission and every user-visible mutation remain prohibited.
+Authenticated runtime, Supabase, SQL, database access, migrations, deployment
+control, operational reactivation, publishing, and public launch remain
+blocked.
