@@ -36,6 +36,7 @@ const REQUIRED_CORE = new Set([
   "testing/production-perimeter-static-assertions.mjs",
 ]);
 const REQUIRED_POLICY = new Set([
+  "testing/public-launch-blocker-registry.test.mjs",
   "testing/static-test-safety-manifest.test.mjs",
   "testing/readiness-coverage-matrix.test.mjs",
   "testing/static-readiness-workflow-static-assertions.mjs",

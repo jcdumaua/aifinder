@@ -27,6 +27,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run test:static-safety-manifest
       - run: npm run test:readiness-coverage
+      - run: npm run test:public-launch-blockers
       - run: npm run test:static-readiness-workflow
       - run: npm run test:accessibility-responsive-static
 

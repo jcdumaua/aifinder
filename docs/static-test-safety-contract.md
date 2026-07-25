@@ -31,3 +31,13 @@ Its browser fixtures are support-denied, its fabricated stub is
 live-server-support-denied, and its isolated orchestrator is
 live-route-executable-denied. Direct browser execution requires a separate
 runtime authorization and cannot enter `RUN_CORE`.
+
+The public-launch blocker registry is a `STATIC_FIXTURE` with
+`VALIDATE_ONLY`; its validator is a required `SAFE_STATIC_POLICY` with
+`RUN_POLICY`. The validator reads only strict repository governance data and
+rejects source drift, partition drift, authority promotion, execution
+authority, and no-go decision changes.
+
+The complete manifest contains 95 entries: 3 `RUN_CORE`, 5 `RUN_POLICY`, 9
+`VALIDATE_ONLY`, and 78 `DENY`. These classifications do not authorize any
+blocked runtime or operational capability.

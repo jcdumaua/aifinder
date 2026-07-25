@@ -28,3 +28,15 @@ for the shared layout and the six fabricated public routes. Those entries use
 `SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED`, remain
 `launch_blocking=true`, and do not represent deployed/public runtime,
 authentication, Supabase, SQL, database, or operational proof.
+
+## Blocker control plane
+
+`testing/public-launch-blocker-registry.json` derives five exact planning
+workstreams from all 69 launch-blocking entries: `7/13/3/18/28` in planning
+priority order. The registry does not alter this matrix, its gap codes, or its
+route digest. Every workstream remains blocked behind separate authority, and
+the overall decision remains `NO_GO_PENDING_SEPARATE_AUTHORITIES`.
+
+The seven synthetic-evidence surfaces are only the first planning candidate.
+They are not production-runtime proof. Static policy, synthetic evidence, or a
+Vercel `READY` deployment cannot promote an entry to launch readiness.

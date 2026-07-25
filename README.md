@@ -32,9 +32,16 @@ database gaps. `.github/workflows/static-readiness.yml` applies the same
 read-only policy in four dependency-pinned CI jobs. The workflow is a proposed
 static gate; its presence does not authorize a run or deployment.
 
+`testing/public-launch-blocker-registry.json` partitions all 69 launch-blocking
+matrix entries into five separate-authority planning workstreams. Its validator
+preserves the `NO_GO_PENDING_SEPARATE_AUTHORITIES` decision and rejects any
+execution-authority or readiness promotion. Planning order is not execution
+authority, and no workstream is authorized by the registry.
+
 Useful static commands:
 
 ```bash
+npm run test:public-launch-blockers
 npm run test:accessibility-responsive-static
 npm run test:static-readiness
 npm run check:static

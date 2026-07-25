@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "ac31b58f41886b8cc61747ef2498fc4a0a16631e3fac08fe0085164f0f626ad9",
+  "testing_tree_digest": "0fc75ea6599b75f8d36a66ef685aa93a1acbb2dc241fa0bcf6d34bc20c89ab73",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -608,6 +608,25 @@
         "testing/production-perimeter-static-assertions.mjs"
       ],
       "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/public-launch-blocker-registry.json",
+      "role": "CONFIG",
+      "safety_class": "STATIC_FIXTURE",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PUBLIC_LAUNCH_BLOCKER_REGISTRY"
+    },
+    {
+      "path": "testing/public-launch-blocker-registry.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/public-launch-blocker-registry.test.mjs"
+      ],
+      "reason_code": "PUBLIC_LAUNCH_BLOCKER_POLICY"
     },
     {
       "path": "testing/public-launch-resilience-static-assertions.mjs",
