@@ -9,11 +9,11 @@ deployment, publishing, reactivation, or launch operation.
 
 - Matrix: `testing/readiness-coverage-matrix.json`
 - Matrix SHA-256:
-  `4a770a73b9b10bbcd8f4bd7931e1ca8b05f41e46395a23e92e1d82ad45b734fb`
-- Matrix Git blob: `fcd1277d33aa1eb366c332fd14b396234550ac1a`
-- Matrix bytes/lines/mode: `37588/978/0644`
+  `5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240`
+- Matrix Git blob: `2bc2d245ed2d01f496fc23f9b35a0ba844e400ec`
+- Matrix bytes/lines/mode: `37616/978/0644`
 - Route inventory digest:
-  `9409898f384e89f3a1cc99a87a154a3764d17edc450263b8e577d5533ecd6350`
+  `2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726`
 - Matrix entries/launch-blocking entries: `69/69`
 
 ## Decision and authority boundary
@@ -32,7 +32,7 @@ readiness.
 
 | Priority | Matrix gap | Entries | Authority class | State |
 | ---: | --- | ---: | --- | --- |
-| 1 | `SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED` | 7 | `PUBLIC_PRODUCTION_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
+| 1 | `CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED` | 7 | `PUBLIC_PRODUCTION_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
 | 2 | `BROWSER_OR_LIVE_EVIDENCE_REQUIRED` | 13 | `PUBLIC_BROWSER_OR_LIVE_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
 | 3 | `LIVE_ROUTE_EVIDENCE_REQUIRED` | 3 | `PUBLIC_LIVE_ROUTE_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
 | 4 | `AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED` | 18 | `AUTHENTICATED_BROWSER_RUNTIME` | `BLOCKED_SEPARATE_AUTHORITY_REQUIRED` |
@@ -43,12 +43,14 @@ surfaces have the strongest current synthetic evidence. Its strict static plan
 is now complete at
 `testing/public-production-runtime-planning-manifest.json`, and the registry
 binds that artifact with
-`STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED`. The first next gate is
-`SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME`.
+`CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED`. The first next
+gate is `SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW`.
 
-That planning completion does not authorize a production-runtime check,
-resolve or contact a target origin, promote live evidence, or reduce any of
-the 69 blockers.
+The spent Phase 30JC–30JO runtime attempt failed closed on canonical metadata.
+Phase 30JP–30KF subsequently confirmed the apex-to-`www` redirect direction
+with two bounded anonymous HEAD requests and centralized the repository source
+on `https://www.aifinder.to`. This does not authorize a full production-runtime
+retest, promote live evidence, or reduce any of the 69 blockers.
 
 ## Persistent blocks
 

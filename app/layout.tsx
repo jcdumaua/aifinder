@@ -4,26 +4,25 @@ import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 import { GlobalToaster } from "@/components/ui/global-toaster";
 import { SkipLink } from "@/components/public/skip-link";
-
-const siteUrl = "https://aifinder.to";
+import { PUBLIC_CANONICAL_ORIGIN } from "../lib/public-canonical-origin";
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "AiFinder",
   alternateName: "AI Finder",
-  url: siteUrl,
+  url: PUBLIC_CANONICAL_ORIGIN,
   description:
     "AiFinder helps you discover useful AI tools for chatbots, image AI, video AI, writing, coding, business, productivity, marketing, SEO, design, and AI agents.",
   publisher: {
     "@type": "Organization",
     name: "AiFinder",
-    url: siteUrl,
+    url: PUBLIC_CANONICAL_ORIGIN,
   },
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(PUBLIC_CANONICAL_ORIGIN),
   applicationName: "AiFinder",
   title: {
     default: "AiFinder — Discover the Best AI Tools",
@@ -57,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_CA",
-    url: siteUrl,
+    url: PUBLIC_CANONICAL_ORIGIN,
     siteName: "AiFinder",
     title: "AiFinder — Discover the Best AI Tools",
     description:

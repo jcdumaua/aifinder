@@ -2,15 +2,19 @@
 
 ## Decision
 
-The static planning decision is
-`STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED`. Exactly seven public
-surfaces are planned, while all 69 readiness-matrix surfaces remain
+The current decision is
+`CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED`. Exactly seven
+public surfaces are planned, while all 69 readiness-matrix surfaces remain
 launch-blocking. Current authority is `STATIC_ONLY`, execution is not
-authorized, and live evidence is `NOT_EXECUTED`.
+authorized, and live evidence is `FULL_RUNTIME_RETEST_REQUIRED`.
 
-No public or deployed target was contacted. No target origin was resolved. No
-application, route, HTTP, or browser runtime occurred. No indirect production
-data access was exercised.
+The spent Phase 30JC–30JO one-use runtime attempt failed closed with
+`RUNTIME_CANONICAL_METADATA_ORIGIN`; its immutable CCR SHA-256 is
+`804ecfa2d25216c1a9c589bfdff90c64822cd1b3859f4c1f9bcca1a0d829094d`.
+Phase 30JP–30KF used exactly two anonymous HEAD requests to confirm that the
+apex redirects one hop to `https://www.aifinder.to/` and that the `www` root
+responds without another redirect. No browser or full runtime retest occurred,
+and no indirect production data access was intentionally exercised.
 
 ## Exact planning surfaces
 
@@ -54,8 +58,9 @@ retrieval; Supabase; SQL; database access; migrations or generated types;
 deployment control; direct Vercel writes; operational reactivation;
 publishing; and public launch.
 
-The next gate is
-`SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME`.
+The canonical source is aligned to `https://www.aifinder.to`, but the failed
+runtime result is not promoted. The next gate is
+`SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW`.
 
 ## Stable finalization binding
 

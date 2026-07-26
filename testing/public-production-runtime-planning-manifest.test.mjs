@@ -21,21 +21,21 @@ const PLAN_PATH = "testing/public-production-runtime-planning-manifest.json";
 const SOURCE_COMMIT = "05bcc50605809c6fb934d0bea914bf417758a457";
 const SOURCE_REGISTRY = {
   path: "testing/public-launch-blocker-registry.json",
-  sha256: "6808627391c8383924d72d2931cf36937b894edaab6da83d1bd04d481f612475",
-  git_blob: "426cb7c8d51711474af99e0473dcf92bcc0cebef",
-  bytes: 9489,
-  lines: 264,
+  sha256: "6722c6605ff63076d0fddf39b1a46b3d5bc2845d841729be374039cdf2eb259a",
+  git_blob: "8c58a34e4697a2264b6142343605f95b63073b70",
+  bytes: 9780,
+  lines: 272,
   mode: "0644",
 };
 const SOURCE_MATRIX = {
   path: "testing/readiness-coverage-matrix.json",
-  sha256: "4a770a73b9b10bbcd8f4bd7931e1ca8b05f41e46395a23e92e1d82ad45b734fb",
-  git_blob: "fcd1277d33aa1eb366c332fd14b396234550ac1a",
-  bytes: 37588,
+  sha256: "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
+  git_blob: "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
+  bytes: 37616,
   lines: 978,
   mode: "0644",
   route_inventory_digest:
-    "9409898f384e89f3a1cc99a87a154a3764d17edc450263b8e577d5533ecd6350",
+    "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
   entry_count: 69,
   launch_blocking_count: 69,
 };
@@ -51,6 +51,11 @@ const TOP_LEVEL_KEYS = [
   "live_evidence_status",
   "target_origin",
   "target_origin_resolution",
+  "selected_canonical_origin",
+  "last_runtime_result",
+  "last_runtime_failure_code",
+  "last_runtime_failure_message_sha256",
+  "canonical_source_alignment",
   "blocked_capabilities",
   "future_authority_classes",
   "surfaces",
@@ -117,10 +122,10 @@ const SOURCE_IDENTITIES = new Map([
     {
       path: "app/category/[slug]/page.tsx",
       sha256:
-        "1eb41ff12e344844adce52132054bcd52e1ce25b1fd4a0e9f4d283bb0053a156",
-      git_blob: "d5bc48d2d28704f722b874ee1a056927f667c691",
-      bytes: 9095,
-      lines: 329,
+        "0b70d304cf324dc75c9b40d6e3d4c82f652d62db1f636f3195e7d8ce9c277bf7",
+      git_blob: "5312bb78580caf37b7f043c66db28392bb7069c3",
+      bytes: 9215,
+      lines: 328,
       mode: "0644",
     },
   ],
@@ -129,10 +134,10 @@ const SOURCE_IDENTITIES = new Map([
     {
       path: "app/compare/page.tsx",
       sha256:
-        "2c4aaa4b8037bd8f677649564df3b74ddace7bf5e5d00ff679dd1bd7264cf7ad",
-      git_blob: "bf0a18d6123a4f70e22c4d81e9ae19ee932aea9c",
-      bytes: 3860,
-      lines: 154,
+        "51e2420b6a3dd358a060cad89f7de695d161687b5ee45fac04a95226d2950cab",
+      git_blob: "b306ee21a7a7366d148af0be512b566d30e3b9e9",
+      bytes: 3945,
+      lines: 153,
       mode: "0644",
     },
   ],
@@ -141,10 +146,10 @@ const SOURCE_IDENTITIES = new Map([
     {
       path: "app/layout.tsx",
       sha256:
-        "b2a095d48d705cb95a364da0f73711bf6a1b199d37476af7656093d65a12469d",
-      git_blob: "400c6c189c4a21c66a1905ff98f02664b297b103",
-      bytes: 3339,
-      lines: 126,
+        "7f17dbd43421293902651132faf22e57cb4e8d526d736e76f2e0d93ce92a3f4d",
+      git_blob: "d1aa14c6399d10f60471b39334571a8e47f4185a",
+      bytes: 3437,
+      lines: 125,
       mode: "0644",
     },
   ],
@@ -189,10 +194,10 @@ const SOURCE_IDENTITIES = new Map([
     {
       path: "app/tool/[slug]/page.tsx",
       sha256:
-        "92f4fe978a2e043363c1363945da9da65ba0bdf9a9b303c403fbc42755a3f395",
-      git_blob: "4f1bcb9ef3660182a3592f2439e12a51d07fe8c7",
-      bytes: 7225,
-      lines: 296,
+        "d809c057bcca31d2426cf08c6bb63d7f65cf73358d8dffbf17e667c4834d275d",
+      git_blob: "fe66392d3f5ba1cb04a289b1700016550400dcda",
+      bytes: 7329,
+      lines: 295,
       mode: "0644",
     },
   ],
@@ -707,13 +712,14 @@ function validatePlan() {
   assert(
     exactValue(plan.workstream, {
       id: "PUBLIC_PRODUCTION_RUNTIME",
-      gap_code: "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED",
+      gap_code: "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
       entry_count: 7,
     }),
     "RUNTIME_PLAN_DECISION",
   );
   assert(
-    plan.decision === "STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED" &&
+    plan.decision ===
+      "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED" &&
       plan.current_authority === "STATIC_ONLY",
     "RUNTIME_PLAN_DECISION",
   );
@@ -722,12 +728,25 @@ function validatePlan() {
     "RUNTIME_PLAN_EXECUTION_AUTHORITY",
   );
   assert(
-    plan.live_evidence_status === "NOT_EXECUTED",
+    plan.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
     "RUNTIME_PLAN_EVIDENCE_PROMOTION",
   );
-  assert(plan.target_origin === null, "RUNTIME_PLAN_TARGET_ORIGIN");
   assert(
-    plan.target_origin_resolution === "NOT_PERFORMED",
+    plan.target_origin === "https://www.aifinder.to",
+    "RUNTIME_PLAN_TARGET_ORIGIN",
+  );
+  assert(
+    plan.target_origin_resolution ===
+      "CONFIRMED_APEX_REDIRECTS_ONE_HOP_TO_WWW",
+    "RUNTIME_PLAN_TARGET_ORIGIN",
+  );
+  assert(
+    plan.selected_canonical_origin === "https://www.aifinder.to" &&
+      plan.last_runtime_result === "FAILED_CANONICAL_METADATA_ORIGIN" &&
+      plan.last_runtime_failure_code === "RUNTIME_CANONICAL_METADATA_ORIGIN" &&
+      plan.last_runtime_failure_message_sha256 ===
+        "bdfceb0f94def1c781b827f1c02bae7a7759001d63f50f5b074f637743ac7c23" &&
+      plan.canonical_source_alignment === "COMPLETE",
     "RUNTIME_PLAN_TARGET_ORIGIN",
   );
   assert(
@@ -740,7 +759,7 @@ function validatePlan() {
   );
   assert(
     plan.next_gate ===
-      "SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME",
+      "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW",
     "RUNTIME_PLAN_DECISION",
   );
   const rawPlan = readFileSync(
@@ -751,7 +770,7 @@ function validatePlan() {
   );
   assert(
     !/https?:\/\/|process\.env|BEGIN PRIVATE KEY|\.supabase\.(?:co|com)/i.test(
-      rawPlan,
+      rawPlan.split("https://www.aifinder.to").join(""),
     ),
     "RUNTIME_PLAN_TARGET_ORIGIN",
   );
@@ -832,7 +851,7 @@ function validatePlan() {
       "RUNTIME_PLAN_EXECUTION_AUTHORITY",
     );
     assert(
-      surface.live_evidence_status === "NOT_EXECUTED",
+      surface.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
       "RUNTIME_PLAN_EVIDENCE_PROMOTION",
     );
   }
@@ -847,7 +866,7 @@ function validatePlan() {
 try {
   const result = validatePlan();
   console.log(
-    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} execution_authorized=false live_evidence=NOT_EXECUTED failures=0 internal_failures=0`,
+    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} execution_authorized=false live_evidence=FULL_RUNTIME_RETEST_REQUIRED failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

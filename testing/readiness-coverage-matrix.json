@@ -1,7 +1,7 @@
 {
   "matrix_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "route_inventory_digest": "9409898f384e89f3a1cc99a87a154a3764d17edc450263b8e577d5533ecd6350",
+  "route_inventory_digest": "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
   "entries": [
     {
       "path": "app/admin-login/layout.tsx",
@@ -679,7 +679,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/compare/error.tsx",
@@ -715,7 +715,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/error.tsx",
@@ -767,7 +767,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/loading.tsx",
@@ -816,7 +816,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/opengraph-image.tsx",
@@ -846,7 +846,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/robots.ts",
@@ -924,7 +924,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/tool/[slug]/error.tsx",
@@ -960,7 +960,7 @@
       ],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED"
+      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
     },
     {
       "path": "app/twitter-image.tsx",

@@ -18,13 +18,13 @@ const RUNTIME_PLAN_PATH =
 const SOURCE_COMMIT = "9841a4ce19b12e9c55a24cdd02ca1292667949c9";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "4a770a73b9b10bbcd8f4bd7931e1ca8b05f41e46395a23e92e1d82ad45b734fb",
-  git_blob: "fcd1277d33aa1eb366c332fd14b396234550ac1a",
-  bytes: 37588,
+  sha256: "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
+  git_blob: "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
+  bytes: 37616,
   lines: 978,
   mode: "0644",
   route_inventory_digest:
-    "9409898f384e89f3a1cc99a87a154a3764d17edc450263b8e577d5533ecd6350",
+    "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
   entry_count: 69,
   launch_blocking_count: 69,
 };
@@ -93,11 +93,11 @@ const COMMON_PREREQUISITES = [
 const WORKSTREAMS = [
   {
     id: "PUBLIC_PRODUCTION_RUNTIME",
-    gap_code: "SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED",
+    gap_code: "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
     entry_count: 7,
     authority_class: "PUBLIC_PRODUCTION_RUNTIME",
     planning_priority: 1,
-    next_gate: "SEPARATE_RUNTIME_AUTHORITY_REVIEW_PUBLIC_PRODUCTION_RUNTIME",
+    next_gate: "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW",
   },
   {
     id: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
@@ -325,12 +325,12 @@ function validateRegistry() {
     planningArtifact.workstream_id === "PUBLIC_PRODUCTION_RUNTIME" &&
       planningArtifact.path === RUNTIME_PLAN_PATH &&
       planningArtifact.state ===
-        "STATIC_PLANNING_COMPLETE_EXECUTION_UNAUTHORIZED" &&
+        "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED" &&
       planningArtifact.execution_authorized === false &&
       runtimePlan.workstream?.id === planningArtifact.workstream_id &&
       runtimePlan.decision === planningArtifact.state &&
       runtimePlan.execution_authorized === false &&
-      runtimePlan.live_evidence_status === "NOT_EXECUTED",
+      runtimePlan.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
     "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
   );
   assert(
@@ -400,9 +400,11 @@ function validateRegistry() {
     );
     assert(
       actual.next_gate === expected.next_gate &&
-        /^SEPARATE_(?:PLANNING|RUNTIME_AUTHORITY)_REVIEW_/.test(
+        (/^SEPARATE_(?:PLANNING|RUNTIME_AUTHORITY)_REVIEW_/.test(
           actual.next_gate,
-        ) &&
+        ) ||
+          actual.next_gate ===
+            "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW") &&
         !actual.next_gate
           .split("_")
           .some((part) =>

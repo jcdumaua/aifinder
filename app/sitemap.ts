@@ -2,10 +2,9 @@ import type { MetadataRoute } from "next";
 import { logPublicDiagnosticEvent } from "@/lib/public-diagnostics";
 import { supabaseAdmin } from "../lib/supabase-admin";
 import { categories, slugify } from "./data/tools";
+import { PUBLIC_CANONICAL_ORIGIN } from "../lib/public-canonical-origin";
 
 export const dynamic = "force-dynamic";
-
-const siteUrl = "https://aifinder.to";
 
 type ToolSitemapRow = {
   slug?: string | null;
@@ -50,7 +49,7 @@ async function getToolUrls() {
       const persistedDate = getPersistedDate(tool.updated_at, tool.created_at);
 
       return {
-        url: `${siteUrl}/tool/${tool.slug}`,
+        url: `${PUBLIC_CANONICAL_ORIGIN}/tool/${tool.slug}`,
         ...(persistedDate ? { lastModified: persistedDate } : {}),
         changeFrequency: "weekly" as const,
         priority: 0.8,
@@ -62,24 +61,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const toolUrls = await getToolUrls();
 
   const categoryUrls = categories.map((category) => ({
-    url: `${siteUrl}/category/${slugify(category)}`,
+    url: `${PUBLIC_CANONICAL_ORIGIN}/category/${slugify(category)}`,
     changeFrequency: "weekly" as const,
     priority: 0.75,
   }));
 
   return [
     {
-      url: siteUrl,
+      url: PUBLIC_CANONICAL_ORIGIN,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${siteUrl}/submit`,
+      url: `${PUBLIC_CANONICAL_ORIGIN}/submit`,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: `${siteUrl}/compare`,
+      url: `${PUBLIC_CANONICAL_ORIGIN}/compare`,
       changeFrequency: "weekly",
       priority: 0.75,
     },

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
-
-const siteUrl = "https://aifinder.to";
+import {
+  PUBLIC_CANONICAL_HOST,
+  PUBLIC_CANONICAL_ORIGIN,
+} from "../lib/public-canonical-origin";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -11,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/admin-login", "/api/"],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: `${PUBLIC_CANONICAL_ORIGIN}/sitemap.xml`,
+    host: PUBLIC_CANONICAL_HOST,
   };
 }

@@ -11,10 +11,9 @@ import {
   toolSlug,
 } from "../../data/tools";
 import ToolDetailClient, { ToolPageData } from "./tool-detail-client";
+import { PUBLIC_CANONICAL_ORIGIN } from "../../../lib/public-canonical-origin";
 
 export const revalidate = 300;
-
-const siteUrl = "https://aifinder.to";
 
 type PageProps = {
   params: Promise<{
@@ -185,19 +184,19 @@ function getBreadcrumbJsonLd(tool: ToolPageData) {
         "@type": "ListItem",
         position: 1,
         name: "AiFinder",
-        item: siteUrl,
+        item: PUBLIC_CANONICAL_ORIGIN,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: tool.category,
-        item: `${siteUrl}/category/${slugify(tool.category)}`,
+        item: `${PUBLIC_CANONICAL_ORIGIN}/category/${slugify(tool.category)}`,
       },
       {
         "@type": "ListItem",
         position: 3,
         name: tool.name,
-        item: `${siteUrl}/tool/${tool.slug}`,
+        item: `${PUBLIC_CANONICAL_ORIGIN}/tool/${tool.slug}`,
       },
     ],
   };
@@ -231,7 +230,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     openGraph: {
       type: "article",
-      url: `${siteUrl}/tool/${tool.slug}`,
+      url: `${PUBLIC_CANONICAL_ORIGIN}/tool/${tool.slug}`,
       siteName: "AiFinder",
       title,
       description,

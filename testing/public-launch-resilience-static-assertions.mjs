@@ -1,8 +1,10 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import ts from "typescript";
 
-const CANONICAL_ORIGIN = "https://aifinder.to";
+const CURRENT_CANONICAL_ORIGIN = "https://www.aifinder.to";
+const ALTERNATE_CANONICAL_ORIGIN = "https://aifinder.to";
 const OLD_ORIGIN = "https://aifinder-eight.vercel.app";
+const CANONICAL_SOURCE_PATH = "lib/public-canonical-origin.ts";
 
 const errorBoundaryPaths = [
   "app/error.tsx",
@@ -26,6 +28,11 @@ const canonicalPages = [
   "app/category/[slug]/page.tsx",
   "app/tool/[slug]/page.tsx",
 ];
+const canonicalImportSpecifiers = new Map([
+  ["app/compare/page.tsx", "../../lib/public-canonical-origin"],
+  ["app/category/[slug]/page.tsx", "../../../lib/public-canonical-origin"],
+  ["app/tool/[slug]/page.tsx", "../../../lib/public-canonical-origin"],
+]);
 
 const expectedDiagnosticEvents = [...diagnosticConsumers.values()];
 
@@ -362,11 +369,38 @@ const groups = [
   {
     id: "RESIDUAL_CANONICAL_ORIGINS",
     run() {
+      const { source: canonicalSource, sourceFile: canonicalSourceFile } = parse(
+        CANONICAL_SOURCE_PATH,
+        ts.ScriptKind.TS,
+      );
+      assert(
+        variableStringLiteral(
+          canonicalSourceFile,
+          "PUBLIC_CANONICAL_ORIGIN",
+        ) === CURRENT_CANONICAL_ORIGIN,
+        "shared canonical origin mismatch",
+      );
+      assert(
+        !canonicalSource.includes("process.env"),
+        "shared canonical source reads environment state",
+      );
       for (const path of canonicalPages) {
         const { source, sourceFile } = parse(path);
         assert(
-          variableStringLiteral(sourceFile, "siteUrl") === CANONICAL_ORIGIN,
-          `${path} canonical origin mismatch`,
+          hasNamedImport(
+            sourceFile,
+            canonicalImportSpecifiers.get(path),
+            "PUBLIC_CANONICAL_ORIGIN",
+          ),
+          `${path} omits the shared canonical origin import`,
+        );
+        assert(
+          !source.includes(CURRENT_CANONICAL_ORIGIN),
+          `${path} retains a local current origin`,
+        );
+        assert(
+          !source.includes(ALTERNATE_CANONICAL_ORIGIN),
+          `${path} retains the alternate origin`,
         );
         assert(!source.includes(OLD_ORIGIN), `${path} retains the old origin`);
       }

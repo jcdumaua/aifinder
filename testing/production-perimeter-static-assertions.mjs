@@ -8,10 +8,16 @@ import {
 import { inflateSync } from "node:zlib";
 import ts from "typescript";
 
-const CANONICAL_ORIGIN = "https://aifinder.to";
+const CURRENT_CANONICAL_ORIGIN = "https://www.aifinder.to";
+const CURRENT_CANONICAL_HOST = "www.aifinder.to";
+const CANONICAL_ORIGIN = CURRENT_CANONICAL_ORIGIN;
+const HISTORICAL_PHASE29_CANONICAL_ORIGIN = "https://aifinder.to";
 const OLD_ORIGIN = "https://aifinder-eight.vercel.app";
 const SECURITY_CONTACT = "mailto:security@aifinder.to";
-const SECURITY_CANONICAL = "https://aifinder.to/.well-known/security.txt";
+const CURRENT_SECURITY_CANONICAL =
+  "https://www.aifinder.to/.well-known/security.txt";
+const HISTORICAL_PHASE29_SECURITY_CANONICAL =
+  "https://aifinder.to/.well-known/security.txt";
 const SECURITY_EXPIRES = "2027-07-21T23:59:59Z";
 const RENEWAL_OWNER = "James Carlo Dumaua";
 const RENEWAL_DUE = "2027-06-21T00:00:00Z";
@@ -41,6 +47,14 @@ const PHASE29_SUCCESSOR_MUTABLE_IDENTITIES = {
     sha256: "02034aa50cbcd46f07faca5c9b83bd67ed312c9fa31f4453f9e3116ca59d0202",
     bytes: 2192,
   },
+  "app/robots.ts": {
+    sha256: "3a1cf66693db825b5c5bc7fa736e44bf8cd682973c16796392e0d43458354cf7",
+    bytes: 353,
+  },
+  "public/.well-known/security.txt": {
+    sha256: "c4ffc111831054faa66e2d221c59c48732a7d9e3050760d21808fa5ef54690b1",
+    bytes: 147,
+  },
   "testing/production-perimeter-static-assertions.mjs": {
     sha256: "1dbad2521aba73641ef1e6bbd252e198d6dfe7abc933c08fa212aa56392df26d",
     bytes: 34648,
@@ -64,10 +78,20 @@ const paths = {
   icon512: "public/icon-512x512.png",
   iconMaskable: "public/icon-maskable-512x512.png",
   security: "public/.well-known/security.txt",
+  canonicalSource: "lib/public-canonical-origin.ts",
   assertions: "testing/production-perimeter-static-assertions.mjs",
   gate: "docs/discovery-phase-29aa-29at-production-perimeter-audit-and-repair-gate.md",
   proxy: "proxy.ts",
 };
+
+const canonicalImportSpecifiers = new Map([
+  ["layout", "../lib/public-canonical-origin"],
+  ["robots", "../lib/public-canonical-origin"],
+  ["sitemap", "../lib/public-canonical-origin"],
+  ["compare", "../../lib/public-canonical-origin"],
+  ["category", "../../../lib/public-canonical-origin"],
+  ["tool", "../../../lib/public-canonical-origin"],
+]);
 
 const text = (path) => readFileSync(path, "utf8");
 const bytes = (path) => readFileSync(path);
@@ -266,6 +290,21 @@ function literalString(node, label) {
   return node.text;
 }
 
+function hasNamedImport(sourceFile, moduleName, importedName) {
+  return sourceFile.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteralLike(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === moduleName &&
+      statement.importClause?.namedBindings &&
+      ts.isNamedImports(statement.importClause.namedBindings) &&
+      statement.importClause.namedBindings.elements.some(
+        (element) =>
+          (element.propertyName?.text ?? element.name.text) === importedName,
+      ),
+  );
+}
+
 function objectPropertyMap(object, label) {
   if (!ts.isObjectLiteralExpression(object)) throw new Error(`${label} is not an object literal`);
   const properties = new Map();
@@ -389,6 +428,7 @@ const manifestSource = text(paths.manifest);
 const INSTALLABILITY_PUBLIC_PERIMETER_ASSERTIONS = true;
 const config = text(paths.config);
 const architecture = text(paths.architecture);
+const canonicalSource = text(paths.canonicalSource);
 let activation;
 
 const layoutAst = parseTypeScript(paths.layout, ts.ScriptKind.TSX);
@@ -399,20 +439,87 @@ const categoryPageAst = parseTypeScript(paths.categoryPage, ts.ScriptKind.TSX);
 const toolPageAst = parseTypeScript(paths.toolPage, ts.ScriptKind.TSX);
 const manifestAst = parseTypeScript(paths.manifest);
 const configAst = parseTypeScript(paths.config);
+const canonicalSourceAst = parseTypeScript(paths.canonicalSource);
 
 for (const [label, source, sourceFile] of [
   ["layout", layout, layoutAst],
   ["robots", robots, robotsAst],
   ["sitemap", sitemap, sitemapAst],
 ]) {
-  check(`CANONICAL.${label}.ASSIGNED`, () =>
+  check(`CANONICAL.${label}.ASSIGNED`, () => {
+    if (label === "layout") {
+      regularMode0644(paths.canonicalSource);
+      equal(
+        literalString(
+          findVariableInitializer(
+            canonicalSourceAst,
+            "PUBLIC_CANONICAL_ORIGIN",
+          ),
+          "shared canonical origin",
+        ),
+        CURRENT_CANONICAL_ORIGIN,
+        "shared canonical origin",
+      );
+      equal(
+        literalString(
+          findVariableInitializer(
+            canonicalSourceAst,
+            "PUBLIC_CANONICAL_HOST",
+          ),
+          "shared canonical host",
+        ),
+        CURRENT_CANONICAL_HOST,
+        "shared canonical host",
+      );
+      equal(
+        literalString(
+          findVariableInitializer(
+            canonicalSourceAst,
+            "PUBLIC_SECURITY_CANONICAL_URL",
+          ),
+          "shared security canonical",
+        ),
+        CURRENT_SECURITY_CANONICAL,
+        "shared security canonical",
+      );
+      excludes(canonicalSource, "process.env", "canonical environment access");
+    }
     equal(
-      literalString(findVariableInitializer(sourceFile, "siteUrl"), `${label} siteUrl`),
-      CANONICAL_ORIGIN,
-      `${label} siteUrl`,
-    ),
-  );
-  check(`CANONICAL.${label}.OLD_ORIGIN_ABSENT`, () => excludes(source, OLD_ORIGIN, label));
+      hasNamedImport(
+        sourceFile,
+        canonicalImportSpecifiers.get(label),
+        "PUBLIC_CANONICAL_ORIGIN",
+      ),
+      true,
+      `${label} shared canonical import`,
+    );
+    if (label === "robots") {
+      equal(
+        hasNamedImport(
+          robotsAst,
+          canonicalImportSpecifiers.get("robots"),
+          "PUBLIC_CANONICAL_HOST",
+        ),
+        true,
+        "robots shared canonical host import",
+      );
+      includes(robots, "host: PUBLIC_CANONICAL_HOST", "robots host binding");
+      includes(
+        robots,
+        "`${PUBLIC_CANONICAL_ORIGIN}/sitemap.xml`",
+        "robots sitemap binding",
+      );
+    }
+  });
+  check(`CANONICAL.${label}.OLD_ORIGIN_ABSENT`, () => {
+    excludes(source, CURRENT_CANONICAL_ORIGIN, `${label} local current origin`);
+    excludes(
+      source,
+      HISTORICAL_PHASE29_CANONICAL_ORIGIN,
+      `${label} alternate origin`,
+    );
+    excludes(source, OLD_ORIGIN, label);
+  });
 }
 
 const manifestProperties = objectPropertyMap(
@@ -440,14 +547,24 @@ for (const [label, path, sourceFile] of [
   const source = text(path);
   check(`CANONICAL.${label}.ASSIGNED`, () =>
     equal(
-      literalString(findVariableInitializer(sourceFile, "siteUrl"), `${label} siteUrl`),
-      CANONICAL_ORIGIN,
-      `${label} siteUrl`,
+      hasNamedImport(
+        sourceFile,
+        canonicalImportSpecifiers.get(label),
+        "PUBLIC_CANONICAL_ORIGIN",
+      ),
+      true,
+      `${label} shared canonical import`,
     ),
   );
-  check(`CANONICAL.${label}.OLD_ORIGIN_ABSENT`, () =>
-    excludes(source, OLD_ORIGIN, label),
-  );
+  check(`CANONICAL.${label}.OLD_ORIGIN_ABSENT`, () => {
+    excludes(source, CURRENT_CANONICAL_ORIGIN, `${label} local current origin`);
+    excludes(
+      source,
+      HISTORICAL_PHASE29_CANONICAL_ORIGIN,
+      `${label} alternate origin`,
+    );
+    excludes(source, OLD_ORIGIN, label);
+  });
 }
 
 check("MANIFEST.EXACT_ICON_OBJECTS", () => {
@@ -547,7 +664,7 @@ check("SECURITY.EXACT_CONTENT", () => {
   const expected = [
     `Contact: ${SECURITY_CONTACT}`,
     `Expires: ${SECURITY_EXPIRES}`,
-    `Canonical: ${SECURITY_CANONICAL}`,
+    `Canonical: ${CURRENT_SECURITY_CANONICAL}`,
     "Preferred-Languages: en",
     "",
   ].join("\n");
@@ -840,9 +957,9 @@ check("PHASE29.GATE.BINDINGS", () => {
     CURRENT_BASELINE,
     AUDIT_CCR_SHA256,
     AUDIT_LEDGER_SHA256,
-    CANONICAL_ORIGIN,
+    HISTORICAL_PHASE29_CANONICAL_ORIGIN,
     SECURITY_CONTACT,
-    SECURITY_CANONICAL,
+    HISTORICAL_PHASE29_SECURITY_CANONICAL,
     SECURITY_EXPIRES,
     RENEWAL_OWNER,
     RENEWAL_DUE,

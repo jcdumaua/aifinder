@@ -12,10 +12,9 @@ import {
   toolSlug,
 } from "../data/tools";
 import CompareClient, { ComparePageTool } from "./compare-client";
+import { PUBLIC_CANONICAL_ORIGIN } from "../../lib/public-canonical-origin";
 
 export const revalidate = 300;
-
-const siteUrl = "https://aifinder.to";
 
 function cleanText(value: string | null | undefined, fallback = "") {
   return (value || fallback).trim();
@@ -83,7 +82,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: `${siteUrl}/compare`,
+    url: `${PUBLIC_CANONICAL_ORIGIN}/compare`,
     siteName: "AiFinder",
     title,
     description,
@@ -119,7 +118,7 @@ function getCompareJsonLd(tools: ComparePageTool[]) {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: "Compare AI Tools",
-    url: `${siteUrl}/compare`,
+    url: `${PUBLIC_CANONICAL_ORIGIN}/compare`,
     description,
     mainEntity: {
       "@type": "ItemList",
@@ -127,7 +126,7 @@ function getCompareJsonLd(tools: ComparePageTool[]) {
       itemListElement: tools.slice(0, 20).map((tool, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: `${siteUrl}/tool/${tool.slug}`,
+        url: `${PUBLIC_CANONICAL_ORIGIN}/tool/${tool.slug}`,
         name: tool.name,
         description: tool.description,
       })),

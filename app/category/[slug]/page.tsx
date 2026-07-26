@@ -17,10 +17,9 @@ import {
 import CategoryDetailClient, {
   CategoryPageTool,
 } from "./category-detail-client";
+import { PUBLIC_CANONICAL_ORIGIN } from "../../../lib/public-canonical-origin";
 
 export const revalidate = 300;
-
-const siteUrl = "https://aifinder.to";
 
 type PageProps = {
   params: Promise<{
@@ -185,7 +184,7 @@ function getCategoryJsonLd({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `${category} AI Tools`,
-    url: `${siteUrl}/category/${slugify(category)}`,
+    url: `${PUBLIC_CANONICAL_ORIGIN}/category/${slugify(category)}`,
     description: getCategoryDescription(category),
     mainEntity: {
       "@type": "ItemList",
@@ -193,7 +192,7 @@ function getCategoryJsonLd({
       itemListElement: categoryTools.slice(0, 20).map((tool, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: `${siteUrl}/tool/${tool.slug}`,
+        url: `${PUBLIC_CANONICAL_ORIGIN}/tool/${tool.slug}`,
         name: tool.name,
         description: tool.description,
       })),
@@ -210,13 +209,13 @@ function getBreadcrumbJsonLd(category: string) {
         "@type": "ListItem",
         position: 1,
         name: "AiFinder",
-        item: siteUrl,
+        item: PUBLIC_CANONICAL_ORIGIN,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: `${category} AI Tools`,
-        item: `${siteUrl}/category/${slugify(category)}`,
+        item: `${PUBLIC_CANONICAL_ORIGIN}/category/${slugify(category)}`,
       },
     ],
   };
@@ -254,7 +253,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     openGraph: {
       type: "website",
-      url: `${siteUrl}/category/${slugify(category)}`,
+      url: `${PUBLIC_CANONICAL_ORIGIN}/category/${slugify(category)}`,
       siteName: "AiFinder",
       title,
       description,

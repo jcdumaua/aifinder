@@ -23,19 +23,24 @@ The matrix therefore exposes work that still needs browser, live-route,
 authentication, database, or operational evidence rather than converting
 absence of evidence into readiness.
 
-Phase 30GD–30GP adds bounded static evidence and non-static browser evidence
-for the shared layout and the six fabricated public routes. Those entries use
-`SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED`, remain
-`launch_blocking=true`, and do not represent deployed/public runtime,
+Phase 30GD–30GP added bounded static evidence and non-static browser evidence
+for the shared layout and the six fabricated public routes. Those seven
+entries originally used
+`SYNTHETIC_BROWSER_PASSED_PRODUCTION_RUNTIME_UNVERIFIED`. After the spent
+Phase 30JC–30JO runtime attempt failed on canonical metadata, Phase 30JP–30KF
+confirmed the apex-to-`www` direction and replaced that current gap with
+`CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED`. All seven remain
+`launch_blocking=true` and do not represent complete deployed/public runtime,
 authentication, Supabase, SQL, database, or operational proof.
 
 ## Blocker control plane
 
 `testing/public-launch-blocker-registry.json` derives five exact planning
 workstreams from all 69 launch-blocking entries: `7/13/3/18/28` in planning
-priority order. The registry does not alter this matrix, its gap codes, or its
-route digest. Every workstream remains blocked behind separate authority, and
-the overall decision remains `NO_GO_PENDING_SEPARATE_AUTHORITIES`.
+priority order. It binds the current matrix and route digest without changing
+the five-workstream partition. Every workstream remains blocked behind
+separate authority, and the overall decision remains
+`NO_GO_PENDING_SEPARATE_AUTHORITIES`.
 
 The seven synthetic-evidence surfaces are only the first planning candidate.
 They are not production-runtime proof. Static policy, synthetic evidence, or a
@@ -45,13 +50,16 @@ Vercel `READY` deployment cannot promote an entry to launch readiness.
 
 The strict planning manifest covers exactly seven source-bound surfaces and
 derives their local import closures and categorical capability signals without
-importing or executing application modules. Planning is complete; live
-evidence remains `NOT_EXECUTED`, no public/deployed target was contacted, no
-target origin was resolved, no application or browser runtime occurred, and
-indirect production data access was not exercised.
+importing or executing application modules. Canonical source alignment is
+complete at `https://www.aifinder.to`; the prior runtime result remains failed,
+live evidence is `FULL_RUNTIME_RETEST_REQUIRED`, and execution remains
+unauthorized. The only new public evidence is the bounded two-request
+apex-to-`www` HEAD confirmation. No browser or full runtime retest occurred.
 
 All 69 matrix entries remain launch-blocking. Actual HTTP, browser,
 dynamic-target, and indirect production-data-read evidence require a separate
-exact Gemini authority. Form submission and mutation remain prohibited, as do
-authenticated runtime, Supabase, SQL, database access, migrations, deployment
-control, reactivation, publishing, and public launch.
+exact Gemini authority through
+`SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW`. Form submission
+and mutation remain prohibited, as do authenticated runtime, Supabase, SQL,
+database access, migrations, deployment control, reactivation, publishing,
+and public launch.
