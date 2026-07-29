@@ -18,8 +18,11 @@ import {
 } from "./static-governance-utils.mjs";
 
 const PLAN_PATH = "testing/public-production-runtime-planning-manifest.json";
-const SOURCE_COMMIT = "05bcc50605809c6fb934d0bea914bf417758a457";
+const RUNTIME_EVIDENCE_PATH =
+  "testing/public-production-runtime-evidence.json";
+const SOURCE_COMMIT = "7c369726fa5a4092b056d91f14ca6a61effef151";
 const SOURCE_REGISTRY = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
   path: "testing/public-launch-blocker-registry.json",
   sha256: "6722c6605ff63076d0fddf39b1a46b3d5bc2845d841729be374039cdf2eb259a",
   git_blob: "8c58a34e4697a2264b6142343605f95b63073b70",
@@ -28,6 +31,7 @@ const SOURCE_REGISTRY = {
   mode: "0644",
 };
 const SOURCE_MATRIX = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
   path: "testing/readiness-coverage-matrix.json",
   sha256: "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
   git_blob: "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
@@ -39,6 +43,16 @@ const SOURCE_MATRIX = {
   entry_count: 69,
   launch_blocking_count: 69,
 };
+const RUNTIME_EVIDENCE_IDENTITY = {
+  path: RUNTIME_EVIDENCE_PATH,
+  sha256: "dc9eb9878caf6a055ea7859ac2def9653161e82231e236fd5de0b6195ebd5c20",
+  git_blob: "40d8e9e9d7235f7299092e9a0f3ccef9b7d0e387",
+  bytes: 12315,
+  lines: 335,
+  mode: "0644",
+};
+const EXACT_SUCCESS_MARKER =
+  "PASSED_PHASE_31AQ_31BP_TERMINAL_GUARD_REASON_VECTOR_AND_CDP_TAXONOMY_HARDENING_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION_AND_LAUNCH_READINESS_DECISION";
 const TOP_LEVEL_KEYS = [
   "planning_version",
   "source_commit",
@@ -56,6 +70,7 @@ const TOP_LEVEL_KEYS = [
   "last_runtime_failure_code",
   "last_runtime_failure_message_sha256",
   "canonical_source_alignment",
+  "runtime_evidence",
   "blocked_capabilities",
   "future_authority_classes",
   "surfaces",
@@ -69,11 +84,28 @@ const SOURCE_IDENTITY_KEYS = [
   "lines",
   "mode",
 ];
+const SOURCE_BINDING_KEYS = ["binding_role", ...SOURCE_IDENTITY_KEYS];
 const SOURCE_MATRIX_KEYS = [
-  ...SOURCE_IDENTITY_KEYS,
+  ...SOURCE_BINDING_KEYS,
   "route_inventory_digest",
   "entry_count",
   "launch_blocking_count",
+];
+const RUNTIME_EVIDENCE_MAJOR_KEYS = [
+  "schema_version",
+  "source_phase",
+  "source_ccr",
+  "controlling_package",
+  "canonical_result",
+  "source_reporting_defects",
+  "immutable_binding",
+  "runtime_contract",
+  "public_data_contract",
+  "terminal_contract",
+  "private_harness_contract",
+  "process_exit_contract",
+  "safety_boundary",
+  "integration_decision",
 ];
 const WORKSTREAM_KEYS = ["id", "gap_code", "entry_count"];
 const SURFACE_KEYS = [
@@ -674,32 +706,187 @@ function readPlan() {
   return strictJsonParse(readFileSync(absolute, "utf8"));
 }
 
-function validateSourceMatrix() {
-  const actual = actualSourceIdentity(SOURCE_MATRIX.path);
-  for (const key of SOURCE_IDENTITY_KEYS) {
-    assert(
-      actual[key] === SOURCE_MATRIX[key],
-      "RUNTIME_PLAN_SOURCE_IDENTITY",
-    );
-  }
-  const matrix = readStrictJson(SOURCE_MATRIX.path);
+function validateRuntimeEvidence() {
+  const evidence = readStrictJson(RUNTIME_EVIDENCE_PATH);
   assert(
-    matrix.route_inventory_digest === SOURCE_MATRIX.route_inventory_digest &&
-      matrix.entries.length === SOURCE_MATRIX.entry_count &&
-      matrix.entries.filter((entry) => entry.launch_blocking === true).length ===
-        SOURCE_MATRIX.launch_blocking_count,
-    "RUNTIME_PLAN_SOURCE_IDENTITY",
+    exactObject(evidence, RUNTIME_EVIDENCE_MAJOR_KEYS),
+    "RUNTIME_EVIDENCE_SCHEMA",
+  );
+  assert(
+    exactValue(actualSourceIdentity(RUNTIME_EVIDENCE_PATH), RUNTIME_EVIDENCE_IDENTITY),
+    "RUNTIME_EVIDENCE_IDENTITY",
+  );
+  assert(
+    evidence.schema_version === 1 &&
+      evidence.source_phase.startsWith("PHASE_31AQ_31BP_"),
+    "RUNTIME_EVIDENCE_SCHEMA",
+  );
+  assert(
+    exactValue(evidence.source_ccr, {
+      reference: "EXTERNAL_PHASE_31AQ_31BP_CCR",
+      sha256:
+        "ca12bad25b89c161ca9e44f9776b7a9803231bd2dcae14539739cba5dd3c6874",
+      bytes: 71384,
+      lines: 1936,
+      mode: "0600",
+    }) &&
+      exactValue(evidence.controlling_package, {
+        reference: "EXTERNAL_PHASE_31AQ_31BP_CONTROLLING_PACKAGE",
+        sha256:
+          "62805fc50fd42bb33ea37521f12cb90d84f9767d1d4704a0699e54b2e85d29f1",
+        bytes: 29498,
+        lines: 729,
+        mode: "0600",
+      }),
+    "RUNTIME_EVIDENCE_SOURCE_BINDING",
+  );
+  assert(
+    evidence.canonical_result === EXACT_SUCCESS_MARKER,
+    "RUNTIME_EVIDENCE_CANONICAL_RESULT",
+  );
+  const defects = evidence.source_reporting_defects;
+  assert(
+    defects.top_level_classification_alias.observed !== EXACT_SUCCESS_MARKER &&
+      defects.top_level_classification_alias.canonical === EXACT_SUCCESS_MARKER &&
+      defects.top_level_classification_alias.reconciliation_source ===
+        "CONTROLLING_PACKAGE_AND_EXACT_SUCCESS_MARKER" &&
+      defects.unresolved_remote_bindings.observed_deployment_binding ===
+        "undefined" &&
+      defects.unresolved_remote_bindings.observed_public_data_origin_binding ===
+        "undefined" &&
+      defects.unresolved_remote_bindings.reconciled_deployment_id ===
+        "dpl_48RE7rYPfwJCK1ZKzpJ2eZoksMor" &&
+      defects.unresolved_remote_bindings
+        .reconciled_public_data_origin_sha256 ===
+        "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777",
+    "RUNTIME_EVIDENCE_SOURCE_RECONCILIATION",
+  );
+  const binding = evidence.immutable_binding;
+  assert(
+    binding.repository_commit === SOURCE_COMMIT &&
+      binding.repository_tree ===
+        "a6a3a1057355d61445ded239250ef7f7597bf077" &&
+      binding.canonical_origin === "https://www.aifinder.to" &&
+      binding.public_data_origin_sha256 ===
+        "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777" &&
+      binding.source_deployment_id === "dpl_48RE7rYPfwJCK1ZKzpJ2eZoksMor" &&
+      binding.source_github_run_id === 30184205732 &&
+      binding.authorization_state ===
+        "CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE",
+    "RUNTIME_EVIDENCE_IMMUTABLE_BINDING",
+  );
+  assert(
+    binding.execution_gate.state === "CLOSED" &&
+      binding.execution_gate.use_state === "SPENT" &&
+      binding.execution_gate.result === "PASS" &&
+      binding.execution_receipt.state === "SUCCESS" &&
+      binding.execution_receipt.use_state === "SPENT" &&
+      binding.execution_receipt.result === "PASS" &&
+      binding.runner_checkpoint.state === "SUCCESS" &&
+      binding.runner_checkpoint.stage === "COMPLETED" &&
+      binding.runner_checkpoint.use_state === "SPENT" &&
+      binding.runner_checkpoint.result === "PASS",
+    "RUNTIME_EVIDENCE_FINALIZATION_STATE",
+  );
+  const runtime = evidence.runtime_contract;
+  const expectedSurfaces = stableSortedPaths([...SURFACE_CONTRACTS.keys()]);
+  assert(
+    exactArray(runtime.surfaces, expectedSurfaces) &&
+      runtime.surface_count === 7 &&
+      runtime.target_count === 6 &&
+      runtime.http.transactions === 6 &&
+      runtime.http.status_200 === 5 &&
+      runtime.http.status_404 === 1 &&
+      runtime.http.status_5xx === 0 &&
+      runtime.browser.desktop_passed === 6 &&
+      runtime.browser.mobile_passed === 6 &&
+      runtime.root_layout_passed === 12 &&
+      runtime.submit_render_only_passed === 2 &&
+      runtime.repository_unchanged === true,
+    "RUNTIME_EVIDENCE_SURFACES",
+  );
+  const publicData = evidence.public_data_contract;
+  assert(
+    publicData.intent_count === 2 &&
+      publicData.preflight_count === 2 &&
+      publicData.preflight_before_get_observed_count === 2 &&
+      publicData.get_count === 2 &&
+      publicData.allowed_count === 2 &&
+      publicData.completed_count === 2 &&
+      publicData.failed_count === 0 &&
+      publicData.rejected_preflight_count === 0 &&
+      publicData.duplicate_or_replayed_accept_count === 0 &&
+      publicData.unsafe_header_rejection_count === 0 &&
+      publicData.context_terminal_intent_sum === 2 &&
+      publicData.scope_relationship_valid === true,
+    "RUNTIME_EVIDENCE_PUBLIC_DATA_COUNTS",
+  );
+  const terminal = evidence.terminal_contract;
+  assert(
+    terminal.predicate_passed === 20 &&
+      terminal.predicate_total === 20 &&
+      terminal.predicate_failed === 0 &&
+      terminal.taxonomy_mutually_exclusive === true &&
+      terminal.cross_channel_disagreement_count === 0 &&
+      terminal.unresolved_terminal_count === 0 &&
+      terminal.duplicate_terminal_count === 0 &&
+      terminal.cleanup_late_terminal_count === 0,
+    "RUNTIME_EVIDENCE_TERMINAL_CONTRACT",
+  );
+  assert(
+    evidence.private_harness_contract.classification ===
+      "FROZEN_EXACT_SIX_BYTE_IDENTICAL" &&
+      evidence.private_harness_contract.files.length === 6 &&
+      evidence.private_harness_contract.runtime_artifacts.length === 4 &&
+      evidence.private_harness_contract.focused_finalization_test.result ===
+        "PASS" &&
+      evidence.private_harness_contract.focused_finalization_test.tests === 1 &&
+      evidence.private_harness_contract.focused_finalization_test.failed === 0,
+    "RUNTIME_EVIDENCE_PRIVATE_HARNESS",
+  );
+  const processExit = evidence.process_exit_contract;
+  assert(
+    processExit.source_observed_exit_code === 1 &&
+      processExit.source_stdout.success_marker_exact === true &&
+      processExit.source_stderr.empty === true &&
+      Object.values(processExit.authoritative_atomic_success_state).every(
+        (value) => value === true,
+      ) &&
+      processExit.offline_regression.result === "PASS" &&
+      processExit.offline_regression.classification ===
+        "EXTERNAL_EXEC_TOOL_STATUS_CAPTURE_ANOMALY_CONFIRMED" &&
+      processExit.offline_regression.private_harness_repair_required === false &&
+      processExit.offline_regression.success_child_exit_code === 0 &&
+      processExit.offline_regression.success_marker_exact === true &&
+      processExit.offline_regression.controlled_failure_child_exit_code === 1 &&
+      processExit.offline_regression
+        .controlled_failure_success_marker_absent === true,
+    "RUNTIME_EVIDENCE_PROCESS_EXIT",
+  );
+  assert(
+    Object.values(evidence.safety_boundary).every((value) => value === 0),
+    "RUNTIME_EVIDENCE_SAFETY_BOUNDARY",
+  );
+  assert(
+    exactValue(evidence.integration_decision, {
+      static_evidence_integration_recommendation: "GO",
+      public_production_runtime_workstream: "EVIDENCE_COMPLETE",
+      public_launch_decision:
+        "NO_GO_PENDING_REMAINING_WORKSTREAMS_AND_FINAL_LAUNCH_GATE",
+      next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+    }),
+    "RUNTIME_EVIDENCE_DECISION",
   );
 }
 
 function validatePlan() {
   const plan = readPlan();
-  validateSourceMatrix();
+  validateRuntimeEvidence();
   assert(exactObject(plan, TOP_LEVEL_KEYS), "RUNTIME_PLAN_VERSION");
   assert(plan.planning_version === 1, "RUNTIME_PLAN_VERSION");
   assert(plan.source_commit === SOURCE_COMMIT, "RUNTIME_PLAN_SOURCE_IDENTITY");
   assert(
-    exactObject(plan.source_registry, SOURCE_IDENTITY_KEYS) &&
+    exactObject(plan.source_registry, SOURCE_BINDING_KEYS) &&
       exactValue(plan.source_registry, SOURCE_REGISTRY),
     "RUNTIME_PLAN_SOURCE_IDENTITY",
   );
@@ -712,14 +899,14 @@ function validatePlan() {
   assert(
     exactValue(plan.workstream, {
       id: "PUBLIC_PRODUCTION_RUNTIME",
-      gap_code: "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
+      gap_code: "RUNTIME_EVIDENCE_INTEGRATED",
       entry_count: 7,
     }),
     "RUNTIME_PLAN_DECISION",
   );
   assert(
     plan.decision ===
-      "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED" &&
+      "FINAL_READ_ONLY_RUNTIME_QUALIFICATION_EVIDENCE_INTEGRATED" &&
       plan.current_authority === "STATIC_ONLY",
     "RUNTIME_PLAN_DECISION",
   );
@@ -728,7 +915,8 @@ function validatePlan() {
     "RUNTIME_PLAN_EXECUTION_AUTHORITY",
   );
   assert(
-    plan.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
+    plan.live_evidence_status ===
+      "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION",
     "RUNTIME_PLAN_EVIDENCE_PROMOTION",
   );
   assert(
@@ -736,18 +924,21 @@ function validatePlan() {
     "RUNTIME_PLAN_TARGET_ORIGIN",
   );
   assert(
-    plan.target_origin_resolution ===
-      "CONFIRMED_APEX_REDIRECTS_ONE_HOP_TO_WWW",
+    plan.target_origin_resolution === "CONFIRMED_FINAL_PUBLIC_RUNTIME_QUALIFICATION",
     "RUNTIME_PLAN_TARGET_ORIGIN",
   );
   assert(
     plan.selected_canonical_origin === "https://www.aifinder.to" &&
-      plan.last_runtime_result === "FAILED_CANONICAL_METADATA_ORIGIN" &&
-      plan.last_runtime_failure_code === "RUNTIME_CANONICAL_METADATA_ORIGIN" &&
-      plan.last_runtime_failure_message_sha256 ===
-        "bdfceb0f94def1c781b827f1c02bae7a7759001d63f50f5b074f637743ac7c23" &&
+      plan.last_runtime_result === EXACT_SUCCESS_MARKER &&
+      plan.last_runtime_failure_code === null &&
+      plan.last_runtime_failure_message_sha256 === null &&
       plan.canonical_source_alignment === "COMPLETE",
     "RUNTIME_PLAN_TARGET_ORIGIN",
+  );
+  assert(
+    exactObject(plan.runtime_evidence, SOURCE_IDENTITY_KEYS) &&
+      exactValue(plan.runtime_evidence, RUNTIME_EVIDENCE_IDENTITY),
+    "RUNTIME_PLAN_EVIDENCE_PROMOTION",
   );
   assert(
     exactArray(plan.blocked_capabilities, BLOCKED_CAPABILITIES),
@@ -759,7 +950,7 @@ function validatePlan() {
   );
   assert(
     plan.next_gate ===
-      "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW",
+      "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME",
     "RUNTIME_PLAN_DECISION",
   );
   const rawPlan = readFileSync(
@@ -851,7 +1042,8 @@ function validatePlan() {
       "RUNTIME_PLAN_EXECUTION_AUTHORITY",
     );
     assert(
-      surface.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
+      surface.live_evidence_status ===
+        "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION",
       "RUNTIME_PLAN_EVIDENCE_PROMOTION",
     );
   }
@@ -866,7 +1058,7 @@ function validatePlan() {
 try {
   const result = validatePlan();
   console.log(
-    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} execution_authorized=false live_evidence=FULL_RUNTIME_RETEST_REQUIRED failures=0 internal_failures=0`,
+    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} execution_authorized=false live_evidence=PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

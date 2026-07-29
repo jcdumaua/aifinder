@@ -1,7 +1,8 @@
 {
   "planning_version": 1,
-  "source_commit": "05bcc50605809c6fb934d0bea914bf417758a457",
+  "source_commit": "7c369726fa5a4092b056d91f14ca6a61effef151",
   "source_registry": {
+    "binding_role": "PRE_INTEGRATION_SOURCE_BINDING",
     "path": "testing/public-launch-blocker-registry.json",
     "sha256": "6722c6605ff63076d0fddf39b1a46b3d5bc2845d841729be374039cdf2eb259a",
     "git_blob": "8c58a34e4697a2264b6142343605f95b63073b70",
@@ -10,6 +11,7 @@
     "mode": "0644"
   },
   "source_matrix": {
+    "binding_role": "PRE_INTEGRATION_SOURCE_BINDING",
     "path": "testing/readiness-coverage-matrix.json",
     "sha256": "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
     "git_blob": "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
@@ -22,20 +24,28 @@
   },
   "workstream": {
     "id": "PUBLIC_PRODUCTION_RUNTIME",
-    "gap_code": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
+    "gap_code": "RUNTIME_EVIDENCE_INTEGRATED",
     "entry_count": 7
   },
-  "decision": "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED",
+  "decision": "FINAL_READ_ONLY_RUNTIME_QUALIFICATION_EVIDENCE_INTEGRATED",
   "current_authority": "STATIC_ONLY",
   "execution_authorized": false,
-  "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED",
+  "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION",
   "target_origin": "https://www.aifinder.to",
-  "target_origin_resolution": "CONFIRMED_APEX_REDIRECTS_ONE_HOP_TO_WWW",
+  "target_origin_resolution": "CONFIRMED_FINAL_PUBLIC_RUNTIME_QUALIFICATION",
   "selected_canonical_origin": "https://www.aifinder.to",
-  "last_runtime_result": "FAILED_CANONICAL_METADATA_ORIGIN",
-  "last_runtime_failure_code": "RUNTIME_CANONICAL_METADATA_ORIGIN",
-  "last_runtime_failure_message_sha256": "bdfceb0f94def1c781b827f1c02bae7a7759001d63f50f5b074f637743ac7c23",
+  "last_runtime_result": "PASSED_PHASE_31AQ_31BP_TERMINAL_GUARD_REASON_VECTOR_AND_CDP_TAXONOMY_HARDENING_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION_AND_LAUNCH_READINESS_DECISION",
+  "last_runtime_failure_code": null,
+  "last_runtime_failure_message_sha256": null,
   "canonical_source_alignment": "COMPLETE",
+  "runtime_evidence": {
+    "path": "testing/public-production-runtime-evidence.json",
+    "sha256": "dc9eb9878caf6a055ea7859ac2def9653161e82231e236fd5de0b6195ebd5c20",
+    "git_blob": "40d8e9e9d7235f7299092e9a0f3ccef9b7d0e387",
+    "bytes": 12315,
+    "lines": 335,
+    "mode": "0644"
+  },
   "blocked_capabilities": [
     "AUTHENTICATED_RUNTIME",
     "DATABASE",
@@ -136,7 +146,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/compare/page.tsx",
@@ -201,7 +211,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/layout.tsx",
@@ -252,7 +262,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/not-found.tsx",
@@ -293,7 +303,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/page.tsx",
@@ -375,7 +385,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/submit/page.tsx",
@@ -432,7 +442,7 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     },
     {
       "source_path": "app/tool/[slug]/page.tsx",
@@ -495,8 +505,8 @@
       ],
       "mutation_prohibited": true,
       "execution_authorized": false,
-      "live_evidence_status": "FULL_RUNTIME_RETEST_REQUIRED"
+      "live_evidence_status": "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION"
     }
   ],
-  "next_gate": "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW"
+  "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME"
 }

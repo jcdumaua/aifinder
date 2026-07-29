@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "source_phase": "PHASE_31AQ_31BP_CONSOLIDATED_EXACT_6_FILE_TERMINAL_GUARD_PREDICATE_VECTOR_CDP_LOADINGFAILED_TAXONOMY_REQUEST_SCOPE_PARTITIONING_FAILURE_LEDGER_COMPLETENESS_COMPLETE_HISTORICAL_REQUALIFICATION_AND_BOUNDED_MAXIMUM_TWO_ATTEMPT_READ_ONLY_PUBLIC_PRODUCTION_FINAL_RUNTIME_QUALIFICATION",
+  "source_ccr": {
+    "reference": "EXTERNAL_PHASE_31AQ_31BP_CCR",
+    "sha256": "ca12bad25b89c161ca9e44f9776b7a9803231bd2dcae14539739cba5dd3c6874",
+    "bytes": 71384,
+    "lines": 1936,
+    "mode": "0600"
+  },
+  "controlling_package": {
+    "reference": "EXTERNAL_PHASE_31AQ_31BP_CONTROLLING_PACKAGE",
+    "sha256": "62805fc50fd42bb33ea37521f12cb90d84f9767d1d4704a0699e54b2e85d29f1",
+    "bytes": 29498,
+    "lines": 729,
+    "mode": "0600"
+  },
+  "canonical_result": "PASSED_PHASE_31AQ_31BP_TERMINAL_GUARD_REASON_VECTOR_AND_CDP_TAXONOMY_HARDENING_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION_AND_LAUNCH_READINESS_DECISION",
+  "source_reporting_defects": {
+    "top_level_classification_alias": {
+      "observed": "PASSED_PHASE_31AQ_31BP_EXACT_6_FILE_PRIVATE_TERMINAL_GUARD_REPAIR_AND_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION",
+      "canonical": "PASSED_PHASE_31AQ_31BP_TERMINAL_GUARD_REASON_VECTOR_AND_CDP_TAXONOMY_HARDENING_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION_AND_LAUNCH_READINESS_DECISION",
+      "reconciliation_source": "CONTROLLING_PACKAGE_AND_EXACT_SUCCESS_MARKER",
+      "historical_source_bytes_preserved": true
+    },
+    "unresolved_remote_bindings": {
+      "observed_deployment_binding": "undefined",
+      "observed_public_data_origin_binding": "undefined",
+      "reconciled_deployment_id": "dpl_48RE7rYPfwJCK1ZKzpJ2eZoksMor",
+      "reconciled_public_data_origin_sha256": "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777",
+      "reconciliation_sources": [
+        "PRODUCTION_EXECUTION_GATE",
+        "PRODUCTION_EXECUTION_RECEIPT",
+        "RUNTIME_ARTIFACT_03",
+        "RUNTIME_ARTIFACT_06",
+        "BOUNDED_GITHUB_METADATA",
+        "BOUNDED_VERCEL_METADATA"
+      ],
+      "historical_source_bytes_preserved": true
+    },
+    "shell_facing_exit_status": {
+      "observed_exit_code": 1,
+      "stdout_marker_exact": true,
+      "stderr_empty": true,
+      "authoritative_atomic_success_state": true,
+      "offline_reconciliation": "EXTERNAL_EXEC_TOOL_STATUS_CAPTURE_ANOMALY_CONFIRMED",
+      "historical_source_bytes_preserved": true
+    }
+  },
+  "immutable_binding": {
+    "repository_commit": "7c369726fa5a4092b056d91f14ca6a61effef151",
+    "repository_tree": "a6a3a1057355d61445ded239250ef7f7597bf077",
+    "repository_digest_sha256": "9192bc54a37632d3f91b162a35a558535e7a64f8a1c4ea4e41c6e860038ad21b",
+    "repository_subject": "Align canonical metadata with www production host",
+    "canonical_origin": "https://www.aifinder.to",
+    "public_data_origin_sha256": "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777",
+    "source_deployment_id": "dpl_48RE7rYPfwJCK1ZKzpJ2eZoksMor",
+    "source_github_run_id": 30184205732,
+    "authorization_state": "CONSUMED_EXACTLY_ONCE_SPENT_NON_REUSABLE",
+    "execution_gate": {
+      "sha256": "9c951a3447104332c827e3c36025e17d5ee04d518c596bb4a01ccaad63ff8ef8",
+      "bytes": 14623,
+      "lines": 311,
+      "mode": "0600",
+      "state": "CLOSED",
+      "use_state": "SPENT",
+      "result": "PASS"
+    },
+    "execution_receipt": {
+      "sha256": "89571f42c60b8378d703f33cc8b4038140530245463955c9d91ad332fe1c4005",
+      "bytes": 2968,
+      "lines": 37,
+      "mode": "0600",
+      "state": "SUCCESS",
+      "use_state": "SPENT",
+      "result": "PASS"
+    },
+    "runner_checkpoint": {
+      "sha256": "602068edbba8bcbf9aeb51e19fd369410d924edd4b0e9ea503f55aae67ef61d0",
+      "bytes": 3215,
+      "lines": 44,
+      "mode": "0600",
+      "state": "SUCCESS",
+      "stage": "COMPLETED",
+      "use_state": "SPENT",
+      "result": "PASS"
+    }
+  },
+  "runtime_contract": {
+    "surfaces": [
+      "app/category/[slug]/page.tsx",
+      "app/compare/page.tsx",
+      "app/layout.tsx",
+      "app/not-found.tsx",
+      "app/page.tsx",
+      "app/submit/page.tsx",
+      "app/tool/[slug]/page.tsx"
+    ],
+    "surface_count": 7,
+    "target_count": 6,
+    "http": {
+      "transactions": 6,
+      "status_200": 5,
+      "status_404": 1,
+      "status_5xx": 0,
+      "metadata_independently_bounded": true,
+      "raw_bodies_retained": false
+    },
+    "browser": {
+      "desktop_navigations": 6,
+      "desktop_passed": 6,
+      "mobile_navigations": 6,
+      "mobile_passed": 6,
+      "total_navigations": 12
+    },
+    "root_layout_passed": 12,
+    "submit_render_only_passed": 2,
+    "dynamic_target_count": 2,
+    "artifact_request_count": 413,
+    "cdp_observed_request_count": 415,
+    "canonical_read_count": 362,
+    "external_application_public_read_count": 2,
+    "repository_unchanged": true
+  },
+  "public_data_contract": {
+    "authoritative_scope": "all_browser_contexts_terminal_aggregate",
+    "intent_count": 2,
+    "preflight_count": 2,
+    "preflight_before_get_observed_count": 2,
+    "get_count": 2,
+    "allowed_count": 2,
+    "completed_count": 2,
+    "failed_count": 0,
+    "rejected_preflight_count": 0,
+    "duplicate_or_replayed_accept_count": 0,
+    "unsafe_header_rejection_count": 0,
+    "desktop_terminal_intent_count": 1,
+    "mobile_terminal_intent_count": 1,
+    "context_terminal_intent_sum": 2,
+    "scope_relationship_valid": true,
+    "unique_origin_hash_count": 1,
+    "origin_sha256": "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777",
+    "request_header_names_inspected": false,
+    "request_header_values_inspected": false
+  },
+  "terminal_contract": {
+    "predicate_passed": 20,
+    "predicate_total": 20,
+    "predicate_failed": 0,
+    "taxonomy_mutually_exclusive": true,
+    "request_will_be_sent_count": 415,
+    "response_received_count": 366,
+    "loading_finished_count": 365,
+    "loading_failed_count": 50,
+    "completed_count": 365,
+    "taxonomy_counts": {
+      "CANCELED_ALLOWLISTED": 1,
+      "BLOCKED": 49,
+      "CORS": 0,
+      "FAILED_KNOWN_OTHER": 0,
+      "FAILED_UNKNOWN": 0
+    },
+    "scope_counts": {
+      "SAME_ORIGIN_REQUIRED": 361,
+      "SAME_ORIGIN_OPTIONAL_OR_SPECULATIVE": 1,
+      "SANCTIONED_EXTERNAL_PUBLIC_DATA": 4,
+      "GENERIC_EXTERNAL": 49
+    },
+    "disposition_counts": {
+      "same_origin_required_unexpected_failure": 0,
+      "same_origin_optional_unexpected_failure": 0,
+      "sanctioned_external_public_data_failure": 0,
+      "generic_external_policy_denied": 49,
+      "generic_external_violation": 0
+    },
+    "cross_channel_agreement_count": 50,
+    "cross_channel_disagreement_count": 0,
+    "unresolved_terminal_count": 0,
+    "duplicate_terminal_count": 0,
+    "cleanup_late_terminal_count": 0,
+    "primary_descriptor_cdp_binding_present": true
+  },
+  "private_harness_contract": {
+    "classification": "FROZEN_EXACT_SIX_BYTE_IDENTICAL",
+    "harness_files_sha256": "fc640e36700fbba4cddc8c04fd20c35f049d0c8c637a17f7aba6427ace489ac2",
+    "files": [
+      {
+        "path": "harness/production-runner.mjs",
+        "sha256": "7399ee23e3e19e720fbc077b3ba50a3c64b7471d9ca33f800a987580ca8a23c0",
+        "bytes": 308874,
+        "lines": 8437,
+        "mode": "0600"
+      },
+      {
+        "path": "harness/production-runner.test.mjs",
+        "sha256": "281971d0c58c2777bef15e396ce4cd90edbc6d29b287e9403740dd594caa3677",
+        "bytes": 160274,
+        "lines": 4666,
+        "mode": "0600"
+      },
+      {
+        "path": "harness/runtime-harness.mjs",
+        "sha256": "68c4a1c04b5ffa0f32f46a5824bd0701f6fe9269940630cecda52a5471743cf6",
+        "bytes": 194147,
+        "lines": 5599,
+        "mode": "0600"
+      },
+      {
+        "path": "harness/runtime-harness.test.mjs",
+        "sha256": "5dc7b707662630ef667d9c6eeeba5a8e15e5111b09382b87320062bedf9980a6",
+        "bytes": 48164,
+        "lines": 1403,
+        "mode": "0600"
+      },
+      {
+        "path": "harness/self-test-cli.test.mjs",
+        "sha256": "6ff6d977d02f27a31540b341e6b9b21ef9acaa6fabc6d79768b7feca6d9ef94d",
+        "bytes": 19503,
+        "lines": 456,
+        "mode": "0600"
+      },
+      {
+        "path": "harness/self-test.mjs",
+        "sha256": "39b207901035244c63edc9d555c690d0a5c8f3f8bcf269f98543ad571e318834",
+        "bytes": 55009,
+        "lines": 1220,
+        "mode": "0600"
+      }
+    ],
+    "runtime_artifacts": [
+      {
+        "path": "03-correlated-public-data-and-modal-assisted-dynamic-targets.json",
+        "sha256": "ffec3d93194cf1f68c125f56b8e7997fc39d5c3070ab9793a2703287545c4635",
+        "bytes": 3926,
+        "lines": 95,
+        "mode": "0600"
+      },
+      {
+        "path": "04-six-target-http-evidence.json",
+        "sha256": "7930078d58e8022eae5a57787909404a29c8469b51f9f30c565a7930158d5777",
+        "bytes": 3021,
+        "lines": 80,
+        "mode": "0600"
+      },
+      {
+        "path": "05-desktop-mobile-browser-layout-and-canonical-evidence.json",
+        "sha256": "38b5a02c69777a3c6ce18cbca56dc843a40e4cd5903271e56368cb2372b2a1ba",
+        "bytes": 16227,
+        "lines": 458,
+        "mode": "0600"
+      },
+      {
+        "path": "06-network-anonymous-state-form-and-public-data-boundary.json",
+        "sha256": "9a58226bdb1c08572853aa8dcb614e8a20ddd3b38515d5acb502ec8135196da3",
+        "bytes": 1101224,
+        "lines": 23110,
+        "mode": "0600"
+      }
+    ],
+    "focused_finalization_test": {
+      "result": "PASS",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "network_scope": "LOOPBACK_ONLY",
+      "stdout_sha256": "dfa306b3161e07a790c274ec416aa7467f1e022b4c7a84788c1635906f46085b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "process_exit_contract": {
+    "source_observed_exit_code": 1,
+    "source_stdout": {
+      "sha256": "0c3ca191ae44e6574ebb77074bf0bf2f081d85ff4d944a0208d687fd026cb139",
+      "bytes": 189,
+      "lines": 1,
+      "success_marker_exact": true
+    },
+    "source_stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "lines": 0,
+      "empty": true
+    },
+    "authoritative_atomic_success_state": {
+      "gate_closed_spent_pass": true,
+      "receipt_success_spent_pass": true,
+      "checkpoint_completed_spent_pass": true,
+      "cleanup_complete": true,
+      "terminal_predicates_20_of_20": true,
+      "four_runtime_artifacts_present": true
+    },
+    "offline_regression": {
+      "result": "PASS",
+      "classification": "EXTERNAL_EXEC_TOOL_STATUS_CAPTURE_ANOMALY_CONFIRMED",
+      "private_harness_repair_required": false,
+      "intentional_red_observed": true,
+      "success_child_exit_code": 0,
+      "success_marker_exact": true,
+      "success_stderr_empty": true,
+      "controlled_failure_child_exit_code": 1,
+      "controlled_failure_success_marker_absent": true,
+      "diagnosis_artifact_sha256": "5615bdf2fa839f7238912da7af3c260cd3884d05a0a8964f7defd1d49b5c1ab7",
+      "diagnosis_artifact_bytes": 4774,
+      "diagnosis_artifact_lines": 132,
+      "diagnosis_artifact_mode": "0600",
+      "green_stdout_sha256": "fddb5f047a172d91b2f0904324aa653de0a6e83c2b8d2364b2b39fa9068c0b3e",
+      "green_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "safety_boundary": {
+    "additional_public_runtime_observations": 0,
+    "public_http_requests": 0,
+    "production_browser_runs": 0,
+    "real_environment_reads": 0,
+    "secret_reads": 0,
+    "supabase_connector_calls": 0,
+    "real_supabase_requests": 0,
+    "codex_constructed_non_loopback_supabase_requests": 0,
+    "sql_executions": 0,
+    "database_api_calls": 0,
+    "authenticated_runtime_operations": 0,
+    "form_interactions": 0,
+    "user_visible_mutations": 0,
+    "direct_vercel_writes": 0,
+    "deployment_control_actions": 0,
+    "operational_reactivation_actions": 0,
+    "public_launch_actions": 0
+  },
+  "integration_decision": {
+    "static_evidence_integration_recommendation": "GO",
+    "public_production_runtime_workstream": "EVIDENCE_COMPLETE",
+    "public_launch_decision": "NO_GO_PENDING_REMAINING_WORKSTREAMS_AND_FINAL_LAUNCH_GATE",
+    "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME"
+  }
+}

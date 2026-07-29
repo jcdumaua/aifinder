@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "a43dbf4a1c847e3fccf4c844568b1a1ae25103cb50f8634ffc7dfc1ef4a61525",
+  "testing_tree_digest": "cf70ecd36ac0fe6fcb931dd75420a8fad181ce5de1b76ec8548ba39f20cfaa13",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -649,6 +649,14 @@
         "testing/public-persistence.test.mjs"
       ],
       "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/public-production-runtime-evidence.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "FINAL_PUBLIC_RUNTIME_EVIDENCE"
     },
     {
       "path": "testing/public-production-runtime-planning-manifest.json",

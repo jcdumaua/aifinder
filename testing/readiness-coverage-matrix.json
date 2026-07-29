@@ -671,15 +671,16 @@
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
-        "testing/public-launch-resilience-static-assertions.mjs"
+        "testing/public-launch-resilience-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/compare/error.tsx",
@@ -707,15 +708,16 @@
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
-        "testing/public-launch-resilience-static-assertions.mjs"
+        "testing/public-launch-resilience-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/error.tsx",
@@ -759,15 +761,16 @@
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
-        "testing/production-perimeter-static-assertions.mjs"
+        "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/loading.tsx",
@@ -808,15 +811,16 @@
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
-        "testing/public-launch-resilience-static-assertions.mjs"
+        "testing/public-launch-resilience-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/opengraph-image.tsx",
@@ -838,15 +842,16 @@
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
-        "testing/public-launch-resilience-static-assertions.mjs"
+        "testing/public-launch-resilience-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/robots.ts",
@@ -916,15 +921,16 @@
       "url_pattern_or_special_role": "/submit",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
-        "testing/accessibility-responsive-static-assertions.mjs"
+        "testing/accessibility-responsive-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/tool/[slug]/error.tsx",
@@ -952,15 +958,16 @@
       "static_evidence_paths": [
         "testing/accessibility-responsive-static-assertions.mjs",
         "testing/production-perimeter-static-assertions.mjs",
-        "testing/public-launch-resilience-static-assertions.mjs"
+        "testing/public-launch-resilience-static-assertions.mjs",
+        "testing/public-production-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED"
+      "coverage_state": "RUNTIME_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/twitter-image.tsx",

@@ -15,18 +15,18 @@ const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const RUNTIME_PLAN_PATH =
   "testing/public-production-runtime-planning-manifest.json";
-const SOURCE_COMMIT = "9841a4ce19b12e9c55a24cdd02ca1292667949c9";
+const SOURCE_COMMIT = "7c369726fa5a4092b056d91f14ca6a61effef151";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
-  git_blob: "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
-  bytes: 37616,
-  lines: 978,
+  sha256: "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
+  git_blob: "9273a1304f2007a56f31747ff6e4e74057843a32",
+  bytes: 37735,
+  lines: 985,
   mode: "0644",
   route_inventory_digest:
     "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
   entry_count: 69,
-  launch_blocking_count: 69,
+  launch_blocking_count: 62,
 };
 const TOP_LEVEL_KEYS = [
   "registry_version",
@@ -93,17 +93,19 @@ const COMMON_PREREQUISITES = [
 const WORKSTREAMS = [
   {
     id: "PUBLIC_PRODUCTION_RUNTIME",
-    gap_code: "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
+    gap_code: "RUNTIME_EVIDENCE_INTEGRATED",
     entry_count: 7,
     authority_class: "PUBLIC_PRODUCTION_RUNTIME",
+    state: "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
     planning_priority: 1,
-    next_gate: "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW",
+    next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME",
   },
   {
     id: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
     gap_code: "BROWSER_OR_LIVE_EVIDENCE_REQUIRED",
     entry_count: 13,
     authority_class: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
     planning_priority: 2,
     next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME",
   },
@@ -112,6 +114,7 @@ const WORKSTREAMS = [
     gap_code: "LIVE_ROUTE_EVIDENCE_REQUIRED",
     entry_count: 3,
     authority_class: "PUBLIC_LIVE_ROUTE_RUNTIME",
+    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
     planning_priority: 3,
     next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME",
   },
@@ -120,6 +123,7 @@ const WORKSTREAMS = [
     gap_code: "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED",
     entry_count: 18,
     authority_class: "AUTHENTICATED_BROWSER_RUNTIME",
+    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
     planning_priority: 4,
     next_gate: "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
   },
@@ -128,6 +132,7 @@ const WORKSTREAMS = [
     gap_code: "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
     entry_count: 28,
     authority_class: "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
+    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
     planning_priority: 5,
     next_gate: "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
   },
@@ -236,9 +241,20 @@ function matrixModel() {
     (entry) => entry.launch_blocking === true,
   );
   assert(
-    launchBlocking.length === MATRIX_IDENTITY.launch_blocking_count &&
-      launchBlocking.length === matrix.entries.length,
+    launchBlocking.length === MATRIX_IDENTITY.launch_blocking_count,
     "BLOCKER_REGISTRY_ENTRY_COUNT",
+  );
+  const completedPaths = matrix.entries
+    .filter(
+      (entry) =>
+        entry.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED" &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null,
+    )
+    .map((entry) => entry.path);
+  assert(
+    completedPaths.length === 7,
+    "BLOCKER_REGISTRY_COMPLETED_PATHS",
   );
 
   const paths = matrix.entries.map((entry) => entry.path);
@@ -249,30 +265,36 @@ function matrixModel() {
   );
 
   const expectedGapSet = stableSortedPaths(
-    WORKSTREAMS.map((workstream) => workstream.gap_code),
+    WORKSTREAMS.filter(
+      (workstream) => workstream.id !== "PUBLIC_PRODUCTION_RUNTIME",
+    ).map((workstream) => workstream.gap_code),
   );
   const actualGapSet = stableSortedPaths([
-    ...new Set(matrix.entries.map((entry) => entry.gap_code_or_null)),
+    ...new Set(launchBlocking.map((entry) => entry.gap_code_or_null)),
   ]);
   assert(exactArray(actualGapSet, expectedGapSet), "BLOCKER_REGISTRY_GAP_SET");
 
   const pathsByGap = new Map();
   for (const workstream of WORKSTREAMS) {
-    const sourcePaths = matrix.entries
-      .filter((entry) => entry.gap_code_or_null === workstream.gap_code)
-      .map((entry) => entry.path);
+    const sourcePaths =
+      workstream.id === "PUBLIC_PRODUCTION_RUNTIME"
+        ? completedPaths
+        : matrix.entries
+            .filter((entry) => entry.gap_code_or_null === workstream.gap_code)
+            .map((entry) => entry.path);
     assert(
       sourcePaths.length === workstream.entry_count,
       "BLOCKER_REGISTRY_GAP_COUNT",
     );
     pathsByGap.set(workstream.gap_code, sourcePaths);
   }
-  return { matrix, paths, pathsByGap };
+  return { matrix, paths, pathsByGap, completedPaths, launchBlocking };
 }
 
 function validateRegistry() {
   const registry = readRegistry();
-  const { matrix, paths, pathsByGap } = matrixModel();
+  const { matrix, paths, pathsByGap, completedPaths, launchBlocking } =
+    matrixModel();
 
   assert(
     exactKeys(registry, TOP_LEVEL_KEYS),
@@ -325,12 +347,13 @@ function validateRegistry() {
     planningArtifact.workstream_id === "PUBLIC_PRODUCTION_RUNTIME" &&
       planningArtifact.path === RUNTIME_PLAN_PATH &&
       planningArtifact.state ===
-        "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED" &&
+        "FINAL_READ_ONLY_RUNTIME_QUALIFICATION_EVIDENCE_INTEGRATED" &&
       planningArtifact.execution_authorized === false &&
       runtimePlan.workstream?.id === planningArtifact.workstream_id &&
       runtimePlan.decision === planningArtifact.state &&
       runtimePlan.execution_authorized === false &&
-      runtimePlan.live_evidence_status === "FULL_RUNTIME_RETEST_REQUIRED",
+      runtimePlan.live_evidence_status ===
+        "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION",
     "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
   );
   assert(
@@ -363,7 +386,7 @@ function validateRegistry() {
       "BLOCKER_REGISTRY_AUTHORITY_CLASS",
     );
     assert(
-      actual.state === "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+      actual.state === expected.state,
       "BLOCKER_REGISTRY_STATE",
     );
     assert(
@@ -381,7 +404,12 @@ function validateRegistry() {
     for (const sourcePath of actual.source_paths) {
       const entry = matrix.entries.find((candidate) => candidate.path === sourcePath);
       assert(
-        entry?.gap_code_or_null === actual.gap_code,
+        expected.id === "PUBLIC_PRODUCTION_RUNTIME"
+          ? entry?.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED" &&
+              entry.launch_blocking === false &&
+              entry.gap_code_or_null === null
+          : entry?.launch_blocking === true &&
+              entry.gap_code_or_null === actual.gap_code,
         "BLOCKER_REGISTRY_PATH_GAP_MISMATCH",
       );
     }
@@ -431,18 +459,26 @@ function validateRegistry() {
       compareExactPathSets(registryPaths, paths).equal,
     "BLOCKER_REGISTRY_PATH_PARTITION",
   );
+  assert(
+    compareExactPathSets(
+      registry.workstreams[0].source_paths,
+      completedPaths,
+    ).equal,
+    "BLOCKER_REGISTRY_COMPLETED_PATHS",
+  );
 
   return {
     entries: paths.length,
     workstreams: registry.workstreams.length,
-    blocked: registryPaths.length,
+    completed: completedPaths.length,
+    blocked: launchBlocking.length,
   };
 }
 
 try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} blocked=${result.blocked} decision=NO_GO failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed=${result.completed} blocked=${result.blocked} decision=NO_GO failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

@@ -1,16 +1,16 @@
 {
   "registry_version": 1,
-  "source_commit": "9841a4ce19b12e9c55a24cdd02ca1292667949c9",
+  "source_commit": "7c369726fa5a4092b056d91f14ca6a61effef151",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "5b20505312059376144fdfa0fa0f3a5ae3dbdddfca48bd1ba5bce74da6a6c240",
-    "git_blob": "2bc2d245ed2d01f496fc23f9b35a0ba844e400ec",
-    "bytes": 37616,
-    "lines": 978,
+    "sha256": "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
+    "git_blob": "9273a1304f2007a56f31747ff6e4e74057843a32",
+    "bytes": 37735,
+    "lines": 985,
     "mode": "0644",
     "route_inventory_digest": "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
     "entry_count": 69,
-    "launch_blocking_count": 69
+    "launch_blocking_count": 62
   },
   "overall_decision": "NO_GO_PENDING_SEPARATE_AUTHORITIES",
   "current_authority": "STATIC_ONLY",
@@ -34,17 +34,17 @@
     {
       "workstream_id": "PUBLIC_PRODUCTION_RUNTIME",
       "path": "testing/public-production-runtime-planning-manifest.json",
-      "state": "CANONICAL_HOST_SOURCE_ALIGNED_RUNTIME_RETEST_UNAUTHORIZED",
+      "state": "FINAL_READ_ONLY_RUNTIME_QUALIFICATION_EVIDENCE_INTEGRATED",
       "execution_authorized": false
     }
   ],
   "workstreams": [
     {
       "id": "PUBLIC_PRODUCTION_RUNTIME",
-      "gap_code": "CANONICAL_HOST_SOURCE_ALIGNED_FULL_RUNTIME_RETEST_REQUIRED",
+      "gap_code": "RUNTIME_EVIDENCE_INTEGRATED",
       "entry_count": 7,
       "authority_class": "PUBLIC_PRODUCTION_RUNTIME",
-      "state": "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+      "state": "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
       "execution_authorized": false,
       "planning_priority": 1,
       "source_paths": [
@@ -76,7 +76,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW"
+      "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME"
     },
     {
       "id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
