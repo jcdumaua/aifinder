@@ -1,0 +1,322 @@
+{
+  "planning_version": 1,
+  "source_commit": "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16",
+  "source_registry": {
+    "binding_role": "PRE_INTEGRATION_SOURCE_BINDING",
+    "path": "testing/public-launch-blocker-registry.json",
+    "sha256": "b145c551fb3c0b51dc5fd3f61c19f039c273cad2e3b6ce255159655bdd36f854",
+    "git_blob": "91df9efa96e117e47db90f28c212854df6e94f8e",
+    "bytes": 9754,
+    "lines": 272,
+    "mode": "0644"
+  },
+  "source_matrix": {
+    "binding_role": "PRE_INTEGRATION_SOURCE_BINDING",
+    "path": "testing/readiness-coverage-matrix.json",
+    "sha256": "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
+    "git_blob": "9273a1304f2007a56f31747ff6e4e74057843a32",
+    "bytes": 37735,
+    "lines": 985,
+    "mode": "0644",
+    "route_inventory_digest": "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
+    "entry_count": 69,
+    "launch_blocking_count": 62
+  },
+  "workstream": {
+    "id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+    "gap_code": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+    "entry_count": 13
+  },
+  "decision": "FINAL_PUBLIC_BROWSER_OR_LIVE_RUNTIME_EVIDENCE_INTEGRATED",
+  "current_authority": "STATIC_ONLY",
+  "execution_authorized": false,
+  "live_evidence_status": "PASSED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE",
+  "target_origin": "https://www.aifinder.to",
+  "last_runtime_result": "PASSED_PHASE_31CU_31FN_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE_READY_FOR_STATIC_EVIDENCE_INTEGRATION",
+  "canonical_source_alignment": "COMPLETE",
+  "runtime_evidence": {
+    "path": "testing/public-browser-live-runtime-evidence.json",
+    "sha256": "b421e7c540ba0003e6311f764724f6917d864c7dbf4f3cdeb8f047a2ee4dae33",
+    "git_blob": "b424a1a816a344339fdd7bcffaf43fdd73e8be25",
+    "bytes": 12916,
+    "lines": 343,
+    "mode": "0644"
+  },
+  "blocked_capabilities": [
+    "AUTHENTICATED_RUNTIME",
+    "DATABASE",
+    "DEPLOYMENT_CONTROL",
+    "DIRECT_VERCEL_WRITE",
+    "MIGRATIONS_OR_GENERATED_TYPES",
+    "OPERATIONAL_REACTIVATION",
+    "PUBLIC_LAUNCH",
+    "PUBLIC_OR_DEPLOYED_BROWSER",
+    "PUBLIC_OR_DEPLOYED_HTTP",
+    "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+    "SQL",
+    "SUPABASE"
+  ],
+  "surfaces": [
+    {
+      "source_path": "app/category/[slug]/error.tsx",
+      "source_role": "ERROR_CATEGORY",
+      "source_identity": {
+        "path": "app/category/[slug]/error.tsx",
+        "sha256": "5e80eb7f2a3a270056e3c7ef0da086d4a3d0183fa20865d4e76be09b6ee8999a",
+        "git_blob": "fbe47ed9bfc513404845da6aa062162fb49cce75",
+        "bytes": 275,
+        "lines": 12,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/compare/error.tsx",
+      "source_role": "ERROR_COMPARE",
+      "source_identity": {
+        "path": "app/compare/error.tsx",
+        "sha256": "5e660f0225c0ba460ed50590e09ce3f7c079d3179f98c338380959f34215e1f6",
+        "git_blob": "34039b92976d64e8212037a07ebb0e4e8ae556d3",
+        "bytes": 273,
+        "lines": 12,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/error.tsx",
+      "source_role": "ERROR_ROOT",
+      "source_identity": {
+        "path": "app/error.tsx",
+        "sha256": "0fdd14d627f83a8d297961f690a70c5e620d52508ab415a508631a1524a45656",
+        "git_blob": "97b33bb0a4f764f47171f435d681b58e5f658030",
+        "bytes": 267,
+        "lines": 12,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/global-error.tsx",
+      "source_role": "ERROR_GLOBAL",
+      "source_identity": {
+        "path": "app/global-error.tsx",
+        "sha256": "6c14dcc174e9e404e726f5ff7fc7c68ef4f0440b536a34f81cfe7aa81eb79cd0",
+        "git_blob": "88c300169c3b7d90d54c1d4cb356e52e175c7956",
+        "bytes": 343,
+        "lines": 18,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/loading.tsx",
+      "source_role": "LOADING",
+      "source_identity": {
+        "path": "app/loading.tsx",
+        "sha256": "9acf531871afe9315833f9d12e9849848ccab9ea6e4f8e09fa035c4c097887c2",
+        "git_blob": "11f4faef41818c8d1eaa49a2f585ce2b17738502",
+        "bytes": 407,
+        "lines": 13,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_LOADING_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_LOADING_PROFILE",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/manifest.ts",
+      "source_role": "METADATA_MANIFEST",
+      "source_identity": {
+        "path": "app/manifest.ts",
+        "sha256": "f408dc12c136e612e559cdf062c2ad616dc1f71fadc8d39f7c1afba6b23cf116",
+        "git_blob": "f96af2cd9dec0c84d7d238e35ebc5947cc7e7c7f",
+        "bytes": 971,
+        "lines": 37,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_AND_PUBLIC_METADATA",
+      "required_evidence": [
+        "COMMITTED_SHADOW_METADATA",
+        "PUBLIC_METADATA_RESPONSE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/opengraph-image.tsx",
+      "source_role": "METADATA_OPENGRAPH_IMAGE",
+      "source_identity": {
+        "path": "app/opengraph-image.tsx",
+        "sha256": "79ecaf82465159be296c0bff9b135404cd88899b700b0df42c70a24fa4671380",
+        "git_blob": "f5f7dc00918bdac9e5fd56bcba84c36fb3063207",
+        "bytes": 2982,
+        "lines": 121,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_AND_PUBLIC_METADATA",
+      "required_evidence": [
+        "COMMITTED_SHADOW_METADATA",
+        "PUBLIC_METADATA_RESPONSE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/robots.ts",
+      "source_role": "METADATA_ROBOTS",
+      "source_identity": {
+        "path": "app/robots.ts",
+        "sha256": "416a390936dbeb8767e33a92ac29ab05220e2474aa0d2ab2079d0ba4f5bc63db",
+        "git_blob": "fb6e9bbb6ac39d5fbe2eedb40ae35f9ddf779bbc",
+        "bytes": 445,
+        "lines": 19,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_AND_PUBLIC_METADATA",
+      "required_evidence": [
+        "COMMITTED_SHADOW_METADATA",
+        "PUBLIC_METADATA_RESPONSE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/sitemap.ts",
+      "source_role": "METADATA_SITEMAP",
+      "source_identity": {
+        "path": "app/sitemap.ts",
+        "sha256": "60d5a78dc68be0bd6da4bad51eb771308459fd8e253841e4498a4cd986dfe1bb",
+        "git_blob": "307e5e43906c98842cbd90c509a5eff6734d148c",
+        "bytes": 2378,
+        "lines": 88,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_ONLY_SITEMAP_INDIRECT_DATA",
+      "required_evidence": [
+        "COMMITTED_SHADOW_ERROR_FALLBACK",
+        "COMMITTED_SHADOW_SUCCESS"
+      ],
+      "live_evidence_status": "PASSED_SHADOW_ONLY_PUBLIC_REQUESTS_ZERO",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/submit/error.tsx",
+      "source_role": "ERROR_SUBMIT",
+      "source_identity": {
+        "path": "app/submit/error.tsx",
+        "sha256": "deb50ebdd8b8d2e393cf0b2c0d6fb75f99fd7d516667fe5529da1d208cc85e41",
+        "git_blob": "ecce34fc3285af25ce9598aa46c5b1a5fcb4c8d6",
+        "bytes": 271,
+        "lines": 12,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/submit/layout.tsx",
+      "source_role": "LAYOUT_SUBMIT",
+      "source_identity": {
+        "path": "app/submit/layout.tsx",
+        "sha256": "9f6d58faae5d505cf0b68f0e60a1a4d430ed29ad45822c50b9a0a59e821ecfea",
+        "git_blob": "4da09c21cc985fd9669035b89fa9b73fd61eabdd",
+        "bytes": 535,
+        "lines": 24,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_AND_PUBLIC_LAYOUT",
+      "required_evidence": [
+        "COMMITTED_SHADOW_LAYOUT_PROFILE",
+        "PUBLIC_LAYOUT_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/tool/[slug]/error.tsx",
+      "source_role": "ERROR_TOOL",
+      "source_identity": {
+        "path": "app/tool/[slug]/error.tsx",
+        "sha256": "c27d1fd535f8179aa7ce05a1e5c6f2e89aed3f837dff6dbda9a91db9c5b387ae",
+        "git_blob": "9d33a968b5806e63cdec17c9cb18c463b2922c54",
+        "bytes": 267,
+        "lines": 12,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_FAULT_RENDER_ONLY",
+      "required_evidence": [
+        "COMMITTED_SHADOW_FAULT_INJECTION",
+        "PUBLIC_RENDER_ASSURANCE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    },
+    {
+      "source_path": "app/twitter-image.tsx",
+      "source_role": "METADATA_TWITTER_IMAGE",
+      "source_identity": {
+        "path": "app/twitter-image.tsx",
+        "sha256": "3513491e9d240eb1b11c12777280666cd5003a8257d616e30f4e0bb8ef44dcee",
+        "git_blob": "b9f299076b76a7aa48e2b123291b81ffe88a5348",
+        "bytes": 2995,
+        "lines": 121,
+        "mode": "0644"
+      },
+      "evidence_mode": "SHADOW_AND_PUBLIC_METADATA",
+      "required_evidence": [
+        "COMMITTED_SHADOW_METADATA",
+        "PUBLIC_METADATA_RESPONSE"
+      ],
+      "live_evidence_status": "PASSED",
+      "mutation_prohibited": true,
+      "execution_authorized": false
+    }
+  ],
+  "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME"
+}

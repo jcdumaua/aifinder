@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "source_phase": "PHASE_31CU_31FN_CONSOLIDATED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ERROR_LOADING_LAYOUT_MANIFEST_ROBOTS_SITEMAP_OPENGRAPH_TWITTER_ASSURANCE_EXACT_COMMITTED_SHADOW_SYNTHETIC_FAULT_INJECTION_COMPLETE_HISTORICAL_SIMULATOR_AND_BOUNDED_MAXIMUM_TWO_ATTEMPT_PUBLIC_METADATA_BROWSER_SESSION",
+  "source_reporting_notes": {
+    "source_phase_field_observed": "PHASE_31CU_31FN",
+    "canonical_phase_from_controlling_package": "PHASE_31CU_31FN_CONSOLIDATED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ERROR_LOADING_LAYOUT_MANIFEST_ROBOTS_SITEMAP_OPENGRAPH_TWITTER_ASSURANCE_EXACT_COMMITTED_SHADOW_SYNTHETIC_FAULT_INJECTION_COMPLETE_HISTORICAL_SIMULATOR_AND_BOUNDED_MAXIMUM_TWO_ATTEMPT_PUBLIC_METADATA_BROWSER_SESSION",
+    "source_authorization_state_observed": "CONSUMED_EXACTLY_ONCE_COMPLETED",
+    "canonical_terminal_interpretation": "CLOSED_SUCCESS_NON_REUSABLE"
+  },
+  "source_ccr": {
+    "reference": "EXTERNAL_PHASE_31CU_31FN_CCR",
+    "sha256": "44a9999ec9f5990898d115b49867fb62ef8d9ed647fa3d6d46a464f00b01b784",
+    "bytes": 80537,
+    "lines": 1876,
+    "mode": "0600"
+  },
+  "controlling_package": {
+    "reference": "EXTERNAL_PHASE_31CU_31FN_CONTROLLING_PACKAGE",
+    "sha256": "e59c4cb4f8ab33b711ea636d7c0a1d508cda3c12106d0c4d798ebd42cbb2d9f3",
+    "bytes": 24048,
+    "lines": 617,
+    "mode": "0600"
+  },
+  "canonical_result": "PASSED_PHASE_31CU_31FN_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE_READY_FOR_STATIC_EVIDENCE_INTEGRATION",
+  "authorization_session": {
+    "source_authorization_state": "CONSUMED_EXACTLY_ONCE_COMPLETED",
+    "terminal_state": "CLOSED_SUCCESS_NON_REUSABLE",
+    "attempts_authorized_maximum": 2,
+    "attempts_consumed": 1,
+    "attempt_1": "PASS",
+    "attempt_2": "UNUSED_AND_FORBIDDEN_AFTER_PASS"
+  },
+  "immutable_binding": {
+    "repository_commit": "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16",
+    "repository_tree": "a36a3f461a51577be89e8eb764eb4e9d1e9baf6c",
+    "canonical_origin": "https://www.aifinder.to",
+    "github_run_id": 30437575033,
+    "github_run_attempt": 1,
+    "vercel_deployment_id": "dpl_9KfszMm4Q3eJ1d8swTW71BnsaUkY",
+    "vercel_state": "READY"
+  },
+  "exact_surface_contract": {
+    "exact_13_surface_qualification": "13/13",
+    "surface_count": 13,
+    "sources": [
+      {
+        "path": "app/category/[slug]/error.tsx",
+        "role": "ERROR_CATEGORY",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "fbe47ed9bfc513404845da6aa062162fb49cce75",
+        "sha256": "5e80eb7f2a3a270056e3c7ef0da086d4a3d0183fa20865d4e76be09b6ee8999a",
+        "bytes": 275,
+        "lines": 12,
+        "mode": "0644"
+      },
+      {
+        "path": "app/compare/error.tsx",
+        "role": "ERROR_COMPARE",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "34039b92976d64e8212037a07ebb0e4e8ae556d3",
+        "sha256": "5e660f0225c0ba460ed50590e09ce3f7c079d3179f98c338380959f34215e1f6",
+        "bytes": 273,
+        "lines": 12,
+        "mode": "0644"
+      },
+      {
+        "path": "app/error.tsx",
+        "role": "ERROR_ROOT",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "97b33bb0a4f764f47171f435d681b58e5f658030",
+        "sha256": "0fdd14d627f83a8d297961f690a70c5e620d52508ab415a508631a1524a45656",
+        "bytes": 267,
+        "lines": 12,
+        "mode": "0644"
+      },
+      {
+        "path": "app/global-error.tsx",
+        "role": "ERROR_GLOBAL",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "88c300169c3b7d90d54c1d4cb356e52e175c7956",
+        "sha256": "6c14dcc174e9e404e726f5ff7fc7c68ef4f0440b536a34f81cfe7aa81eb79cd0",
+        "bytes": 343,
+        "lines": 18,
+        "mode": "0644"
+      },
+      {
+        "path": "app/loading.tsx",
+        "role": "LOADING",
+        "classification": "SHADOW_LOADING_ONLY",
+        "git_blob": "11f4faef41818c8d1eaa49a2f585ce2b17738502",
+        "sha256": "9acf531871afe9315833f9d12e9849848ccab9ea6e4f8e09fa035c4c097887c2",
+        "bytes": 407,
+        "lines": 13,
+        "mode": "0644"
+      },
+      {
+        "path": "app/manifest.ts",
+        "role": "METADATA_MANIFEST",
+        "classification": "SHADOW_AND_PUBLIC_METADATA",
+        "git_blob": "f96af2cd9dec0c84d7d238e35ebc5947cc7e7c7f",
+        "sha256": "f408dc12c136e612e559cdf062c2ad616dc1f71fadc8d39f7c1afba6b23cf116",
+        "bytes": 971,
+        "lines": 37,
+        "mode": "0644"
+      },
+      {
+        "path": "app/opengraph-image.tsx",
+        "role": "METADATA_OPENGRAPH_IMAGE",
+        "classification": "SHADOW_AND_PUBLIC_METADATA",
+        "git_blob": "f5f7dc00918bdac9e5fd56bcba84c36fb3063207",
+        "sha256": "79ecaf82465159be296c0bff9b135404cd88899b700b0df42c70a24fa4671380",
+        "bytes": 2982,
+        "lines": 121,
+        "mode": "0644"
+      },
+      {
+        "path": "app/robots.ts",
+        "role": "METADATA_ROBOTS",
+        "classification": "SHADOW_AND_PUBLIC_METADATA",
+        "git_blob": "fb6e9bbb6ac39d5fbe2eedb40ae35f9ddf779bbc",
+        "sha256": "416a390936dbeb8767e33a92ac29ab05220e2474aa0d2ab2079d0ba4f5bc63db",
+        "bytes": 445,
+        "lines": 19,
+        "mode": "0644"
+      },
+      {
+        "path": "app/sitemap.ts",
+        "role": "METADATA_SITEMAP",
+        "classification": "SHADOW_ONLY_SITEMAP_INDIRECT_DATA",
+        "git_blob": "307e5e43906c98842cbd90c509a5eff6734d148c",
+        "sha256": "60d5a78dc68be0bd6da4bad51eb771308459fd8e253841e4498a4cd986dfe1bb",
+        "bytes": 2378,
+        "lines": 88,
+        "mode": "0644"
+      },
+      {
+        "path": "app/submit/error.tsx",
+        "role": "ERROR_SUBMIT",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "ecce34fc3285af25ce9598aa46c5b1a5fcb4c8d6",
+        "sha256": "deb50ebdd8b8d2e393cf0b2c0d6fb75f99fd7d516667fe5529da1d208cc85e41",
+        "bytes": 271,
+        "lines": 12,
+        "mode": "0644"
+      },
+      {
+        "path": "app/submit/layout.tsx",
+        "role": "LAYOUT_SUBMIT",
+        "classification": "SHADOW_AND_PUBLIC_LAYOUT",
+        "git_blob": "4da09c21cc985fd9669035b89fa9b73fd61eabdd",
+        "sha256": "9f6d58faae5d505cf0b68f0e60a1a4d430ed29ad45822c50b9a0a59e821ecfea",
+        "bytes": 535,
+        "lines": 24,
+        "mode": "0644"
+      },
+      {
+        "path": "app/tool/[slug]/error.tsx",
+        "role": "ERROR_TOOL",
+        "classification": "SHADOW_FAULT_RENDER_ONLY",
+        "git_blob": "9d33a968b5806e63cdec17c9cb18c463b2922c54",
+        "sha256": "c27d1fd535f8179aa7ce05a1e5c6f2e89aed3f837dff6dbda9a91db9c5b387ae",
+        "bytes": 267,
+        "lines": 12,
+        "mode": "0644"
+      },
+      {
+        "path": "app/twitter-image.tsx",
+        "role": "METADATA_TWITTER_IMAGE",
+        "classification": "SHADOW_AND_PUBLIC_METADATA",
+        "git_blob": "b9f299076b76a7aa48e2b123291b81ffe88a5348",
+        "sha256": "3513491e9d240eb1b11c12777280666cd5003a8257d616e30f4e0bb8ef44dcee",
+        "bytes": 2995,
+        "lines": 121,
+        "mode": "0644"
+      }
+    ]
+  },
+  "import_closure_contract": {
+    "import_count": 6,
+    "imports": [
+      {
+        "path": "app/data/tools.ts",
+        "git_blob": "5140587ed4417e5e9e1f2c61455a3dda928e3bd0",
+        "sha256": "4cbd06d987e2a20ffe2fa1b1aa2a368335233b58fae2077b1afa0c6e96c067b4",
+        "bytes": 21964,
+        "mode": "0644"
+      },
+      {
+        "path": "components/public/public-route-error.tsx",
+        "git_blob": "e2cb4dcd8923205c0850ded4413cd280d3672a6c",
+        "sha256": "cfd9a7b43de73857d7fb9e811b549f3d1ec433ccadd5b85047e90e39ef3e53e2",
+        "bytes": 2480,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/public-canonical-origin.ts",
+        "git_blob": "b96d685835da017eb57e5173b60288093f9badd2",
+        "sha256": "fe30fc5a87c0ff66a5b0c2ebc3225d0864f727b6f919a288c8c68603af85ba5e",
+        "bytes": 221,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/public-diagnostics.ts",
+        "git_blob": "84c120206f2ee941f41d09ce0fab7b6befbf594d",
+        "sha256": "b55aeef8385b6cef6ec5c97b9c19b21b410a4f6ff0a9ea715660dcc7ea7d67d5",
+        "bytes": 332,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/supabase-admin.ts",
+        "git_blob": "d3c31ea64e18dc0bdcb7ecee863f047383658d44",
+        "sha256": "fea8f1b29460bdf245321e6dec80091dc63dd119fa17bface6f6d4980749dbae",
+        "bytes": 417,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/tool-categories.ts",
+        "git_blob": "bd52f86182478728b7cf92fe040232d076ffa084",
+        "sha256": "5d7ae105a6539b070cdc214316ec37f2f2970c0a377ceef761e159d3cb619046",
+        "bytes": 980,
+        "mode": "0644"
+      }
+    ]
+  },
+  "committed_shadow_contract": {
+    "error_boundaries": "24/24",
+    "loading_profiles": "4/4",
+    "submit_layout_profiles": "4/4",
+    "metadata_route_method_cases": "10/10",
+    "committed_shadow_cases": "42/42",
+    "sitemap_success_sha256": "cd98a0fb0fc99286e0434e27b9a8373377276dedefd45c2677bfb9eca2829378",
+    "sitemap_error_fallback_sha256": "e980dc23f33c46f7f1d507d4d1737169f6981bc3c540f0901df0438ca4d6370d",
+    "public_sitemap_requests": 0,
+    "real_supabase_requests": 0
+  },
+  "public_attempt_contract": {
+    "public_targets": "5/5",
+    "public_sitemap_requests": 0,
+    "public_result_sha256": "936cf13c4c6fcba14180e0cc5a81bf9a8537fc33f364831d4b081fd6fe04d883",
+    "completion_receipt_sha256": "183c4329932751066fe47a6b251597aeec467751063a922ab3b6e6d173add1b1",
+    "attempts_consumed": 1,
+    "attempt_2": "UNUSED_AND_FORBIDDEN_AFTER_PASS"
+  },
+  "metadata_contract": {
+    "manifest_sha256": "41de116438070705ea0473326a2a93680d37ff17da157a3962c33b99af00935d",
+    "robots_sha256": "d5b70e16f3c6c065323ca9036abcfd566d08bfdb09ba20dcbc6edd1ff5acbb43",
+    "opengraph_sha256": "1eb3ec54c35fee3d55f2ee59c5b6b19b0f2752081f301079167885190a25bf2d",
+    "twitter_sha256": "1eb3ec54c35fee3d55f2ee59c5b6b19b0f2752081f301079167885190a25bf2d",
+    "public_targets": "5/5",
+    "public_sitemap_requests": 0
+  },
+  "accessibility_responsive_contract": {
+    "accessibility_critical_serious": "0/0",
+    "overflow_overlap_clipping": "0/0/0"
+  },
+  "simulator_mutation_review": {
+    "historical_portfolio": "400/400",
+    "historical_contracts": "28/28",
+    "mutations": "240/240",
+    "independent_review": "0/0/0"
+  },
+  "source_artifacts": [
+    {
+      "path": "01-preflight-workstream-and-session-budget.md",
+      "sha256": "471806e23ba8c4243690d4378c7899c27107b16e90117d490267413cfc5aa2fd",
+      "bytes": 1507,
+      "lines": 46,
+      "mode": "0600"
+    },
+    {
+      "path": "02-exact-13-source-and-import-closure.json",
+      "sha256": "57adf72ab1285e30e9ed889c1a51bf9bb72f1d282961ae99f4e65bd6c14e3b16",
+      "bytes": 6895,
+      "lines": 200,
+      "mode": "0600"
+    },
+    {
+      "path": "03-error-loading-layout-shadow-assurance.json",
+      "sha256": "d598465102ba8bf72c4fe2ce679ea25d5b893aeb5f76a3d2d437dbd100db2a61",
+      "bytes": 6644,
+      "lines": 255,
+      "mode": "0600"
+    },
+    {
+      "path": "04-metadata-sitemap-and-image-shadow-assurance.json",
+      "sha256": "f01eb88d9a7b67bb7056caab9ec820aca5328aac0f3c8c0c974c87c5a2c85737",
+      "bytes": 5508,
+      "lines": 175,
+      "mode": "0600"
+    },
+    {
+      "path": "05-complete-simulator-mutations-and-review.json",
+      "sha256": "a071234c2d55fdcb4ee4a09401f5772ea7f8f58fd662c36ab7722e2a7d150745",
+      "bytes": 20225,
+      "lines": 671,
+      "mode": "0600"
+    },
+    {
+      "path": "06-attempt-one-public-metadata-browser-evidence.json",
+      "sha256": "d51bc0c04797af029d204a345143161286d3b46fc3a7083e34be8f77bba77a04",
+      "bytes": 3556,
+      "lines": 108,
+      "mode": "0600"
+    },
+    {
+      "path": "07-between-attempt-repair-and-final-attempt.json",
+      "sha256": "9aeb723dfb1adc9b972c9a0883e3bab04a836eab526e5d3fb55892df79ad625f",
+      "bytes": 1105,
+      "lines": 26,
+      "mode": "0600"
+    },
+    {
+      "path": "08-final-13-surface-static-integration-boundary.md",
+      "sha256": "999f4074362585b236e1b97d13d3e0b56a8c902c6c18482579fe0bee3eec1982",
+      "bytes": 1597,
+      "lines": 34,
+      "mode": "0600"
+    }
+  ],
+  "safety_boundary": {
+    "real_supabase_sql_database": "0/0/0",
+    "repository_writes_stages_commits_pushes": "0/0/0/0",
+    "raw_response_bodies_retained": 0,
+    "raw_urls_or_query_values_retained": 0,
+    "header_values_retained": 0,
+    "cookies_sessions_storage_retained": 0,
+    "credentials_environment_values_retained": 0,
+    "form_values_retained": 0,
+    "production_records_retained": 0,
+    "real_supabase_calls": 0,
+    "sql_executions": 0,
+    "database_accesses": 0,
+    "repository_writes": 0,
+    "stages": 0,
+    "commits": 0,
+    "pushes": 0
+  },
+  "integration_decision": {
+    "PUBLIC_BROWSER_OR_LIVE_RUNTIME_WORKSTREAM": "EVIDENCE_COMPLETE",
+    "STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION": "GO",
+    "PUBLIC_LAUNCH_DECISION": "NO_GO_PENDING_REMAINING_WORKSTREAMS_AND_FINAL_LAUNCH_GATE"
+  }
+}

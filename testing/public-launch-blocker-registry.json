@@ -1,16 +1,16 @@
 {
   "registry_version": 1,
-  "source_commit": "7c369726fa5a4092b056d91f14ca6a61effef151",
+  "source_commit": "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
-    "git_blob": "9273a1304f2007a56f31747ff6e4e74057843a32",
-    "bytes": 37735,
-    "lines": 985,
+    "sha256": "5f7ae77cd4c1f985e937f98035e6f329890244206e7a9b04f036a672a95b6eb5",
+    "git_blob": "17e5c1c9e18f6ad3555c9d918c84f10a21bca9a2",
+    "bytes": 38378,
+    "lines": 1001,
     "mode": "0644",
     "route_inventory_digest": "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
     "entry_count": 69,
-    "launch_blocking_count": 62
+    "launch_blocking_count": 49
   },
   "overall_decision": "NO_GO_PENDING_SEPARATE_AUTHORITIES",
   "current_authority": "STATIC_ONLY",
@@ -35,6 +35,12 @@
       "workstream_id": "PUBLIC_PRODUCTION_RUNTIME",
       "path": "testing/public-production-runtime-planning-manifest.json",
       "state": "FINAL_READ_ONLY_RUNTIME_QUALIFICATION_EVIDENCE_INTEGRATED",
+      "execution_authorized": false
+    },
+    {
+      "workstream_id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+      "path": "testing/public-browser-live-runtime-planning-manifest.json",
+      "state": "FINAL_PUBLIC_BROWSER_OR_LIVE_RUNTIME_EVIDENCE_INTEGRATED",
       "execution_authorized": false
     }
   ],
@@ -80,10 +86,10 @@
     },
     {
       "id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
-      "gap_code": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED",
+      "gap_code": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
       "entry_count": 13,
       "authority_class": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
-      "state": "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+      "state": "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
       "execution_authorized": false,
       "planning_priority": 2,
       "source_paths": [
@@ -121,7 +127,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME"
+      "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME"
     },
     {
       "id": "PUBLIC_LIVE_ROUTE_RUNTIME",

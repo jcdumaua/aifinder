@@ -14,6 +14,8 @@ const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
 const RUNTIME_EVIDENCE_PATH =
   "testing/public-production-runtime-evidence.json";
+const BROWSER_LIVE_EVIDENCE_PATH =
+  "testing/public-browser-live-runtime-evidence.json";
 const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
 const PUBLIC_ROOTS = new Set([
   "app/page.tsx",
@@ -33,6 +35,7 @@ const COVERAGE_STATES = new Set([
   "PARTIAL_STATIC",
   "NO_STATIC_EVIDENCE",
   "RUNTIME_EVIDENCE_INTEGRATED",
+  "BROWSER_LIVE_EVIDENCE_INTEGRATED",
 ]);
 const STATIC_CLASSES = new Set([
   "SAFE_STATIC_CORE",
@@ -47,6 +50,21 @@ const RUNTIME_EVIDENCE_PATHS = [
   "app/page.tsx",
   "app/submit/page.tsx",
   "app/tool/[slug]/page.tsx",
+];
+const BROWSER_LIVE_EVIDENCE_PATHS = [
+  "app/category/[slug]/error.tsx",
+  "app/compare/error.tsx",
+  "app/error.tsx",
+  "app/global-error.tsx",
+  "app/loading.tsx",
+  "app/manifest.ts",
+  "app/opengraph-image.tsx",
+  "app/robots.ts",
+  "app/sitemap.ts",
+  "app/submit/error.tsx",
+  "app/submit/layout.tsx",
+  "app/tool/[slug]/error.tsx",
+  "app/twitter-image.tsx",
 ];
 const FUTURE_ONLY_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
@@ -192,6 +210,22 @@ function validateMatrix() {
         "MATRIX_RUNTIME_EVIDENCE_STILL_BLOCKING",
       );
       assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (
+      entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED"
+    ) {
+      assert(
+        entry.static_evidence_paths.includes(BROWSER_LIVE_EVIDENCE_PATH),
+        "MATRIX_BROWSER_LIVE_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.static_evidence_paths.length > 0,
+        "MATRIX_COVERED_WITHOUT_EVIDENCE",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_BROWSER_LIVE_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
     } else if (entry.coverage_state === "STATIC_COVERED") {
       assert(
         entry.static_evidence_paths.length > 0,
@@ -225,6 +259,10 @@ function validateMatrix() {
   const runtimeEvidenceIntegrated = matrix.entries.filter(
     (entry) => entry.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED",
   );
+  const browserLiveEvidenceIntegrated = matrix.entries.filter(
+    (entry) =>
+      entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+  );
   const unblockedPaths = matrix.entries
     .filter((entry) => entry.launch_blocking === false)
     .map((entry) => entry.path);
@@ -233,6 +271,9 @@ function validateMatrix() {
   ).length;
   const gaps = launchBlocking;
   const evidenceManifestEntry = manifestByPath.get(RUNTIME_EVIDENCE_PATH);
+  const browserLiveEvidenceManifestEntry = manifestByPath.get(
+    BROWSER_LIVE_EVIDENCE_PATH,
+  );
   assert(
     PUBLIC_ROOTS.size > 0 && publicCount > 0 && adminCount > 0,
     "MATRIX_PARTITION",
@@ -240,12 +281,20 @@ function validateMatrix() {
   assert(
     matrix.entries.length === 69 &&
       runtimeEvidenceIntegrated.length === 7 &&
+      browserLiveEvidenceIntegrated.length === 13 &&
       compareExactPathSets(
         runtimeEvidenceIntegrated.map((entry) => entry.path),
         RUNTIME_EVIDENCE_PATHS,
       ).equal &&
-      compareExactPathSets(unblockedPaths, RUNTIME_EVIDENCE_PATHS).equal &&
-      launchBlocking === 62,
+      compareExactPathSets(
+        browserLiveEvidenceIntegrated.map((entry) => entry.path),
+        BROWSER_LIVE_EVIDENCE_PATHS,
+      ).equal &&
+      compareExactPathSets(unblockedPaths, [
+        ...RUNTIME_EVIDENCE_PATHS,
+        ...BROWSER_LIVE_EVIDENCE_PATHS,
+      ]).equal &&
+      launchBlocking === 49,
     "MATRIX_RUNTIME_EVIDENCE_PARTITION",
   );
   assert(
@@ -256,12 +305,23 @@ function validateMatrix() {
       evidenceManifestEntry.reason_code === "FINAL_PUBLIC_RUNTIME_EVIDENCE",
     "MATRIX_RUNTIME_EVIDENCE_SAFETY",
   );
+  assert(
+    browserLiveEvidenceManifestEntry?.role === "CONFIG" &&
+      browserLiveEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      browserLiveEvidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      browserLiveEvidenceManifestEntry.command_argv === null &&
+      browserLiveEvidenceManifestEntry.reason_code ===
+        "FINAL_PUBLIC_BROWSER_LIVE_RUNTIME_EVIDENCE",
+    "MATRIX_BROWSER_LIVE_EVIDENCE_SAFETY",
+  );
   return {
     entries: matrix.entries.length,
     publicCount,
     adminCount,
     covered,
     runtimeEvidenceIntegrated: runtimeEvidenceIntegrated.length,
+    browserLiveEvidenceIntegrated: browserLiveEvidenceIntegrated.length,
     launchBlocking,
     gaps,
   };
@@ -270,7 +330,7 @@ function validateMatrix() {
 try {
   const result = validateMatrix();
   console.log(
-    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=${result.covered} runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} launch_blocking=${result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
+    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=${result.covered} runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} browser_live_evidence_integrated=${result.browserLiveEvidenceIntegrated} launch_blocking=${result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

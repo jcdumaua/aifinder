@@ -15,18 +15,20 @@ const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const RUNTIME_PLAN_PATH =
   "testing/public-production-runtime-planning-manifest.json";
-const SOURCE_COMMIT = "7c369726fa5a4092b056d91f14ca6a61effef151";
+const BROWSER_LIVE_PLAN_PATH =
+  "testing/public-browser-live-runtime-planning-manifest.json";
+const SOURCE_COMMIT = "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
-  git_blob: "9273a1304f2007a56f31747ff6e4e74057843a32",
-  bytes: 37735,
-  lines: 985,
+  sha256: "5f7ae77cd4c1f985e937f98035e6f329890244206e7a9b04f036a672a95b6eb5",
+  git_blob: "17e5c1c9e18f6ad3555c9d918c84f10a21bca9a2",
+  bytes: 38378,
+  lines: 1001,
   mode: "0644",
   route_inventory_digest:
     "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
   entry_count: 69,
-  launch_blocking_count: 62,
+  launch_blocking_count: 49,
 };
 const TOP_LEVEL_KEYS = [
   "registry_version",
@@ -102,12 +104,12 @@ const WORKSTREAMS = [
   },
   {
     id: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
-    gap_code: "BROWSER_OR_LIVE_EVIDENCE_REQUIRED",
+    gap_code: "BROWSER_LIVE_EVIDENCE_INTEGRATED",
     entry_count: 13,
     authority_class: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
-    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+    state: "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
     planning_priority: 2,
-    next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+    next_gate: "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME",
   },
   {
     id: "PUBLIC_LIVE_ROUTE_RUNTIME",
@@ -256,6 +258,18 @@ function matrixModel() {
     completedPaths.length === 7,
     "BLOCKER_REGISTRY_COMPLETED_PATHS",
   );
+  const completedBrowserLivePaths = matrix.entries
+    .filter(
+      (entry) =>
+        entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED" &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null,
+    )
+    .map((entry) => entry.path);
+  assert(
+    completedBrowserLivePaths.length === 13,
+    "BLOCKER_REGISTRY_COMPLETED_PATHS",
+  );
 
   const paths = matrix.entries.map((entry) => entry.path);
   assert(
@@ -266,7 +280,11 @@ function matrixModel() {
 
   const expectedGapSet = stableSortedPaths(
     WORKSTREAMS.filter(
-      (workstream) => workstream.id !== "PUBLIC_PRODUCTION_RUNTIME",
+      (workstream) =>
+        ![
+          "PUBLIC_PRODUCTION_RUNTIME",
+          "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+        ].includes(workstream.id),
     ).map((workstream) => workstream.gap_code),
   );
   const actualGapSet = stableSortedPaths([
@@ -279,6 +297,8 @@ function matrixModel() {
     const sourcePaths =
       workstream.id === "PUBLIC_PRODUCTION_RUNTIME"
         ? completedPaths
+        : workstream.id === "PUBLIC_BROWSER_OR_LIVE_RUNTIME"
+          ? completedBrowserLivePaths
         : matrix.entries
             .filter((entry) => entry.gap_code_or_null === workstream.gap_code)
             .map((entry) => entry.path);
@@ -288,13 +308,26 @@ function matrixModel() {
     );
     pathsByGap.set(workstream.gap_code, sourcePaths);
   }
-  return { matrix, paths, pathsByGap, completedPaths, launchBlocking };
+  return {
+    matrix,
+    paths,
+    pathsByGap,
+    completedPaths,
+    completedBrowserLivePaths,
+    launchBlocking,
+  };
 }
 
 function validateRegistry() {
   const registry = readRegistry();
-  const { matrix, paths, pathsByGap, completedPaths, launchBlocking } =
-    matrixModel();
+  const {
+    matrix,
+    paths,
+    pathsByGap,
+    completedPaths,
+    completedBrowserLivePaths,
+    launchBlocking,
+  } = matrixModel();
 
   assert(
     exactKeys(registry, TOP_LEVEL_KEYS),
@@ -337,8 +370,10 @@ function validateRegistry() {
   );
   assert(
     Array.isArray(registry.planning_artifacts) &&
-      registry.planning_artifacts.length === 1 &&
-      exactKeys(registry.planning_artifacts[0], PLANNING_ARTIFACT_KEYS),
+      registry.planning_artifacts.length === 2 &&
+      registry.planning_artifacts.every((entry) =>
+        exactKeys(entry, PLANNING_ARTIFACT_KEYS),
+      ),
     "BLOCKER_REGISTRY_SEQUENCE",
   );
   const planningArtifact = registry.planning_artifacts[0];
@@ -354,6 +389,23 @@ function validateRegistry() {
       runtimePlan.execution_authorized === false &&
       runtimePlan.live_evidence_status ===
         "PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION",
+    "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
+  );
+  const browserLivePlanningArtifact = registry.planning_artifacts[1];
+  const browserLivePlan = readStrictJson(BROWSER_LIVE_PLAN_PATH);
+  assert(
+    browserLivePlanningArtifact.workstream_id ===
+      "PUBLIC_BROWSER_OR_LIVE_RUNTIME" &&
+      browserLivePlanningArtifact.path === BROWSER_LIVE_PLAN_PATH &&
+      browserLivePlanningArtifact.state ===
+        "FINAL_PUBLIC_BROWSER_OR_LIVE_RUNTIME_EVIDENCE_INTEGRATED" &&
+      browserLivePlanningArtifact.execution_authorized === false &&
+      browserLivePlan.workstream?.id ===
+        browserLivePlanningArtifact.workstream_id &&
+      browserLivePlan.decision === browserLivePlanningArtifact.state &&
+      browserLivePlan.execution_authorized === false &&
+      browserLivePlan.live_evidence_status ===
+        "PASSED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE",
     "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
   );
   assert(
@@ -408,6 +460,10 @@ function validateRegistry() {
           ? entry?.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED" &&
               entry.launch_blocking === false &&
               entry.gap_code_or_null === null
+          : expected.id === "PUBLIC_BROWSER_OR_LIVE_RUNTIME"
+            ? entry?.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED" &&
+                entry.launch_blocking === false &&
+                entry.gap_code_or_null === null
           : entry?.launch_blocking === true &&
               entry.gap_code_or_null === actual.gap_code,
         "BLOCKER_REGISTRY_PATH_GAP_MISMATCH",
@@ -466,11 +522,19 @@ function validateRegistry() {
     ).equal,
     "BLOCKER_REGISTRY_COMPLETED_PATHS",
   );
+  assert(
+    compareExactPathSets(
+      registry.workstreams[1].source_paths,
+      completedBrowserLivePaths,
+    ).equal,
+    "BLOCKER_REGISTRY_COMPLETED_PATHS",
+  );
 
   return {
     entries: paths.length,
     workstreams: registry.workstreams.length,
     completed: completedPaths.length,
+    completedBrowserLive: completedBrowserLivePaths.length,
     blocked: launchBlocking.length,
   };
 }
@@ -478,7 +542,7 @@ function validateRegistry() {
 try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed=${result.completed} blocked=${result.blocked} decision=NO_GO failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed_public_production=${result.completed} completed_public_browser_live=${result.completedBrowserLive} blocked=${result.blocked} planning_artifacts=2 next_active_workstream=PUBLIC_LIVE_ROUTE_RUNTIME decision=NO_GO failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

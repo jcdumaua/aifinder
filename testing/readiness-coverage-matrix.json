@@ -652,15 +652,16 @@
       "url_pattern_or_special_role": "SPECIAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/category/[slug]/page.tsx",
@@ -689,15 +690,16 @@
       "url_pattern_or_special_role": "SPECIAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/compare/page.tsx",
@@ -726,15 +728,16 @@
       "url_pattern_or_special_role": "SPECIAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/global-error.tsx",
@@ -743,15 +746,16 @@
       "url_pattern_or_special_role": "SPECIAL_GLOBAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/layout.tsx",
@@ -779,15 +783,16 @@
       "url_pattern_or_special_role": "SPECIAL_LOADING",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/manifest.ts",
@@ -796,12 +801,13 @@
       "url_pattern_or_special_role": "SPECIAL_MANIFEST",
       "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/production-perimeter-static-assertions.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/not-found.tsx",
@@ -828,11 +834,13 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "SPECIAL_OPENGRAPH_IMAGE",
       "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/page.tsx",
@@ -860,12 +868,13 @@
       "url_pattern_or_special_role": "SPECIAL_ROBOTS",
       "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/production-perimeter-static-assertions.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/sitemap.ts",
@@ -875,12 +884,13 @@
       "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
       "static_evidence_paths": [
         "testing/production-perimeter-static-assertions.mjs",
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/submit/error.tsx",
@@ -889,15 +899,16 @@
       "url_pattern_or_special_role": "SPECIAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/submit/layout.tsx",
@@ -905,14 +916,16 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "/submit",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/submit/page.tsx",
@@ -939,15 +952,16 @@
       "url_pattern_or_special_role": "SPECIAL_ERROR",
       "security_boundary_class": "PUBLIC_UI_BOUNDARY",
       "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json",
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/tool/[slug]/page.tsx",
@@ -975,11 +989,13 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "SPECIAL_TWITTER_IMAGE",
       "security_boundary_class": "PUBLIC_METADATA_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-browser-live-runtime-evidence.json"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "BROWSER_OR_LIVE_EVIDENCE_REQUIRED"
+      "coverage_state": "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     }
   ]
 }

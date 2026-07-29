@@ -20,6 +20,10 @@ import {
 const PLAN_PATH = "testing/public-production-runtime-planning-manifest.json";
 const RUNTIME_EVIDENCE_PATH =
   "testing/public-production-runtime-evidence.json";
+const BROWSER_LIVE_PLAN_PATH =
+  "testing/public-browser-live-runtime-planning-manifest.json";
+const BROWSER_LIVE_EVIDENCE_PATH =
+  "testing/public-browser-live-runtime-evidence.json";
 const SOURCE_COMMIT = "7c369726fa5a4092b056d91f14ca6a61effef151";
 const SOURCE_REGISTRY = {
   binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
@@ -53,6 +57,103 @@ const RUNTIME_EVIDENCE_IDENTITY = {
 };
 const EXACT_SUCCESS_MARKER =
   "PASSED_PHASE_31AQ_31BP_TERMINAL_GUARD_REASON_VECTOR_AND_CDP_TAXONOMY_HARDENING_FINAL_SEVEN_SURFACE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION_AND_LAUNCH_READINESS_DECISION";
+const BROWSER_LIVE_SOURCE_PHASE =
+  "PHASE_31CU_31FN_CONSOLIDATED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ERROR_LOADING_LAYOUT_MANIFEST_ROBOTS_SITEMAP_OPENGRAPH_TWITTER_ASSURANCE_EXACT_COMMITTED_SHADOW_SYNTHETIC_FAULT_INJECTION_COMPLETE_HISTORICAL_SIMULATOR_AND_BOUNDED_MAXIMUM_TWO_ATTEMPT_PUBLIC_METADATA_BROWSER_SESSION";
+const BROWSER_LIVE_SUCCESS_MARKER =
+  "PASSED_PHASE_31CU_31FN_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE_READY_FOR_STATIC_EVIDENCE_INTEGRATION";
+const BROWSER_LIVE_EVIDENCE_KEYS = [
+  "schema_version",
+  "source_phase",
+  "source_reporting_notes",
+  "source_ccr",
+  "controlling_package",
+  "canonical_result",
+  "authorization_session",
+  "immutable_binding",
+  "exact_surface_contract",
+  "import_closure_contract",
+  "committed_shadow_contract",
+  "public_attempt_contract",
+  "metadata_contract",
+  "accessibility_responsive_contract",
+  "simulator_mutation_review",
+  "source_artifacts",
+  "safety_boundary",
+  "integration_decision",
+];
+const BROWSER_LIVE_PLAN_KEYS = [
+  "planning_version",
+  "source_commit",
+  "source_registry",
+  "source_matrix",
+  "workstream",
+  "decision",
+  "current_authority",
+  "execution_authorized",
+  "live_evidence_status",
+  "target_origin",
+  "last_runtime_result",
+  "canonical_source_alignment",
+  "runtime_evidence",
+  "blocked_capabilities",
+  "surfaces",
+  "next_gate",
+];
+const BROWSER_LIVE_SURFACE_KEYS = [
+  "source_path",
+  "source_role",
+  "source_identity",
+  "evidence_mode",
+  "required_evidence",
+  "live_evidence_status",
+  "mutation_prohibited",
+  "execution_authorized",
+];
+const BROWSER_LIVE_SOURCE_ROLES = new Map([
+  ["app/category/[slug]/error.tsx", "ERROR_CATEGORY"],
+  ["app/compare/error.tsx", "ERROR_COMPARE"],
+  ["app/error.tsx", "ERROR_ROOT"],
+  ["app/global-error.tsx", "ERROR_GLOBAL"],
+  ["app/loading.tsx", "LOADING"],
+  ["app/manifest.ts", "METADATA_MANIFEST"],
+  ["app/opengraph-image.tsx", "METADATA_OPENGRAPH_IMAGE"],
+  ["app/robots.ts", "METADATA_ROBOTS"],
+  ["app/sitemap.ts", "METADATA_SITEMAP"],
+  ["app/submit/error.tsx", "ERROR_SUBMIT"],
+  ["app/submit/layout.tsx", "LAYOUT_SUBMIT"],
+  ["app/tool/[slug]/error.tsx", "ERROR_TOOL"],
+  ["app/twitter-image.tsx", "METADATA_TWITTER_IMAGE"],
+]);
+const BROWSER_LIVE_IMPORT_PATHS = [
+  "app/data/tools.ts",
+  "components/public/public-route-error.tsx",
+  "lib/public-canonical-origin.ts",
+  "lib/public-diagnostics.ts",
+  "lib/supabase-admin.ts",
+  "lib/tool-categories.ts",
+];
+const BROWSER_LIVE_SOURCE_REGISTRY = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
+  path: "testing/public-launch-blocker-registry.json",
+  sha256: "b145c551fb3c0b51dc5fd3f61c19f039c273cad2e3b6ce255159655bdd36f854",
+  git_blob: "91df9efa96e117e47db90f28c212854df6e94f8e",
+  bytes: 9754,
+  lines: 272,
+  mode: "0644",
+};
+const BROWSER_LIVE_SOURCE_MATRIX = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
+  path: "testing/readiness-coverage-matrix.json",
+  sha256: "048d0e59a3a9517a5b4d1e8f296d96fcd569a013fae1467150f2848392fc84f7",
+  git_blob: "9273a1304f2007a56f31747ff6e4e74057843a32",
+  bytes: 37735,
+  lines: 985,
+  mode: "0644",
+  route_inventory_digest:
+    "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
+  entry_count: 69,
+  launch_blocking_count: 62,
+};
 const TOP_LEVEL_KEYS = [
   "planning_version",
   "source_commit",
@@ -879,9 +980,348 @@ function validateRuntimeEvidence() {
   );
 }
 
+function validateBrowserLiveEvidenceAndPlan() {
+  const evidence = readStrictJson(BROWSER_LIVE_EVIDENCE_PATH);
+  const plan = readStrictJson(BROWSER_LIVE_PLAN_PATH);
+  assert(
+    exactObject(evidence, BROWSER_LIVE_EVIDENCE_KEYS),
+    "BROWSER_LIVE_EVIDENCE_SCHEMA",
+  );
+  assert(
+    evidence.schema_version === 1 &&
+      evidence.source_phase === BROWSER_LIVE_SOURCE_PHASE &&
+      evidence.canonical_result === BROWSER_LIVE_SUCCESS_MARKER,
+    "BROWSER_LIVE_EVIDENCE_SOURCE_RECONCILIATION",
+  );
+  assert(
+    exactValue(evidence.source_reporting_notes, {
+      source_phase_field_observed: "PHASE_31CU_31FN",
+      canonical_phase_from_controlling_package: BROWSER_LIVE_SOURCE_PHASE,
+      source_authorization_state_observed: "CONSUMED_EXACTLY_ONCE_COMPLETED",
+      canonical_terminal_interpretation: "CLOSED_SUCCESS_NON_REUSABLE",
+    }),
+    "BROWSER_LIVE_EVIDENCE_SOURCE_RECONCILIATION",
+  );
+  assert(
+    exactValue(evidence.source_ccr, {
+      reference: "EXTERNAL_PHASE_31CU_31FN_CCR",
+      sha256:
+        "44a9999ec9f5990898d115b49867fb62ef8d9ed647fa3d6d46a464f00b01b784",
+      bytes: 80537,
+      lines: 1876,
+      mode: "0600",
+    }) &&
+      exactValue(evidence.controlling_package, {
+        reference: "EXTERNAL_PHASE_31CU_31FN_CONTROLLING_PACKAGE",
+        sha256:
+          "e59c4cb4f8ab33b711ea636d7c0a1d508cda3c12106d0c4d798ebd42cbb2d9f3",
+        bytes: 24048,
+        lines: 617,
+        mode: "0600",
+      }),
+    "BROWSER_LIVE_EVIDENCE_SOURCE_BINDING",
+  );
+  assert(
+    exactValue(evidence.authorization_session, {
+      source_authorization_state: "CONSUMED_EXACTLY_ONCE_COMPLETED",
+      terminal_state: "CLOSED_SUCCESS_NON_REUSABLE",
+      attempts_authorized_maximum: 2,
+      attempts_consumed: 1,
+      attempt_1: "PASS",
+      attempt_2: "UNUSED_AND_FORBIDDEN_AFTER_PASS",
+    }),
+    "BROWSER_LIVE_EVIDENCE_AUTHORIZATION_SESSION",
+  );
+  assert(
+    exactValue(evidence.immutable_binding, {
+      repository_commit: "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16",
+      repository_tree: "a36a3f461a51577be89e8eb764eb4e9d1e9baf6c",
+      canonical_origin: "https://www.aifinder.to",
+      github_run_id: 30437575033,
+      github_run_attempt: 1,
+      vercel_deployment_id: "dpl_9KfszMm4Q3eJ1d8swTW71BnsaUkY",
+      vercel_state: "READY",
+    }),
+    "BROWSER_LIVE_EVIDENCE_IMMUTABLE_BINDING",
+  );
+
+  const expectedPaths = stableSortedPaths([...BROWSER_LIVE_SOURCE_ROLES.keys()]);
+  const sources = evidence.exact_surface_contract?.sources;
+  assert(
+    evidence.exact_surface_contract?.exact_13_surface_qualification ===
+      "13/13" &&
+      evidence.exact_surface_contract?.surface_count === 13 &&
+      Array.isArray(sources) &&
+      sources.length === 13 &&
+      exactArray(
+        sources.map((source) => source.path),
+        expectedPaths,
+      ),
+    "BROWSER_LIVE_EVIDENCE_SURFACE_PARTITION",
+  );
+  for (const source of sources) {
+    assert(
+      exactObject(source, [
+        "path",
+        "role",
+        "classification",
+        "git_blob",
+        "sha256",
+        "bytes",
+        "lines",
+        "mode",
+      ]) &&
+        source.role === BROWSER_LIVE_SOURCE_ROLES.get(source.path) &&
+        typeof source.classification === "string" &&
+        source.classification.length > 0,
+      "BROWSER_LIVE_EVIDENCE_SOURCE_IDENTITY",
+    );
+    const actual = actualSourceIdentity(source.path);
+    assert(
+      source.sha256 === actual.sha256 &&
+        source.git_blob === actual.git_blob &&
+        source.bytes === actual.bytes &&
+        source.lines === actual.lines &&
+        source.mode === actual.mode,
+      "BROWSER_LIVE_EVIDENCE_SOURCE_IDENTITY",
+    );
+  }
+
+  const imports = evidence.import_closure_contract?.imports;
+  assert(
+    evidence.import_closure_contract?.import_count === 6 &&
+      Array.isArray(imports) &&
+      imports.length === 6 &&
+      exactArray(
+        imports.map((entry) => entry.path),
+        BROWSER_LIVE_IMPORT_PATHS,
+      ),
+    "BROWSER_LIVE_EVIDENCE_IMPORT_CLOSURE",
+  );
+  for (const entry of imports) {
+    assert(
+      exactObject(entry, [
+        "path",
+        "git_blob",
+        "sha256",
+        "bytes",
+        "mode",
+      ]),
+      "BROWSER_LIVE_EVIDENCE_IMPORT_CLOSURE",
+    );
+    const actual = actualSourceIdentity(entry.path);
+    assert(
+      entry.sha256 === actual.sha256 &&
+        entry.git_blob === actual.git_blob &&
+        entry.bytes === actual.bytes &&
+        entry.mode === actual.mode,
+      "BROWSER_LIVE_EVIDENCE_IMPORT_CLOSURE",
+    );
+  }
+
+  const shadow = evidence.committed_shadow_contract;
+  assert(
+    shadow.error_boundaries === "24/24" &&
+      shadow.loading_profiles === "4/4" &&
+      shadow.submit_layout_profiles === "4/4" &&
+      shadow.metadata_route_method_cases === "10/10" &&
+      shadow.committed_shadow_cases === "42/42" &&
+      shadow.sitemap_success_sha256 ===
+        "cd98a0fb0fc99286e0434e27b9a8373377276dedefd45c2677bfb9eca2829378" &&
+      shadow.sitemap_error_fallback_sha256 ===
+        "e980dc23f33c46f7f1d507d4d1737169f6981bc3c540f0901df0438ca4d6370d" &&
+      shadow.public_sitemap_requests === 0 &&
+      shadow.real_supabase_requests === 0,
+    "BROWSER_LIVE_EVIDENCE_SHADOW_COUNTS",
+  );
+  assert(
+    exactValue(evidence.public_attempt_contract, {
+      public_targets: "5/5",
+      public_sitemap_requests: 0,
+      public_result_sha256:
+        "936cf13c4c6fcba14180e0cc5a81bf9a8537fc33f364831d4b081fd6fe04d883",
+      completion_receipt_sha256:
+        "183c4329932751066fe47a6b251597aeec467751063a922ab3b6e6d173add1b1",
+      attempts_consumed: 1,
+      attempt_2: "UNUSED_AND_FORBIDDEN_AFTER_PASS",
+    }),
+    "BROWSER_LIVE_EVIDENCE_PUBLIC_ATTEMPT",
+  );
+  assert(
+    exactValue(evidence.metadata_contract, {
+      manifest_sha256:
+        "41de116438070705ea0473326a2a93680d37ff17da157a3962c33b99af00935d",
+      robots_sha256:
+        "d5b70e16f3c6c065323ca9036abcfd566d08bfdb09ba20dcbc6edd1ff5acbb43",
+      opengraph_sha256:
+        "1eb3ec54c35fee3d55f2ee59c5b6b19b0f2752081f301079167885190a25bf2d",
+      twitter_sha256:
+        "1eb3ec54c35fee3d55f2ee59c5b6b19b0f2752081f301079167885190a25bf2d",
+      public_targets: "5/5",
+      public_sitemap_requests: 0,
+    }),
+    "BROWSER_LIVE_EVIDENCE_METADATA",
+  );
+  assert(
+    exactValue(evidence.accessibility_responsive_contract, {
+      accessibility_critical_serious: "0/0",
+      overflow_overlap_clipping: "0/0/0",
+    }) &&
+      exactValue(evidence.simulator_mutation_review, {
+        historical_portfolio: "400/400",
+        historical_contracts: "28/28",
+        mutations: "240/240",
+        independent_review: "0/0/0",
+      }),
+    "BROWSER_LIVE_EVIDENCE_REVIEW",
+  );
+  const expectedArtifacts = [
+    ["01-preflight-workstream-and-session-budget.md", "471806e23ba8c4243690d4378c7899c27107b16e90117d490267413cfc5aa2fd", 1507, 46],
+    ["02-exact-13-source-and-import-closure.json", "57adf72ab1285e30e9ed889c1a51bf9bb72f1d282961ae99f4e65bd6c14e3b16", 6895, 200],
+    ["03-error-loading-layout-shadow-assurance.json", "d598465102ba8bf72c4fe2ce679ea25d5b893aeb5f76a3d2d437dbd100db2a61", 6644, 255],
+    ["04-metadata-sitemap-and-image-shadow-assurance.json", "f01eb88d9a7b67bb7056caab9ec820aca5328aac0f3c8c0c974c87c5a2c85737", 5508, 175],
+    ["05-complete-simulator-mutations-and-review.json", "a071234c2d55fdcb4ee4a09401f5772ea7f8f58fd662c36ab7722e2a7d150745", 20225, 671],
+    ["06-attempt-one-public-metadata-browser-evidence.json", "d51bc0c04797af029d204a345143161286d3b46fc3a7083e34be8f77bba77a04", 3556, 108],
+    ["07-between-attempt-repair-and-final-attempt.json", "9aeb723dfb1adc9b972c9a0883e3bab04a836eab526e5d3fb55892df79ad625f", 1105, 26],
+    ["08-final-13-surface-static-integration-boundary.md", "999f4074362585b236e1b97d13d3e0b56a8c902c6c18482579fe0bee3eec1982", 1597, 34],
+  ];
+  assert(
+    exactValue(
+      evidence.source_artifacts.map((entry) => [
+        entry.path,
+        entry.sha256,
+        entry.bytes,
+        entry.lines,
+      ]),
+      expectedArtifacts,
+    ) &&
+      evidence.source_artifacts.every((entry) => entry.mode === "0600"),
+    "BROWSER_LIVE_EVIDENCE_SOURCE_ARTIFACTS",
+  );
+  assert(
+    evidence.safety_boundary.real_supabase_sql_database === "0/0/0" &&
+      evidence.safety_boundary.repository_writes_stages_commits_pushes ===
+        "0/0/0/0" &&
+      Object.entries(evidence.safety_boundary)
+        .filter(
+          ([key]) =>
+            ![
+              "real_supabase_sql_database",
+              "repository_writes_stages_commits_pushes",
+            ].includes(key),
+        )
+        .every(([, value]) => value === 0),
+    "BROWSER_LIVE_EVIDENCE_SAFETY_BOUNDARY",
+  );
+  assert(
+    exactValue(evidence.integration_decision, {
+      PUBLIC_BROWSER_OR_LIVE_RUNTIME_WORKSTREAM: "EVIDENCE_COMPLETE",
+      STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION: "GO",
+      PUBLIC_LAUNCH_DECISION:
+        "NO_GO_PENDING_REMAINING_WORKSTREAMS_AND_FINAL_LAUNCH_GATE",
+    }),
+    "BROWSER_LIVE_EVIDENCE_DECISION",
+  );
+  const rawEvidence = readFileSync(
+    path.resolve(repositoryRoot, BROWSER_LIVE_EVIDENCE_PATH),
+    "utf8",
+  ).split("https://www.aifinder.to").join("");
+  assert(
+    !/https?:\/\/|BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|process\.env/i.test(
+      rawEvidence,
+    ),
+    "BROWSER_LIVE_EVIDENCE_SAFETY_BOUNDARY",
+  );
+
+  assert(
+    exactObject(plan, BROWSER_LIVE_PLAN_KEYS) &&
+      plan.planning_version === 1 &&
+      plan.source_commit === "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16",
+    "BROWSER_LIVE_PLAN_SCHEMA",
+  );
+  assert(
+    exactValue(plan.source_registry, BROWSER_LIVE_SOURCE_REGISTRY) &&
+      exactValue(plan.source_matrix, BROWSER_LIVE_SOURCE_MATRIX),
+    "BROWSER_LIVE_PLAN_SOURCE_BINDING",
+  );
+  assert(
+    exactValue(plan.workstream, {
+      id: "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
+      gap_code: "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+      entry_count: 13,
+    }) &&
+      plan.decision ===
+        "FINAL_PUBLIC_BROWSER_OR_LIVE_RUNTIME_EVIDENCE_INTEGRATED" &&
+      plan.current_authority === "STATIC_ONLY" &&
+      plan.execution_authorized === false &&
+      plan.live_evidence_status ===
+        "PASSED_EXACT_13_SURFACE_PUBLIC_BROWSER_OR_LIVE_RUNTIME_ASSURANCE" &&
+      plan.target_origin === "https://www.aifinder.to" &&
+      plan.last_runtime_result === BROWSER_LIVE_SUCCESS_MARKER &&
+      plan.canonical_source_alignment === "COMPLETE" &&
+      plan.next_gate === "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME",
+    "BROWSER_LIVE_PLAN_DECISION",
+  );
+  assert(
+    exactObject(plan.runtime_evidence, SOURCE_IDENTITY_KEYS) &&
+      exactValue(
+        plan.runtime_evidence,
+        actualSourceIdentity(BROWSER_LIVE_EVIDENCE_PATH),
+      ),
+    "BROWSER_LIVE_PLAN_EVIDENCE_IDENTITY",
+  );
+  assert(
+    exactArray(plan.blocked_capabilities, [
+      "AUTHENTICATED_RUNTIME",
+      "DATABASE",
+      "DEPLOYMENT_CONTROL",
+      "DIRECT_VERCEL_WRITE",
+      "MIGRATIONS_OR_GENERATED_TYPES",
+      "OPERATIONAL_REACTIVATION",
+      "PUBLIC_LAUNCH",
+      "PUBLIC_OR_DEPLOYED_BROWSER",
+      "PUBLIC_OR_DEPLOYED_HTTP",
+      "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+      "SQL",
+      "SUPABASE",
+    ]),
+    "BROWSER_LIVE_PLAN_BLOCKED_CAPABILITIES",
+  );
+  assert(
+    Array.isArray(plan.surfaces) &&
+      plan.surfaces.length === 13 &&
+      exactArray(
+        plan.surfaces.map((surface) => surface.source_path),
+        expectedPaths,
+      ),
+    "BROWSER_LIVE_PLAN_SURFACE_PARTITION",
+  );
+  const evidenceByPath = new Map(sources.map((source) => [source.path, source]));
+  for (const surface of plan.surfaces) {
+    const source = evidenceByPath.get(surface.source_path);
+    assert(
+      exactObject(surface, BROWSER_LIVE_SURFACE_KEYS) &&
+        source !== undefined &&
+        surface.source_role === source.role &&
+        surface.evidence_mode === source.classification &&
+        sortedUnique(surface.required_evidence) &&
+        surface.required_evidence.length >= 1 &&
+        ["PASSED", "PASSED_SHADOW_ONLY_PUBLIC_REQUESTS_ZERO"].includes(
+          surface.live_evidence_status,
+        ) &&
+        surface.mutation_prohibited === true &&
+        surface.execution_authorized === false &&
+        exactValue(surface.source_identity, actualSourceIdentity(surface.source_path)),
+      "BROWSER_LIVE_PLAN_SURFACE_PARTITION",
+    );
+  }
+  return { surfaces: plan.surfaces.length, imports: imports.length };
+}
+
 function validatePlan() {
   const plan = readPlan();
   validateRuntimeEvidence();
+  const browserLive = validateBrowserLiveEvidenceAndPlan();
   assert(exactObject(plan, TOP_LEVEL_KEYS), "RUNTIME_PLAN_VERSION");
   assert(plan.planning_version === 1, "RUNTIME_PLAN_VERSION");
   assert(plan.source_commit === SOURCE_COMMIT, "RUNTIME_PLAN_SOURCE_IDENTITY");
@@ -1052,13 +1492,15 @@ function validatePlan() {
     importGraphs: plan.surfaces.filter(
       (surface) => surface.local_import_closure.length > 0,
     ).length,
+    browserLiveSurfaces: browserLive.surfaces,
+    browserLiveImports: browserLive.imports,
   };
 }
 
 try {
   const result = validatePlan();
   console.log(
-    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} execution_authorized=false live_evidence=PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION failures=0 internal_failures=0`,
+    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} browser_live_surfaces=${result.browserLiveSurfaces} browser_live_imports=${result.browserLiveImports} execution_authorized=false live_evidence=PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {
