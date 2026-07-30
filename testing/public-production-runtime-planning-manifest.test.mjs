@@ -24,6 +24,10 @@ const BROWSER_LIVE_PLAN_PATH =
   "testing/public-browser-live-runtime-planning-manifest.json";
 const BROWSER_LIVE_EVIDENCE_PATH =
   "testing/public-browser-live-runtime-evidence.json";
+const PUBLIC_LIVE_ROUTE_PLAN_PATH =
+  "testing/public-live-route-runtime-planning-manifest.json";
+const PUBLIC_LIVE_ROUTE_EVIDENCE_PATH =
+  "testing/public-live-route-runtime-evidence.json";
 const SOURCE_COMMIT = "7c369726fa5a4092b056d91f14ca6a61effef151";
 const SOURCE_REGISTRY = {
   binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
@@ -154,6 +158,235 @@ const BROWSER_LIVE_SOURCE_MATRIX = {
   entry_count: 69,
   launch_blocking_count: 62,
 };
+const PUBLIC_LIVE_ROUTE_SOURCE_PHASE =
+  "PHASE_31KA_31LZ_CONSOLIDATED_EXACT_3_ROUTE_PUBLIC_LIVE_RUNTIME_QUALIFICATION_ONE_READ_ONLY_GET_TWO_PRE_PRIVILEGED_REJECTION_POSTS_SOURCE_BOUND_BRANCH_WITNESS_COMPLETE_SYNTHETIC_REQUALIFICATION_MUTATION_ASSURANCE_INDEPENDENT_REVIEW_BOUNDED_MAXIMUM_TWO_ATTEMPT_SESSION";
+const PUBLIC_LIVE_ROUTE_SUCCESS_MARKER =
+  "PASSED_PHASE_31KA_31LZ_EXACT_3_PUBLIC_LIVE_ROUTE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION";
+const PUBLIC_LIVE_ROUTE_BRANCH_WITNESS =
+  "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7";
+const PUBLIC_LIVE_ROUTE_EVIDENCE_KEYS = [
+  "schema_version",
+  "source_phase",
+  "source_reporting_notes",
+  "source_ccr",
+  "controlling_package",
+  "canonical_result",
+  "authorization_session",
+  "immutable_binding",
+  "exact_route_contract",
+  "branch_witness_contract",
+  "private_requalification_contract",
+  "public_attempt_contract",
+  "data_operation_boundary",
+  "source_artifacts",
+  "safety_boundary",
+  "integration_decision",
+];
+const PUBLIC_LIVE_ROUTE_PLAN_KEYS = [
+  "planning_version",
+  "source_commit",
+  "source_registry",
+  "source_matrix",
+  "workstream",
+  "decision",
+  "current_authority",
+  "execution_authorized",
+  "live_evidence_status",
+  "target_origin",
+  "last_runtime_result",
+  "canonical_source_alignment",
+  "runtime_evidence",
+  "blocked_capabilities",
+  "routes",
+  "next_gate",
+];
+const PUBLIC_LIVE_ROUTE_SOURCE_IDENTITY_KEYS = [
+  "path",
+  "git_blob",
+  "sha256",
+  "bytes",
+  "lines",
+  "mode",
+];
+const PUBLIC_LIVE_ROUTE_EVIDENCE_ROUTE_KEYS = [
+  "path",
+  "runtime_role",
+  "source_identity",
+  "method",
+  "status",
+  "content_type_category",
+  "response_bytes",
+  "public_category",
+  "errors",
+  "warnings",
+  "cache_no_store",
+  "nosniff",
+  "branch_witness_identity",
+];
+const PUBLIC_LIVE_ROUTE_REJECTION_EVIDENCE_ROUTE_KEYS = [
+  "path",
+  "runtime_role",
+  "source_identity",
+  "method",
+  "status",
+  "content_type_category",
+  "response_bytes",
+  "public_category",
+  "cache_no_store",
+  "nosniff",
+  "branch_witness_identity",
+];
+const PUBLIC_LIVE_ROUTE_PLAN_ROUTE_KEYS = [
+  "source_path",
+  "runtime_role",
+  "source_identity",
+  "observed_method",
+  "observed_status",
+  "observed_category",
+  "branch_witness_identity",
+  "static_evidence",
+  "runtime_evidence",
+  "mutation_prohibited",
+  "execution_authorized",
+];
+const PUBLIC_LIVE_ROUTE_SOURCE_REGISTRY = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
+  path: "testing/public-launch-blocker-registry.json",
+  sha256: "571a15bd6dcf55faf90e60be84d04cc6c14b56c943a3d285104d6a2dc7ef6055",
+  git_blob: "94645a12df49407fd1bd02fbbffc98af06c91f91",
+  bytes: 10012,
+  lines: 278,
+  mode: "0644",
+};
+const PUBLIC_LIVE_ROUTE_SOURCE_MATRIX = {
+  binding_role: "PRE_INTEGRATION_SOURCE_BINDING",
+  path: "testing/readiness-coverage-matrix.json",
+  sha256: "ed23a3d550d178780abdbaa3ae668de246587a9a13c31e9ccf59013ac77ccf6d",
+  git_blob: "e62315dfcaacc20eb7260d83a7cd8289491f8f6b",
+  bytes: 38588,
+  lines: 1007,
+  mode: "0644",
+  route_inventory_digest:
+    "40729ce2a17801c08cae008eb67eae3f297909f11a01e2685fb387a0bb7c2aab",
+  entry_count: 69,
+  launch_blocking_count: 49,
+};
+const PUBLIC_LIVE_ROUTE_SOURCE_IDENTITIES = [
+  {
+    path: "app/api/homepage-control/published/route.ts",
+    git_blob: "29992ba9fbd88f65617573047eeb4a2b8f906a5a",
+    sha256: "c7242b326a71eb54f14d72dc060f7d13709bafcb7cac753329cb42551dc05289",
+    bytes: 983,
+    lines: 34,
+    mode: "0644",
+  },
+  {
+    path: "app/api/submit-tool/route.ts",
+    git_blob: "f3bcd74d5a2a7eba361486aedae06e7c806b1e93",
+    sha256: "e296e8bc1f6aa32e2c5cadf4c5306aec9d91870cb98957574505668fa03b93d1",
+    bytes: 8956,
+    lines: 361,
+    mode: "0644",
+  },
+  {
+    path: "app/api/upload-logo/route.ts",
+    git_blob: "5039bb86ff22aba50836e98676d079529ac6d093",
+    sha256: "cfb3d3c7279120b1a094421ea11f36b54e93c6709993b8f7ed1d2d6c6556b274",
+    bytes: 5901,
+    lines: 232,
+    mode: "0644",
+  },
+  {
+    path: "lib/homepage-control-public.ts",
+    git_blob: "29b741c29e22e85a3aaf4b48b78557481ef5aa5f",
+    sha256: "9d6c1fa10f5fddec35376c40fd99991c096c924ca9dd11708b412883eaabbdd2",
+    bytes: 7605,
+    lines: 276,
+    mode: "0644",
+  },
+  {
+    path: "lib/public-live-route-safety.ts",
+    git_blob: "002f8aa05ce033d050e0e196b0af82e3753999fc",
+    sha256: "5dfe7542d377e90532869a3553a74a6a596bc72ccdb43cc78bc6ac05cf3b8680",
+    bytes: 5832,
+    lines: 241,
+    mode: "0644",
+  },
+  {
+    path: "testing/public-live-route-security-static-assertions.mjs",
+    git_blob: "48f6e4ee05a1292b0ba6e06b95826db66414958f",
+    sha256: "2d5409ddc565949a34f52e6e151f2be6bacaf34509a6c1981a686688d6e0eb12",
+    bytes: 9619,
+    lines: 336,
+    mode: "0644",
+  },
+  {
+    path: "testing/readiness-coverage-matrix.json",
+    git_blob: "e62315dfcaacc20eb7260d83a7cd8289491f8f6b",
+    sha256: "ed23a3d550d178780abdbaa3ae668de246587a9a13c31e9ccf59013ac77ccf6d",
+    bytes: 38588,
+    lines: 1007,
+    mode: "0644",
+  },
+  {
+    path: "testing/public-launch-blocker-registry.json",
+    git_blob: "94645a12df49407fd1bd02fbbffc98af06c91f91",
+    sha256: "571a15bd6dcf55faf90e60be84d04cc6c14b56c943a3d285104d6a2dc7ef6055",
+    bytes: 10012,
+    lines: 278,
+    mode: "0644",
+  },
+  {
+    path: "testing/static-test-safety-manifest.json",
+    git_blob: "5e19833a7a933061f0209dfdd6fb77e073737b65",
+    sha256: "47768a6c6f27bfd48fb4fe254b619f6563d13733af74ccd2ad86a98b7647e190",
+    bytes: 28780,
+    lines: 845,
+    mode: "0644",
+  },
+];
+const PUBLIC_LIVE_ROUTE_CONTRACTS = new Map([
+  [
+    "app/api/homepage-control/published/route.ts",
+    {
+      runtime_role: "READ_ONLY_PUBLIC_HOMEPAGE_CONTROL",
+      method: "GET",
+      status: 200,
+      response_bytes: 703,
+      public_category: "PUBLISHED_ACTIVE_OBJECT",
+    },
+  ],
+  [
+    "app/api/submit-tool/route.ts",
+    {
+      runtime_role: "PRE_PRIVILEGED_INVALID_SUBMISSION_REJECTION",
+      method: "POST",
+      status: 400,
+      response_bytes: 31,
+      public_category: "INVALID_SUBMISSION",
+    },
+  ],
+  [
+    "app/api/upload-logo/route.ts",
+    {
+      runtime_role: "PRE_PRIVILEGED_ONE_FILE_REQUIRED_REJECTION",
+      method: "POST",
+      status: 400,
+      response_bytes: 45,
+      public_category: "ONE_FILE_REQUIRED",
+    },
+  ],
+]);
+const PUBLIC_LIVE_ROUTE_SOURCE_ARTIFACTS = [
+  ["01-preflight-source-deployment-and-session-budget.md", "38a631fc1e6a1d72862628065c7d218ad52b56c399b1b6b556ca59f8cf5ed42a", 2694, 57, "0600"],
+  ["02-exact-three-route-source-and-branch-witness.json", "bca419e695659fa8cf14fb0068c3d0270537ed77d7c8ab7f0e97a121583851ee", 11512, 413, "0600"],
+  ["03-private-shadow-and-complete-requalification.json", "ca561d5a4fda3165b47d374de25a18ae87263e7cd26d77c7de3a7f4db2b949bd", 13655, 360, "0600"],
+  ["04-session-contract-mutations-and-independent-review.json", "a11f4ce0f653135989f7b1b4338c7c1712fb1252320b7ff8ce9b353b7c44a8f2", 6024, 149, "0600"],
+  ["05-attempt-one-public-live-route-evidence.json", "4f9aabdcfb83f9c97f179b8dce61f546b548d8cadb0523afa60d6a34d6c0d56c", 5180, 158, "0600"],
+  ["06-between-attempt-repair-and-final-attempt.json", "f5dedae9a63411d6f77390f4530df37184ab50be8b4a5f30bdd03fc774833b07", 646, 29, "0600"],
+  ["07-final-three-route-static-integration-boundary.md", "4c8b47153f0b877d12a5712268f47e108bd1c711d8e4f69d1f71e626814da62f", 1441, 29, "0600"],
+  ["08-preservation-topology-risk-and-next-action.md", "c988a9a7cfab74e991796246f1e9e7314bda6d392b1da8e89cf5135a765ba846", 2443, 57, "0600"],
+];
 const TOP_LEVEL_KEYS = [
   "planning_version",
   "source_commit",
@@ -670,7 +903,10 @@ function actualSourceIdentity(sourcePath) {
     sha256: createHash("sha256").update(bytes).digest("hex"),
     git_blob: createHash("sha1").update(gitHeader).update(bytes).digest("hex"),
     bytes: bytes.byteLength,
-    lines: (text.match(/\n/g) ?? []).length,
+    lines:
+      text.length === 0
+        ? 0
+        : (text.match(/\n/g) ?? []).length + (text.endsWith("\n") ? 0 : 1),
     mode: (statSync(absolute).mode & 0o777).toString(8).padStart(4, "0"),
   };
 }
@@ -1318,10 +1554,450 @@ function validateBrowserLiveEvidenceAndPlan() {
   return { surfaces: plan.surfaces.length, imports: imports.length };
 }
 
+function validatePublicLiveRouteEvidenceAndPlan() {
+  const evidence = readStrictJson(PUBLIC_LIVE_ROUTE_EVIDENCE_PATH);
+  const plan = readStrictJson(PUBLIC_LIVE_ROUTE_PLAN_PATH);
+  assert(
+    exactObject(evidence, PUBLIC_LIVE_ROUTE_EVIDENCE_KEYS) &&
+      evidence.schema_version === 1 &&
+      evidence.source_phase === PUBLIC_LIVE_ROUTE_SOURCE_PHASE &&
+      evidence.canonical_result === PUBLIC_LIVE_ROUTE_SUCCESS_MARKER,
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SCHEMA",
+  );
+  assert(
+    exactValue(evidence.source_reporting_notes, {
+      source_phase_field_observed: "31KA-31LZ",
+      canonical_phase_from_controlling_package:
+        PUBLIC_LIVE_ROUTE_SOURCE_PHASE,
+      source_authorization_state_observed: "CONSUMED_EXACTLY_ONCE",
+      canonical_terminal_state: "CLOSED_SUCCESS_NON_REUSABLE",
+      historical_source_bytes_preserved: true,
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SOURCE_RECONCILIATION",
+  );
+  assert(
+    exactValue(evidence.source_ccr, {
+      reference: "EXTERNAL_PHASE_31KA_31LZ_CCR",
+      sha256:
+        "ca34fd27fcd4b302da360fb7e5c0633568743d4ca66217ed13f2439a654b35bd",
+      bytes: 64245,
+      lines: 1614,
+      mode: "0600",
+    }) &&
+      exactValue(evidence.controlling_package, {
+        reference: "EXTERNAL_PHASE_31KA_31LZ_CONTROLLING_PACKAGE",
+        sha256:
+          "558842e0dc47a71d4638f8b91f273cb0d7228193f2bcec0f57a59182a7a41d11",
+        bytes: 24994,
+        lines: 625,
+        mode: "0600",
+      }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SOURCE_BINDING",
+  );
+  assert(
+    exactValue(evidence.authorization_session, {
+      source_authorization_state_observed: "CONSUMED_EXACTLY_ONCE",
+      canonical_terminal_state: "CLOSED_SUCCESS_NON_REUSABLE",
+      attempts_consumed: 1,
+      attempt_1: "PASS_TERMINAL_3_OF_3",
+      attempt_2: "NOT_EXECUTED_PERMANENTLY_FORBIDDEN_AFTER_PASS",
+      maximum_attempts: 2,
+      public_requests: 3,
+      session_closed: true,
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_AUTHORIZATION_SESSION",
+  );
+
+  const binding = evidence.immutable_binding;
+  assert(
+    exactObject(binding, [
+      "repository_commit",
+      "repository_tree",
+      "repository_subject",
+      "canonical_origin",
+      "github_run_id",
+      "vercel_deployment_id",
+      "branch_witness_identity",
+      "source_identities",
+    ]) &&
+      binding.repository_commit ===
+        "7b50b5c173a7e26a27eb3ff3557c559049fd731c" &&
+      binding.repository_tree ===
+        "464bbece532b85ffbefd1c1bc8c948592a9d1461" &&
+      binding.repository_subject === "Harden public live route boundaries" &&
+      binding.canonical_origin === "https://www.aifinder.to" &&
+      binding.github_run_id === 30510364231 &&
+      binding.vercel_deployment_id === "dpl_FK867TsdKziEwvQ5pMufhD2KTrHk" &&
+      binding.branch_witness_identity === PUBLIC_LIVE_ROUTE_BRANCH_WITNESS &&
+      exactValue(
+        binding.source_identities,
+        PUBLIC_LIVE_ROUTE_SOURCE_IDENTITIES,
+      ),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_IMMUTABLE_BINDING",
+  );
+  for (const expected of PUBLIC_LIVE_ROUTE_SOURCE_IDENTITIES.slice(0, 6)) {
+    const actual = actualSourceIdentity(expected.path);
+    assert(
+      actual.path === expected.path &&
+        actual.git_blob === expected.git_blob &&
+        actual.sha256 === expected.sha256 &&
+        actual.bytes === expected.bytes &&
+        actual.lines === expected.lines &&
+        actual.mode === expected.mode,
+      "PUBLIC_LIVE_ROUTE_EVIDENCE_SOURCE_IDENTITY",
+    );
+  }
+
+  const expectedRoutePaths = [
+    "app/api/homepage-control/published/route.ts",
+    "app/api/submit-tool/route.ts",
+    "app/api/upload-logo/route.ts",
+  ];
+  const routes = evidence.exact_route_contract?.routes;
+  assert(
+    exactObject(evidence.exact_route_contract, [
+      "route_count",
+      "exact_route_qualification",
+      "observed_methods",
+      "routes",
+    ]) &&
+      evidence.exact_route_contract.route_count === 3 &&
+      evidence.exact_route_contract.exact_route_qualification === "3/3" &&
+      exactValue(evidence.exact_route_contract.observed_methods, {
+        GET: 1,
+        POST: 2,
+        total: 3,
+      }) &&
+      Array.isArray(routes) &&
+      routes.length === 3 &&
+      exactArray(
+        routes.map((route) => route.path),
+        expectedRoutePaths,
+      ),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_ROUTE_PARTITION",
+  );
+  const sourceIdentityByPath = new Map(
+    PUBLIC_LIVE_ROUTE_SOURCE_IDENTITIES.map((identity) => [
+      identity.path,
+      identity,
+    ]),
+  );
+  for (const route of routes) {
+    const contract = PUBLIC_LIVE_ROUTE_CONTRACTS.get(route.path);
+    const expectedIdentity = sourceIdentityByPath.get(route.path);
+    const isHomepage =
+      route.path === "app/api/homepage-control/published/route.ts";
+    assert(
+      exactObject(
+        route,
+        isHomepage
+          ? PUBLIC_LIVE_ROUTE_EVIDENCE_ROUTE_KEYS
+          : PUBLIC_LIVE_ROUTE_REJECTION_EVIDENCE_ROUTE_KEYS,
+      ) &&
+        contract !== undefined &&
+        expectedIdentity !== undefined &&
+        exactObject(
+          route.source_identity,
+          PUBLIC_LIVE_ROUTE_SOURCE_IDENTITY_KEYS,
+        ) &&
+        exactValue(route.source_identity, expectedIdentity) &&
+        route.runtime_role === contract.runtime_role &&
+        route.method === contract.method &&
+        route.status === contract.status &&
+        route.content_type_category === "APPLICATION_JSON" &&
+        route.response_bytes === contract.response_bytes &&
+        route.public_category === contract.public_category &&
+        (!isHomepage || (route.errors === 0 && route.warnings === 0)) &&
+        route.cache_no_store === true &&
+        route.nosniff === true &&
+        route.branch_witness_identity === PUBLIC_LIVE_ROUTE_BRANCH_WITNESS,
+      "PUBLIC_LIVE_ROUTE_EVIDENCE_ROUTE_CONTRACT",
+    );
+  }
+
+  assert(
+    exactValue(evidence.branch_witness_contract, {
+      identity: PUBLIC_LIVE_ROUTE_BRANCH_WITNESS,
+      predicate_count: 55,
+      false_predicate_ids: [],
+      maximum_homepage_indirect_reads: 2,
+      homepage_helper_mutation_calls: 0,
+      submit_pre_create_client: true,
+      upload_pre_storage: true,
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_BRANCH_WITNESS",
+  );
+  assert(
+    exactValue(evidence.private_requalification_contract, {
+      harness_contract: "100/100",
+      private_route_shadow: "3/3",
+      route_domain_matrix: "105/105",
+      helper: "21/21",
+      homepage: "18/18",
+      submit: "36/36",
+      upload: "30/30",
+      static_readiness: "PASS",
+      shadow_build: "PASS_31_OF_31",
+      candidate_mutations: "83/83",
+      governance_mutations: "14/14",
+      predecessor_mutations: "97/97",
+      current_session_mutations: "67/67",
+      combined_mutations: "164/164",
+      independent_review: "0/0/0",
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_PRIVATE_REQUALIFICATION",
+  );
+  assert(
+    exactValue(evidence.public_attempt_contract, {
+      attempts_consumed: 1,
+      attempt_2: "UNUSED_AND_FORBIDDEN_AFTER_PASS",
+      exact_route_qualification: "3/3",
+      GET: 1,
+      POST: 2,
+      public_requests: 3,
+      homepage_status: 200,
+      homepage_response_bytes: 703,
+      homepage_config_state: "PUBLISHED_ACTIVE_OBJECT",
+      homepage_errors: 0,
+      homepage_warnings: 0,
+      submit_status: 400,
+      submit_category: "INVALID_SUBMISSION",
+      submit_response_bytes: 31,
+      upload_status: 400,
+      upload_category: "ONE_FILE_REQUIRED",
+      upload_response_bytes: 45,
+      no_store_nosniff: "3/3",
+      set_cookie_redirect_query_auth_browser: "0/0/0/0/0",
+      successful_submit_upload_real_file: "0/0/0",
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_PUBLIC_ATTEMPT",
+  );
+  assert(
+    exactValue(evidence.data_operation_boundary, {
+      observed_public_method_calls: {
+        GET: 1,
+        POST: 2,
+        total: 3,
+      },
+      source_proven_pre_privileged_branches: {
+        submit_privileged_branch_reached: false,
+        upload_privileged_branch_reached: false,
+      },
+      authorized_indirect_read_only_route_behavior: {
+        homepage_maximum_indirect_reads: 2,
+        internal_database_call_counts_directly_observed: false,
+      },
+      direct_codex_data_operations: {
+        supabase: 0,
+        sql: 0,
+        database: 0,
+        storage: 0,
+      },
+      persistent_database_storage_mutations: {
+        database: 0,
+        storage: 0,
+        evidence_basis: "SOURCE_BOUND_INFERENCE_NOT_DIRECT_INTERNAL_OBSERVATION",
+      },
+      ephemeral_rate_limit_increments: {
+        observed: 2,
+        minimum: 2,
+        maximum: 2,
+        evidence_basis: "SOURCE_BOUND_INFERENCE",
+      },
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_DATA_OPERATION_BOUNDARY",
+  );
+  assert(
+    Array.isArray(evidence.source_artifacts) &&
+      evidence.source_artifacts.every((entry) =>
+        exactObject(entry, ["path", "sha256", "bytes", "lines", "mode"]),
+      ) &&
+      exactValue(
+        evidence.source_artifacts.map((entry) => [
+          entry.path,
+          entry.sha256,
+          entry.bytes,
+          entry.lines,
+          entry.mode,
+        ]),
+        PUBLIC_LIVE_ROUTE_SOURCE_ARTIFACTS,
+      ),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SOURCE_ARTIFACTS",
+  );
+  assert(
+    exactObject(evidence.safety_boundary, [
+      "source_repository_writes_stages_commits_pushes",
+      "additional_public_runtime_observations",
+      "additional_public_http_requests",
+      "production_browser_runs",
+      "real_environment_reads",
+      "secret_reads",
+      "raw_config_or_response_bodies_retained",
+      "raw_urls_queries_or_operational_headers_retained",
+      "cookies_sessions_credentials_or_field_values_retained",
+      "production_upload_file_names_or_production_records_retained",
+      "supabase_connector_calls",
+      "real_supabase_requests",
+      "sql_executions",
+      "database_api_calls",
+      "storage_api_calls",
+      "authenticated_runtime_operations",
+      "form_or_file_interactions",
+      "direct_vercel_writes",
+      "deployment_control_actions",
+      "operational_reactivation_actions",
+      "publishing_actions",
+      "public_launch_actions",
+    ]) &&
+      evidence.safety_boundary
+        .source_repository_writes_stages_commits_pushes === "0/0/0/0" &&
+      Object.entries(evidence.safety_boundary)
+        .filter(
+          ([key]) =>
+            key !== "source_repository_writes_stages_commits_pushes",
+        )
+        .every(([, value]) => value === 0),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SAFETY_BOUNDARY",
+  );
+  assert(
+    exactValue(evidence.integration_decision, {
+      PUBLIC_LIVE_ROUTE_RUNTIME_WORKSTREAM: "EVIDENCE_COMPLETE",
+      STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION: "GO",
+      PUBLIC_LAUNCH_DECISION:
+        "NO_GO_PENDING_AUTHENTICATED_WORKSTREAMS_AND_FINAL_LAUNCH_GATE",
+    }),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_DECISION",
+  );
+
+  assert(
+    exactObject(plan, PUBLIC_LIVE_ROUTE_PLAN_KEYS) &&
+      plan.planning_version === 1 &&
+      plan.source_commit ===
+        "7b50b5c173a7e26a27eb3ff3557c559049fd731c",
+    "PUBLIC_LIVE_ROUTE_PLAN_SCHEMA",
+  );
+  assert(
+    exactObject(plan.source_registry, SOURCE_BINDING_KEYS) &&
+      exactValue(
+        plan.source_registry,
+        PUBLIC_LIVE_ROUTE_SOURCE_REGISTRY,
+      ) &&
+      exactObject(plan.source_matrix, SOURCE_MATRIX_KEYS) &&
+      exactValue(plan.source_matrix, PUBLIC_LIVE_ROUTE_SOURCE_MATRIX),
+    "PUBLIC_LIVE_ROUTE_PLAN_SOURCE_BINDING",
+  );
+  assert(
+    exactValue(plan.workstream, {
+      id: "PUBLIC_LIVE_ROUTE_RUNTIME",
+      gap_code: "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+      entry_count: 3,
+    }) &&
+      plan.decision ===
+        "FINAL_PUBLIC_LIVE_ROUTE_RUNTIME_EVIDENCE_INTEGRATED" &&
+      plan.current_authority === "STATIC_ONLY" &&
+      plan.execution_authorized === false &&
+      plan.live_evidence_status ===
+        "PASSED_EXACT_3_PUBLIC_LIVE_ROUTE_RUNTIME_QUALIFICATION" &&
+      plan.target_origin === "https://www.aifinder.to" &&
+      plan.last_runtime_result === PUBLIC_LIVE_ROUTE_SUCCESS_MARKER &&
+      plan.canonical_source_alignment === "COMPLETE" &&
+      plan.next_gate ===
+        "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
+    "PUBLIC_LIVE_ROUTE_PLAN_DECISION",
+  );
+  assert(
+    exactObject(plan.runtime_evidence, SOURCE_IDENTITY_KEYS) &&
+      exactValue(
+        plan.runtime_evidence,
+        actualSourceIdentity(PUBLIC_LIVE_ROUTE_EVIDENCE_PATH),
+      ),
+    "PUBLIC_LIVE_ROUTE_PLAN_EVIDENCE_IDENTITY",
+  );
+  assert(
+    exactArray(plan.blocked_capabilities, [
+      "AUTHENTICATED_RUNTIME",
+      "DATABASE",
+      "DEPLOYMENT_CONTROL",
+      "DIRECT_VERCEL_WRITE",
+      "FORM_OR_FILE_INTERACTION",
+      "MIGRATIONS_OR_GENERATED_TYPES",
+      "OPERATIONAL_REACTIVATION",
+      "PUBLIC_LAUNCH",
+      "PUBLIC_OR_DEPLOYED_BROWSER",
+      "PUBLIC_OR_DEPLOYED_HTTP",
+      "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+      "SQL",
+      "STORAGE_API",
+      "SUPABASE",
+      "USER_VISIBLE_MUTATION",
+    ]),
+    "PUBLIC_LIVE_ROUTE_PLAN_BLOCKED_CAPABILITIES",
+  );
+  assert(
+    Array.isArray(plan.routes) &&
+      plan.routes.length === 3 &&
+      exactArray(
+        plan.routes.map((route) => route.source_path),
+        expectedRoutePaths,
+      ),
+    "PUBLIC_LIVE_ROUTE_PLAN_ROUTE_PARTITION",
+  );
+  for (const route of plan.routes) {
+    const contract = PUBLIC_LIVE_ROUTE_CONTRACTS.get(route.source_path);
+    const expectedIdentity = sourceIdentityByPath.get(route.source_path);
+    assert(
+      exactObject(route, PUBLIC_LIVE_ROUTE_PLAN_ROUTE_KEYS) &&
+        contract !== undefined &&
+        expectedIdentity !== undefined &&
+        exactObject(
+          route.source_identity,
+          PUBLIC_LIVE_ROUTE_SOURCE_IDENTITY_KEYS,
+        ) &&
+        exactValue(route.source_identity, expectedIdentity) &&
+        route.runtime_role === contract.runtime_role &&
+        route.observed_method === contract.method &&
+        route.observed_status === contract.status &&
+        route.observed_category === contract.public_category &&
+        route.branch_witness_identity === PUBLIC_LIVE_ROUTE_BRANCH_WITNESS &&
+        exactArray(route.static_evidence, [
+          "testing/public-live-route-security-static-assertions.mjs",
+        ]) &&
+        exactArray(route.runtime_evidence, [
+          PUBLIC_LIVE_ROUTE_EVIDENCE_PATH,
+        ]) &&
+        route.mutation_prohibited === true &&
+        route.execution_authorized === false,
+      "PUBLIC_LIVE_ROUTE_PLAN_ROUTE_CONTRACT",
+    );
+  }
+
+  const rawEvidenceAndPlan = [
+    readFileSync(
+      path.resolve(repositoryRoot, PUBLIC_LIVE_ROUTE_EVIDENCE_PATH),
+      "utf8",
+    ),
+    readFileSync(
+      path.resolve(repositoryRoot, PUBLIC_LIVE_ROUTE_PLAN_PATH),
+      "utf8",
+    ),
+  ]
+    .join("\n")
+    .split("https://www.aifinder.to")
+    .join("");
+  assert(
+    !/https?:\/\/|BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|process\.env|(?:^|[/"'])\.env(?:[/"'.]|$)/im.test(
+      rawEvidenceAndPlan,
+    ),
+    "PUBLIC_LIVE_ROUTE_EVIDENCE_SAFETY_BOUNDARY",
+  );
+  return { routes: plan.routes.length };
+}
+
 function validatePlan() {
   const plan = readPlan();
   validateRuntimeEvidence();
   const browserLive = validateBrowserLiveEvidenceAndPlan();
+  const publicLiveRoute = validatePublicLiveRouteEvidenceAndPlan();
   assert(exactObject(plan, TOP_LEVEL_KEYS), "RUNTIME_PLAN_VERSION");
   assert(plan.planning_version === 1, "RUNTIME_PLAN_VERSION");
   assert(plan.source_commit === SOURCE_COMMIT, "RUNTIME_PLAN_SOURCE_IDENTITY");
@@ -1494,13 +2170,14 @@ function validatePlan() {
     ).length,
     browserLiveSurfaces: browserLive.surfaces,
     browserLiveImports: browserLive.imports,
+    publicLiveRoutes: publicLiveRoute.routes,
   };
 }
 
 try {
   const result = validatePlan();
   console.log(
-    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} browser_live_surfaces=${result.browserLiveSurfaces} browser_live_imports=${result.browserLiveImports} execution_authorized=false live_evidence=PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION failures=0 internal_failures=0`,
+    `PASS_PUBLIC_PRODUCTION_RUNTIME_PLANNING entries=${result.entries} import_graphs=${result.importGraphs} browser_live_surfaces=${result.browserLiveSurfaces} browser_live_imports=${result.browserLiveImports} public_live_routes=${result.publicLiveRoutes} execution_authorized=false live_evidence=PASSED_FINAL_READ_ONLY_RUNTIME_QUALIFICATION failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

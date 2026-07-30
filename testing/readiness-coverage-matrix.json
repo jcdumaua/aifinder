@@ -616,12 +616,13 @@
       "url_pattern_or_special_role": "/api/homepage-control/published",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
       "static_evidence_paths": [
-        "testing/public-live-route-security-static-assertions.mjs"
+        "testing/public-live-route-security-static-assertions.mjs",
+        "testing/public-live-route-runtime-evidence.json"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "coverage_state": "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/api/submit-tool/route.ts",
@@ -630,12 +631,13 @@
       "url_pattern_or_special_role": "/api/submit-tool",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
       "static_evidence_paths": [
-        "testing/public-live-route-security-static-assertions.mjs"
+        "testing/public-live-route-security-static-assertions.mjs",
+        "testing/public-live-route-runtime-evidence.json"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "coverage_state": "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/api/upload-logo/route.ts",
@@ -644,12 +646,13 @@
       "url_pattern_or_special_role": "/api/upload-logo",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
       "static_evidence_paths": [
-        "testing/public-live-route-security-static-assertions.mjs"
+        "testing/public-live-route-security-static-assertions.mjs",
+        "testing/public-live-route-runtime-evidence.json"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "coverage_state": "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/category/[slug]/error.tsx",

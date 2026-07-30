@@ -1,16 +1,16 @@
 {
   "registry_version": 1,
-  "source_commit": "e16bdd3c65d087c67e54a0120e1c82e8195185ae",
+  "source_commit": "7b50b5c173a7e26a27eb3ff3557c559049fd731c",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "ed23a3d550d178780abdbaa3ae668de246587a9a13c31e9ccf59013ac77ccf6d",
-    "git_blob": "e62315dfcaacc20eb7260d83a7cd8289491f8f6b",
-    "bytes": 38588,
-    "lines": 1007,
+    "sha256": "bc9745206f4ff34c88145778c770e14726d34fa505be22e90b52bf91b6525ee6",
+    "git_blob": "cfec8dcec46c59af93161387789de24090debd0c",
+    "bytes": 38738,
+    "lines": 1010,
     "mode": "0644",
     "route_inventory_digest": "40729ce2a17801c08cae008eb67eae3f297909f11a01e2685fb387a0bb7c2aab",
     "entry_count": 69,
-    "launch_blocking_count": 49
+    "launch_blocking_count": 46
   },
   "overall_decision": "NO_GO_PENDING_SEPARATE_AUTHORITIES",
   "current_authority": "STATIC_ONLY",
@@ -41,6 +41,12 @@
       "workstream_id": "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
       "path": "testing/public-browser-live-runtime-planning-manifest.json",
       "state": "FINAL_PUBLIC_BROWSER_OR_LIVE_RUNTIME_EVIDENCE_INTEGRATED",
+      "execution_authorized": false
+    },
+    {
+      "workstream_id": "PUBLIC_LIVE_ROUTE_RUNTIME",
+      "path": "testing/public-live-route-runtime-planning-manifest.json",
+      "state": "FINAL_PUBLIC_LIVE_ROUTE_RUNTIME_EVIDENCE_INTEGRATED",
       "execution_authorized": false
     }
   ],
@@ -131,10 +137,10 @@
     },
     {
       "id": "PUBLIC_LIVE_ROUTE_RUNTIME",
-      "gap_code": "LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code": "LIVE_ROUTE_EVIDENCE_INTEGRATED",
       "entry_count": 3,
       "authority_class": "PUBLIC_LIVE_ROUTE_RUNTIME",
-      "state": "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+      "state": "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
       "execution_authorized": false,
       "planning_priority": 3,
       "source_paths": [
@@ -162,7 +168,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "SEPARATE_PLANNING_REVIEW_PUBLIC_LIVE_ROUTE_RUNTIME"
+      "next_gate": "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_BROWSER_RUNTIME"
     },
     {
       "id": "AUTHENTICATED_BROWSER_RUNTIME",

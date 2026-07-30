@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "source_phase": "PHASE_31KA_31LZ_CONSOLIDATED_EXACT_3_ROUTE_PUBLIC_LIVE_RUNTIME_QUALIFICATION_ONE_READ_ONLY_GET_TWO_PRE_PRIVILEGED_REJECTION_POSTS_SOURCE_BOUND_BRANCH_WITNESS_COMPLETE_SYNTHETIC_REQUALIFICATION_MUTATION_ASSURANCE_INDEPENDENT_REVIEW_BOUNDED_MAXIMUM_TWO_ATTEMPT_SESSION",
+  "source_reporting_notes": {
+    "source_phase_field_observed": "31KA-31LZ",
+    "canonical_phase_from_controlling_package": "PHASE_31KA_31LZ_CONSOLIDATED_EXACT_3_ROUTE_PUBLIC_LIVE_RUNTIME_QUALIFICATION_ONE_READ_ONLY_GET_TWO_PRE_PRIVILEGED_REJECTION_POSTS_SOURCE_BOUND_BRANCH_WITNESS_COMPLETE_SYNTHETIC_REQUALIFICATION_MUTATION_ASSURANCE_INDEPENDENT_REVIEW_BOUNDED_MAXIMUM_TWO_ATTEMPT_SESSION",
+    "source_authorization_state_observed": "CONSUMED_EXACTLY_ONCE",
+    "canonical_terminal_state": "CLOSED_SUCCESS_NON_REUSABLE",
+    "historical_source_bytes_preserved": true
+  },
+  "source_ccr": {
+    "reference": "EXTERNAL_PHASE_31KA_31LZ_CCR",
+    "sha256": "ca34fd27fcd4b302da360fb7e5c0633568743d4ca66217ed13f2439a654b35bd",
+    "bytes": 64245,
+    "lines": 1614,
+    "mode": "0600"
+  },
+  "controlling_package": {
+    "reference": "EXTERNAL_PHASE_31KA_31LZ_CONTROLLING_PACKAGE",
+    "sha256": "558842e0dc47a71d4638f8b91f273cb0d7228193f2bcec0f57a59182a7a41d11",
+    "bytes": 24994,
+    "lines": 625,
+    "mode": "0600"
+  },
+  "canonical_result": "PASSED_PHASE_31KA_31LZ_EXACT_3_PUBLIC_LIVE_ROUTE_RUNTIME_QUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION",
+  "authorization_session": {
+    "source_authorization_state_observed": "CONSUMED_EXACTLY_ONCE",
+    "canonical_terminal_state": "CLOSED_SUCCESS_NON_REUSABLE",
+    "attempts_consumed": 1,
+    "attempt_1": "PASS_TERMINAL_3_OF_3",
+    "attempt_2": "NOT_EXECUTED_PERMANENTLY_FORBIDDEN_AFTER_PASS",
+    "maximum_attempts": 2,
+    "public_requests": 3,
+    "session_closed": true
+  },
+  "immutable_binding": {
+    "repository_commit": "7b50b5c173a7e26a27eb3ff3557c559049fd731c",
+    "repository_tree": "464bbece532b85ffbefd1c1bc8c948592a9d1461",
+    "repository_subject": "Harden public live route boundaries",
+    "canonical_origin": "https://www.aifinder.to",
+    "github_run_id": 30510364231,
+    "vercel_deployment_id": "dpl_FK867TsdKziEwvQ5pMufhD2KTrHk",
+    "branch_witness_identity": "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7",
+    "source_identities": [
+      {
+        "path": "app/api/homepage-control/published/route.ts",
+        "git_blob": "29992ba9fbd88f65617573047eeb4a2b8f906a5a",
+        "sha256": "c7242b326a71eb54f14d72dc060f7d13709bafcb7cac753329cb42551dc05289",
+        "bytes": 983,
+        "lines": 34,
+        "mode": "0644"
+      },
+      {
+        "path": "app/api/submit-tool/route.ts",
+        "git_blob": "f3bcd74d5a2a7eba361486aedae06e7c806b1e93",
+        "sha256": "e296e8bc1f6aa32e2c5cadf4c5306aec9d91870cb98957574505668fa03b93d1",
+        "bytes": 8956,
+        "lines": 361,
+        "mode": "0644"
+      },
+      {
+        "path": "app/api/upload-logo/route.ts",
+        "git_blob": "5039bb86ff22aba50836e98676d079529ac6d093",
+        "sha256": "cfb3d3c7279120b1a094421ea11f36b54e93c6709993b8f7ed1d2d6c6556b274",
+        "bytes": 5901,
+        "lines": 232,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/homepage-control-public.ts",
+        "git_blob": "29b741c29e22e85a3aaf4b48b78557481ef5aa5f",
+        "sha256": "9d6c1fa10f5fddec35376c40fd99991c096c924ca9dd11708b412883eaabbdd2",
+        "bytes": 7605,
+        "lines": 276,
+        "mode": "0644"
+      },
+      {
+        "path": "lib/public-live-route-safety.ts",
+        "git_blob": "002f8aa05ce033d050e0e196b0af82e3753999fc",
+        "sha256": "5dfe7542d377e90532869a3553a74a6a596bc72ccdb43cc78bc6ac05cf3b8680",
+        "bytes": 5832,
+        "lines": 241,
+        "mode": "0644"
+      },
+      {
+        "path": "testing/public-live-route-security-static-assertions.mjs",
+        "git_blob": "48f6e4ee05a1292b0ba6e06b95826db66414958f",
+        "sha256": "2d5409ddc565949a34f52e6e151f2be6bacaf34509a6c1981a686688d6e0eb12",
+        "bytes": 9619,
+        "lines": 336,
+        "mode": "0644"
+      },
+      {
+        "path": "testing/readiness-coverage-matrix.json",
+        "git_blob": "e62315dfcaacc20eb7260d83a7cd8289491f8f6b",
+        "sha256": "ed23a3d550d178780abdbaa3ae668de246587a9a13c31e9ccf59013ac77ccf6d",
+        "bytes": 38588,
+        "lines": 1007,
+        "mode": "0644"
+      },
+      {
+        "path": "testing/public-launch-blocker-registry.json",
+        "git_blob": "94645a12df49407fd1bd02fbbffc98af06c91f91",
+        "sha256": "571a15bd6dcf55faf90e60be84d04cc6c14b56c943a3d285104d6a2dc7ef6055",
+        "bytes": 10012,
+        "lines": 278,
+        "mode": "0644"
+      },
+      {
+        "path": "testing/static-test-safety-manifest.json",
+        "git_blob": "5e19833a7a933061f0209dfdd6fb77e073737b65",
+        "sha256": "47768a6c6f27bfd48fb4fe254b619f6563d13733af74ccd2ad86a98b7647e190",
+        "bytes": 28780,
+        "lines": 845,
+        "mode": "0644"
+      }
+    ]
+  },
+  "exact_route_contract": {
+    "route_count": 3,
+    "exact_route_qualification": "3/3",
+    "observed_methods": {
+      "GET": 1,
+      "POST": 2,
+      "total": 3
+    },
+    "routes": [
+      {
+        "path": "app/api/homepage-control/published/route.ts",
+        "runtime_role": "READ_ONLY_PUBLIC_HOMEPAGE_CONTROL",
+        "source_identity": {
+          "path": "app/api/homepage-control/published/route.ts",
+          "git_blob": "29992ba9fbd88f65617573047eeb4a2b8f906a5a",
+          "sha256": "c7242b326a71eb54f14d72dc060f7d13709bafcb7cac753329cb42551dc05289",
+          "bytes": 983,
+          "lines": 34,
+          "mode": "0644"
+        },
+        "method": "GET",
+        "status": 200,
+        "content_type_category": "APPLICATION_JSON",
+        "response_bytes": 703,
+        "public_category": "PUBLISHED_ACTIVE_OBJECT",
+        "errors": 0,
+        "warnings": 0,
+        "cache_no_store": true,
+        "nosniff": true,
+        "branch_witness_identity": "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7"
+      },
+      {
+        "path": "app/api/submit-tool/route.ts",
+        "runtime_role": "PRE_PRIVILEGED_INVALID_SUBMISSION_REJECTION",
+        "source_identity": {
+          "path": "app/api/submit-tool/route.ts",
+          "git_blob": "f3bcd74d5a2a7eba361486aedae06e7c806b1e93",
+          "sha256": "e296e8bc1f6aa32e2c5cadf4c5306aec9d91870cb98957574505668fa03b93d1",
+          "bytes": 8956,
+          "lines": 361,
+          "mode": "0644"
+        },
+        "method": "POST",
+        "status": 400,
+        "content_type_category": "APPLICATION_JSON",
+        "response_bytes": 31,
+        "public_category": "INVALID_SUBMISSION",
+        "cache_no_store": true,
+        "nosniff": true,
+        "branch_witness_identity": "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7"
+      },
+      {
+        "path": "app/api/upload-logo/route.ts",
+        "runtime_role": "PRE_PRIVILEGED_ONE_FILE_REQUIRED_REJECTION",
+        "source_identity": {
+          "path": "app/api/upload-logo/route.ts",
+          "git_blob": "5039bb86ff22aba50836e98676d079529ac6d093",
+          "sha256": "cfb3d3c7279120b1a094421ea11f36b54e93c6709993b8f7ed1d2d6c6556b274",
+          "bytes": 5901,
+          "lines": 232,
+          "mode": "0644"
+        },
+        "method": "POST",
+        "status": 400,
+        "content_type_category": "APPLICATION_JSON",
+        "response_bytes": 45,
+        "public_category": "ONE_FILE_REQUIRED",
+        "cache_no_store": true,
+        "nosniff": true,
+        "branch_witness_identity": "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7"
+      }
+    ]
+  },
+  "branch_witness_contract": {
+    "identity": "25532a6e8a149b52b03b27cbccf33212af483772eb0314c973a70c69595c3cc7",
+    "predicate_count": 55,
+    "false_predicate_ids": [],
+    "maximum_homepage_indirect_reads": 2,
+    "homepage_helper_mutation_calls": 0,
+    "submit_pre_create_client": true,
+    "upload_pre_storage": true
+  },
+  "private_requalification_contract": {
+    "harness_contract": "100/100",
+    "private_route_shadow": "3/3",
+    "route_domain_matrix": "105/105",
+    "helper": "21/21",
+    "homepage": "18/18",
+    "submit": "36/36",
+    "upload": "30/30",
+    "static_readiness": "PASS",
+    "shadow_build": "PASS_31_OF_31",
+    "candidate_mutations": "83/83",
+    "governance_mutations": "14/14",
+    "predecessor_mutations": "97/97",
+    "current_session_mutations": "67/67",
+    "combined_mutations": "164/164",
+    "independent_review": "0/0/0"
+  },
+  "public_attempt_contract": {
+    "attempts_consumed": 1,
+    "attempt_2": "UNUSED_AND_FORBIDDEN_AFTER_PASS",
+    "exact_route_qualification": "3/3",
+    "GET": 1,
+    "POST": 2,
+    "public_requests": 3,
+    "homepage_status": 200,
+    "homepage_response_bytes": 703,
+    "homepage_config_state": "PUBLISHED_ACTIVE_OBJECT",
+    "homepage_errors": 0,
+    "homepage_warnings": 0,
+    "submit_status": 400,
+    "submit_category": "INVALID_SUBMISSION",
+    "submit_response_bytes": 31,
+    "upload_status": 400,
+    "upload_category": "ONE_FILE_REQUIRED",
+    "upload_response_bytes": 45,
+    "no_store_nosniff": "3/3",
+    "set_cookie_redirect_query_auth_browser": "0/0/0/0/0",
+    "successful_submit_upload_real_file": "0/0/0"
+  },
+  "data_operation_boundary": {
+    "observed_public_method_calls": {
+      "GET": 1,
+      "POST": 2,
+      "total": 3
+    },
+    "source_proven_pre_privileged_branches": {
+      "submit_privileged_branch_reached": false,
+      "upload_privileged_branch_reached": false
+    },
+    "authorized_indirect_read_only_route_behavior": {
+      "homepage_maximum_indirect_reads": 2,
+      "internal_database_call_counts_directly_observed": false
+    },
+    "direct_codex_data_operations": {
+      "supabase": 0,
+      "sql": 0,
+      "database": 0,
+      "storage": 0
+    },
+    "persistent_database_storage_mutations": {
+      "database": 0,
+      "storage": 0,
+      "evidence_basis": "SOURCE_BOUND_INFERENCE_NOT_DIRECT_INTERNAL_OBSERVATION"
+    },
+    "ephemeral_rate_limit_increments": {
+      "observed": 2,
+      "minimum": 2,
+      "maximum": 2,
+      "evidence_basis": "SOURCE_BOUND_INFERENCE"
+    }
+  },
+  "source_artifacts": [
+    {
+      "path": "01-preflight-source-deployment-and-session-budget.md",
+      "sha256": "38a631fc1e6a1d72862628065c7d218ad52b56c399b1b6b556ca59f8cf5ed42a",
+      "bytes": 2694,
+      "lines": 57,
+      "mode": "0600"
+    },
+    {
+      "path": "02-exact-three-route-source-and-branch-witness.json",
+      "sha256": "bca419e695659fa8cf14fb0068c3d0270537ed77d7c8ab7f0e97a121583851ee",
+      "bytes": 11512,
+      "lines": 413,
+      "mode": "0600"
+    },
+    {
+      "path": "03-private-shadow-and-complete-requalification.json",
+      "sha256": "ca561d5a4fda3165b47d374de25a18ae87263e7cd26d77c7de3a7f4db2b949bd",
+      "bytes": 13655,
+      "lines": 360,
+      "mode": "0600"
+    },
+    {
+      "path": "04-session-contract-mutations-and-independent-review.json",
+      "sha256": "a11f4ce0f653135989f7b1b4338c7c1712fb1252320b7ff8ce9b353b7c44a8f2",
+      "bytes": 6024,
+      "lines": 149,
+      "mode": "0600"
+    },
+    {
+      "path": "05-attempt-one-public-live-route-evidence.json",
+      "sha256": "4f9aabdcfb83f9c97f179b8dce61f546b548d8cadb0523afa60d6a34d6c0d56c",
+      "bytes": 5180,
+      "lines": 158,
+      "mode": "0600"
+    },
+    {
+      "path": "06-between-attempt-repair-and-final-attempt.json",
+      "sha256": "f5dedae9a63411d6f77390f4530df37184ab50be8b4a5f30bdd03fc774833b07",
+      "bytes": 646,
+      "lines": 29,
+      "mode": "0600"
+    },
+    {
+      "path": "07-final-three-route-static-integration-boundary.md",
+      "sha256": "4c8b47153f0b877d12a5712268f47e108bd1c711d8e4f69d1f71e626814da62f",
+      "bytes": 1441,
+      "lines": 29,
+      "mode": "0600"
+    },
+    {
+      "path": "08-preservation-topology-risk-and-next-action.md",
+      "sha256": "c988a9a7cfab74e991796246f1e9e7314bda6d392b1da8e89cf5135a765ba846",
+      "bytes": 2443,
+      "lines": 57,
+      "mode": "0600"
+    }
+  ],
+  "safety_boundary": {
+    "source_repository_writes_stages_commits_pushes": "0/0/0/0",
+    "additional_public_runtime_observations": 0,
+    "additional_public_http_requests": 0,
+    "production_browser_runs": 0,
+    "real_environment_reads": 0,
+    "secret_reads": 0,
+    "raw_config_or_response_bodies_retained": 0,
+    "raw_urls_queries_or_operational_headers_retained": 0,
+    "cookies_sessions_credentials_or_field_values_retained": 0,
+    "production_upload_file_names_or_production_records_retained": 0,
+    "supabase_connector_calls": 0,
+    "real_supabase_requests": 0,
+    "sql_executions": 0,
+    "database_api_calls": 0,
+    "storage_api_calls": 0,
+    "authenticated_runtime_operations": 0,
+    "form_or_file_interactions": 0,
+    "direct_vercel_writes": 0,
+    "deployment_control_actions": 0,
+    "operational_reactivation_actions": 0,
+    "publishing_actions": 0,
+    "public_launch_actions": 0
+  },
+  "integration_decision": {
+    "PUBLIC_LIVE_ROUTE_RUNTIME_WORKSTREAM": "EVIDENCE_COMPLETE",
+    "STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION": "GO",
+    "PUBLIC_LAUNCH_DECISION": "NO_GO_PENDING_AUTHENTICATED_WORKSTREAMS_AND_FINAL_LAUNCH_GATE"
+  }
+}
