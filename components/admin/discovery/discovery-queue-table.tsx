@@ -399,6 +399,7 @@ export function DiscoveryQueueTable() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
             value={sourceFilter}
+            aria-label="Filter discovery queue by source"
             onChange={(event) => {
               setSourceFilter(event.target.value);
               setPage(1);
@@ -418,6 +419,7 @@ export function DiscoveryQueueTable() {
 
           <select
             value={statusFilter}
+            aria-label="Filter discovery queue by status"
             onChange={(event) => {
               setStatusFilter(event.target.value);
               setPage(1);
@@ -588,7 +590,7 @@ export function DiscoveryQueueTable() {
                         <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                     ) : (
-                      <p className="mt-1 text-xs text-slate-400">No website</p>
+                      <p className="mt-1 text-xs text-slate-500">No website</p>
                     )}
 
                     {tool.description && (
@@ -608,7 +610,7 @@ export function DiscoveryQueueTable() {
                     <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">
                       {tool.category || "Uncategorized"}
                     </span>
-                      <p className="text-xs font-semibold text-slate-400">
+                      <p className="text-xs font-semibold text-slate-500">
                         {tool.pricing || "Pricing unknown"}
                       </p>
                   </div>

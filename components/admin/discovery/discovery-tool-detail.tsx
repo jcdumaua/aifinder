@@ -117,7 +117,7 @@ function getAuditActionStyle(value: unknown) {
 function DetailRow({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+      <p className="text-xs font-black uppercase tracking-widest text-slate-600">
         {label}
       </p>
       <p className="mt-2 break-words text-sm font-semibold text-slate-900">
@@ -507,7 +507,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
       <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-cyan-600">
+            <p className="text-xs font-black uppercase tracking-widest text-cyan-700">
               Discovered Candidate
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">
@@ -585,7 +585,7 @@ export function DiscoveryToolDetail({ toolId }: DiscoveryToolDetailProps) {
                 type="button"
                 onClick={() => void updateStatus("pending_review")}
                 disabled={actionLoading !== null}
-                className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-black text-white hover:bg-cyan-700 disabled:opacity-50"
+                className="rounded-xl bg-cyan-700 px-3 py-2 text-xs font-black text-white hover:bg-cyan-800 disabled:opacity-50"
               >
                 {actionLoading === "pending_review"
                   ? "Updating..."

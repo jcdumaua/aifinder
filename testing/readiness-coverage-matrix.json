@@ -1,7 +1,7 @@
 {
   "matrix_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "route_inventory_digest": "40729ce2a17801c08cae008eb67eae3f297909f11a01e2685fb387a0bb7c2aab",
+  "route_inventory_digest": "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed",
   "entries": [
     {
       "path": "app/admin-login/layout.tsx",
@@ -9,12 +9,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin-login",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -24,12 +27,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin-login",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -39,12 +45,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/analytics",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -54,12 +63,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/discovered-tools",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -69,12 +81,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/discovery",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -84,12 +99,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/discovery/tools/[id]",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -99,12 +117,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/discovery/tools",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -114,12 +135,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/homepage-control/[id]/edit",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -129,12 +153,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/homepage-control/[id]",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -144,12 +171,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/homepage-control/[id]/preview",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -159,12 +189,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/homepage-control",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -174,12 +207,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -189,12 +225,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/moderation",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -204,12 +243,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/notifications",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -219,12 +261,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -234,12 +279,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/security",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -249,12 +297,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/settings",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -264,12 +315,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/admin/tools",
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
     },
@@ -279,9 +333,12 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/audit-logs",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/authenticated-browser-security-static-assertions.mjs",
+        "testing/authenticated-browser-static-evidence.json"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
     },

@@ -319,6 +319,7 @@ export function DiscoverySourcesPanel() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={sourceTypeFilter}
+            aria-label="Filter discovery sources by type"
             onChange={(event) =>
               changeSourceTypeFilter(event.target.value as SourceTypeFilter)
             }
@@ -334,6 +335,7 @@ export function DiscoverySourcesPanel() {
 
           <select
             value={activeFilter}
+            aria-label="Filter discovery sources by active state"
             onChange={(event) =>
               changeActiveFilter(event.target.value as ActiveFilter)
             }

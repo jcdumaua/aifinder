@@ -5,7 +5,6 @@ import {
   getHomepageControlConfigById,
   getHomepageControlPreviewChecklist,
   hydrateHomepagePreviewToolPlacements,
-  recordHomepageControlPreview,
   type HomepagePreviewToolPlacement,
 } from "../../../../../lib/homepage-control-admin";
 import {
@@ -157,21 +156,10 @@ export default async function AdminHomepageControlPreviewPage({
   );
   const visibleSections = getStringArray(config.config.visibleSections);
   const sectionOrder = getStringArray(config.config.sectionOrder);
-  const previewAuditResult = await recordHomepageControlPreview(
-    config.id,
-    { id: null, label: "AiFinder Admin" },
-    config.version
-  );
   const previewChecklistResult = await getHomepageControlPreviewChecklist(
     config.id
   );
   const placementResult = await hydrateHomepagePreviewToolPlacements(config);
-  const auditWarnings = previewAuditResult.success
-    ? previewAuditResult.warnings
-    : [
-        ...previewAuditResult.errors,
-        ...previewAuditResult.warnings,
-      ];
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -184,7 +172,6 @@ export default async function AdminHomepageControlPreviewPage({
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {(result.errors.length > 0 ||
           result.warnings.length > 0 ||
-          auditWarnings.length > 0 ||
           previewChecklistResult.errors.length > 0 ||
           previewChecklistResult.warnings.length > 0 ||
           placementResult.errors.length > 0 ||
@@ -199,7 +186,6 @@ export default async function AdminHomepageControlPreviewPage({
             ))}
             {[
               ...result.warnings,
-              ...auditWarnings,
               ...previewChecklistResult.warnings,
               ...placementResult.warnings,
             ].map((item) => (

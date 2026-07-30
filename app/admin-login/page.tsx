@@ -31,11 +31,39 @@ export default function AdminLoginPage() {
     const params = new URLSearchParams(window.location.search);
     const from = params.get("from");
 
-    if (from && from.startsWith("/admin")) {
-      return from;
+    if (
+      !from ||
+      !from.startsWith("/") ||
+      from.startsWith("//") ||
+      /[\u0000-\u001F\u007F\\]/u.test(from) ||
+      /%(?![0-9a-f]{2})/iu.test(from) ||
+      /%(?:25|2e|2f|5c)/iu.test(from) ||
+      from.includes("#")
+    ) {
+      return "/admin";
     }
 
-    return "/admin";
+    try {
+      const candidate = new URL(from, window.location.origin);
+      const isAdminPath =
+        candidate.pathname === "/admin" ||
+        candidate.pathname.startsWith("/admin/");
+
+      if (
+        candidate.origin !== window.location.origin ||
+        candidate.username ||
+        candidate.password ||
+        !isAdminPath ||
+        candidate.hash
+      ) {
+        return "/admin";
+      }
+
+      return `${candidate.pathname}${candidate.search}`;
+    } catch {
+      return "/admin";
+    }
+
   }
 
   async function checkAdminSession() {
@@ -62,7 +90,10 @@ export default function AdminLoginPage() {
   }
 
   async function unlockAdmin() {
-    if (!password.trim()) {
+    const submittedPassword = password;
+    setPassword("");
+
+    if (!submittedPassword.trim()) {
       showError("Please enter the admin password.");
       return;
     }
@@ -77,7 +108,7 @@ export default function AdminLoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          password,
+          password: submittedPassword,
         }),
       });
 
@@ -88,7 +119,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      setPassword("");
       window.location.replace(getRedirectPath());
     } catch {
       showError("Admin login failed. Please try again.");
@@ -110,6 +140,8 @@ export default function AdminLoginPage() {
       className="aifinder-responsive-modal-backdrop fixed inset-0 z-[9999] flex w-screen items-center justify-center bg-black/80 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="admin-login-message-title"
+      aria-describedby="admin-login-message-description"
     >
       <div className="aifinder-responsive-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-[2rem] border border-red-400/30 bg-slate-950 p-5 text-center shadow-2xl sm:p-7">
         <div className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-slate-950" />
@@ -119,15 +151,22 @@ export default function AdminLoginPage() {
           !
         </div>
 
-        <h2 className="mt-5 text-2xl font-black text-white">
+        <h2
+          id="admin-login-message-title"
+          className="mt-5 text-2xl font-black text-white"
+        >
           {popup.title}
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-slate-300">
+        <p
+          id="admin-login-message-description"
+          className="mt-3 text-sm leading-6 text-slate-300"
+        >
           {popup.message}
         </p>
 
         <button
+          type="button"
           onClick={() => setPopup(null)}
           className="mt-6 rounded-full bg-red-400 px-7 py-3 text-sm font-bold text-slate-950 hover:bg-red-300"
         >
@@ -171,27 +210,39 @@ export default function AdminLoginPage() {
           Enter the admin password to continue.
         </p>
 
-        <input suppressHydrationWarning
-          type="password"
-          placeholder="Admin password"
-          value={password}
-          disabled={isLoggingIn}
-          onChange={(event) => setPassword(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !isLoggingIn) {
-              unlockAdmin();
-            }
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void unlockAdmin();
           }}
-          className="mt-6 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-        />
-
-        <button
-          onClick={unlockAdmin}
-          disabled={isLoggingIn}
-          className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
-        </button>
+          <label
+            htmlFor="admin-password"
+            className="mt-6 block text-sm font-semibold text-slate-200"
+          >
+            Admin password
+          </label>
+          <input
+            suppressHydrationWarning
+            id="admin-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Admin password"
+            value={password}
+            disabled={isLoggingIn}
+            onChange={(event) => setPassword(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+
+          <button
+            type="submit"
+            disabled={isLoggingIn}
+            className="mt-4 w-full rounded-full bg-white px-5 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
+          </button>
+        </form>
 
         <p className="mt-4 text-xs text-slate-500">
           Admin password is checked securely on the server. A secure cookie

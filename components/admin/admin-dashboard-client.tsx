@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -499,6 +499,8 @@ function SlideOverPanel({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const slideOverTitleId = useId();
+  const slideOverDescriptionId = useId();
   const accentClass =
     accent === "amber"
       ? "text-amber-700"
@@ -511,6 +513,8 @@ function SlideOverPanel({
       className="fixed inset-0 z-[9997] flex min-h-dvh w-screen justify-end overflow-x-hidden bg-slate-500/25 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={slideOverTitleId}
+      aria-describedby={slideOverDescriptionId}
     >
       <div className="aifinder-responsive-slide-panel ai-corner-safe-panel relative isolate flex flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl shadow-slate-300/70 sm:rounded-l-2xl">
         <AdminModalLayers />
@@ -522,12 +526,23 @@ function SlideOverPanel({
             >
               {eyebrow}
             </p>
-            <h2 className="mt-2 text-lg font-black text-slate-950 sm:text-xl">
+            <h2
+              id={slideOverTitleId}
+              className="mt-2 text-lg font-black text-slate-950 sm:text-xl"
+            >
               {title}
             </h2>
             {description && (
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p
+                id={slideOverDescriptionId}
+                className="mt-2 text-sm leading-6 text-slate-600"
+              >
                 {description}
+              </p>
+            )}
+            {!description && (
+              <p id={slideOverDescriptionId} className="sr-only">
+                {title} panel.
               </p>
             )}
           </div>
@@ -1100,7 +1115,7 @@ export default function AdminDashboardClient({
             closeSlideOvers();
             setIsAddToolModalOpen(true);
           }}
-          className="w-full rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-700 sm:w-auto"
+          className="w-full rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-800 sm:w-auto"
         >
           Add Tool
         </button>
@@ -1132,11 +1147,8 @@ export default function AdminDashboardClient({
     if (view === "security") {
       return (
         <button
-          onClick={() => {
-            closeSlideOvers();
-            setIsAuditLogModalOpen(true);
-            fetchAuditLogs();
-          }}
+          type="button"
+          onClick={openAuditLogsPanel}
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
         >
           Audit Logs
@@ -1161,6 +1173,16 @@ export default function AdminDashboardClient({
   function openAdminReviewPanel() {
     closeSlideOvers();
     setIsAdminReviewModalOpen(true);
+  }
+
+  function openAuditLogsPanel() {
+    closeSlideOvers();
+    setIsAuditLogModalOpen(true);
+    void fetchAuditLogs();
+  }
+
+  function refreshAuditLogsPanel() {
+    void fetchAuditLogs();
   }
 
   function openNotificationPanel(notification: SmartAdminNotification) {
@@ -1235,7 +1257,11 @@ export default function AdminDashboardClient({
 
       const result = await response.json().catch(() => null);
 
-      setIsUnlocked(Boolean(response.ok && result?.authenticated));
+      const hasAuthenticatedSession = Boolean(
+        response.ok && result?.authenticated
+      );
+      setPassword("");
+      setIsUnlocked(hasAuthenticatedSession);
     } catch {
       setIsUnlocked(false);
     } finally {
@@ -1430,7 +1456,10 @@ export default function AdminDashboardClient({
   }
 
   async function unlockAdmin() {
-    if (!password.trim()) {
+    const submittedPassword = password;
+    setPassword("");
+
+    if (!submittedPassword.trim()) {
       showError("Please enter the admin password.", "Admin Access Denied");
       return;
     }
@@ -1445,7 +1474,7 @@ export default function AdminDashboardClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          password,
+          password: submittedPassword,
         }),
       });
 
@@ -1459,7 +1488,6 @@ export default function AdminDashboardClient({
         return;
       }
 
-      setPassword("");
       setIsUnlocked(true);
     } catch {
       showError("Admin login failed. Please try again.", "Admin Access Denied");
@@ -1570,7 +1598,6 @@ export default function AdminDashboardClient({
       setUrl(result.logoUrl);
       // Future Sonner use in upload flows: toast.success("Logo Uploaded", { description: "Logo uploaded successfully." }).
       showSuccess("Logo uploaded successfully.", "Logo Uploaded");
-      fetchAuditLogs();
     } catch {
       showError("Failed to upload logo.");
     } finally {
@@ -1671,6 +1698,65 @@ export default function AdminDashboardClient({
     }
   }
 
+  function archiveOverflowAuditLogs() {
+    askConfirm({
+      title: "Archive Overflow Audit Logs?",
+      message:
+        "This explicitly archives audit logs above the live-log limit. No archival runs automatically when this panel opens.",
+      confirmLabel: "Archive overflow logs",
+      confirmTone: "yellow",
+      onConfirm: async () => {
+        const secureToken = await fetchCsrfToken();
+
+        if (!secureToken) return;
+
+        const response = await fetch("/api/admin/audit-logs", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            "x-csrf-token": secureToken,
+          },
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (handleSecurityFailure(response.status)) {
+          return;
+        }
+
+        if (!response.ok) {
+          showError("Audit-log archival did not complete.");
+          return;
+        }
+
+        if (result?.result === "ARCHIVE_NOT_REQUIRED") {
+          showSuccess(
+            "The live audit log is within its limit. Nothing was archived.",
+            "No Archive Required"
+          );
+          return;
+        }
+
+        if (
+          result?.result === "ARCHIVE_COMPLETED" &&
+          Number.isSafeInteger(result?.archived_count) &&
+          result.archived_count >= 0
+        ) {
+          showSuccess(
+            `${result.archived_count} overflow audit log${
+              result.archived_count === 1 ? "" : "s"
+            } archived. Use Refresh Logs to load the updated lists.`,
+            "Audit Archive Completed"
+          );
+          return;
+        }
+
+        showError("Audit-log archival returned an invalid result.");
+      },
+    });
+  }
+
   function downloadAuditArchive(archiveId: string) {
     window.open(`/api/admin/audit-logs/archive/${archiveId}`, "_blank", "noopener,noreferrer");
   }
@@ -1707,7 +1793,6 @@ export default function AdminDashboardClient({
         }
 
         showSuccess(`Deleted archive: ${fileName}`, "Audit Archive Deleted");
-        fetchAuditLogs();
       },
     });
   }
@@ -1754,7 +1839,6 @@ export default function AdminDashboardClient({
 
         fetchSubmissions();
         fetchTools();
-        fetchAuditLogs();
       },
     });
   }
@@ -1797,7 +1881,6 @@ export default function AdminDashboardClient({
         showSuccess("Submission rejected.", "Submission Rejected");
 
         fetchSubmissions();
-        fetchAuditLogs();
       },
     });
   }
@@ -1873,7 +1956,6 @@ export default function AdminDashboardClient({
 
     closeSubmissionEditModal();
     fetchSubmissions();
-    fetchAuditLogs();
   }
 
   useEffect(() => {
@@ -1886,7 +1968,6 @@ export default function AdminDashboardClient({
     void Promise.resolve().then(() => {
       fetchTools();
       fetchSubmissions();
-      fetchAuditLogs();
       fetchCsrfToken();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2003,7 +2084,6 @@ export default function AdminDashboardClient({
 
     fetchTools();
     fetchSubmissions();
-    fetchAuditLogs();
   }
 
   function openEditModal(tool: Tool) {
@@ -2078,7 +2158,6 @@ export default function AdminDashboardClient({
     closeEditModal();
     fetchTools();
     fetchSubmissions();
-    fetchAuditLogs();
   }
 
   function deleteTool(id?: number) {
@@ -2122,7 +2201,6 @@ export default function AdminDashboardClient({
 
         fetchTools();
         fetchSubmissions();
-        fetchAuditLogs();
       },
     });
   }
@@ -2134,6 +2212,8 @@ export default function AdminDashboardClient({
       className="aifinder-responsive-modal-backdrop fixed inset-0 z-[9999] flex w-screen items-end justify-center bg-slate-500/25 backdrop-blur-md sm:items-center"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="admin-message-dialog-title"
+      aria-describedby="admin-message-dialog-description"
     >
       <div
         className={`aifinder-responsive-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-t-2xl border p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7 ${
@@ -2163,15 +2243,22 @@ export default function AdminDashboardClient({
           {isSuccessPopup ? "✓" : "!"}
         </div>
 
-        <h2 className="mt-5 text-lg font-black text-slate-950">
+        <h2
+          id="admin-message-dialog-title"
+          className="mt-5 text-lg font-black text-slate-950"
+        >
           {popup.title}
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-slate-700">
+        <p
+          id="admin-message-dialog-description"
+          className="mt-3 text-sm leading-6 text-slate-700"
+        >
           {popup.message}
         </p>
 
         <button
+          type="button"
           onClick={() => setPopup(null)}
           className={`mt-6 rounded-full px-7 py-3 text-sm font-bold text-white ${
             isSuccessPopup
@@ -2191,6 +2278,8 @@ export default function AdminDashboardClient({
       className="aifinder-responsive-modal-backdrop fixed inset-0 z-[9998] flex w-screen items-end justify-center bg-slate-500/25 backdrop-blur-md sm:items-center"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="admin-confirm-dialog-title"
+      aria-describedby="admin-confirm-dialog-description"
     >
       <div className="aifinder-responsive-modal-panel ai-corner-safe-panel relative isolate max-w-md overflow-hidden rounded-t-2xl border border-slate-200 bg-white p-5 text-center shadow-xl shadow-slate-200/80 sm:rounded-2xl sm:p-7">
         <AdminModalLayers />
@@ -2217,16 +2306,23 @@ export default function AdminDashboardClient({
           ?
         </div>
 
-        <h2 className="mt-5 text-lg font-black text-slate-950">
+        <h2
+          id="admin-confirm-dialog-title"
+          className="mt-5 text-lg font-black text-slate-950"
+        >
           {confirmDialog.title}
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-slate-700">
+        <p
+          id="admin-confirm-dialog-description"
+          className="mt-3 text-sm leading-6 text-slate-700"
+        >
           {confirmDialog.message}
         </p>
 
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <button
+            type="button"
             onClick={() => setConfirmDialog(null)}
             disabled={isConfirming}
             className="w-full rounded-full border border-slate-200 px-7 py-3 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
@@ -2235,14 +2331,15 @@ export default function AdminDashboardClient({
           </button>
 
           <button
+            type="button"
             onClick={runConfirmAction}
             disabled={isConfirming}
-            className={`w-full rounded-full px-7 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
+            className={`w-full rounded-full px-7 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
               confirmDialog.confirmTone === "green"
-                ? "bg-emerald-600 hover:bg-emerald-500"
+                ? "bg-emerald-600 text-white hover:bg-emerald-500"
                 : confirmDialog.confirmTone === "red"
-                  ? "bg-red-600 hover:bg-red-500"
-                  : "bg-amber-500 hover:bg-amber-400"
+                  ? "bg-red-600 text-white hover:bg-red-500"
+                  : "bg-amber-500 text-slate-950 hover:bg-amber-400"
             }`}
           >
             {isConfirming ? "Working..." : confirmDialog.confirmLabel}
@@ -2257,17 +2354,26 @@ export default function AdminDashboardClient({
     <SlideOverPanel
       eyebrow="Security Audit"
       title="Recent Admin Activity"
-      description="Latest logs stay visible while older logs are archived for security review."
+      description="Review recent activity and explicitly archive overflow logs when needed."
       accent="slate"
       onClose={() => setIsAuditLogModalOpen(false)}
     >
           <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
-              onClick={fetchAuditLogs}
+              type="button"
+              onClick={refreshAuditLogsPanel}
               disabled={isLoadingAuditLogs}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {isLoadingAuditLogs ? "Loading..." : "Refresh Logs"}
+            </button>
+
+            <button
+              type="button"
+              onClick={archiveOverflowAuditLogs}
+              className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-900 hover:bg-amber-100 sm:w-auto"
+            >
+              Archive overflow logs
             </button>
 
           </div>
@@ -2281,7 +2387,8 @@ export default function AdminDashboardClient({
                 </h3>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Shows the newest activity. Older logs are archived automatically after 100 live logs.
+                  Shows the newest activity. Archival occurs only after an
+                  explicit confirmed action.
                 </p>
               </div>
 
@@ -2353,7 +2460,8 @@ export default function AdminDashboardClient({
 
             {auditArchives.length === 0 ? (
               <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                No compressed audit archives yet. Archives appear after live logs go over 100.
+                No compressed audit archives yet. Use Archive overflow logs
+                when the live-log limit is exceeded.
               </p>
             ) : (
               <div className="overflow-hidden rounded-2xl border border-slate-200">
@@ -2393,13 +2501,15 @@ export default function AdminDashboardClient({
 
                       <div className="flex flex-wrap gap-2">
                         <button
+                          type="button"
                           onClick={() => downloadAuditArchive(archive.id)}
-                          className="w-full rounded-full bg-cyan-600 px-4 py-2 text-xs font-bold text-white hover:bg-cyan-700 sm:w-auto"
+                          className="w-full rounded-full bg-cyan-700 px-4 py-2 text-xs font-bold text-white hover:bg-cyan-800 sm:w-auto"
                         >
                           Download
                         </button>
 
                         <button
+                          type="button"
                           onClick={() =>
                             deleteAuditArchive(archive.id, archive.file_name)
                           }
@@ -2634,7 +2744,7 @@ export default function AdminDashboardClient({
               type="button"
               onClick={addTool}
               variant="ghost"
-              className="mt-5 h-auto rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700"
+              className="mt-5 h-auto rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-800"
             >
               Add Tool
             </Button>
@@ -2697,6 +2807,7 @@ export default function AdminDashboardClient({
             />
 
             <select suppressHydrationWarning
+              aria-label="Filter submissions by category"
               className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
               value={submissionCategoryFilter}
               onChange={(e) => setSubmissionCategoryFilter(e.target.value)}
@@ -2893,6 +3004,7 @@ export default function AdminDashboardClient({
               />
 
               <select suppressHydrationWarning
+                aria-label="Filter tools by category"
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                 value={toolCategoryFilter}
                 onChange={(e) => setToolCategoryFilter(e.target.value)}
@@ -2912,6 +3024,7 @@ export default function AdminDashboardClient({
               </select>
 
               <select suppressHydrationWarning
+                aria-label="Sort tools"
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:bg-white"
                 value={toolSort}
                 onChange={(e) => setToolSort(e.target.value)}
@@ -3164,27 +3277,39 @@ export default function AdminDashboardClient({
             Enter the admin password to manage AI tools.
           </p>
 
-          <input suppressHydrationWarning
-            type="password"
-            placeholder="Admin password"
-            value={password}
-            disabled={isLoggingIn}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !isLoggingIn) {
-                unlockAdmin();
-              }
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void unlockAdmin();
             }}
-            className="mt-6 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-500"
-          />
-
-          <button
-            onClick={unlockAdmin}
-            disabled={isLoggingIn}
-            className="mt-4 w-full rounded-full bg-cyan-600 px-5 py-4 text-sm font-bold text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
-          </button>
+            <label
+              htmlFor="admin-dashboard-password"
+              className="mt-6 block text-sm font-semibold text-slate-700"
+            >
+              Admin password
+            </label>
+            <input
+              suppressHydrationWarning
+              id="admin-dashboard-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Admin password"
+              value={password}
+              disabled={isLoggingIn}
+              onChange={(event) => setPassword(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-500"
+            />
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="mt-4 w-full rounded-full bg-cyan-700 px-5 py-4 text-sm font-bold text-white hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoggingIn ? "Checking..." : "Unlock Dashboard"}
+            </button>
+          </form>
 
           <p className="mt-4 text-xs text-slate-500">
             Admin password is checked securely on the server. A secure cookie
@@ -3507,7 +3632,7 @@ export default function AdminDashboardClient({
                         closeSlideOvers();
                         setIsAddToolModalOpen(true);
                       }}
-                      className="rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-700"
+                      className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-cyan-800"
                     >
                       Add Tool
                     </button>
@@ -4239,7 +4364,7 @@ export default function AdminDashboardClient({
                           type="button"
                           onClick={() => void loadManualIntakeSources()}
                           disabled={isLoadingManualIntakeSources}
-                          className="text-xs font-bold text-cyan-700 hover:text-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="text-xs font-bold text-cyan-800 hover:text-cyan-950 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isLoadingManualIntakeSources
                             ? "Loading..."
@@ -4506,8 +4631,8 @@ export default function AdminDashboardClient({
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-black text-slate-950">Audit Archive</p>
               <p className="mt-2 text-xs leading-6 text-slate-600">
-                Older logs are compressed into downloadable archives after the
-                live log limit is reached.
+                Overflow logs can be compressed into downloadable archives
+                only through an explicit confirmed admin action.
               </p>
             </div>
           </div>
@@ -4526,11 +4651,8 @@ export default function AdminDashboardClient({
                   </h2>
                 </div>
                 <button
-                  onClick={() => {
-                    closeSlideOvers();
-                    setIsAuditLogModalOpen(true);
-                    fetchAuditLogs();
-                  }}
+                  type="button"
+                  onClick={openAuditLogsPanel}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                 >
                   Audit Logs
@@ -4806,6 +4928,7 @@ export default function AdminDashboardClient({
                 />
 
                 <select suppressHydrationWarning
+                  aria-label="Edit submission category"
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
                   value={submissionEditCategory}
                   onChange={(e) =>
@@ -4832,6 +4955,7 @@ export default function AdminDashboardClient({
                 />
 
                 <select suppressHydrationWarning
+                  aria-label="Edit submission pricing"
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:bg-white"
                   value={submissionEditPricing}
                   onChange={(e) => setSubmissionEditPricing(e.target.value)}
@@ -5168,7 +5292,7 @@ export default function AdminDashboardClient({
                     type="button"
                     onClick={updateTool}
                     variant="ghost"
-                    className="h-auto w-full rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-700 sm:w-auto"
+                    className="h-auto w-full rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-cyan-800 sm:w-auto"
                   >
                     Save Changes
                   </Button>

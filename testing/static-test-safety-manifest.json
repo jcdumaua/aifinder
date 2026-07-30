@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "d23750fd63637c25b50df6ec8083bd8eeb6f8752ba845b5a08c9cd75045abcf2",
+  "testing_tree_digest": "6fb16f5b0261a3c9c760596bfd708d748c3c4c00b7cd0a5cc4253de3d4454ad9",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -117,6 +117,33 @@
       "ci_disposition": "DENY",
       "command_argv": null,
       "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
+    },
+    {
+      "path": "testing/authenticated-browser-planning-manifest.json",
+      "role": "CONFIG",
+      "safety_class": "STATIC_FIXTURE",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_BROWSER_RUNTIME_PLANNING_MANIFEST"
+    },
+    {
+      "path": "testing/authenticated-browser-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_CORE",
+      "ci_disposition": "RUN_CORE",
+      "command_argv": [
+        "node",
+        "testing/authenticated-browser-security-static-assertions.mjs"
+      ],
+      "reason_code": "STATIC_AUTHENTICATED_BROWSER_SECURITY"
+    },
+    {
+      "path": "testing/authenticated-browser-static-evidence.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "FINAL_AUTHENTICATED_BROWSER_STATIC_EVIDENCE"
     },
     {
       "path": "testing/browser-qa-fixtures.ts",

@@ -447,6 +447,7 @@ export function DiscoveryRunsTable({ refreshKey = 0 }: { refreshKey?: number }) 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
             value={status}
+            aria-label="Filter discovery runs by status"
             onChange={(event) => updateStatus(event.target.value)}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
           >

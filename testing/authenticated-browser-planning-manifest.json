@@ -1,0 +1,83 @@
+{
+  "planning_version": 1,
+  "source_commit": "3a43f8c9b01997487e20725ddcb38a4b7ce19676",
+  "workstream": {
+    "id": "AUTHENTICATED_BROWSER_RUNTIME",
+    "entry_count": 18,
+    "gap_code": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+  },
+  "decision": "AUTHENTICATED_BROWSER_STATIC_ASSURANCE_READY_FOR_RUNTIME",
+  "current_authority": "STATIC_AND_SYNTHETIC_ONLY",
+  "execution_authorized": false,
+  "real_secret_access_authorized": false,
+  "authenticated_production_runtime_authorized": false,
+  "next_gate": "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
+  "runtime_evidence": {
+    "path": "testing/authenticated-browser-static-evidence.json",
+    "sha256": "4a2f319ed8418e695162f9a3a5316da31c15d9f13c467ea10b1881db1faaaa26",
+    "git_blob": "c31d798b1110bf9a75ed934cf433be990a6fe52c",
+    "bytes": 18950,
+    "lines": 456,
+    "mode": "0644",
+    "authenticated_surface_profile_cases": "72/72",
+    "discovery_select_name_cases": "20/20",
+    "discovery_detail_contrast_cases": "8/8",
+    "audit_get_post_security_and_compensation_cases": "24/24"
+  },
+  "source_registry": {
+    "path": "testing/public-launch-blocker-registry.json",
+    "sha256": "8bb921814898abd40c9d3f4c38b4181446bd9f4bfc58cdf29f9909a6071668e6",
+    "git_blob": "b4cab952aad85634f031a6b175f3c991911517e7",
+    "bytes": 10542,
+    "lines": 291,
+    "mode": "0644"
+  },
+  "source_matrix": {
+    "path": "testing/readiness-coverage-matrix.json",
+    "sha256": "0a467e1cacfdb4310c254357931b8cf3c5d976f52f486f9c0a3bb8c67048656e",
+    "git_blob": "ac474c6470a805687b04875754e416b6fce502e3",
+    "bytes": 41322,
+    "lines": 1067,
+    "mode": "0644",
+    "route_inventory_digest": "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed",
+    "entry_count": 69,
+    "launch_blocking_count": 46
+  },
+  "scope": {
+    "repository_path_count": 16,
+    "source_path_count": 8,
+    "governance_path_count": 8,
+    "authenticated_browser_surface_count": 18,
+    "authenticated_live_route_partial_static_count": 1
+  },
+  "blocked_capabilities": [
+    "AUTHENTICATED_PRODUCTION_RUNTIME",
+    "DATABASE",
+    "DEPLOYMENT_CONTROL",
+    "DIRECT_VERCEL_WRITE",
+    "MIGRATIONS_OR_GENERATED_TYPES",
+    "OPERATIONAL_REACTIVATION",
+    "PRODUCTION_BROWSER",
+    "PUBLIC_HTTP",
+    "PUBLIC_LAUNCH",
+    "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+    "REAL_FORM_OR_FILE_INTERACTION",
+    "SQL",
+    "SUPABASE",
+    "USER_VISIBLE_PERSISTENT_MUTATION"
+  ],
+  "terminal_assurance_artifact": {
+    "result": "PASS_TERMINAL_AUTHENTICATED_BROWSER_ASSURANCE",
+    "sha256": "f1d93d2f6da5b885ab7dd75ee2e35ea128ba71303131c71f311683959667ff9d",
+    "bytes": 8261,
+    "lines": 268,
+    "mode": "0600"
+  },
+  "phase_finalization": {
+    "state": "FINAL_STATIC_MUTATION_REVIEW_COMPLETE_READY_FOR_STAGING",
+    "final_governance_static_rerun": "PASS",
+    "final_mutation_rerun": "PASS",
+    "independent_review": "PASS_0_0_0",
+    "staging_eligible": true
+  }
+}

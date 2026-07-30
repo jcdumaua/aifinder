@@ -2,7 +2,10 @@ import "server-only";
 
 import * as zlib from "zlib";
 import { NextResponse } from "next/server";
-import { isAuthorizedAdminRequest } from "../../../../lib/admin-auth";
+import {
+  isAuthorizedAdminRequest,
+  verifyAdminCsrfRequest,
+} from "../../../../lib/admin-auth";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -10,8 +13,14 @@ export const dynamic = "force-dynamic";
 
 const LIVE_LOG_LIMIT = 100;
 const DISPLAY_LOG_LIMIT = 50;
+const MAX_ARCHIVE_BATCH = 1_000;
 const ARCHIVE_BUCKET = "admin-audit-archives";
 const GENERIC_AUDIT_LOGS_ERROR = "Failed to load audit logs.";
+
+type ArchiveOverflowResult =
+  | { outcome: "ARCHIVE_NOT_REQUIRED" }
+  | { outcome: "ARCHIVE_COMPLETED"; archivedCount: number }
+  | { outcome: "ARCHIVE_FAILED" };
 
 type AuditLogRow = {
   id: number;
@@ -81,23 +90,55 @@ function getArchiveStoragePath(fileName: string) {
   return `audit-logs/${year}/${month}/${fileName}`;
 }
 
-async function archiveOverflowAuditLogs() {
+async function removeArchiveStorageObject(storagePath: string) {
+  try {
+    const { error } = await supabaseAdmin.storage
+      .from(ARCHIVE_BUCKET)
+      .remove([storagePath]);
+
+    if (error) {
+      console.error("audit_logs_archive_storage_rollback_failed");
+    }
+  } catch {
+    console.error("audit_logs_archive_storage_rollback_failed");
+  }
+}
+
+async function rollbackArchiveMetadata(storagePath: string) {
+  try {
+    const { error } = await supabaseAdmin
+      .from("admin_audit_archives")
+      .delete()
+      .eq("storage_path", storagePath);
+
+    if (error) {
+      console.error("audit_logs_archive_metadata_rollback_failed");
+    }
+  } catch {
+    console.error("audit_logs_archive_metadata_rollback_failed");
+  }
+}
+
+async function archiveOverflowAuditLogs(): Promise<ArchiveOverflowResult> {
   const { count, error: countError } = await supabaseAdmin
     .from("admin_audit_logs")
     .select("id", { count: "exact", head: true });
 
   if (countError) {
     console.error("audit_logs_count_failed");
-    return;
+    return { outcome: "ARCHIVE_FAILED" };
   }
 
   const totalLogs = count || 0;
 
   if (totalLogs <= LIVE_LOG_LIMIT) {
-    return;
+    return { outcome: "ARCHIVE_NOT_REQUIRED" };
   }
 
-  const archiveCount = totalLogs - LIVE_LOG_LIMIT;
+  const archiveCount = Math.min(
+    totalLogs - LIVE_LOG_LIMIT,
+    MAX_ARCHIVE_BATCH
+  );
 
   const { data: logsToArchive, error: fetchError } = await supabaseAdmin
     .from("admin_audit_logs")
@@ -109,7 +150,7 @@ async function archiveOverflowAuditLogs() {
 
   if (fetchError || !logsToArchive || logsToArchive.length === 0) {
     console.error("audit_logs_archive_fetch_failed");
-    return;
+    return { outcome: "ARCHIVE_FAILED" };
   }
 
   const typedLogs = logsToArchive as AuditLogRow[];
@@ -140,7 +181,7 @@ async function archiveOverflowAuditLogs() {
 
   if (uploadError) {
     console.error("audit_logs_archive_upload_failed");
-    return;
+    return { outcome: "ARCHIVE_FAILED" };
   }
 
   const { error: archiveInsertError } = await supabaseAdmin
@@ -159,8 +200,8 @@ async function archiveOverflowAuditLogs() {
 
   if (archiveInsertError) {
     console.error("audit_logs_archive_insert_failed");
-    await supabaseAdmin.storage.from(ARCHIVE_BUCKET).remove([storagePath]);
-    return;
+    await removeArchiveStorageObject(storagePath);
+    return { outcome: "ARCHIVE_FAILED" };
   }
 
   const idsToDelete = typedLogs.map((log) => log.id);
@@ -172,7 +213,15 @@ async function archiveOverflowAuditLogs() {
 
   if (deleteError) {
     console.error("audit_logs_archive_delete_failed");
+    await rollbackArchiveMetadata(storagePath);
+    await removeArchiveStorageObject(storagePath);
+    return { outcome: "ARCHIVE_FAILED" };
   }
+
+  return {
+    outcome: "ARCHIVE_COMPLETED",
+    archivedCount: Math.min(typedLogs.length, MAX_ARCHIVE_BATCH),
+  };
 }
 
 async function getRecentAuditLogs() {
@@ -215,8 +264,6 @@ export async function GET(request: Request) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    await archiveOverflowAuditLogs();
-
     const [logs, archives] = await Promise.all([
       getRecentAuditLogs(),
       getAuditArchives(),
@@ -232,5 +279,35 @@ export async function GET(request: Request) {
   } catch {
     console.error("audit_logs_unexpected_failure");
     return auditLogsFailureResponse();
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    if (!isAuthorizedAdminRequest(request)) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    if (!verifyAdminCsrfRequest(request)) {
+      return jsonResponse({ error: "Security token missing or expired." }, 403);
+    }
+
+    const result = await archiveOverflowAuditLogs();
+
+    if (result.outcome === "ARCHIVE_NOT_REQUIRED") {
+      return jsonResponse({ result: "ARCHIVE_NOT_REQUIRED" });
+    }
+
+    if (result.outcome === "ARCHIVE_COMPLETED") {
+      return jsonResponse({
+        result: "ARCHIVE_COMPLETED",
+        archived_count: result.archivedCount,
+      });
+    }
+
+    return jsonResponse({ error: "ARCHIVE_FAILED" }, 500);
+  } catch {
+    console.error("audit_logs_archive_unexpected_failure");
+    return jsonResponse({ error: "ARCHIVE_FAILED" }, 500);
   }
 }
