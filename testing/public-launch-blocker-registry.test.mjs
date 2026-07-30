@@ -13,20 +13,27 @@ import {
 
 const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
+const PUBLIC_LIVE_ROUTE_STATIC_EVIDENCE_PATH =
+  "testing/public-live-route-security-static-assertions.mjs";
+const PUBLIC_LIVE_ROUTE_PATHS = [
+  "app/api/homepage-control/published/route.ts",
+  "app/api/submit-tool/route.ts",
+  "app/api/upload-logo/route.ts",
+];
 const RUNTIME_PLAN_PATH =
   "testing/public-production-runtime-planning-manifest.json";
 const BROWSER_LIVE_PLAN_PATH =
   "testing/public-browser-live-runtime-planning-manifest.json";
-const SOURCE_COMMIT = "e4f221246abc4acfcda2ddeae852a5c7cd5b8c16";
+const SOURCE_COMMIT = "e16bdd3c65d087c67e54a0120e1c82e8195185ae";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "5f7ae77cd4c1f985e937f98035e6f329890244206e7a9b04f036a672a95b6eb5",
-  git_blob: "17e5c1c9e18f6ad3555c9d918c84f10a21bca9a2",
-  bytes: 38378,
-  lines: 1001,
+  sha256: "ed23a3d550d178780abdbaa3ae668de246587a9a13c31e9ccf59013ac77ccf6d",
+  git_blob: "e62315dfcaacc20eb7260d83a7cd8289491f8f6b",
+  bytes: 38588,
+  lines: 1007,
   mode: "0644",
   route_inventory_digest:
-    "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
+    "40729ce2a17801c08cae008eb67eae3f297909f11a01e2685fb387a0bb7c2aab",
   entry_count: 69,
   launch_blocking_count: 49,
 };
@@ -269,6 +276,26 @@ function matrixModel() {
   assert(
     completedBrowserLivePaths.length === 13,
     "BLOCKER_REGISTRY_COMPLETED_PATHS",
+  );
+  const partialStaticLiveRoutes = matrix.entries.filter(
+    (entry) =>
+      entry.coverage_state === "PARTIAL_STATIC" &&
+      entry.launch_blocking === true &&
+      entry.gap_code_or_null === "LIVE_ROUTE_EVIDENCE_REQUIRED",
+  );
+  assert(
+    partialStaticLiveRoutes.length === 3 &&
+      compareExactPathSets(
+        partialStaticLiveRoutes.map((entry) => entry.path),
+        PUBLIC_LIVE_ROUTE_PATHS,
+      ).equal &&
+      partialStaticLiveRoutes.every(
+        (entry) =>
+          exactArray(entry.static_evidence_paths, [
+            PUBLIC_LIVE_ROUTE_STATIC_EVIDENCE_PATH,
+          ]) && entry.future_evidence_paths.length === 0,
+      ),
+    "BLOCKER_REGISTRY_PUBLIC_LIVE_ROUTE_PARTIAL_STATIC",
   );
 
   const paths = matrix.entries.map((entry) => entry.path);

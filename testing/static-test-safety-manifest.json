@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "5912c3bd4698d1d2bd80c68ef6b8604f34a7d498307a98322686b1a1a9e25655",
+  "testing_tree_digest": "1968137497933b1dec2ea45318704a1e21936720eb51aa26e2b04b1ef2cd928c",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -654,6 +654,17 @@
         "testing/public-launch-resilience-static-assertions.mjs"
       ],
       "reason_code": "PROVEN_STATIC_READ_ONLY_SOURCE"
+    },
+    {
+      "path": "testing/public-live-route-security-static-assertions.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_CORE",
+      "ci_disposition": "RUN_CORE",
+      "command_argv": [
+        "node",
+        "testing/public-live-route-security-static-assertions.mjs"
+      ],
+      "reason_code": "STATIC_PUBLIC_LIVE_ROUTE_SECURITY"
     },
     {
       "path": "testing/public-persistence.test.mjs",

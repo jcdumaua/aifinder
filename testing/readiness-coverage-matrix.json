@@ -1,7 +1,7 @@
 {
   "matrix_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "route_inventory_digest": "2ab892934273cef903d720dfcb7cdd351711eb2969a02e36f5b2a714e496b726",
+  "route_inventory_digest": "40729ce2a17801c08cae008eb67eae3f297909f11a01e2685fb387a0bb7c2aab",
   "entries": [
     {
       "path": "app/admin-login/layout.tsx",
@@ -615,9 +615,11 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "/api/homepage-control/published",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-live-route-security-static-assertions.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
     },
@@ -627,9 +629,11 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "/api/submit-tool",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-live-route-security-static-assertions.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
     },
@@ -639,9 +643,11 @@
       "public_or_admin": "PUBLIC",
       "url_pattern_or_special_role": "/api/upload-logo",
       "security_boundary_class": "PUBLIC_API_BOUNDARY",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/public-live-route-security-static-assertions.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
       "gap_code_or_null": "LIVE_ROUTE_EVIDENCE_REQUIRED"
     },

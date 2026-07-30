@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
+import {
+  parseBoundedFormData,
+  PublicLiveRouteSafetyError,
+  readBoundedRequestBody,
+} from "../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 
@@ -111,17 +116,11 @@ export async function POST(request: Request) {
       return jsonResponse({ error: "Invalid upload format." }, 415);
     }
 
-    const contentLengthHeader = request.headers.get("content-length");
-    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-    if (contentLength > MAX_REQUEST_SIZE_BYTES) {
-      return jsonResponse(
-        { error: "Upload is too large. Logo file must be under 2MB." },
-        413
-      );
-    }
-
-    const formData = await request.formData();
+    const boundedBody = await readBoundedRequestBody(
+      request,
+      MAX_REQUEST_SIZE_BYTES
+    );
+    const formData = await parseBoundedFormData(boundedBody, contentType);
     const uploadedFiles = formData
       .getAll("file")
       .filter((item): item is File => item instanceof File);
@@ -187,7 +186,7 @@ export async function POST(request: Request) {
       });
 
     if (error) {
-      console.error("Logo upload error:", error.message);
+      console.error("upload_logo_storage_failed");
 
       return jsonResponse(
         { error: "Unable to upload logo. Please try again later." },
@@ -204,7 +203,26 @@ export async function POST(request: Request) {
       logoUrl: data.publicUrl,
     });
   } catch (error) {
-    console.error("Logo upload route error:", error);
+    if (error instanceof PublicLiveRouteSafetyError) {
+      if (error.code === "request_body_too_large") {
+        return jsonResponse(
+          { error: "Upload is too large. Logo file must be under 2MB." },
+          413
+        );
+      }
+
+      if (
+        error.code === "content_length_malformed" ||
+        error.code === "content_length_negative" ||
+        error.code === "content_length_understated" ||
+        error.code === "content_length_overstated" ||
+        error.code === "request_body_invalid_form_data"
+      ) {
+        return jsonResponse({ error: "Invalid upload format." }, 400);
+      }
+    }
+
+    console.error("upload_logo_unexpected_failure");
 
     return jsonResponse(
       { error: "Logo upload failed. Please try again." },

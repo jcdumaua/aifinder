@@ -42,6 +42,24 @@ export type HomepageControlPublicFetchResult = {
   warnings: string[];
 };
 
+const PUBLIC_HOMEPAGE_DIAGNOSTICS = {
+  primaryReadFailure:
+    "Published homepage configuration is temporarily unavailable.",
+  noActiveConfig:
+    "No active published homepage configuration is available.",
+  malformedPayload:
+    "Published homepage configuration is invalid.",
+  recoverableMetadata:
+    "Published homepage configuration contains recoverable metadata warnings.",
+  hydrationFailure:
+    "Published homepage tools are temporarily unavailable.",
+} as const;
+
+function boundedMissingToolWarning(count: number) {
+  const boundedCount = Math.min(Math.max(0, Math.trunc(count)), 999);
+  return `Some published homepage tools are unavailable. Missing count: ${boundedCount}.`;
+}
+
 async function hydratePublicToolPlacements(
   placements: HomepageToolPlacementConfig[],
   warnings: string[]
@@ -65,7 +83,7 @@ async function hydratePublicToolPlacements(
     .in("slug", Array.from(allSlugs));
 
   if (error) {
-    warnings.push(`Hydration failed: ${error.message}`);
+    warnings.push(PUBLIC_HOMEPAGE_DIAGNOSTICS.hydrationFailure);
     return [];
   }
 
@@ -85,6 +103,7 @@ async function hydratePublicToolPlacements(
   });
 
   const hydrated: HydratedHomepageToolPlacement[] = [];
+  let missingToolCount = 0;
 
   enabledPlacements.forEach((placement) => {
     const hydratedTools: PublicToolCardData[] = [];
@@ -99,9 +118,7 @@ async function hydratePublicToolPlacements(
       }
 
       missingToolSlugs.push(slug);
-      warnings.push(
-        `Tool with slug "${slug}" was not found or approved for placement "${placement.placementId}".`
-      );
+      missingToolCount += 1;
     });
 
     hydrated.push({
@@ -110,6 +127,10 @@ async function hydratePublicToolPlacements(
       missingToolSlugs,
     });
   });
+
+  if (missingToolCount > 0) {
+    warnings.push(boundedMissingToolWarning(missingToolCount));
+  }
 
   return hydrated;
 }
@@ -123,7 +144,9 @@ function normalizePublicToolPlacements(
     nonArrayMessage: "Published homepage tool_placements must be an array.",
   });
 
-  warnings.push(...result.warnings, ...result.errors);
+  if (result.warnings.length > 0 || result.errors.length > 0) {
+    warnings.push(PUBLIC_HOMEPAGE_DIAGNOSTICS.malformedPayload);
+  }
 
   return result.placements;
 }
@@ -176,7 +199,7 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
         success: false,
         config: null,
         hydratedPlacements: [],
-        errors: ["Failed to fetch active published Homepage Control Room config."],
+        errors: [PUBLIC_HOMEPAGE_DIAGNOSTICS.primaryReadFailure],
         warnings: [],
       };
     }
@@ -187,7 +210,7 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
         config: null,
         hydratedPlacements: [],
         errors: [],
-        warnings: ["No active published Homepage Control Room config found."],
+        warnings: [PUBLIC_HOMEPAGE_DIAGNOSTICS.noActiveConfig],
       };
     }
 
@@ -211,12 +234,19 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
         success: false,
         config: null,
         hydratedPlacements: [],
-        errors: parsed.errors,
-        warnings: [...parsed.warnings, ...placementWarnings],
+        errors: [PUBLIC_HOMEPAGE_DIAGNOSTICS.malformedPayload],
+        warnings:
+          placementWarnings.length > 0
+            ? [PUBLIC_HOMEPAGE_DIAGNOSTICS.malformedPayload]
+            : [],
       };
     }
 
-    const fetchWarnings = [...parsed.warnings, ...placementWarnings];
+    const fetchWarnings = [...placementWarnings];
+
+    if (parsed.warnings.length > 0) {
+      fetchWarnings.push(PUBLIC_HOMEPAGE_DIAGNOSTICS.recoverableMetadata);
+    }
 
     // Phase 2O-C2: Hydrate tool placements
     const hydratedPlacements = await hydratePublicToolPlacements(
@@ -239,7 +269,7 @@ export async function fetchPublishedHomepageControlConfig(): Promise<
       success: false,
       config: null,
       hydratedPlacements: [],
-      errors: ["Unexpected error fetching active published Homepage Control Room config."],
+      errors: [PUBLIC_HOMEPAGE_DIAGNOSTICS.primaryReadFailure],
       warnings: [],
     };
   }

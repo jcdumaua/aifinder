@@ -12,6 +12,11 @@ import {
   validateToolCategory,
   validateToolPricing,
 } from "../../../lib/tool-validation";
+import {
+  parseBoundedJsonBody,
+  PublicLiveRouteSafetyError,
+  readBoundedRequestBody,
+} from "../../../lib/public-live-route-safety";
 
 const MAX_BODY_SIZE_BYTES = 20 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -263,18 +268,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const contentLengthHeader = request.headers.get("content-length");
-    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-    if (contentLength > MAX_BODY_SIZE_BYTES) {
-      throw new SubmitToolValidationError(
-        "request_too_large",
-        "Submission is too large. Please shorten your entry.",
-        413
-      );
-    }
-
-    const body = await request.json().catch(() => null);
+    const boundedBody = await readBoundedRequestBody(
+      request,
+      MAX_BODY_SIZE_BYTES
+    );
+    const body = parseBoundedJsonBody(boundedBody);
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new SubmitToolValidationError(
@@ -333,6 +331,19 @@ export async function POST(request: Request) {
       message: "Thank you! Your tool has been submitted for admin review.",
     });
   } catch (caught) {
+    if (caught instanceof PublicLiveRouteSafetyError) {
+      if (caught.code === "request_body_too_large") {
+        return jsonResponse(
+          {
+            error: "Submission is too large. Please shorten your entry.",
+          },
+          413
+        );
+      }
+
+      return jsonResponse({ error: "Invalid submission." }, 400);
+    }
+
     if (caught instanceof SubmitToolValidationError) {
       const { publicMessage, status } = caught;
       return jsonResponse({ error: publicMessage }, status);
