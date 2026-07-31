@@ -22,9 +22,16 @@ const AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH =
   "testing/authenticated-browser-security-static-assertions.mjs";
 const AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH =
   "testing/authenticated-browser-static-evidence.json";
-const AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATHS = [
+const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
+  "testing/authenticated-browser-runtime-evidence.json";
+const AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS = [
   AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
   AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+  AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+];
+const AUTHENTICATED_BROWSER_FUTURE_EVIDENCE_PATHS = [
+  "testing/accessibility-qa.spec.ts",
+  "testing/responsive-qa.spec.ts",
 ];
 const AUTHENTICATED_AUDIT_ROUTE_PATH =
   "app/api/admin/audit-logs/route.ts";
@@ -49,6 +56,7 @@ const COVERAGE_STATES = new Set([
   "RUNTIME_EVIDENCE_INTEGRATED",
   "BROWSER_LIVE_EVIDENCE_INTEGRATED",
   "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+  "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
 ]);
 const STATIC_CLASSES = new Set([
   "SAFE_STATIC_CORE",
@@ -320,6 +328,21 @@ function validateMatrix() {
         "MATRIX_LIVE_ROUTE_EVIDENCE_STILL_BLOCKING",
       );
       assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (
+      entry.coverage_state === "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED"
+    ) {
+      assert(
+        exactArray(
+          entry.static_evidence_paths,
+          AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS,
+        ),
+        "MATRIX_AUTHENTICATED_BROWSER_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_AUTHENTICATED_BROWSER_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
     } else if (entry.coverage_state === "STATIC_COVERED") {
       assert(
         entry.static_evidence_paths.length > 0,
@@ -360,6 +383,11 @@ function validateMatrix() {
   const liveRouteEvidenceIntegrated = matrix.entries.filter(
     (entry) => entry.coverage_state === "LIVE_ROUTE_EVIDENCE_INTEGRATED",
   );
+  const authenticatedBrowserEvidenceIntegrated = matrix.entries.filter(
+    (entry) =>
+      entry.coverage_state ===
+      "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+  );
   const unblockedPaths = matrix.entries
     .filter((entry) => entry.launch_blocking === false)
     .map((entry) => entry.path);
@@ -373,6 +401,9 @@ function validateMatrix() {
   );
   const liveRouteEvidenceManifestEntry = manifestByPath.get(
     LIVE_ROUTE_EVIDENCE_PATH,
+  );
+  const authenticatedBrowserRuntimeEvidenceManifestEntry = manifestByPath.get(
+    AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
   );
   const authenticatedBrowserGapPaths = matrix.entries
     .filter(
@@ -412,6 +443,7 @@ function validateMatrix() {
       runtimeEvidenceIntegrated.length === 7 &&
       browserLiveEvidenceIntegrated.length === 13 &&
       liveRouteEvidenceIntegrated.length === 3 &&
+      authenticatedBrowserEvidenceIntegrated.length === 18 &&
       compareExactPathSets(
         runtimeEvidenceIntegrated.map((entry) => entry.path),
         RUNTIME_EVIDENCE_PATHS,
@@ -428,11 +460,9 @@ function validateMatrix() {
         ...RUNTIME_EVIDENCE_PATHS,
         ...BROWSER_LIVE_EVIDENCE_PATHS,
         ...LIVE_ROUTE_EVIDENCE_PATHS,
+        ...AUTHENTICATED_BROWSER_PATHS,
       ]).equal &&
-      compareExactPathSets(
-        authenticatedBrowserGapPaths,
-        AUTHENTICATED_BROWSER_PATHS,
-      ).equal &&
+      authenticatedBrowserGapPaths.length === 0 &&
       compareExactPathSets(
         authenticatedLiveRouteGapPaths,
         AUTHENTICATED_LIVE_ROUTE_PATHS,
@@ -440,18 +470,27 @@ function validateMatrix() {
       authenticatedBrowserEntries.length === 18 &&
       authenticatedBrowserEntries.every(
         (entry) =>
-          entry.coverage_state === "PARTIAL_STATIC" &&
-          entry.launch_blocking === true &&
+          entry.coverage_state ===
+            "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null &&
           exactArray(
             entry.static_evidence_paths,
-            AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATHS,
+            AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS,
+          ) &&
+          exactArray(
+            entry.future_evidence_paths,
+            AUTHENTICATED_BROWSER_FUTURE_EVIDENCE_PATHS,
           ),
       ) &&
       authenticatedAuditRouteEntry?.coverage_state === "PARTIAL_STATIC" &&
       authenticatedAuditRouteEntry.launch_blocking === true &&
       exactArray(
         authenticatedAuditRouteEntry.static_evidence_paths,
-        AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATHS,
+        [
+          AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+          AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+        ],
       ) &&
       authenticatedLiveRouteNoStatic.length === 27 &&
       authenticatedLiveRouteNoStatic.every(
@@ -460,8 +499,8 @@ function validateMatrix() {
           entry.static_evidence_paths.length === 0 &&
           entry.launch_blocking === true,
       ) &&
-      partialStatic.length === 19 &&
-      launchBlocking === 46,
+      partialStatic.length === 1 &&
+      launchBlocking === 28,
     "MATRIX_RUNTIME_EVIDENCE_PARTITION",
   );
   const authenticatedStaticAssertionManifestEntry = manifestByPath.get(
@@ -516,6 +555,17 @@ function validateMatrix() {
         "FINAL_PUBLIC_LIVE_ROUTE_RUNTIME_EVIDENCE",
     "MATRIX_LIVE_ROUTE_EVIDENCE_SAFETY",
   );
+  assert(
+    authenticatedBrowserRuntimeEvidenceManifestEntry?.role === "CONFIG" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.ci_disposition ===
+        "VALIDATE_ONLY" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.command_argv === null &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.reason_code ===
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE",
+    "MATRIX_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_SAFETY",
+  );
   return {
     entries: matrix.entries.length,
     publicCount,
@@ -524,7 +574,8 @@ function validateMatrix() {
     runtimeEvidenceIntegrated: runtimeEvidenceIntegrated.length,
     browserLiveEvidenceIntegrated: browserLiveEvidenceIntegrated.length,
     liveRouteEvidenceIntegrated: liveRouteEvidenceIntegrated.length,
-    authenticatedBrowserPartialStatic: authenticatedBrowserEntries.length,
+    authenticatedBrowserIntegrated:
+      authenticatedBrowserEvidenceIntegrated.length,
     authenticatedLiveRoutePartialStatic: 1,
     authenticatedLiveRouteNoStatic: authenticatedLiveRouteNoStatic.length,
     partialStatic: partialStatic.length,
@@ -536,7 +587,7 @@ function validateMatrix() {
 try {
   const result = validateMatrix();
   console.log(
-    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=${result.covered} runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} browser_live_evidence_integrated=${result.browserLiveEvidenceIntegrated} live_route_evidence_integrated=${result.liveRouteEvidenceIntegrated} authenticated_browser_partial_static=${result.authenticatedBrowserPartialStatic} authenticated_live_route_partial_static=${result.authenticatedLiveRoutePartialStatic} authenticated_live_route_no_static=${result.authenticatedLiveRouteNoStatic} partial_static=${result.partialStatic} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
+    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=${result.covered} runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} browser_live_evidence_integrated=${result.browserLiveEvidenceIntegrated} live_route_evidence_integrated=${result.liveRouteEvidenceIntegrated} authenticated_browser_integrated=${result.authenticatedBrowserIntegrated} authenticated_live_route_partial_static=${result.authenticatedLiveRoutePartialStatic} authenticated_live_route_no_static=${result.authenticatedLiveRouteNoStatic} partial_static=${result.partialStatic} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

@@ -7,6 +7,8 @@ const ROOT = path.resolve(".");
 const SELF_PATH =
   "testing/authenticated-browser-security-static-assertions.mjs";
 const EVIDENCE_PATH = "testing/authenticated-browser-static-evidence.json";
+const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
+  "testing/authenticated-browser-runtime-evidence.json";
 const PLAN_PATH = "testing/authenticated-browser-planning-manifest.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
@@ -24,6 +26,9 @@ const DISCOVERY_QUEUE_PATH =
 const DISCOVERY_DETAIL_PATH =
   "components/admin/discovery/discovery-tool-detail.tsx";
 const BASELINE = "3a43f8c9b01997487e20725ddcb38a4b7ce19676";
+const INTEGRATION_BASELINE =
+  "2570765ca0e769888286e42456d2f27d831f46df";
+const INTEGRATION_TREE = "2503e7cf964a4e5bc3f6121aa04dfc5f2e3128e1";
 const TERMINAL_ASSURANCE_RESULT =
   "PASS_TERMINAL_AUTHENTICATED_BROWSER_ASSURANCE";
 const EXPECTED_SOURCE_SHA256 = Object.freeze({
@@ -37,6 +42,54 @@ const EXPECTED_SOURCE_SHA256 = Object.freeze({
 const AUTHENTICATED_STATIC_EVIDENCE_PATHS = Object.freeze([
   SELF_PATH,
   EVIDENCE_PATH,
+]);
+const AUTHENTICATED_INTEGRATED_EVIDENCE_PATHS = Object.freeze([
+  SELF_PATH,
+  EVIDENCE_PATH,
+  AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+]);
+const RUNTIME_EVIDENCE_TOP_LEVEL_KEYS = Object.freeze([
+  "schema_version",
+  "source_phase",
+  "source_reporting_notes",
+  "source_ccr",
+  "predecessor_chain",
+  "canonical_result",
+  "authorization_session",
+  "immutable_binding",
+  "exact_surface_contract",
+  "credential_session_contract",
+  "sentinel_recovery_contract",
+  "route_qualification_contract",
+  "network_read_only_contract",
+  "accessibility_contract",
+  "cleanup_privacy_contract",
+  "source_artifacts",
+  "safety_boundary",
+  "integration_decision",
+]);
+const PLAN_TOP_LEVEL_KEYS = Object.freeze([
+  "planning_version",
+  "source_commit",
+  "source_registry",
+  "source_matrix",
+  "workstream",
+  "decision",
+  "current_authority",
+  "execution_authorized",
+  "real_secret_access_authorized",
+  "authenticated_production_runtime_authorized",
+  "live_evidence_status",
+  "last_runtime_result",
+  "canonical_source_alignment",
+  "target_origin",
+  "static_evidence",
+  "runtime_evidence",
+  "scope",
+  "blocked_capabilities",
+  "terminal_assurance_artifact",
+  "phase_finalization",
+  "next_gate",
 ]);
 
 const AUTHENTICATED_SURFACES = Object.freeze([
@@ -986,6 +1039,50 @@ function exactArray(actual, expected) {
   );
 }
 
+function exactKeys(actual, expected) {
+  return (
+    actual !== null &&
+    typeof actual === "object" &&
+    !Array.isArray(actual) &&
+    exactArray(Object.keys(actual), expected)
+  );
+}
+
+function hasForbiddenRuntimeField(value) {
+  const forbidden = new Set([
+    "password",
+    "passwordvalue",
+    "passwordlengthvalue",
+    "loginrequestbody",
+    "requestbodyvalue",
+    "cookie",
+    "cookievalue",
+    "session",
+    "sessionvalue",
+    "csrf",
+    "csrfvalue",
+    "secret",
+    "token",
+    "accesstoken",
+    "refreshtoken",
+    "authorizationheader",
+    "storageStateValue".toLowerCase(),
+    "rawpagecontent",
+    "rawresponsebody",
+    "operationalheadervalue",
+    "productiondynamicidentifier",
+    "productionrecord",
+    "urlquery",
+  ]);
+  if (Array.isArray(value)) return value.some(hasForbiddenRuntimeField);
+  if (value === null || typeof value !== "object") return false;
+  return Object.entries(value).some(
+    ([key, child]) =>
+      forbidden.has(key.toLowerCase().replace(/[^a-z0-9]/gu, "")) ||
+      hasForbiddenRuntimeField(child),
+  );
+}
+
 function isTerminalAssuranceBinding(value) {
   const expectedKeys = ["bytes", "lines", "mode", "result", "sha256"];
   return (
@@ -1005,6 +1102,7 @@ function isTerminalAssuranceBinding(value) {
 
 function verifyGovernance() {
   const evidence = readJson(EVIDENCE_PATH);
+  const runtimeEvidence = readJson(AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH);
   const plan = readJson(PLAN_PATH);
   const matrix = readJson(MATRIX_PATH);
   const registry = readJson(REGISTRY_PATH);
@@ -1102,25 +1200,798 @@ function verifyGovernance() {
     "AUTH_STATIC_RECURSIVE_CLOSURE_EVIDENCE",
   );
 
-  const evidenceIdentity = identity(EVIDENCE_PATH);
+  const expectedRuntimeResult =
+    "PASSED_PHASE_32BA_32BZ_OPERATOR_CONTROLLED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_REQUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION";
   requireContract(
-    plan.planning_version === 1 &&
-      plan.source_commit === BASELINE &&
+    exactKeys(runtimeEvidence, RUNTIME_EVIDENCE_TOP_LEVEL_KEYS) &&
+      runtimeEvidence.schema_version === 1 &&
+      runtimeEvidence.source_phase ===
+        "PHASE_32BA_32BZ_OPERATOR_CONTROLLED_DEDICATED_HEADED_BROWSER_VALID_UUID_SENTINEL_RECOVERY_EXACT_18_SURFACE_AUTHENTICATED_PRODUCTION_RUNTIME_REQUALIFICATION" &&
+      runtimeEvidence.canonical_result === expectedRuntimeResult &&
+      runtimeEvidence.source_ccr.sha256 ===
+        "2b52db3ef22eff3923ec7c4ba81b1336dac6063fd3c7e97242b59020ed11468b" &&
+      runtimeEvidence.source_ccr.name === "CCR-REPORT.md" &&
+      runtimeEvidence.source_ccr.bytes === 50749 &&
+      runtimeEvidence.source_ccr.lines === 1762 &&
+      runtimeEvidence.source_ccr.mode === "0600" &&
+      runtimeEvidence.source_ccr.opening_marker_count === 1 &&
+      runtimeEvidence.source_ccr.closing_marker_count === 1 &&
+      runtimeEvidence.authorization_session.source_authorization_state ===
+        "CLOSED_SUCCESS_SPENT_NON_REUSABLE" &&
+      runtimeEvidence.authorization_session.operator_credential_entry ===
+        "HUMAN_BROWSER_ONLY" &&
+      runtimeEvidence.authorization_session.ephemeral_session_only === true &&
+      runtimeEvidence.authorization_session.execution_authorized_by_this_manifest ===
+        false,
+    "AUTH_RUNTIME_SOURCE_AND_AUTHORIZATION",
+  );
+  requireContract(
+    exactKeys(runtimeEvidence.source_reporting_notes, [
+      "directly_observed_browser_network_outcomes",
+      "source_bound_read_only_and_zero_write_inference",
+      "human_only_credential_entry",
+      "ephemeral_authenticated_session_use",
+      "direct_codex_data_operations",
+      "persistent_database_storage_mutation",
+    ]) &&
+      exactKeys(runtimeEvidence.source_ccr, [
+        "name",
+        "sha256",
+        "bytes",
+        "lines",
+        "mode",
+        "opening_marker_count",
+        "closing_marker_count",
+      ]) &&
+      exactKeys(runtimeEvidence.predecessor_chain, [
+        "static_assurance_commit",
+        "runtime_source_commit",
+        "runtime_source_tree",
+        "planning_manifest_preintegration_git_blob",
+      ]) &&
+      exactKeys(runtimeEvidence.authorization_session, [
+        "source_authorization_state",
+        "operator_credential_entry",
+        "ephemeral_session_only",
+        "execution_authorized_by_this_manifest",
+      ]) &&
+      exactKeys(runtimeEvidence.immutable_binding, [
+        "repository_commit",
+        "repository_tree",
+        "repository_subject",
+        "github_run_id",
+        "vercel_deployment_id",
+        "canonical_origin",
+        "static_evidence",
+      ]) &&
+      exactKeys(runtimeEvidence.immutable_binding.static_evidence, [
+        "path",
+        "sha256",
+        "git_blob",
+        "bytes",
+        "lines",
+        "mode",
+      ]),
+    "AUTH_RUNTIME_SOURCE_SCHEMA",
+  );
+  requireContract(
+    exactKeys(runtimeEvidence.exact_surface_contract, [
+      "surface_count",
+      "profiles",
+      "source_profile_cases",
+      "surfaces",
+    ]) &&
+      Array.isArray(runtimeEvidence.exact_surface_contract.surfaces) &&
+      runtimeEvidence.exact_surface_contract.surfaces.every((entry) =>
+        exactKeys(entry, [
+          "path",
+          "git_blob",
+          "sha256",
+          "bytes",
+          "lines",
+          "mode",
+          "surface_role",
+          "route_id",
+          "source_profile_count",
+          "desktop_disposition",
+          "mobile_disposition",
+          "runtime_result",
+        ]),
+      ) &&
+      exactKeys(runtimeEvidence.credential_session_contract, [
+        "browser_only_credential_entry",
+        "ready_signal_received",
+        "submissions",
+        "successful_submissions",
+        "invalid_credential_responses",
+        "session_verified",
+        "password_observed",
+        "request_post_data_reads",
+        "cookie_reads",
+        "storage_state_exports",
+        "clipboard_reads_writes",
+        "retained_sensitive_artifacts",
+      ]) &&
+      exactKeys(runtimeEvidence.sentinel_recovery_contract, [
+        "old_sentinel",
+        "old_sentinel_valid_uuid",
+        "replacement_sentinel",
+        "replacement_sentinel_valid_uuid",
+        "discovery_route_blob",
+        "diagnosis",
+        "valid_sentinel_400_count",
+        "failure_route",
+        "failure_profile",
+      ]) &&
+      exactKeys(runtimeEvidence.route_qualification_contract, [
+        "source_profile_cases",
+        "login_layout_page",
+        "admin_layout",
+        "protected_pages",
+        "route_profile_record_count",
+        "desktop_route_records",
+        "mobile_route_records",
+        "source_case_sum",
+        "route_profile_records",
+      ]),
+    "AUTH_RUNTIME_QUALIFICATION_SCHEMA",
+  );
+  requireContract(
+    exactKeys(runtimeEvidence.network_read_only_contract, [
+      "allowed_same_origin_get_head",
+      "allowed_login_posts",
+      "post_login_mutation_methods",
+      "external_origin_attempts",
+      "same_origin_5xx",
+      "authenticated_401_or_403",
+      "downloads",
+      "popups",
+      "direct_supabase_operations",
+      "direct_sql_operations",
+      "direct_database_operations",
+      "direct_storage_operations",
+      "persistent_database_writes_directly_observed",
+      "persistent_storage_writes_directly_observed",
+      "conclusion_basis",
+    ]) &&
+      exactKeys(runtimeEvidence.accessibility_contract, [
+        "critical",
+        "serious",
+        "moderate",
+        "minor",
+        "unknown",
+        "horizontal_overflow",
+        "unknown_console_errors",
+        "page_errors",
+        "unknown_request_failures",
+      ]) &&
+      exactKeys(runtimeEvidence.cleanup_privacy_contract, [
+        "page_closed",
+        "context_closed",
+        "browser_closed",
+        "temporary_profile_absent",
+        "password_retained",
+        "password_length_retained",
+        "request_body_retained",
+        "cookie_retained",
+        "session_retained",
+        "csrf_retained",
+        "storage_state_retained",
+        "screenshots",
+        "video",
+        "trace",
+        "har",
+        "page_record_text",
+        "dynamic_production_identifiers",
+        "raw_urls_or_queries",
+        "raw_headers",
+        "repository_writes",
+        "stages",
+        "commits",
+        "pushes",
+      ]) &&
+      exactKeys(runtimeEvidence.source_artifacts, [
+        "artifact_count",
+        "artifacts",
+        "script",
+        "helper",
+      ]) &&
+      Array.isArray(runtimeEvidence.source_artifacts.artifacts) &&
+      runtimeEvidence.source_artifacts.artifacts.every((entry) =>
+        exactKeys(entry, ["name", "sha256", "bytes", "lines", "mode"]),
+      ) &&
+      exactKeys(runtimeEvidence.source_artifacts.script, [
+        "name",
+        "sha256",
+        "bytes",
+        "lines",
+        "mode",
+      ]) &&
+      exactKeys(runtimeEvidence.source_artifacts.helper, [
+        "name",
+        "sha256",
+        "bytes",
+        "lines",
+        "mode",
+      ]) &&
+      exactKeys(runtimeEvidence.safety_boundary, [
+        "evidence_is_static_only",
+        "runtime_authority_granted",
+        "authenticated_live_route_authority_granted",
+        "database_storage_mutation_directly_observed",
+        "raw_sensitive_or_production_values_retained",
+        "prohibited_operations",
+      ]) &&
+      exactKeys(runtimeEvidence.integration_decision, [
+        "AUTHENTICATED_BROWSER_RUNTIME_WORKSTREAM",
+        "STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION",
+        "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
+        "PUBLIC_LAUNCH_DECISION",
+      ]),
+    "AUTH_RUNTIME_BOUNDARY_SCHEMA",
+  );
+  requireContract(
+    runtimeEvidence.source_reporting_notes
+      .directly_observed_browser_network_outcomes === true &&
+      runtimeEvidence.source_reporting_notes
+        .source_bound_read_only_and_zero_write_inference === true &&
+      runtimeEvidence.source_reporting_notes.human_only_credential_entry ===
+        true &&
+      runtimeEvidence.source_reporting_notes
+        .ephemeral_authenticated_session_use === true &&
+      runtimeEvidence.source_reporting_notes.direct_codex_data_operations ===
+        "ZERO_REPORTED_BY_SOURCE" &&
+      runtimeEvidence.source_reporting_notes
+        .persistent_database_storage_mutation ===
+        "NOT_CLAIMED_AS_DIRECTLY_OBSERVED",
+    "AUTH_RUNTIME_REPORTING_BOUNDARY",
+  );
+  const runtimeStaticBinding = runtimeEvidence.immutable_binding.static_evidence;
+  requireContract(
+    runtimeEvidence.predecessor_chain.static_assurance_commit === BASELINE &&
+      runtimeEvidence.predecessor_chain.runtime_source_commit ===
+        INTEGRATION_BASELINE &&
+      runtimeEvidence.predecessor_chain.runtime_source_tree ===
+        INTEGRATION_TREE &&
+      runtimeEvidence.predecessor_chain
+        .planning_manifest_preintegration_git_blob ===
+        "f668e59f58b491972fd03103cc42530396048da5" &&
+      runtimeEvidence.immutable_binding.repository_commit ===
+        INTEGRATION_BASELINE &&
+      runtimeEvidence.immutable_binding.repository_tree === INTEGRATION_TREE &&
+      runtimeEvidence.immutable_binding.repository_subject ===
+        "Prepare authenticated browser runtime assurance" &&
+      runtimeEvidence.immutable_binding.github_run_id === 30591624630 &&
+      runtimeEvidence.immutable_binding.vercel_deployment_id ===
+        "dpl_8QaNxJeCecrJ9ixXG2UQj44RDcK4" &&
+      runtimeEvidence.immutable_binding.canonical_origin ===
+        "https://www.aifinder.to" &&
+      runtimeStaticBinding.path === EVIDENCE_PATH &&
+      runtimeStaticBinding.sha256 ===
+        "4a2f319ed8418e695162f9a3a5316da31c15d9f13c467ea10b1881db1faaaa26" &&
+      runtimeStaticBinding.git_blob ===
+        "c31d798b1110bf9a75ed934cf433be990a6fe52c" &&
+      runtimeStaticBinding.bytes === 18950 &&
+      runtimeStaticBinding.lines === 456 &&
+      runtimeStaticBinding.mode === "0644",
+    "AUTH_RUNTIME_IMMUTABLE_BINDING",
+  );
+
+  const expectedSurfaceBindings = Object.freeze({
+    "app/admin-login/layout.tsx": ["AUTHENTICATION_LAYOUT", "ADMIN_LOGIN_PAGE_AND_LAYOUT", "PASS_SESSION_VERIFIED"],
+    "app/admin-login/page.tsx": ["AUTHENTICATION_PAGE", "ADMIN_LOGIN_PAGE_AND_LAYOUT", "PASS_SESSION_VERIFIED"],
+    "app/admin/analytics/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_ANALYTICS", "PASS_2XX"],
+    "app/admin/discovered-tools/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_DISCOVERED_TOOLS", "PASS_2XX"],
+    "app/admin/discovery/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_DISCOVERY", "PASS_2XX"],
+    "app/admin/discovery/tools/[id]/page.tsx": ["PROTECTED_ADMIN_DYNAMIC_PAGE", "ADMIN_DISCOVERY_TOOL_DETAIL_SENTINEL", "PASS_2XX"],
+    "app/admin/discovery/tools/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_DISCOVERY_TOOLS", "PASS_2XX"],
+    "app/admin/homepage-control/[id]/edit/page.tsx": ["PROTECTED_ADMIN_DYNAMIC_PAGE", "ADMIN_HOMEPAGE_CONTROL_EDIT_SENTINEL", "PASS_2XX"],
+    "app/admin/homepage-control/[id]/page.tsx": ["PROTECTED_ADMIN_DYNAMIC_PAGE", "ADMIN_HOMEPAGE_CONTROL_DETAIL_SENTINEL", "PASS_2XX"],
+    "app/admin/homepage-control/[id]/preview/page.tsx": ["PROTECTED_ADMIN_DYNAMIC_PAGE", "ADMIN_HOMEPAGE_CONTROL_PREVIEW_SENTINEL", "PASS_2XX"],
+    "app/admin/homepage-control/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_HOMEPAGE_CONTROL", "PASS_2XX"],
+    "app/admin/layout.tsx": ["PROTECTED_ADMIN_LAYOUT", "ADMIN_HOME", "PASS_2XX"],
+    "app/admin/moderation/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_MODERATION", "PASS_2XX"],
+    "app/admin/notifications/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_NOTIFICATIONS", "PASS_2XX"],
+    "app/admin/page.tsx": ["PROTECTED_ADMIN_HOME_PAGE", "ADMIN_HOME", "PASS_2XX"],
+    "app/admin/security/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_SECURITY", "PASS_2XX"],
+    "app/admin/settings/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_SETTINGS", "PASS_2XX"],
+    "app/admin/tools/page.tsx": ["PROTECTED_ADMIN_PAGE", "ADMIN_TOOLS", "PASS_2XX"],
+  });
+  const runtimeSurfaces = runtimeEvidence.exact_surface_contract.surfaces;
+  requireContract(
+    runtimeEvidence.exact_surface_contract.surface_count === 18 &&
+      runtimeEvidence.exact_surface_contract.source_profile_cases ===
+        "36/36" &&
+      exactArray(runtimeEvidence.exact_surface_contract.profiles, [
+        "DESKTOP",
+        "MOBILE",
+      ]) &&
+      Array.isArray(runtimeSurfaces) &&
+      runtimeSurfaces.length === 18 &&
+      exactArray(
+        runtimeSurfaces.map((entry) => entry.path),
+        AUTHENTICATED_SURFACES,
+      ),
+    "AUTH_RUNTIME_SURFACE_SET",
+  );
+  for (const entry of runtimeSurfaces) {
+    const current = identity(entry.path);
+    const expected = expectedSurfaceBindings[entry.path];
+    requireContract(
+      expected !== undefined &&
+        entry.git_blob === current.git_blob &&
+        entry.sha256 === current.sha256 &&
+        entry.bytes === current.bytes &&
+        entry.lines === current.lines &&
+        entry.mode === current.mode &&
+        entry.source_profile_count === 2 &&
+        entry.surface_role === expected[0] &&
+        entry.route_id === expected[1] &&
+        entry.desktop_disposition === expected[2] &&
+        entry.mobile_disposition === expected[2] &&
+        entry.runtime_result === "QUALIFIED",
+      "AUTH_RUNTIME_SURFACE_IDENTITY",
+    );
+  }
+
+  const session = runtimeEvidence.credential_session_contract;
+  requireContract(
+    session.browser_only_credential_entry === true &&
+      session.ready_signal_received === true &&
+      session.submissions === 1 &&
+      session.successful_submissions === 1 &&
+      session.invalid_credential_responses === 0 &&
+      session.session_verified === true &&
+      session.password_observed === false &&
+      session.request_post_data_reads === 0 &&
+      session.cookie_reads === 0 &&
+      session.storage_state_exports === 0 &&
+      session.clipboard_reads_writes === 0 &&
+      session.retained_sensitive_artifacts === 0,
+    "AUTH_RUNTIME_CREDENTIAL_SESSION",
+  );
+  const sentinel = runtimeEvidence.sentinel_recovery_contract;
+  requireContract(
+    sentinel.old_sentinel === "00000000-0000-0000-0000-000000000000" &&
+      sentinel.old_sentinel_valid_uuid === false &&
+      sentinel.replacement_sentinel ===
+        "00000000-0000-4000-8000-000000000000" &&
+      sentinel.replacement_sentinel_valid_uuid === true &&
+      sentinel.discovery_route_blob ===
+        "a6b290312b6bcefa84b2c0a0afabf03f0c4daa4b" &&
+      sentinel.diagnosis ===
+        "OLD_SENTINEL_INVALID_UUID_SOURCE_400_CLASSIFIED_UNKNOWN" &&
+      sentinel.valid_sentinel_400_count === 0 &&
+      sentinel.failure_route === null &&
+      sentinel.failure_profile === null,
+    "AUTH_RUNTIME_SENTINEL_RECOVERY",
+  );
+
+  const expectedRouteBindings = Object.freeze({
+    ADMIN_LOGIN_PAGE_AND_LAYOUT: ["/admin-login", 2, "NOT_APPLICABLE", false],
+    ADMIN_HOME: ["/admin", 2, "NOT_APPLICABLE", true],
+    ADMIN_ANALYTICS: ["/admin/analytics", 1, "NOT_APPLICABLE", true],
+    ADMIN_DISCOVERED_TOOLS: ["/admin/discovered-tools", 1, "NOT_APPLICABLE", true],
+    ADMIN_DISCOVERY: ["/admin/discovery", 1, "NOT_APPLICABLE", true],
+    ADMIN_DISCOVERY_TOOLS: ["/admin/discovery/tools", 1, "NOT_APPLICABLE", true],
+    ADMIN_DISCOVERY_TOOL_DETAIL_SENTINEL: ["/admin/discovery/tools/00000000-0000-4000-8000-000000000000", 1, "SAFE_ABSENT_SENTINEL", true],
+    ADMIN_HOMEPAGE_CONTROL: ["/admin/homepage-control", 1, "NOT_APPLICABLE", true],
+    ADMIN_HOMEPAGE_CONTROL_DETAIL_SENTINEL: ["/admin/homepage-control/00000000-0000-4000-8000-000000000000", 1, "SAFE_ABSENT_SENTINEL", true],
+    ADMIN_HOMEPAGE_CONTROL_EDIT_SENTINEL: ["/admin/homepage-control/00000000-0000-4000-8000-000000000000/edit", 1, "SAFE_ABSENT_SENTINEL", true],
+    ADMIN_HOMEPAGE_CONTROL_PREVIEW_SENTINEL: ["/admin/homepage-control/00000000-0000-4000-8000-000000000000/preview", 1, "SAFE_ABSENT_SENTINEL", true],
+    ADMIN_MODERATION: ["/admin/moderation", 1, "NOT_APPLICABLE", true],
+    ADMIN_NOTIFICATIONS: ["/admin/notifications", 1, "NOT_APPLICABLE", true],
+    ADMIN_SECURITY: ["/admin/security", 1, "NOT_APPLICABLE", true],
+    ADMIN_SETTINGS: ["/admin/settings", 1, "NOT_APPLICABLE", true],
+    ADMIN_TOOLS: ["/admin/tools", 1, "NOT_APPLICABLE", true],
+  });
+  const routeContract = runtimeEvidence.route_qualification_contract;
+  const routeRecords = routeContract.route_profile_records;
+  requireContract(
+    routeContract.source_profile_cases === "36/36" &&
+      routeContract.login_layout_page === "4/4" &&
+      routeContract.admin_layout === "2/2" &&
+      routeContract.protected_pages === "30/30" &&
+      routeContract.route_profile_record_count === 32 &&
+      routeContract.desktop_route_records === 16 &&
+      routeContract.mobile_route_records === 16 &&
+      routeContract.source_case_sum === 36 &&
+      Array.isArray(routeRecords) &&
+      routeRecords.length === 32 &&
+      routeRecords.filter((entry) => entry.profile === "DESKTOP").length ===
+        16 &&
+      routeRecords.filter((entry) => entry.profile === "MOBILE").length ===
+        16 &&
+      routeRecords.reduce((sum, entry) => sum + entry.sourceCaseCount, 0) ===
+        36 &&
+      exactArray(
+        sorted([...new Set(routeRecords.map((entry) => entry.routeId))]),
+        sorted(Object.keys(expectedRouteBindings)),
+      ) &&
+      routeRecords.every(
+        (entry) => {
+          const expected = expectedRouteBindings[entry.routeId];
+          const expectedRecordKeys = expected?.[3]
+            ? [
+                "routeId",
+                "routeTemplate",
+                "profile",
+                "sourceCaseCount",
+                "sentinelBranch",
+                "metrics",
+                "accessibility",
+                "errorDeltas",
+                "topLevelStatus",
+                "statusCategory",
+              ]
+            : [
+                "routeId",
+                "routeTemplate",
+                "profile",
+                "sourceCaseCount",
+                "sentinelBranch",
+                "metrics",
+                "accessibility",
+                "errorDeltas",
+              ];
+          return (
+            expected !== undefined &&
+            exactKeys(entry, expectedRecordKeys) &&
+            entry.routeTemplate === expected[0] &&
+            entry.sourceCaseCount === expected[1] &&
+            entry.sentinelBranch === expected[2] &&
+            ["DESKTOP", "MOBILE"].includes(entry.profile) &&
+            exactKeys(entry.metrics, [
+              "readyState",
+              "headingCount",
+              "landmarkCount",
+              "elementCount",
+              "horizontalOverflow",
+              "formCount",
+              "fileInputCount",
+            ]) &&
+            exactKeys(entry.accessibility, [
+              "critical",
+              "serious",
+              "moderate",
+              "minor",
+              "unknown",
+              "ruleIds",
+            ]) &&
+            exactKeys(entry.errorDeltas, [
+              "sentinelValidation400",
+              "unknownConsoleErrors",
+              "pageErrors",
+              "unknownRequestFailures",
+            ]) &&
+            entry.metrics.readyState === "complete" &&
+            entry.metrics.horizontalOverflow === false &&
+            [
+              entry.metrics.headingCount,
+              entry.metrics.landmarkCount,
+              entry.metrics.elementCount,
+              entry.metrics.formCount,
+              entry.metrics.fileInputCount,
+            ].every(
+              (value) => Number.isSafeInteger(value) && value >= 0,
+            ) &&
+            Array.isArray(entry.accessibility.ruleIds) &&
+            entry.accessibility.ruleIds.length === 0 &&
+            [
+              entry.accessibility.critical,
+              entry.accessibility.serious,
+              entry.accessibility.moderate,
+              entry.accessibility.minor,
+              entry.accessibility.unknown,
+            ].every(
+              (value) => Number.isSafeInteger(value) && value === 0,
+            ) &&
+            Object.values(entry.errorDeltas).every(
+              (value) => Number.isSafeInteger(value) && value === 0,
+            ) &&
+            (expected[3]
+              ? entry.topLevelStatus === 200 && entry.statusCategory === "2XX"
+              : true)
+          );
+        },
+      ) &&
+      Object.keys(expectedRouteBindings).every((routeId) => {
+        const records = routeRecords.filter(
+          (entry) => entry.routeId === routeId,
+        );
+        return (
+          records.length === 2 &&
+          exactArray(
+            sorted(records.map((entry) => entry.profile)),
+            ["DESKTOP", "MOBILE"],
+          )
+        );
+      }),
+    "AUTH_RUNTIME_ROUTE_QUALIFICATION",
+  );
+
+  const network = runtimeEvidence.network_read_only_contract;
+  requireContract(
+    network.allowed_same_origin_get_head === 1268 &&
+      network.allowed_login_posts === 1 &&
+      network.post_login_mutation_methods === 0 &&
+      network.external_origin_attempts === 0 &&
+      network.same_origin_5xx === 0 &&
+      network.authenticated_401_or_403 === 0 &&
+      network.downloads === 0 &&
+      network.popups === 0 &&
+      network.direct_supabase_operations === 0 &&
+      network.direct_sql_operations === 0 &&
+      network.direct_database_operations === 0 &&
+      network.direct_storage_operations === 0 &&
+      network.persistent_database_writes_directly_observed === false &&
+      network.persistent_storage_writes_directly_observed === false &&
+      network.conclusion_basis ===
+        "SOURCE_BOUND_METHOD_GUARD_AND_OBSERVED_BROWSER_REQUEST_CATEGORIES_ONLY",
+    "AUTH_RUNTIME_NETWORK_READ_ONLY",
+  );
+  requireContract(
+    Object.values(runtimeEvidence.accessibility_contract).every(
+      (value) => Number.isSafeInteger(value) && value === 0,
+    ),
+    "AUTH_RUNTIME_ACCESSIBILITY",
+  );
+  const cleanup = runtimeEvidence.cleanup_privacy_contract;
+  requireContract(
+      cleanup.page_closed === true &&
+      cleanup.context_closed === true &&
+      cleanup.browser_closed === true &&
+      cleanup.temporary_profile_absent === true &&
+      [
+        cleanup.password_retained,
+        cleanup.password_length_retained,
+        cleanup.request_body_retained,
+        cleanup.cookie_retained,
+        cleanup.session_retained,
+        cleanup.csrf_retained,
+        cleanup.storage_state_retained,
+        cleanup.screenshots,
+        cleanup.video,
+        cleanup.trace,
+        cleanup.har,
+        cleanup.page_record_text,
+        cleanup.dynamic_production_identifiers,
+        cleanup.raw_urls_or_queries,
+        cleanup.raw_headers,
+        cleanup.repository_writes,
+        cleanup.stages,
+        cleanup.commits,
+        cleanup.pushes,
+      ].every((value) => Number.isSafeInteger(value) && value === 0),
+    "AUTH_RUNTIME_CLEANUP_PRIVACY",
+  );
+
+  const expectedArtifactIdentities = Object.freeze({
+    "01-preflight-source-and-session-budget.md": ["2aceb6e80e42ae64de221331408a8ba370b904d3a4e3c0e6c3fdaa720145551a", 1066, 14, "0600"],
+    "02-operator-controlled-login-and-session.json": ["da6ed7a6f99b6235d894d2f868f319a5ff3e39d30108837f2d33bb8fa59babe0", 782, 27, "0600"],
+    "03-exact-18-surface-route-qualification.json": ["7188021543b1e33b23d5c14fb09625820257a38f641b501cacf51e7815bc28d5", 27158, 1042, "0600"],
+    "04-network-accessibility-and-read-only-boundary.json": ["fc5c95c1fac1e5331c29c5ff2f22a78f20960dfd0e4200654fde51210e43c6f0", 1672, 53, "0600"],
+    "05-browser-cleanup-and-sensitive-retention.json": ["00d0c30bbe4369e95529ae3303bdaba367ba9f76bcdcf3e5312361c234097294", 941, 38, "0600"],
+    "06-repository-and-platform-preservation.json": ["c383b8704ac1fb8144e7e02acdb1bba8d7525dc274cf674104103d652368485b", 10242, 428, "0600"],
+    "07-final-18-surface-static-integration-boundary.md": ["a705a67ba7ff53c4d0be8095d13ed64352b8c4c941abe294e2a107f7743302d9", 561, 8, "0600"],
+    "08-risk-stop-and-next-action.md": ["335b31065b48aa07a061789f69c9824349e23a652763aa128f79a35602cf9d89", 606, 10, "0600"],
+  });
+  const expectedArtifactNames = Object.keys(expectedArtifactIdentities);
+  requireContract(
+    runtimeEvidence.source_artifacts.artifact_count === 8 &&
+      runtimeEvidence.source_artifacts.artifacts.length === 8 &&
+      exactArray(
+        runtimeEvidence.source_artifacts.artifacts.map((entry) => entry.name),
+        expectedArtifactNames,
+      ) &&
+      runtimeEvidence.source_artifacts.artifacts.every((entry) => {
+        const expected = expectedArtifactIdentities[entry.name];
+        return (
+          expected &&
+          entry.sha256 === expected[0] &&
+          entry.bytes === expected[1] &&
+          entry.lines === expected[2] &&
+          entry.mode === expected[3]
+        );
+      }) &&
+      runtimeEvidence.source_artifacts.script.name ===
+        "aifinder-phase-32ba-32bz-operator-controlled-authenticated-browser-valid-sentinel-recovery.sh" &&
+      runtimeEvidence.source_artifacts.script.sha256 ===
+        "adba4a1425405554e9888a9e80aeec6db6eeba00371be99600c99ded9a66a631" &&
+      runtimeEvidence.source_artifacts.script.bytes === 103444 &&
+      runtimeEvidence.source_artifacts.script.lines === 157 &&
+      runtimeEvidence.source_artifacts.script.mode === "0700" &&
+      runtimeEvidence.source_artifacts.helper.name ===
+        "support/phase32ba-runner.cjs" &&
+      runtimeEvidence.source_artifacts.helper.sha256 ===
+        "8b0fed433eeec06ff2fbb19c3b22d997e6baa22dbae1956f9cd1d93e7106f92c" &&
+      runtimeEvidence.source_artifacts.helper.bytes === 73477 &&
+      runtimeEvidence.source_artifacts.helper.lines === 1472 &&
+      runtimeEvidence.source_artifacts.helper.mode === "0600",
+    "AUTH_RUNTIME_SOURCE_ARTIFACTS",
+  );
+  requireContract(
+    hasForbiddenRuntimeField(runtimeEvidence) === false &&
+      runtimeEvidence.safety_boundary.evidence_is_static_only === true &&
+      runtimeEvidence.safety_boundary.runtime_authority_granted === false &&
+      runtimeEvidence.safety_boundary
+        .authenticated_live_route_authority_granted === false &&
+      runtimeEvidence.safety_boundary
+        .database_storage_mutation_directly_observed === false &&
+      runtimeEvidence.safety_boundary.raw_sensitive_or_production_values_retained ===
+        false &&
+      exactArray(runtimeEvidence.safety_boundary.prohibited_operations, [
+        "AUTHENTICATED_RUNTIME",
+        "DATABASE_OR_STORAGE",
+        "DIRECT_VERCEL_WRITE",
+        "PUBLIC_HTTP_OR_BROWSER",
+        "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+        "SQL_OR_SUPABASE",
+        "USER_VISIBLE_PERSISTENT_MUTATION",
+      ]) &&
+      runtimeEvidence.integration_decision
+        .AUTHENTICATED_BROWSER_RUNTIME_WORKSTREAM === "EVIDENCE_COMPLETE" &&
+      runtimeEvidence.integration_decision
+        .STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION === "GO" &&
+      runtimeEvidence.integration_decision.AUTHENTICATED_LIVE_ROUTE_RUNTIME ===
+        "STILL_BLOCKED" &&
+      runtimeEvidence.integration_decision.PUBLIC_LAUNCH_DECISION ===
+        "NO_GO_PENDING_AUTHENTICATED_LIVE_ROUTE_RUNTIME_AND_FINAL_LAUNCH_GATE",
+    "AUTH_RUNTIME_DECISIONS",
+  );
+
+  const evidenceIdentity = identity(EVIDENCE_PATH);
+  const runtimeEvidenceIdentity = identity(
+    AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+  );
+  const expectedBlockedCapabilities = [
+    "AUTHENTICATED_PRODUCTION_RUNTIME",
+    "DATABASE",
+    "DEPLOYMENT_CONTROL",
+    "DIRECT_VERCEL_WRITE",
+    "MIGRATIONS_OR_GENERATED_TYPES",
+    "OPERATIONAL_REACTIVATION",
+    "PRODUCTION_BROWSER",
+    "PUBLIC_HTTP",
+    "PUBLIC_LAUNCH",
+    "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+    "REAL_FORM_OR_FILE_INTERACTION",
+    "SQL",
+    "SUPABASE",
+    "USER_VISIBLE_PERSISTENT_MUTATION",
+  ];
+  requireContract(
+    exactKeys(plan, PLAN_TOP_LEVEL_KEYS) &&
+      exactKeys(plan.source_registry, [
+        "path",
+        "sha256",
+        "git_blob",
+        "bytes",
+        "lines",
+        "mode",
+      ]) &&
+      exactKeys(plan.source_matrix, [
+        "path",
+        "sha256",
+        "git_blob",
+        "bytes",
+        "lines",
+        "mode",
+        "route_inventory_digest",
+        "entry_count",
+        "launch_blocking_count",
+      ]) &&
+      exactKeys(plan.workstream, ["id", "entry_count", "gap_code"]) &&
+      exactKeys(plan.static_evidence, [
+        "path",
+        "sha256",
+        "git_blob",
+        "bytes",
+        "lines",
+        "mode",
+        "authenticated_surface_profile_cases",
+        "discovery_select_name_cases",
+        "discovery_detail_contrast_cases",
+        "audit_get_post_security_and_compensation_cases",
+      ]) &&
+      exactKeys(plan.runtime_evidence, [
+        "path",
+        "sha256",
+        "git_blob",
+        "bytes",
+        "lines",
+        "mode",
+        "source_profile_cases",
+        "route_profile_records",
+        "authenticated_surface_count",
+        "result",
+      ]) &&
+      exactKeys(plan.scope, [
+        "repository_path_count",
+        "authenticated_browser_surface_count",
+        "route_profile_record_count",
+        "authenticated_live_route_partial_static_count",
+        "authenticated_live_route_no_static_count",
+      ]) &&
+      exactKeys(plan.phase_finalization, [
+        "state",
+        "execution_authorized",
+        "authenticated_live_route_runtime",
+        "public_launch",
+      ]) &&
+      plan.planning_version === 1 &&
+      plan.source_commit === INTEGRATION_BASELINE &&
+      plan.source_registry.git_blob ===
+        "b4cab952aad85634f031a6b175f3c991911517e7" &&
+      plan.source_registry.sha256 ===
+        "8bb921814898abd40c9d3f4c38b4181446bd9f4bfc58cdf29f9909a6071668e6" &&
+      plan.source_registry.path === REGISTRY_PATH &&
+      plan.source_registry.bytes === 10542 &&
+      plan.source_registry.lines === 291 &&
+      plan.source_registry.mode === "0644" &&
+      plan.source_matrix.git_blob ===
+        "ac474c6470a805687b04875754e416b6fce502e3" &&
+      plan.source_matrix.sha256 ===
+        "0a467e1cacfdb4310c254357931b8cf3c5d976f52f486f9c0a3bb8c67048656e" &&
+      plan.source_matrix.path === MATRIX_PATH &&
+      plan.source_matrix.bytes === 41322 &&
+      plan.source_matrix.lines === 1067 &&
+      plan.source_matrix.mode === "0644" &&
+      plan.source_matrix.route_inventory_digest ===
+        "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed" &&
+      plan.source_matrix.entry_count === 69 &&
+      plan.source_matrix.launch_blocking_count === 46 &&
       plan.workstream.id === "AUTHENTICATED_BROWSER_RUNTIME" &&
       plan.workstream.entry_count === 18 &&
       plan.workstream.gap_code ===
-        "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED" &&
+        "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
       plan.decision ===
-        "AUTHENTICATED_BROWSER_STATIC_ASSURANCE_READY_FOR_RUNTIME" &&
-      plan.current_authority === "STATIC_AND_SYNTHETIC_ONLY" &&
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
+      plan.current_authority === "STATIC_ONLY" &&
       plan.execution_authorized === false &&
       plan.real_secret_access_authorized === false &&
       plan.authenticated_production_runtime_authorized === false &&
-      plan.runtime_evidence.sha256 === evidenceIdentity.sha256 &&
-      plan.runtime_evidence.git_blob === evidenceIdentity.git_blob &&
-      plan.runtime_evidence.bytes === evidenceIdentity.bytes &&
-      plan.runtime_evidence.lines === evidenceIdentity.lines &&
-      plan.runtime_evidence.mode === evidenceIdentity.mode,
+      plan.live_evidence_status ===
+        "PASSED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_QUALIFICATION" &&
+      plan.last_runtime_result === expectedRuntimeResult &&
+      plan.canonical_source_alignment === "COMPLETE" &&
+      plan.target_origin === "https://www.aifinder.to" &&
+      plan.static_evidence.path === EVIDENCE_PATH &&
+      plan.static_evidence.sha256 === evidenceIdentity.sha256 &&
+      plan.static_evidence.git_blob === evidenceIdentity.git_blob &&
+      plan.static_evidence.bytes === evidenceIdentity.bytes &&
+      plan.static_evidence.lines === evidenceIdentity.lines &&
+      plan.static_evidence.mode === evidenceIdentity.mode &&
+      plan.static_evidence.authenticated_surface_profile_cases === "72/72" &&
+      plan.static_evidence.discovery_select_name_cases === "20/20" &&
+      plan.static_evidence.discovery_detail_contrast_cases === "8/8" &&
+      plan.static_evidence.audit_get_post_security_and_compensation_cases ===
+        "24/24" &&
+      plan.runtime_evidence.path ===
+        AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH &&
+      plan.runtime_evidence.sha256 === runtimeEvidenceIdentity.sha256 &&
+      plan.runtime_evidence.git_blob === runtimeEvidenceIdentity.git_blob &&
+      plan.runtime_evidence.bytes === runtimeEvidenceIdentity.bytes &&
+      plan.runtime_evidence.lines === runtimeEvidenceIdentity.lines &&
+      plan.runtime_evidence.mode === runtimeEvidenceIdentity.mode &&
+      plan.runtime_evidence.source_profile_cases === "36/36" &&
+      plan.runtime_evidence.route_profile_records === 32 &&
+      plan.runtime_evidence.authenticated_surface_count === 18 &&
+      plan.runtime_evidence.result === expectedRuntimeResult &&
+      plan.scope.repository_path_count === 8 &&
+      plan.scope.authenticated_browser_surface_count === 18 &&
+      plan.scope.route_profile_record_count === 32 &&
+      plan.scope.authenticated_live_route_partial_static_count === 1 &&
+      plan.scope.authenticated_live_route_no_static_count === 27 &&
+      exactArray(plan.blocked_capabilities, expectedBlockedCapabilities) &&
+      plan.phase_finalization.state ===
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
+      plan.phase_finalization.execution_authorized === false &&
+      plan.phase_finalization.authenticated_live_route_runtime ===
+        "BLOCKED_SEPARATE_AUTHORITY_REQUIRED" &&
+      plan.phase_finalization.public_launch === "NO_GO" &&
+      plan.next_gate ===
+        "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
     "AUTH_STATIC_PLANNING",
   );
 
@@ -1140,12 +2011,18 @@ function verifyGovernance() {
       browserEntries.length === 18 &&
       browserEntries.every(
         (entry) =>
-          entry.coverage_state === "PARTIAL_STATIC" &&
-          entry.launch_blocking === true &&
+          entry.coverage_state ===
+            "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null &&
           exactArray(
             entry.static_evidence_paths,
-            AUTHENTICATED_STATIC_EVIDENCE_PATHS,
-          ),
+            AUTHENTICATED_INTEGRATED_EVIDENCE_PATHS,
+          ) &&
+          exactArray(entry.future_evidence_paths, [
+            "testing/accessibility-qa.spec.ts",
+            "testing/responsive-qa.spec.ts",
+          ]),
       ) &&
       auditEntry?.coverage_state === "PARTIAL_STATIC" &&
       auditEntry.launch_blocking === true &&
@@ -1161,9 +2038,14 @@ function verifyGovernance() {
       ) &&
       matrix.entries.filter(
         (entry) => entry.coverage_state === "PARTIAL_STATIC",
-      ).length === 19 &&
-      matrix.entries.filter((entry) => entry.launch_blocking).length === 46 &&
-      matrix.entries.filter((entry) => !entry.launch_blocking).length === 23,
+      ).length === 1 &&
+      matrix.entries.filter(
+        (entry) =>
+          entry.coverage_state ===
+          "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      ).length === 18 &&
+      matrix.entries.filter((entry) => entry.launch_blocking).length === 28 &&
+      matrix.entries.filter((entry) => !entry.launch_blocking).length === 41,
     "AUTH_STATIC_MATRIX",
   );
 
@@ -1174,18 +2056,30 @@ function verifyGovernance() {
     (entry) => entry.id === "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
   );
   requireContract(
-    registry.source_commit === BASELINE &&
+    registry.source_commit === INTEGRATION_BASELINE &&
+      registry.source_matrix.sha256 === identity(MATRIX_PATH).sha256 &&
+      registry.source_matrix.git_blob === identity(MATRIX_PATH).git_blob &&
+      registry.source_matrix.bytes === identity(MATRIX_PATH).bytes &&
+      registry.source_matrix.lines === identity(MATRIX_PATH).lines &&
+      registry.source_matrix.launch_blocking_count === 28 &&
       registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES" &&
       registry.current_authority === "STATIC_ONLY" &&
       registry.execution_authorized === false &&
       registry.planning_artifacts.length === 4 &&
       registry.planning_artifacts[3].path === PLAN_PATH &&
-      browserWorkstream.state ===
-        "STATIC_EVIDENCE_COMPLETE_RUNTIME_REQUIRED" &&
+      registry.planning_artifacts[3].state ===
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
+      browserWorkstream.gap_code ===
+        "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+      browserWorkstream.state === "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM" &&
       browserWorkstream.next_gate ===
-        "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME" &&
+        "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME" &&
+      browserWorkstream.entry_count === 18 &&
       routeWorkstream.entry_count === 28 &&
-      routeWorkstream.partial_static_count === 1,
+      routeWorkstream.partial_static_count === 1 &&
+      routeWorkstream.gap_code ===
+        "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED" &&
+      routeWorkstream.state === "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
     "AUTH_STATIC_REGISTRY",
   );
 
@@ -1194,15 +2088,18 @@ function verifyGovernance() {
     (entry) => entry.path === EVIDENCE_PATH,
   );
   const planEntry = safety.entries.find((entry) => entry.path === PLAN_PATH);
+  const runtimeEvidenceEntry = safety.entries.find(
+    (entry) => entry.path === AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+  );
   requireContract(
-    safety.entries.length === 106 &&
+    safety.entries.length === 107 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_CORE")
         .length === 5 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_POLICY")
         .length === 6 &&
       safety.entries.filter(
         (entry) => entry.ci_disposition === "VALIDATE_ONLY",
-      ).length === 17 &&
+      ).length === 18 &&
       safety.entries.filter((entry) => entry.ci_disposition === "DENY")
         .length === 78 &&
       selfEntry?.role === "EXECUTABLE" &&
@@ -1215,6 +2112,12 @@ function verifyGovernance() {
       planEntry?.role === "CONFIG" &&
       planEntry.safety_class === "STATIC_FIXTURE" &&
       planEntry.ci_disposition === "VALIDATE_ONLY" &&
+      runtimeEvidenceEntry?.role === "CONFIG" &&
+      runtimeEvidenceEntry.safety_class === "SAFE_STATIC_SUPPORT" &&
+      runtimeEvidenceEntry.ci_disposition === "VALIDATE_ONLY" &&
+      runtimeEvidenceEntry.command_argv === null &&
+      runtimeEvidenceEntry.reason_code ===
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE" &&
       safety.testing_tree_digest === testingTreeDigest(),
     "AUTH_STATIC_SAFETY_MANIFEST",
   );

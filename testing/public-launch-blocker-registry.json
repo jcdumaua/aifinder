@@ -1,16 +1,16 @@
 {
   "registry_version": 1,
-  "source_commit": "3a43f8c9b01997487e20725ddcb38a4b7ce19676",
+  "source_commit": "2570765ca0e769888286e42456d2f27d831f46df",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "0a467e1cacfdb4310c254357931b8cf3c5d976f52f486f9c0a3bb8c67048656e",
-    "git_blob": "ac474c6470a805687b04875754e416b6fce502e3",
-    "bytes": 41322,
-    "lines": 1067,
+    "sha256": "3c7bffc1b8e833d8bf2772a329fc0a016ec3c14b63424b54d442b718d6c0d978",
+    "git_blob": "3ae5a67d8c6231720e246ca0f0f66f312da7314a",
+    "bytes": 42294,
+    "lines": 1085,
     "mode": "0644",
     "route_inventory_digest": "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed",
     "entry_count": 69,
-    "launch_blocking_count": 46
+    "launch_blocking_count": 28
   },
   "overall_decision": "NO_GO_PENDING_SEPARATE_AUTHORITIES",
   "current_authority": "STATIC_ONLY",
@@ -52,7 +52,7 @@
     {
       "workstream_id": "AUTHENTICATED_BROWSER_RUNTIME",
       "path": "testing/authenticated-browser-planning-manifest.json",
-      "state": "STATIC_EVIDENCE_COMPLETE_RUNTIME_REQUIRED",
+      "state": "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED",
       "execution_authorized": false
     }
   ],
@@ -178,10 +178,10 @@
     },
     {
       "id": "AUTHENTICATED_BROWSER_RUNTIME",
-      "gap_code": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED",
+      "gap_code": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
       "entry_count": 18,
       "authority_class": "AUTHENTICATED_BROWSER_RUNTIME",
-      "state": "STATIC_EVIDENCE_COMPLETE_RUNTIME_REQUIRED",
+      "state": "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
       "execution_authorized": false,
       "planning_priority": 4,
       "source_paths": [
@@ -224,7 +224,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME"
+      "next_gate": "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME"
     },
     {
       "id": "AUTHENTICATED_LIVE_ROUTE_RUNTIME",

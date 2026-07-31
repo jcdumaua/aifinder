@@ -34,20 +34,22 @@ const AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH =
   "testing/authenticated-browser-security-static-assertions.mjs";
 const AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH =
   "testing/authenticated-browser-static-evidence.json";
+const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
+  "testing/authenticated-browser-runtime-evidence.json";
 const AUTHENTICATED_AUDIT_ROUTE_PATH =
   "app/api/admin/audit-logs/route.ts";
-const SOURCE_COMMIT = "3a43f8c9b01997487e20725ddcb38a4b7ce19676";
+const SOURCE_COMMIT = "2570765ca0e769888286e42456d2f27d831f46df";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "0a467e1cacfdb4310c254357931b8cf3c5d976f52f486f9c0a3bb8c67048656e",
-  git_blob: "ac474c6470a805687b04875754e416b6fce502e3",
-  bytes: 41322,
-  lines: 1067,
+  sha256: "3c7bffc1b8e833d8bf2772a329fc0a016ec3c14b63424b54d442b718d6c0d978",
+  git_blob: "3ae5a67d8c6231720e246ca0f0f66f312da7314a",
+  bytes: 42294,
+  lines: 1085,
   mode: "0644",
   route_inventory_digest:
     "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed",
   entry_count: 69,
-  launch_blocking_count: 46,
+  launch_blocking_count: 28,
 };
 const TOP_LEVEL_KEYS = [
   "registry_version",
@@ -195,12 +197,12 @@ const WORKSTREAMS = [
   },
   {
     id: "AUTHENTICATED_BROWSER_RUNTIME",
-    gap_code: "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED",
+    gap_code: "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
     entry_count: 18,
     authority_class: "AUTHENTICATED_BROWSER_RUNTIME",
-    state: "STATIC_EVIDENCE_COMPLETE_RUNTIME_REQUIRED",
+    state: "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM",
     planning_priority: 4,
-    next_gate: "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
+    next_gate: "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
   },
   {
     id: "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
@@ -377,17 +379,27 @@ function matrixModel() {
   const authenticatedBrowserEntries = matrix.entries.filter((entry) =>
     AUTHENTICATED_BROWSER_PATHS.includes(entry.path),
   );
+  const completedAuthenticatedBrowserPaths = authenticatedBrowserEntries
+    .filter(
+      (entry) =>
+        entry.coverage_state ===
+          "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null,
+    )
+    .map((entry) => entry.path);
   assert(
     authenticatedBrowserEntries.length === 18 &&
       authenticatedBrowserEntries.every(
         (entry) =>
-          entry.coverage_state === "PARTIAL_STATIC" &&
-          entry.launch_blocking === true &&
-          entry.gap_code_or_null ===
-            "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED" &&
+          entry.coverage_state ===
+            "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null &&
           exactArray(entry.static_evidence_paths, [
             AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
             AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+            AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
           ]),
       ),
     "BLOCKER_REGISTRY_AUTHENTICATED_BROWSER_EVIDENCE",
@@ -434,6 +446,7 @@ function matrixModel() {
           "PUBLIC_PRODUCTION_RUNTIME",
           "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
           "PUBLIC_LIVE_ROUTE_RUNTIME",
+          "AUTHENTICATED_BROWSER_RUNTIME",
         ].includes(workstream.id),
     ).map((workstream) => workstream.gap_code),
   );
@@ -451,11 +464,13 @@ function matrixModel() {
           ? completedBrowserLivePaths
           : workstream.id === "PUBLIC_LIVE_ROUTE_RUNTIME"
             ? completedLiveRoutePaths
-            : matrix.entries
-                .filter(
-                  (entry) => entry.gap_code_or_null === workstream.gap_code,
-                )
-                .map((entry) => entry.path);
+            : workstream.id === "AUTHENTICATED_BROWSER_RUNTIME"
+              ? completedAuthenticatedBrowserPaths
+              : matrix.entries
+                  .filter(
+                    (entry) => entry.gap_code_or_null === workstream.gap_code,
+                  )
+                  .map((entry) => entry.path);
     assert(
       sourcePaths.length === workstream.entry_count,
       "BLOCKER_REGISTRY_GAP_COUNT",
@@ -469,6 +484,7 @@ function matrixModel() {
     completedPaths,
     completedBrowserLivePaths,
     completedLiveRoutePaths,
+    completedAuthenticatedBrowserPaths,
     launchBlocking,
   };
 }
@@ -482,6 +498,7 @@ function validateRegistry() {
     completedPaths,
     completedBrowserLivePaths,
     completedLiveRoutePaths,
+    completedAuthenticatedBrowserPaths,
     launchBlocking,
   } = matrixModel();
 
@@ -594,19 +611,19 @@ function validateRegistry() {
       authenticatedBrowserPlanningArtifact.path ===
         AUTHENTICATED_BROWSER_PLAN_PATH &&
       authenticatedBrowserPlanningArtifact.state ===
-        "STATIC_EVIDENCE_COMPLETE_RUNTIME_REQUIRED" &&
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
       authenticatedBrowserPlanningArtifact.execution_authorized === false &&
       authenticatedBrowserPlan.workstream?.id ===
         authenticatedBrowserPlanningArtifact.workstream_id &&
       authenticatedBrowserPlan.decision ===
-        "AUTHENTICATED_BROWSER_STATIC_ASSURANCE_READY_FOR_RUNTIME" &&
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
       authenticatedBrowserPlan.current_authority ===
-        "STATIC_AND_SYNTHETIC_ONLY" &&
+        "STATIC_ONLY" &&
       authenticatedBrowserPlan.execution_authorized === false &&
       authenticatedBrowserPlan.authenticated_production_runtime_authorized ===
         false &&
       authenticatedBrowserPlan.next_gate ===
-        "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
+        "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
     "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
   );
   assert(
@@ -685,7 +702,17 @@ function validateRegistry() {
                     PUBLIC_LIVE_ROUTE_EVIDENCE_PATH,
                   ]) &&
                   entry.future_evidence_paths.length === 0
-              : entry?.launch_blocking === true &&
+              : expected.id === "AUTHENTICATED_BROWSER_RUNTIME"
+                ? entry?.coverage_state ===
+                    "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+                  entry.launch_blocking === false &&
+                  entry.gap_code_or_null === null &&
+                  exactArray(entry.static_evidence_paths, [
+                    AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+                    AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+                    AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+                  ])
+                : entry?.launch_blocking === true &&
                   entry.gap_code_or_null === actual.gap_code,
         "BLOCKER_REGISTRY_PATH_GAP_MISMATCH",
       );
@@ -745,6 +772,13 @@ function validateRegistry() {
   );
   assert(
     compareExactPathSets(
+      registry.workstreams[3].source_paths,
+      completedAuthenticatedBrowserPaths,
+    ).equal,
+    "BLOCKER_REGISTRY_COMPLETED_PATHS",
+  );
+  assert(
+    compareExactPathSets(
       registry.workstreams[1].source_paths,
       completedBrowserLivePaths,
     ).equal,
@@ -775,6 +809,7 @@ function validateRegistry() {
     completed: completedPaths.length,
     completedBrowserLive: completedBrowserLivePaths.length,
     completedLiveRoute: completedLiveRoutePaths.length,
+    completedAuthenticatedBrowser: completedAuthenticatedBrowserPaths.length,
     blocked: launchBlocking.length,
   };
 }
@@ -782,7 +817,7 @@ function validateRegistry() {
 try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed_public_production=${result.completed} completed_public_browser_live=${result.completedBrowserLive} completed_public_live_routes=${result.completedLiveRoute} authenticated_browser_partial_static=18 authenticated_live_route_partial_static=1 authenticated_live_route_no_static=27 blocked=${result.blocked} planning_artifacts=4 next_active_workstream=AUTHENTICATED_BROWSER_RUNTIME decision=NO_GO failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed_public_production=${result.completed} completed_public_browser_live=${result.completedBrowserLive} completed_public_live_routes=${result.completedLiveRoute} completed_authenticated_browser=${result.completedAuthenticatedBrowser} authenticated_live_route_partial_static=1 authenticated_live_route_no_static=27 blocked=${result.blocked} planning_artifacts=4 next_active_workstream=AUTHENTICATED_LIVE_ROUTE_RUNTIME decision=NO_GO failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

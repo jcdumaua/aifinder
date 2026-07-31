@@ -1,0 +1,1519 @@
+{
+  "schema_version": 1,
+  "source_phase": "PHASE_32BA_32BZ_OPERATOR_CONTROLLED_DEDICATED_HEADED_BROWSER_VALID_UUID_SENTINEL_RECOVERY_EXACT_18_SURFACE_AUTHENTICATED_PRODUCTION_RUNTIME_REQUALIFICATION",
+  "source_reporting_notes": {
+    "directly_observed_browser_network_outcomes": true,
+    "source_bound_read_only_and_zero_write_inference": true,
+    "human_only_credential_entry": true,
+    "ephemeral_authenticated_session_use": true,
+    "direct_codex_data_operations": "ZERO_REPORTED_BY_SOURCE",
+    "persistent_database_storage_mutation": "NOT_CLAIMED_AS_DIRECTLY_OBSERVED"
+  },
+  "source_ccr": {
+    "name": "CCR-REPORT.md",
+    "sha256": "2b52db3ef22eff3923ec7c4ba81b1336dac6063fd3c7e97242b59020ed11468b",
+    "bytes": 50749,
+    "lines": 1762,
+    "mode": "0600",
+    "opening_marker_count": 1,
+    "closing_marker_count": 1
+  },
+  "predecessor_chain": {
+    "static_assurance_commit": "3a43f8c9b01997487e20725ddcb38a4b7ce19676",
+    "runtime_source_commit": "2570765ca0e769888286e42456d2f27d831f46df",
+    "runtime_source_tree": "2503e7cf964a4e5bc3f6121aa04dfc5f2e3128e1",
+    "planning_manifest_preintegration_git_blob": "f668e59f58b491972fd03103cc42530396048da5"
+  },
+  "canonical_result": "PASSED_PHASE_32BA_32BZ_OPERATOR_CONTROLLED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_REQUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION",
+  "authorization_session": {
+    "source_authorization_state": "CLOSED_SUCCESS_SPENT_NON_REUSABLE",
+    "operator_credential_entry": "HUMAN_BROWSER_ONLY",
+    "ephemeral_session_only": true,
+    "execution_authorized_by_this_manifest": false
+  },
+  "immutable_binding": {
+    "repository_commit": "2570765ca0e769888286e42456d2f27d831f46df",
+    "repository_tree": "2503e7cf964a4e5bc3f6121aa04dfc5f2e3128e1",
+    "repository_subject": "Prepare authenticated browser runtime assurance",
+    "github_run_id": 30591624630,
+    "vercel_deployment_id": "dpl_8QaNxJeCecrJ9ixXG2UQj44RDcK4",
+    "canonical_origin": "https://www.aifinder.to",
+    "static_evidence": {
+      "path": "testing/authenticated-browser-static-evidence.json",
+      "sha256": "4a2f319ed8418e695162f9a3a5316da31c15d9f13c467ea10b1881db1faaaa26",
+      "git_blob": "c31d798b1110bf9a75ed934cf433be990a6fe52c",
+      "bytes": 18950,
+      "lines": 456,
+      "mode": "0644"
+    }
+  },
+  "exact_surface_contract": {
+    "surface_count": 18,
+    "profiles": [
+      "DESKTOP",
+      "MOBILE"
+    ],
+    "source_profile_cases": "36/36",
+    "surfaces": [
+      {
+        "path": "app/admin-login/layout.tsx",
+        "git_blob": "3d27e328b56040dfdbcde5f0d1768cc04d94fbce",
+        "sha256": "6a2a879541390f4892ea27dae7ffb0682d4820f7ea634718adbe1ccffa300d39",
+        "bytes": 301,
+        "lines": 18,
+        "mode": "0644",
+        "surface_role": "AUTHENTICATION_LAYOUT",
+        "route_id": "ADMIN_LOGIN_PAGE_AND_LAYOUT",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_SESSION_VERIFIED",
+        "mobile_disposition": "PASS_SESSION_VERIFIED",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin-login/page.tsx",
+        "git_blob": "d49715dfe3a40f6fbfd0986b494cc4703aad7ee1",
+        "sha256": "532d1b02b688b25a18825ba4a0d747c3ad39069c99523cc66569ce632621a8f4",
+        "bytes": 7686,
+        "lines": 254,
+        "mode": "0644",
+        "surface_role": "AUTHENTICATION_PAGE",
+        "route_id": "ADMIN_LOGIN_PAGE_AND_LAYOUT",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_SESSION_VERIFIED",
+        "mobile_disposition": "PASS_SESSION_VERIFIED",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/analytics/page.tsx",
+        "git_blob": "104416d671561ff96a32e648c93a1f7e9f345fad",
+        "sha256": "74357921a63a8b028af99b5c4e810b8e7d64b02a7be62172c2e44ef8827c2ef2",
+        "bytes": 187,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_ANALYTICS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/discovered-tools/page.tsx",
+        "git_blob": "a0b2bdaa129eff1a5eacd09a7f53b236cde97a12",
+        "sha256": "221baf343a533fbea4bc503f4ed659071416805bc9130e215b9f1eec15dacf1b",
+        "bytes": 193,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_DISCOVERED_TOOLS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/discovery/page.tsx",
+        "git_blob": "e79f1f6ce3aed82e9dc13730f1764fe1278e7b38",
+        "sha256": "1e72e8405a14dd6598cfe22ce571b1c2aaa39dde96f5a68cf018bee297e38a79",
+        "bytes": 372,
+        "lines": 10,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_DISCOVERY",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/discovery/tools/[id]/page.tsx",
+        "git_blob": "7953f4e8e2dcff5fea7057bff83759391ece9af0",
+        "sha256": "d0dc1db1e9f413a1d3a3e422a208ad791f003b3559c93c1aef65cd5692539d09",
+        "bytes": 422,
+        "lines": 20,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_DYNAMIC_PAGE",
+        "route_id": "ADMIN_DISCOVERY_TOOL_DETAIL_SENTINEL",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/discovery/tools/page.tsx",
+        "git_blob": "e4b596779d6e6635130b3888ffd14ea5b69cf19c",
+        "sha256": "9e4547c6fe3021bf4a0236a7efbf4f064540dda5eea39700f7b97aed3eeaffed",
+        "bytes": 201,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_DISCOVERY_TOOLS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/homepage-control/[id]/edit/page.tsx",
+        "git_blob": "f795111434271ef46281904b83bc747da209dbb8",
+        "sha256": "e4aa4a656ff0af0faf5eb18aef4680003e095ac1483bcec7d310968f82ee3bac",
+        "bytes": 4023,
+        "lines": 115,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_DYNAMIC_PAGE",
+        "route_id": "ADMIN_HOMEPAGE_CONTROL_EDIT_SENTINEL",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/homepage-control/[id]/page.tsx",
+        "git_blob": "bd2fcedf6179ef4ef5d3be00799c646a0e202d1f",
+        "sha256": "d4c82cd2c66087b012fb9d5448377a8c7cf4fcebaf79f58e2261ec00f461c62b",
+        "bytes": 13219,
+        "lines": 395,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_DYNAMIC_PAGE",
+        "route_id": "ADMIN_HOMEPAGE_CONTROL_DETAIL_SENTINEL",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/homepage-control/[id]/preview/page.tsx",
+        "git_blob": "1a0f5152b0ffd0250df0842b8869230c5a9af100",
+        "sha256": "65e87b2dba4c5e1f3e77052ff4cb9ba23d11e5e782664c8d151364c628400600",
+        "bytes": 8822,
+        "lines": 258,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_DYNAMIC_PAGE",
+        "route_id": "ADMIN_HOMEPAGE_CONTROL_PREVIEW_SENTINEL",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/homepage-control/page.tsx",
+        "git_blob": "23657bc640ff78868748e9e0c192c1c91753e49f",
+        "sha256": "e5993b0f8cf8515feb75916e3ab150ce861a09603f978bce14f5f166fff7f339",
+        "bytes": 5789,
+        "lines": 152,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_HOMEPAGE_CONTROL",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/layout.tsx",
+        "git_blob": "ccd44e42ed83e1e8626abcfcde251bf494e049f3",
+        "sha256": "77f77ff1f456672ceb14ae47fa4d3cdb33bfa34f7a61da11c64a5900fd3a1a6d",
+        "bytes": 300,
+        "lines": 18,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_LAYOUT",
+        "route_id": "ADMIN_HOME",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/moderation/page.tsx",
+        "git_blob": "0138abcaf9c3130598c097ccff99270039c802b4",
+        "sha256": "cfc2634b89b70a9430eec71bcf765be8e0de8dc317a77ff1020030d93f91a444",
+        "bytes": 189,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_MODERATION",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/notifications/page.tsx",
+        "git_blob": "143070275dc2c30bec651b926d27f8f18bc01bea",
+        "sha256": "b15079bd6f713b496c47d72504a04cd6d24014c52aeed44ec97a8e4498564238",
+        "bytes": 195,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_NOTIFICATIONS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/page.tsx",
+        "git_blob": "24ebb1d5c369b4ba884a0da989efa8457a049e3a",
+        "sha256": "249a2e6fa9460ba7b8a8c48a097b05ad1ab8aa9618859d9eaa0a338fc8dde487",
+        "bytes": 175,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_HOME_PAGE",
+        "route_id": "ADMIN_HOME",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/security/page.tsx",
+        "git_blob": "c420b6ee203cbcb015036646c45513e83b651868",
+        "sha256": "d9d1b3021696aa65addcc52f9b868640f7a87442c77fdaa3e6c2f9c05e18ce6e",
+        "bytes": 185,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_SECURITY",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/settings/page.tsx",
+        "git_blob": "d8158550b96c5c02cd53f82920703885e75c7433",
+        "sha256": "6f6024eb776c395c2d300e3a018f1af94de8732b9342fe9bc4342217af5e18df",
+        "bytes": 185,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_SETTINGS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      },
+      {
+        "path": "app/admin/tools/page.tsx",
+        "git_blob": "6d4b84f3734a1e7c806c2e79752ec105c27f0b65",
+        "sha256": "505db53998c94b41788f642af8d933c27ff900eaf0acad61ba96254756b06df9",
+        "bytes": 179,
+        "lines": 5,
+        "mode": "0644",
+        "surface_role": "PROTECTED_ADMIN_PAGE",
+        "route_id": "ADMIN_TOOLS",
+        "source_profile_count": 2,
+        "desktop_disposition": "PASS_2XX",
+        "mobile_disposition": "PASS_2XX",
+        "runtime_result": "QUALIFIED"
+      }
+    ]
+  },
+  "credential_session_contract": {
+    "browser_only_credential_entry": true,
+    "ready_signal_received": true,
+    "submissions": 1,
+    "successful_submissions": 1,
+    "invalid_credential_responses": 0,
+    "session_verified": true,
+    "password_observed": false,
+    "request_post_data_reads": 0,
+    "cookie_reads": 0,
+    "storage_state_exports": 0,
+    "clipboard_reads_writes": 0,
+    "retained_sensitive_artifacts": 0
+  },
+  "sentinel_recovery_contract": {
+    "old_sentinel": "00000000-0000-0000-0000-000000000000",
+    "old_sentinel_valid_uuid": false,
+    "replacement_sentinel": "00000000-0000-4000-8000-000000000000",
+    "replacement_sentinel_valid_uuid": true,
+    "discovery_route_blob": "a6b290312b6bcefa84b2c0a0afabf03f0c4daa4b",
+    "diagnosis": "OLD_SENTINEL_INVALID_UUID_SOURCE_400_CLASSIFIED_UNKNOWN",
+    "valid_sentinel_400_count": 0,
+    "failure_route": null,
+    "failure_profile": null
+  },
+  "route_qualification_contract": {
+    "source_profile_cases": "36/36",
+    "login_layout_page": "4/4",
+    "admin_layout": "2/2",
+    "protected_pages": "30/30",
+    "route_profile_record_count": 32,
+    "desktop_route_records": 16,
+    "mobile_route_records": 16,
+    "source_case_sum": 36,
+    "route_profile_records": [
+      {
+        "routeId": "ADMIN_LOGIN_PAGE_AND_LAYOUT",
+        "routeTemplate": "/admin-login",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 2,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 67,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        }
+      },
+      {
+        "routeId": "ADMIN_LOGIN_PAGE_AND_LAYOUT",
+        "routeTemplate": "/admin-login",
+        "profile": "MOBILE",
+        "sourceCaseCount": 2,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 72,
+          "horizontalOverflow": false,
+          "formCount": 1,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        }
+      },
+      {
+        "routeId": "ADMIN_HOME",
+        "routeTemplate": "/admin",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 2,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 5,
+          "landmarkCount": 3,
+          "elementCount": 225,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_ANALYTICS",
+        "routeTemplate": "/admin/analytics",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 3,
+          "elementCount": 143,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERED_TOOLS",
+        "routeTemplate": "/admin/discovered-tools",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 10,
+          "landmarkCount": 3,
+          "elementCount": 435,
+          "horizontalOverflow": false,
+          "formCount": 2,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY",
+        "routeTemplate": "/admin/discovery",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 11,
+          "landmarkCount": 3,
+          "elementCount": 535,
+          "horizontalOverflow": false,
+          "formCount": 2,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY_TOOLS",
+        "routeTemplate": "/admin/discovery/tools",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 150,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY_TOOL_DETAIL_SENTINEL",
+        "routeTemplate": "/admin/discovery/tools/00000000-0000-4000-8000-000000000000",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 3,
+          "elementCount": 118,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL",
+        "routeTemplate": "/admin/homepage-control",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 1,
+          "elementCount": 173,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_DETAIL_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_EDIT_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000/edit",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_PREVIEW_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000/preview",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_MODERATION",
+        "routeTemplate": "/admin/moderation",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 3,
+          "landmarkCount": 3,
+          "elementCount": 162,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_NOTIFICATIONS",
+        "routeTemplate": "/admin/notifications",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 146,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_SECURITY",
+        "routeTemplate": "/admin/security",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 3,
+          "landmarkCount": 3,
+          "elementCount": 189,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_SETTINGS",
+        "routeTemplate": "/admin/settings",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 408,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_TOOLS",
+        "routeTemplate": "/admin/tools",
+        "profile": "DESKTOP",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 5,
+          "landmarkCount": 3,
+          "elementCount": 219,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOME",
+        "routeTemplate": "/admin",
+        "profile": "MOBILE",
+        "sourceCaseCount": 2,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 5,
+          "landmarkCount": 3,
+          "elementCount": 223,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_ANALYTICS",
+        "routeTemplate": "/admin/analytics",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 3,
+          "elementCount": 143,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERED_TOOLS",
+        "routeTemplate": "/admin/discovered-tools",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 10,
+          "landmarkCount": 3,
+          "elementCount": 435,
+          "horizontalOverflow": false,
+          "formCount": 2,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY",
+        "routeTemplate": "/admin/discovery",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 11,
+          "landmarkCount": 3,
+          "elementCount": 541,
+          "horizontalOverflow": false,
+          "formCount": 2,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY_TOOLS",
+        "routeTemplate": "/admin/discovery/tools",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 150,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_DISCOVERY_TOOL_DETAIL_SENTINEL",
+        "routeTemplate": "/admin/discovery/tools/00000000-0000-4000-8000-000000000000",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 3,
+          "elementCount": 118,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL",
+        "routeTemplate": "/admin/homepage-control",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 1,
+          "elementCount": 173,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_DETAIL_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_EDIT_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000/edit",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_HOMEPAGE_CONTROL_PREVIEW_SENTINEL",
+        "routeTemplate": "/admin/homepage-control/00000000-0000-4000-8000-000000000000/preview",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "SAFE_ABSENT_SENTINEL",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 1,
+          "landmarkCount": 1,
+          "elementCount": 81,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_MODERATION",
+        "routeTemplate": "/admin/moderation",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 3,
+          "landmarkCount": 3,
+          "elementCount": 162,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_NOTIFICATIONS",
+        "routeTemplate": "/admin/notifications",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 146,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_SECURITY",
+        "routeTemplate": "/admin/security",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 3,
+          "landmarkCount": 3,
+          "elementCount": 189,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_SETTINGS",
+        "routeTemplate": "/admin/settings",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 2,
+          "landmarkCount": 3,
+          "elementCount": 408,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      },
+      {
+        "routeId": "ADMIN_TOOLS",
+        "routeTemplate": "/admin/tools",
+        "profile": "MOBILE",
+        "sourceCaseCount": 1,
+        "sentinelBranch": "NOT_APPLICABLE",
+        "metrics": {
+          "readyState": "complete",
+          "headingCount": 5,
+          "landmarkCount": 3,
+          "elementCount": 219,
+          "horizontalOverflow": false,
+          "formCount": 0,
+          "fileInputCount": 0
+        },
+        "accessibility": {
+          "critical": 0,
+          "serious": 0,
+          "moderate": 0,
+          "minor": 0,
+          "unknown": 0,
+          "ruleIds": []
+        },
+        "errorDeltas": {
+          "sentinelValidation400": 0,
+          "unknownConsoleErrors": 0,
+          "pageErrors": 0,
+          "unknownRequestFailures": 0
+        },
+        "topLevelStatus": 200,
+        "statusCategory": "2XX"
+      }
+    ]
+  },
+  "network_read_only_contract": {
+    "allowed_same_origin_get_head": 1268,
+    "allowed_login_posts": 1,
+    "post_login_mutation_methods": 0,
+    "external_origin_attempts": 0,
+    "same_origin_5xx": 0,
+    "authenticated_401_or_403": 0,
+    "downloads": 0,
+    "popups": 0,
+    "direct_supabase_operations": 0,
+    "direct_sql_operations": 0,
+    "direct_database_operations": 0,
+    "direct_storage_operations": 0,
+    "persistent_database_writes_directly_observed": false,
+    "persistent_storage_writes_directly_observed": false,
+    "conclusion_basis": "SOURCE_BOUND_METHOD_GUARD_AND_OBSERVED_BROWSER_REQUEST_CATEGORIES_ONLY"
+  },
+  "accessibility_contract": {
+    "critical": 0,
+    "serious": 0,
+    "moderate": 0,
+    "minor": 0,
+    "unknown": 0,
+    "horizontal_overflow": 0,
+    "unknown_console_errors": 0,
+    "page_errors": 0,
+    "unknown_request_failures": 0
+  },
+  "cleanup_privacy_contract": {
+    "page_closed": true,
+    "context_closed": true,
+    "browser_closed": true,
+    "temporary_profile_absent": true,
+    "password_retained": 0,
+    "password_length_retained": 0,
+    "request_body_retained": 0,
+    "cookie_retained": 0,
+    "session_retained": 0,
+    "csrf_retained": 0,
+    "storage_state_retained": 0,
+    "screenshots": 0,
+    "video": 0,
+    "trace": 0,
+    "har": 0,
+    "page_record_text": 0,
+    "dynamic_production_identifiers": 0,
+    "raw_urls_or_queries": 0,
+    "raw_headers": 0,
+    "repository_writes": 0,
+    "stages": 0,
+    "commits": 0,
+    "pushes": 0
+  },
+  "source_artifacts": {
+    "artifact_count": 8,
+    "artifacts": [
+      {
+        "name": "01-preflight-source-and-session-budget.md",
+        "sha256": "2aceb6e80e42ae64de221331408a8ba370b904d3a4e3c0e6c3fdaa720145551a",
+        "bytes": 1066,
+        "lines": 14,
+        "mode": "0600"
+      },
+      {
+        "name": "02-operator-controlled-login-and-session.json",
+        "sha256": "da6ed7a6f99b6235d894d2f868f319a5ff3e39d30108837f2d33bb8fa59babe0",
+        "bytes": 782,
+        "lines": 27,
+        "mode": "0600"
+      },
+      {
+        "name": "03-exact-18-surface-route-qualification.json",
+        "sha256": "7188021543b1e33b23d5c14fb09625820257a38f641b501cacf51e7815bc28d5",
+        "bytes": 27158,
+        "lines": 1042,
+        "mode": "0600"
+      },
+      {
+        "name": "04-network-accessibility-and-read-only-boundary.json",
+        "sha256": "fc5c95c1fac1e5331c29c5ff2f22a78f20960dfd0e4200654fde51210e43c6f0",
+        "bytes": 1672,
+        "lines": 53,
+        "mode": "0600"
+      },
+      {
+        "name": "05-browser-cleanup-and-sensitive-retention.json",
+        "sha256": "00d0c30bbe4369e95529ae3303bdaba367ba9f76bcdcf3e5312361c234097294",
+        "bytes": 941,
+        "lines": 38,
+        "mode": "0600"
+      },
+      {
+        "name": "06-repository-and-platform-preservation.json",
+        "sha256": "c383b8704ac1fb8144e7e02acdb1bba8d7525dc274cf674104103d652368485b",
+        "bytes": 10242,
+        "lines": 428,
+        "mode": "0600"
+      },
+      {
+        "name": "07-final-18-surface-static-integration-boundary.md",
+        "sha256": "a705a67ba7ff53c4d0be8095d13ed64352b8c4c941abe294e2a107f7743302d9",
+        "bytes": 561,
+        "lines": 8,
+        "mode": "0600"
+      },
+      {
+        "name": "08-risk-stop-and-next-action.md",
+        "sha256": "335b31065b48aa07a061789f69c9824349e23a652763aa128f79a35602cf9d89",
+        "bytes": 606,
+        "lines": 10,
+        "mode": "0600"
+      }
+    ],
+    "script": {
+      "name": "aifinder-phase-32ba-32bz-operator-controlled-authenticated-browser-valid-sentinel-recovery.sh",
+      "sha256": "adba4a1425405554e9888a9e80aeec6db6eeba00371be99600c99ded9a66a631",
+      "bytes": 103444,
+      "lines": 157,
+      "mode": "0700"
+    },
+    "helper": {
+      "name": "support/phase32ba-runner.cjs",
+      "sha256": "8b0fed433eeec06ff2fbb19c3b22d997e6baa22dbae1956f9cd1d93e7106f92c",
+      "bytes": 73477,
+      "lines": 1472,
+      "mode": "0600"
+    }
+  },
+  "safety_boundary": {
+    "evidence_is_static_only": true,
+    "runtime_authority_granted": false,
+    "authenticated_live_route_authority_granted": false,
+    "database_storage_mutation_directly_observed": false,
+    "raw_sensitive_or_production_values_retained": false,
+    "prohibited_operations": [
+      "AUTHENTICATED_RUNTIME",
+      "DATABASE_OR_STORAGE",
+      "DIRECT_VERCEL_WRITE",
+      "PUBLIC_HTTP_OR_BROWSER",
+      "REAL_ENVIRONMENT_OR_SECRET_ACCESS",
+      "SQL_OR_SUPABASE",
+      "USER_VISIBLE_PERSISTENT_MUTATION"
+    ]
+  },
+  "integration_decision": {
+    "AUTHENTICATED_BROWSER_RUNTIME_WORKSTREAM": "EVIDENCE_COMPLETE",
+    "STATIC_EVIDENCE_INTEGRATION_RECOMMENDATION": "GO",
+    "AUTHENTICATED_LIVE_ROUTE_RUNTIME": "STILL_BLOCKED",
+    "PUBLIC_LAUNCH_DECISION": "NO_GO_PENDING_AUTHENTICATED_LIVE_ROUTE_RUNTIME_AND_FINAL_LAUNCH_GATE"
+  }
+}

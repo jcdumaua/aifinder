@@ -11,15 +11,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin-login/page.tsx",
@@ -29,15 +30,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/analytics/page.tsx",
@@ -47,15 +49,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/discovered-tools/page.tsx",
@@ -65,15 +68,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/discovery/page.tsx",
@@ -83,15 +87,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/discovery/tools/[id]/page.tsx",
@@ -101,15 +106,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/discovery/tools/page.tsx",
@@ -119,15 +125,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/homepage-control/[id]/edit/page.tsx",
@@ -137,15 +144,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/homepage-control/[id]/page.tsx",
@@ -155,15 +163,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/homepage-control/[id]/preview/page.tsx",
@@ -173,15 +182,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/homepage-control/page.tsx",
@@ -191,15 +201,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/layout.tsx",
@@ -209,15 +220,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/moderation/page.tsx",
@@ -227,15 +239,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/notifications/page.tsx",
@@ -245,15 +258,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/page.tsx",
@@ -263,15 +277,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/security/page.tsx",
@@ -281,15 +296,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/settings/page.tsx",
@@ -299,15 +315,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/admin/tools/page.tsx",
@@ -317,15 +334,16 @@
       "security_boundary_class": "ADMIN_AUTHENTICATION_BOUNDARY",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/authenticated-browser-runtime-evidence.json"
       ],
       "future_evidence_paths": [
         "testing/accessibility-qa.spec.ts",
         "testing/responsive-qa.spec.ts"
       ],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
+      "coverage_state": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+      "launch_blocking": false,
+      "gap_code_or_null": null
     },
     {
       "path": "app/api/admin/audit-logs/route.ts",

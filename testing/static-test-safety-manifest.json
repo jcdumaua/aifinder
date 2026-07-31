@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "6fb16f5b0261a3c9c760596bfd708d748c3c4c00b7cd0a5cc4253de3d4454ad9",
+  "testing_tree_digest": "1871bffeb716ee0ae5938016142dca5324cfa070a3da9091c6d432ec52b7e01d",
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -125,6 +125,14 @@
       "ci_disposition": "VALIDATE_ONLY",
       "command_argv": null,
       "reason_code": "AUTHENTICATED_BROWSER_RUNTIME_PLANNING_MANIFEST"
+    },
+    {
+      "path": "testing/authenticated-browser-runtime-evidence.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE"
     },
     {
       "path": "testing/authenticated-browser-security-static-assertions.mjs",

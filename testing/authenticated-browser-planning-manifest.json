@@ -1,29 +1,6 @@
 {
   "planning_version": 1,
-  "source_commit": "3a43f8c9b01997487e20725ddcb38a4b7ce19676",
-  "workstream": {
-    "id": "AUTHENTICATED_BROWSER_RUNTIME",
-    "entry_count": 18,
-    "gap_code": "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED"
-  },
-  "decision": "AUTHENTICATED_BROWSER_STATIC_ASSURANCE_READY_FOR_RUNTIME",
-  "current_authority": "STATIC_AND_SYNTHETIC_ONLY",
-  "execution_authorized": false,
-  "real_secret_access_authorized": false,
-  "authenticated_production_runtime_authorized": false,
-  "next_gate": "SEPARATE_RUNTIME_REVIEW_AUTHENTICATED_BROWSER_RUNTIME",
-  "runtime_evidence": {
-    "path": "testing/authenticated-browser-static-evidence.json",
-    "sha256": "4a2f319ed8418e695162f9a3a5316da31c15d9f13c467ea10b1881db1faaaa26",
-    "git_blob": "c31d798b1110bf9a75ed934cf433be990a6fe52c",
-    "bytes": 18950,
-    "lines": 456,
-    "mode": "0644",
-    "authenticated_surface_profile_cases": "72/72",
-    "discovery_select_name_cases": "20/20",
-    "discovery_detail_contrast_cases": "8/8",
-    "audit_get_post_security_and_compensation_cases": "24/24"
-  },
+  "source_commit": "2570765ca0e769888286e42456d2f27d831f46df",
   "source_registry": {
     "path": "testing/public-launch-blocker-registry.json",
     "sha256": "8bb921814898abd40c9d3f4c38b4181446bd9f4bfc58cdf29f9909a6071668e6",
@@ -43,12 +20,50 @@
     "entry_count": 69,
     "launch_blocking_count": 46
   },
+  "workstream": {
+    "id": "AUTHENTICATED_BROWSER_RUNTIME",
+    "entry_count": 18,
+    "gap_code": "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED"
+  },
+  "decision": "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED",
+  "current_authority": "STATIC_ONLY",
+  "execution_authorized": false,
+  "real_secret_access_authorized": false,
+  "authenticated_production_runtime_authorized": false,
+  "live_evidence_status": "PASSED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_QUALIFICATION",
+  "last_runtime_result": "PASSED_PHASE_32BA_32BZ_OPERATOR_CONTROLLED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_REQUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION",
+  "canonical_source_alignment": "COMPLETE",
+  "target_origin": "https://www.aifinder.to",
+  "static_evidence": {
+    "path": "testing/authenticated-browser-static-evidence.json",
+    "sha256": "4a2f319ed8418e695162f9a3a5316da31c15d9f13c467ea10b1881db1faaaa26",
+    "git_blob": "c31d798b1110bf9a75ed934cf433be990a6fe52c",
+    "bytes": 18950,
+    "lines": 456,
+    "mode": "0644",
+    "authenticated_surface_profile_cases": "72/72",
+    "discovery_select_name_cases": "20/20",
+    "discovery_detail_contrast_cases": "8/8",
+    "audit_get_post_security_and_compensation_cases": "24/24"
+  },
+  "runtime_evidence": {
+    "path": "testing/authenticated-browser-runtime-evidence.json",
+    "sha256": "1cfb86966cbbe5f9d4c2b2adc4df0df191558e29ffa809d7f3736f936b005aef",
+    "git_blob": "3171d7e983610339709a61886ba01e8785885e6f",
+    "bytes": 46933,
+    "lines": 1519,
+    "mode": "0644",
+    "source_profile_cases": "36/36",
+    "route_profile_records": 32,
+    "authenticated_surface_count": 18,
+    "result": "PASSED_PHASE_32BA_32BZ_OPERATOR_CONTROLLED_EXACT_18_SURFACE_AUTHENTICATED_BROWSER_PRODUCTION_RUNTIME_REQUALIFICATION_READY_FOR_STATIC_EVIDENCE_INTEGRATION"
+  },
   "scope": {
-    "repository_path_count": 16,
-    "source_path_count": 8,
-    "governance_path_count": 8,
+    "repository_path_count": 8,
     "authenticated_browser_surface_count": 18,
-    "authenticated_live_route_partial_static_count": 1
+    "route_profile_record_count": 32,
+    "authenticated_live_route_partial_static_count": 1,
+    "authenticated_live_route_no_static_count": 27
   },
   "blocked_capabilities": [
     "AUTHENTICATED_PRODUCTION_RUNTIME",
@@ -74,10 +89,10 @@
     "mode": "0600"
   },
   "phase_finalization": {
-    "state": "FINAL_STATIC_MUTATION_REVIEW_COMPLETE_READY_FOR_STAGING",
-    "final_governance_static_rerun": "PASS",
-    "final_mutation_rerun": "PASS",
-    "independent_review": "PASS_0_0_0",
-    "staging_eligible": true
-  }
+    "state": "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED",
+    "execution_authorized": false,
+    "authenticated_live_route_runtime": "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+    "public_launch": "NO_GO"
+  },
+  "next_gate": "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME"
 }
