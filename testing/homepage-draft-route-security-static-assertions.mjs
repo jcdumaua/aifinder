@@ -4,10 +4,12 @@ import { readFileSync } from "node:fs";
 const routePath = "app/api/admin/homepage-control/drafts/[id]/route.ts";
 const authPath = "lib/admin-auth.ts";
 const adminPath = "lib/homepage-control-admin.ts";
+const bodySafetyPath = "lib/public-live-route-safety.ts";
 
 const route = readFileSync(routePath, "utf8");
 const auth = readFileSync(authPath, "utf8");
 const admin = readFileSync(adminPath, "utf8");
+const bodySafety = readFileSync(bodySafetyPath, "utf8");
 
 function assertIncludes(source, marker, label) {
   assert.ok(source.includes(marker), `${label} missing marker: ${marker}`);
@@ -73,6 +75,31 @@ assertNoRegex(
 assertIncludes(route, "UUID_PATTERN", "homepage draft UUID validation");
 assertIncludes(route, "MAX_BODY_SIZE_BYTES", "homepage draft body size limit");
 assertIncludes(route, "application/json", "homepage draft content type");
+assertIncludes(
+  route,
+  "readBoundedRequestBody",
+  "homepage draft actual-byte body reader",
+);
+assertIncludes(
+  route,
+  "parseBoundedJsonBody",
+  "homepage draft bounded JSON parser",
+);
+assertIncludes(
+  route,
+  "PublicLiveRouteSafetyError",
+  "homepage draft bounded body error boundary",
+);
+assertNoRegex(
+  route,
+  /\brequest\.json\s*\(/,
+  "homepage draft unbounded JSON reader",
+);
+assertNoRegex(
+  route,
+  /Number\s*\(\s*contentLengthHeader/,
+  "homepage draft header-only size check",
+);
 assertIncludes(route, '"Cache-Control": "no-store"', "homepage draft no-store");
 assertIncludes(
   route,
@@ -126,6 +153,55 @@ assertIncludes(auth, "timingSafeEqual", "admin auth timing-safe comparison");
 assertIncludes(auth, "x-csrf-token", "admin auth CSRF header");
 assertIncludes(auth, "ADMIN_CSRF_COOKIE_NAME", "admin auth CSRF cookie");
 assertIncludes(admin, '"use server";', "homepage control admin server scope");
-assertIncludes(admin, "supabaseAdmin", "homepage control admin privileged client");
+assertIncludes(
+  admin,
+  'import "server-only";',
+  "homepage control admin server-only boundary",
+);
+assertNoRegex(
+  admin,
+  /^import\s+\{\s*supabaseAdmin\s*\}\s+from\s+["']\.\/supabase-admin["'];/m,
+  "homepage control admin eager privileged client",
+);
+assertRegex(
+  admin,
+  /await\s+import\s*\(\s*["']\.\/supabase-admin["']\s*\)/,
+  "homepage control admin lazy privileged client",
+);
+assertIncludes(
+  admin,
+  "updateHomepageControlDraftWithDependencies",
+  "homepage control admin fabricated dependency seam",
+);
+assertIncludes(
+  admin,
+  '.eq("version", current.version)',
+  "homepage control draft optimistic concurrency predicate",
+);
+assertIncludes(
+  admin,
+  '.eq("version", nextVersion)',
+  "homepage control draft compensation version predicate",
+);
+assertIncludes(
+  admin,
+  '.maybeSingle()',
+  "homepage control draft checkable affected-row result",
+);
+assertIncludes(
+  bodySafety,
+  "actualByteLength += chunk.byteLength",
+  "shared request body actual-byte accounting",
+);
+assertIncludes(
+  bodySafety,
+  'throw new PublicLiveRouteSafetyError("content_length_understated")',
+  "shared request body understated-length rejection",
+);
+assertIncludes(
+  bodySafety,
+  'throw new PublicLiveRouteSafetyError("content_length_overstated")',
+  "shared request body overstated-length rejection",
+);
 
 console.log("Homepage draft route security static assertions passed.");

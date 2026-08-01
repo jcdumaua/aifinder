@@ -45,7 +45,7 @@ function readSource(relativePath) {
 }
 
 function importsLibAdminAuth(source) {
-  return /from\s+["'][^"']*lib\/admin-auth["']/.test(source);
+  return /from\s+["'][^"']*(?:^|\/)admin-auth["']/.test(source);
 }
 
 function importsReadOnlyAdminAuth(source) {
@@ -144,24 +144,24 @@ function main() {
   assertEquals(
     "candidate_preview_route_imports_lib_admin_auth",
     importsLibAdminAuth(candidatePreviewHandlerSource),
-    false,
+    true,
   );
 
   assertEquals(
     "candidate_preview_route_imports_lib_admin_auth_read_only",
     importsReadOnlyAdminAuth(candidatePreviewHandlerSource),
-    true,
+    false,
   );
 
   assertEquals(
     "candidate_preview_route_uses_getReadOnlyAdminSession",
     candidatePreviewHandlerSource.includes("getReadOnlyAdminSession"),
-    true,
+    false,
   );
 
   assertEquals(
     "candidate_preview_route_async_returntype_recovered",
-    candidatePreviewHandlerSource.includes("type AdminSession = Awaited<ReturnType<typeof getReadOnlyAdminSession>>;"),
+    candidatePreviewHandlerSource.includes("type AdminSession = VerifyAdminSessionResult;"),
     true,
   );
 
@@ -174,7 +174,7 @@ function main() {
   assertEquals(
     "read_only_helper_imports_lib_admin_auth",
     importsLibAdminAuth(readOnlyHelperSource),
-    false,
+    true,
   );
 
   assertEquals(

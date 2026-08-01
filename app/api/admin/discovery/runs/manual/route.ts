@@ -17,11 +17,23 @@ import {
   type ManualCrawlerSource,
 } from "../../../../../../lib/discovery-manual-crawler";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_SIZE_BYTES = 24 * 1024;
+
+type DiscoveryManualRunDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+};
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -33,6 +45,43 @@ function jsonResponse(data: object, status = 200) {
   });
 }
 
+function toSafeDiscoveryRunResponse(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const run = value as Record<string, unknown>;
+  return {
+    id: run.id ?? null,
+    source_id: run.source_id ?? null,
+    status: run.status ?? null,
+    started_at: run.started_at ?? null,
+    finished_at: run.finished_at ?? null,
+    created_at: run.created_at ?? null,
+    updated_at: run.updated_at ?? null,
+  };
+}
+
+async function resolveActiveRunCreateRace(
+  client: typeof supabaseAdmin,
+  sourceId: string,
+  createdRunId: string,
+) {
+  const { data: contenders, error } = await client
+    .from("discovery_runs")
+    .select("id, status, created_at")
+    .eq("source_id", sourceId)
+    .in("status", ["pending", "running"])
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) return { won: false, cleanupSucceeded: false };
+  const winner = contenders?.[0];
+  if (winner?.id === createdRunId) return { won: true, cleanupSucceeded: true };
+  const { error: cleanupError } = await client
+    .from("discovery_runs")
+    .delete()
+    .eq("id", createdRunId)
+    .eq("status", "pending");
+  return { won: false, cleanupSucceeded: !cleanupError };
+}
+
 async function readJsonBody(request: Request) {
   const contentType = request.headers.get("content-type") || "";
 
@@ -40,14 +89,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -56,8 +108,12 @@ async function readJsonBody(request: Request) {
   return body as Record<string, unknown>;
 }
 
-export async function POST(request: Request) {
-  const adminSession = verifyAdminSession(request);
+export function createDiscoveryManualRunHandler(
+  dependencies: DiscoveryManualRunDependencies = {},
+) {
+ return async function discoveryManualRunHandler(request: Request) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovery_manual_crawler_trigger_unauthorized");
@@ -65,14 +121,14 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoveryManualCrawlerRun,
     actor: adminSession.actor,
@@ -104,7 +160,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: source, error: sourceError } = await supabaseAdmin
+  const { data: source, error: sourceError } = await client
     .from("discovery_sources")
     .select("id, name, slug, source_type, config, is_active")
     .eq("id", manualCrawlerRequest.sourceId)
@@ -129,7 +185,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: activeRuns, error: activeRunError } = await supabaseAdmin
+  const { data: activeRuns, error: activeRunError } = await client
     .from("discovery_runs")
     .select("id, status, created_at")
     .eq("source_id", source.id)
@@ -160,7 +216,7 @@ export async function POST(request: Request) {
     request: manualCrawlerRequest,
   });
 
-  const { data: discoveryRun, error: insertRunError } = await supabaseAdmin
+  const { data: discoveryRun, error: insertRunError } = await client
     .from("discovery_runs")
     .insert({
       source_id: source.id,
@@ -203,7 +259,23 @@ export async function POST(request: Request) {
     updated_at: string;
   };
 
-  const { error: auditError } = await supabaseAdmin
+  const raceResolution = await resolveActiveRunCreateRace(
+    client,
+    source.id,
+    discoveryRunRecord.id,
+  );
+  if (!raceResolution.won) {
+    if (!raceResolution.cleanupSucceeded) {
+      console.error("discovery_manual_crawler_create_race_compensation_failed");
+      return jsonResponse({ error: "Failed to create discovery run." }, 500);
+    }
+    return jsonResponse(
+      { error: "A discovery run is already pending or running for this source." },
+      409,
+    );
+  }
+
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert({
       discovered_tool_id: null,
@@ -227,12 +299,21 @@ export async function POST(request: Request) {
 
   if (auditError) {
     console.error("discovery_manual_crawler_trigger_audit_failed");
+    const { error: compensationError } = await client
+      .from("discovery_runs")
+      .delete()
+      .eq("id", discoveryRunRecord.id)
+      .eq("status", "pending");
+    if (compensationError) {
+      console.error("discovery_manual_crawler_trigger_compensation_failed");
+    }
+    return jsonResponse({ error: "Failed to create discovery run." }, 500);
   }
 
   return jsonResponse(
     {
       data: {
-        run: discoveryRunRecord,
+        run: toSafeDiscoveryRunResponse(discoveryRunRecord),
         execution: {
           enabled: false,
           status: "awaiting_approved_async_executor",
@@ -243,4 +324,7 @@ export async function POST(request: Request) {
     },
     201
   );
+ };
 }
+
+export const POST = createDiscoveryManualRunHandler();

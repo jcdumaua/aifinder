@@ -1,8 +1,18 @@
+import "server-only";
+
 const ADMIN_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const ADMIN_UPLOAD_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MAX_ADMIN_RATE_LIMIT_BUCKETS = 2_048;
 const ADMIN_RATE_LIMIT_MESSAGE =
   "Too many admin requests. Please wait and try again.";
 
 export const ADMIN_RATE_LIMIT_ACTIONS = {
+  auditLogsRead: "audit-logs-read",
+  auditLogsArchive: "audit-logs-archive",
+  catalogSubmissions: "catalog-submissions",
+  catalogTools: "catalog-tools",
+  uploadLogo: "upload-logo",
   discoverySourceCreate: "discovery-source-create",
   discoverySourceUpdate: "discovery-source-update",
   discoveryManualIntake: "discovery-manual-intake",
@@ -77,6 +87,26 @@ const ADMIN_RATE_LIMIT_POLICIES: Record<
   AdminRateLimitAction,
   AdminRateLimitPolicy
 > = {
+  [ADMIN_RATE_LIMIT_ACTIONS.auditLogsRead]: {
+    limit: 80,
+    windowMs: ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS,
+  },
+  [ADMIN_RATE_LIMIT_ACTIONS.auditLogsArchive]: {
+    limit: 20,
+    windowMs: ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS,
+  },
+  [ADMIN_RATE_LIMIT_ACTIONS.catalogSubmissions]: {
+    limit: 80,
+    windowMs: ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS,
+  },
+  [ADMIN_RATE_LIMIT_ACTIONS.catalogTools]: {
+    limit: 80,
+    windowMs: ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS,
+  },
+  [ADMIN_RATE_LIMIT_ACTIONS.uploadLogo]: {
+    limit: 20,
+    windowMs: ADMIN_UPLOAD_RATE_LIMIT_WINDOW_MS,
+  },
   [ADMIN_RATE_LIMIT_ACTIONS.discoverySourceCreate]: {
     limit: 20,
     windowMs: ADMIN_RATE_LIMIT_WINDOW_MS,
@@ -157,8 +187,14 @@ function getFallbackIp(request: Request) {
 }
 
 function getLimiterIdentifier(request: Request, actor?: AdminRateLimitActor | null) {
+  const actorId =
+    typeof actor?.id === "string" ? cleanIdentifier(actor.id) : "";
   const actorLabel =
     typeof actor?.label === "string" ? cleanIdentifier(actor.label) : "";
+
+  if (actorId && actorId !== "unknown") {
+    return `actor:${actorId.toLowerCase()}`;
+  }
 
   if (actorLabel && actorLabel !== "unknown") {
     return `actor:${actorLabel.toLowerCase()}`;
@@ -179,6 +215,21 @@ function pruneExpiredBuckets(now: number) {
   for (const [key, bucket] of adminRateLimitBuckets) {
     if (bucket.resetAt <= now) {
       adminRateLimitBuckets.delete(key);
+    }
+  }
+}
+
+function ensureBucketCapacity(now: number) {
+  pruneExpiredBuckets(now);
+
+  if (adminRateLimitBuckets.size >= MAX_ADMIN_RATE_LIMIT_BUCKETS) {
+    const oldestBucket = [...adminRateLimitBuckets.entries()].sort(
+      ([leftKey, left], [rightKey, right]) =>
+        left.resetAt - right.resetAt || leftKey.localeCompare(rightKey),
+    )[0];
+
+    if (oldestBucket) {
+      adminRateLimitBuckets.delete(oldestBucket[0]);
     }
   }
 }
@@ -216,10 +267,17 @@ export function checkAdminRateLimit({
   pruneExpiredBuckets(now);
 
   const policy = ADMIN_RATE_LIMIT_POLICIES[action];
+  const actorIdentifier = actor ? getLimiterIdentifier(request, actor) : "";
+
+  if (!actorIdentifier) {
+    return createBlockedResult(policy, now + policy.windowMs, now);
+  }
+
   const key = getRateLimitKey(request, action, actor);
   const current = adminRateLimitBuckets.get(key);
 
   if (!current || current.resetAt <= now) {
+    ensureBucketCapacity(now);
     adminRateLimitBuckets.set(key, {
       count: 1,
       resetAt: now + policy.windowMs,

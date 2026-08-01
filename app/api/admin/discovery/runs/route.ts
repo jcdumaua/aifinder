@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { verifyAdminSession } from "../../../../../lib/admin-auth";
 import { normalizeManualMetadataFetchAuditEvents } from "../../../../../lib/discovery-run-results-review";
 import { normalizeManualStaticHtmlEvidenceAuditEvents } from "../../../../../lib/discovery-static-html-evidence-audit-review";
-import { normalizeManualStaticHtmlEvidenceStats } from "../../../../../lib/discovery-static-html-evidence-results-review";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 
 export const runtime = "nodejs";
@@ -75,6 +74,18 @@ function getPositiveInteger(value: string | null, fallback: number) {
   return parsed;
 }
 
+function toSafeDiscoveryRunResponse(run: JsonRecord) {
+  return {
+    id: typeof run.id === "string" ? run.id : null,
+    source_id: typeof run.source_id === "string" ? run.source_id : null,
+    status: typeof run.status === "string" ? run.status : null,
+    started_at: typeof run.started_at === "string" ? run.started_at : null,
+    finished_at: typeof run.finished_at === "string" ? run.finished_at : null,
+    created_at: typeof run.created_at === "string" ? run.created_at : null,
+    updated_at: typeof run.updated_at === "string" ? run.updated_at : null,
+  };
+}
+
 export async function GET(request: Request) {
   const adminSession = verifyAdminSession(request);
 
@@ -102,8 +113,6 @@ export async function GET(request: Request) {
         "id",
         "source_id",
         "status",
-        "stats",
-        "error_log",
         "started_at",
         "finished_at",
         "created_at",
@@ -257,27 +266,13 @@ export async function GET(request: Request) {
   }
 
   return jsonResponse({
-    data: runs.map((run) => {
-      const staticEvidenceReview = normalizeManualStaticHtmlEvidenceStats(run.stats);
-
-      return {
-        ...run,
+    data: runs.map((run) => ({
+        ...toSafeDiscoveryRunResponse(run),
         audit_events: auditEventsByRunId.get(run.id) || [],
-        ...(staticEvidenceReview
-          ? {
-              static_evidence_audit_events:
-                staticEvidenceAuditEventsByRunId.get(run.id) || [],
-              ...(auditWarning
-                ? {
-                    static_evidence_audit_warning:
-                      "Static evidence audit timeline is unavailable.",
-                  }
-                : {}),
-            }
-          : {}),
+        static_evidence_audit_events:
+          staticEvidenceAuditEventsByRunId.get(run.id) || [],
         ...(auditWarning ? { audit_warning: auditWarning } : {}),
-      };
-    }),
+      })),
     pagination: {
       total: count || 0,
       page,

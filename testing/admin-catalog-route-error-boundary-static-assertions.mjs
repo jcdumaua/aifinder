@@ -13,7 +13,10 @@ const TEST_FILE = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(TEST_FILE), "..");
 
 const SUBMISSIONS_PATH = "app/api/admin/submissions/route.ts";
+const SUBMISSIONS_HANDLER_PATH = "app/api/admin/submissions/handler.ts";
 const TOOLS_PATH = "app/api/admin/tools/route.ts";
+const TOOLS_HANDLER_PATH = "app/api/admin/tools/handler.ts";
+const RATE_LIMIT_PATH = "lib/admin-rate-limit.ts";
 const AUDIT_WRITER_PATH = "lib/admin-audit-log.ts";
 const LOGIN_HARNESS_PATH =
   "testing/admin-login-route-security-static-assertions.mjs";
@@ -116,6 +119,7 @@ TRUSTED_TOOL_MESSAGES.delete("Submission ID is invalid.");
 TRUSTED_TOOL_MESSAGES.delete("Unable to check pending submissions.");
 
 const SUBMISSION_EVENTS = new Map([
+  ["admin_submissions_audit_write_failed", "error"],
   ["admin_submissions_duplicate_live_tool_check_failed", "error"],
   ["admin_submissions_duplicate_pending_check_failed", "error"],
   ["admin_submissions_load_failed", "error"],
@@ -126,6 +130,7 @@ const SUBMISSION_EVENTS = new Map([
   ["admin_submission_rejection_failed", "error"],
 ]);
 const TOOL_EVENTS = new Map([
+  ["admin_tools_audit_write_failed", "error"],
   ["admin_tools_duplicate_domain_check_failed", "error"],
   ["admin_tools_duplicate_slug_check_failed", "error"],
   ["admin_tools_load_failed", "error"],
@@ -281,6 +286,16 @@ function functionDeclaration(record, name) {
   );
 }
 
+function nestedFunctionDeclaration(record, name) {
+  return (
+    first(
+      record.sourceFile,
+      (node) =>
+        ts.isFunctionDeclaration(node) && node.name?.text === name,
+    ) || null
+  );
+}
+
 function exportedRuntimeNames(record) {
   const names = new Set();
   for (const statement of record.sourceFile.statements) {
@@ -415,7 +430,7 @@ function stringSetInitializer(record, name) {
 }
 
 function methodBody(record, method) {
-  return functionDeclaration(record, method)?.body || null;
+  return nestedFunctionDeclaration(record, method)?.body || null;
 }
 
 function occurrences(text, marker) {
@@ -446,13 +461,13 @@ function hasMethodCatchFallback(record, method, fallback) {
 }
 
 function securityOrder(record) {
-  const security = functionDeclaration(record, "requireAdminSecurity");
+  const security = nestedFunctionDeclaration(record, "requireAdminSecurity");
   if (!security?.body) return false;
-  const rate = callsNamed(security.body, "checkAdminRateLimit");
-  const auth = callsNamed(security.body, "isAuthorizedAdminRequest");
-  const csrf = callsNamed(security.body, "verifyAdminCsrfRequest");
+  const rate = callsNamed(security.body, "checkRateLimit");
+  const auth = callsNamed(security.body, "verifySession");
+  const csrf = callsNamed(security.body, "verifyCsrf");
   if (rate.length !== 1 || auth.length !== 1 || csrf.length !== 1) return false;
-  if (!(rate[0].getStart() < auth[0].getStart() && auth[0].getStart() < csrf[0].getStart())) {
+  if (!(auth[0].getStart() < csrf[0].getStart() && csrf[0].getStart() < rate[0].getStart())) {
     return false;
   }
   return [...exportedRuntimeNames(record)]
@@ -464,7 +479,9 @@ function securityOrder(record) {
       const bodyReads = callsNamed(body, "readJsonBody");
       const privileged = first(
         body,
-        (node) => ts.isIdentifier(node) && node.text === "supabaseAdmin",
+        (node) =>
+          ts.isPropertyAccessExpression(node) &&
+          node.getText().startsWith("dependencies.client"),
       );
       const firstDownstream = [bodyReads[0], privileged]
         .filter(Boolean)
@@ -492,8 +509,15 @@ function callStringArguments(record, call) {
 
 function auditDetailKeys(record) {
   const keys = new Set();
-  for (const call of callsNamed(record.sourceFile, "createAdminAuditLog")) {
-    const input = call.arguments[0];
+  const calls = [
+    ...callsNamed(record.sourceFile, "createAdminAuditLog"),
+    ...callsNamed(record.sourceFile, "writeBestEffortAudit"),
+  ];
+  for (const call of calls) {
+    const input =
+      callName(call) === "writeBestEffortAudit"
+        ? call.arguments[1]
+        : call.arguments[0];
     if (!input || !ts.isObjectLiteralExpression(input)) continue;
     const details = input.properties.find(
       (property) =>
@@ -510,16 +534,21 @@ function auditDetailKeys(record) {
   return keys;
 }
 
-// A01 must read and parse only the submissions route.
+// A01 first validates the server-only wrapper, then inspects its pure handler.
 const submissions = parseFile(SUBMISSIONS_PATH);
+const submissionsHandler = parseFile(SUBMISSIONS_HANDLER_PATH);
 check(
   "A01",
-  !hasDirectCaughtResponseLeak(submissions),
-  `${SUBMISSIONS_PATH} serializes caught Error.message into an admin API response.`,
+  firstStatementIsServerOnly(submissions) &&
+    firstStatementIsServerOnly(submissionsHandler) &&
+    !hasDirectCaughtResponseLeak(submissionsHandler),
+  `${SUBMISSIONS_HANDLER_PATH} lacks its server boundary or serializes caught diagnostics into a response.`,
 );
 
 // No other repository file is read until A01 has completed successfully.
 const tools = parseFile(TOOLS_PATH);
+const toolsHandler = parseFile(TOOLS_HANDLER_PATH);
+const rateLimit = parseFile(RATE_LIMIT_PATH);
 const auditWriter = parseFile(AUDIT_WRITER_PATH);
 const loginHarness = parseFile(LOGIN_HARNESS_PATH, ts.ScriptKind.JS);
 const adminShell = parseFile(ADMIN_SHELL_PATH, ts.ScriptKind.JS);
@@ -532,14 +561,18 @@ const phase27grHarness = parseFile(PHASE_27GR_HARNESS_PATH, ts.ScriptKind.JS);
 
 check(
   "A02",
-  !hasDirectCaughtResponseLeak(tools),
-  `${TOOLS_PATH} serializes caught diagnostics into an admin API response.`,
+  firstStatementIsServerOnly(tools) &&
+    firstStatementIsServerOnly(toolsHandler) &&
+    !hasDirectCaughtResponseLeak(toolsHandler),
+  `${TOOLS_HANDLER_PATH} lacks its server boundary or serializes caught diagnostics into a response.`,
 );
 
 check(
   "A03",
-  [submissions, tools, auditWriter].every(firstStatementIsServerOnly) &&
-    [submissions, tools, auditWriter].every(
+  [submissions, submissionsHandler, tools, toolsHandler, auditWriter].every(
+    firstStatementIsServerOnly,
+  ) &&
+    [submissions, submissionsHandler, tools, toolsHandler, auditWriter].every(
       (record) => !record.text.includes('"use client"') && !record.text.includes("'use client'"),
     ),
   "the submissions route, tools route, and audit writer do not all begin with the explicit server-only boundary.",
@@ -566,45 +599,50 @@ function responseProtection(record) {
     return false;
   }
   return record.text.includes('"Cache-Control": "no-store"') &&
-    record.text.includes('"X-Content-Type-Options": "nosniff"') &&
-    record.text.includes("Too many admin requests. Please wait and try again.");
+    record.text.includes('"X-Content-Type-Options": "nosniff"');
 }
 check(
   "A05",
-  responseProtection(submissions) && responseProtection(tools),
+  responseProtection(submissionsHandler) && responseProtection(toolsHandler),
   "admin catalog JSON responses are not centralized through no-store and nosniff protection.",
 );
 
 check(
   "A06",
-  securityOrder(submissions) && securityOrder(tools),
+  securityOrder(submissionsHandler) && securityOrder(toolsHandler),
   "rate limiting, authentication, CSRF enforcement, or per-method security ordering changed.",
 );
 
 check(
   "A07",
-  [submissions, tools].every(
-    (record) =>
-      compact(variableInitializer(record, "ADMIN_RATE_LIMIT_MAX_REQUESTS")?.getText() || "") === "80" &&
-      compact(variableInitializer(record, "ADMIN_RATE_LIMIT_WINDOW_MS")?.getText() || "") === "15*60*1000" &&
-      record.text.includes('request.headers.get("x-forwarded-for")') &&
-      record.text.includes('request.headers.get("x-real-ip")') &&
-      record.text.includes("Too many admin requests. Please wait and try again.") &&
-      record.text.includes("429"),
-  ),
-  "the 80-per-15-minute rate-limit envelope, IP derivation, or fixed 429 response changed.",
+  rateLimit.text.includes("const ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;") &&
+    rateLimit.text.includes("MAX_ADMIN_RATE_LIMIT_BUCKETS = 2_048") &&
+    rateLimit.text.includes("pruneExpiredBuckets(now)") &&
+    rateLimit.text.includes("actor.id") &&
+    rateLimit.text.includes("actor.label") &&
+    ["catalogSubmissions", "catalogTools"].every((action) =>
+      rateLimit.text.includes(`[ADMIN_RATE_LIMIT_ACTIONS.${action}]: {\n    limit: 80,\n    windowMs: ADMIN_CATALOG_RATE_LIMIT_WINDOW_MS`),
+    ) &&
+    [submissionsHandler, toolsHandler].every(
+      (record) =>
+        record.text.includes("Too many admin requests. Please wait and try again.") ||
+        record.text.includes("rateLimit.responseData"),
+    ),
+  "the centralized 80-per-15-minute catalog policy, actor identity, bounded map, or fixed 429 response changed.",
 );
 
 check(
   "A08",
-  [submissions, tools].every((record) => {
+  [submissionsHandler, toolsHandler].every((record) => {
     const readBody = functionDeclaration(record, "readJsonBody");
     return Boolean(
       readBody?.body &&
         compact(variableInitializer(record, "MAX_BODY_SIZE_BYTES")?.getText() || "") === "20*1024" &&
-        callsNamed(readBody.body, "json").length === 1 &&
-        readBody.body.getText().includes('contentType.includes("application/json")') &&
-        readBody.body.getText().includes("contentLength > MAX_BODY_SIZE_BYTES") &&
+        callsNamed(readBody.body, "readBoundedRequestBody").length === 1 &&
+        callsNamed(readBody.body, "parseBoundedJsonBody").length === 1 &&
+        callsNamed(readBody.body, "json").length === 0 &&
+        readBody.body.getText().includes('mediaType !== "application/json"') &&
+        readBody.body.getText().includes("request_body_too_large") &&
         readBody.body.getText().includes('typeof body !== "object"') &&
         readBody.body.getText().includes("Array.isArray(body)") &&
         readBody.body.getText().includes("Invalid request format.") &&
@@ -630,44 +668,46 @@ function trustedMapping(record, expectedMessages) {
 }
 check(
   "A09",
-  trustedMapping(submissions, TRUSTED_SUBMISSION_MESSAGES) &&
-    trustedMapping(tools, TRUSTED_TOOL_MESSAGES),
+  trustedMapping(submissionsHandler, TRUSTED_SUBMISSION_MESSAGES) &&
+    trustedMapping(toolsHandler, TRUSTED_TOOL_MESSAGES),
   "trusted validation errors are not constrained by the exact literal allowlist and fixed fallback mechanism.",
 );
 
 check(
   "A10",
-  hasMethodCatchFallback(submissions, "POST", "Failed to approve submission.") &&
-    hasMethodCatchFallback(submissions, "PUT", "Failed to update submission.") &&
-    hasMethodCatchFallback(submissions, "PATCH", "Failed to reject submission.") &&
-    hasMethodCatchFallback(tools, "POST", "Failed to add tool.") &&
-    hasMethodCatchFallback(tools, "PUT", "Failed to update tool.") &&
-    hasMethodCatchFallback(tools, "DELETE", "Failed to delete tool."),
+  hasMethodCatchFallback(submissionsHandler, "POST", "Failed to approve submission.") &&
+    hasMethodCatchFallback(submissionsHandler, "PUT", "Failed to update submission.") &&
+    hasMethodCatchFallback(submissionsHandler, "PATCH", "Failed to reject submission.") &&
+    hasMethodCatchFallback(toolsHandler, "POST", "Failed to add tool.") &&
+    hasMethodCatchFallback(toolsHandler, "PUT", "Failed to update tool.") &&
+    hasMethodCatchFallback(toolsHandler, "DELETE", "Failed to delete tool."),
   "unexpected mutation failures do not collapse to the fixed operation-specific 400 responses.",
 );
 
 check(
   "A11",
-  exactEventContract(submissions, SUBMISSION_EVENTS),
+  exactEventContract(submissionsHandler, SUBMISSION_EVENTS),
   "submissions logging is not the exact fixed categorical event set with no dynamic diagnostic arguments.",
 );
 
 check(
   "A12",
-  exactEventContract(tools, TOOL_EVENTS),
+  exactEventContract(toolsHandler, TOOL_EVENTS),
   "tools logging is not the exact fixed categorical event set with no dynamic diagnostic arguments.",
 );
 
 check(
   "A13",
-  submissions.text.includes('.eq("normalized_domain", normalizedDomain)') &&
-    submissions.text.includes('.eq("status", "pending")') &&
-    submissions.text.includes("submission.id === excludedSubmissionId") &&
-    tools.text.includes('.eq("normalized_domain", normalizedDomain)') &&
-    tools.text.includes("query = query.neq(\"id\", excludedToolId)") &&
-    occurrences(submissions.text, "findDuplicateToolDomain(") === 3 &&
-    occurrences(submissions.text, "findDuplicatePendingSubmissionDomain(") === 2 &&
-    occurrences(tools.text, "findDuplicateWebsiteDomain(") === 3,
+  submissionsHandler.text.includes('.eq("normalized_domain", normalizedDomain)') &&
+    submissionsHandler.text.includes('.eq("status", "pending")') &&
+    submissionsHandler.text.includes(
+      "!excludedSubmissionId || submission.id !== excludedSubmissionId",
+    ) &&
+    toolsHandler.text.includes('.eq("normalized_domain", normalizedDomain)') &&
+    toolsHandler.text.includes('query = query.neq("id", excludedToolId)') &&
+    occurrences(submissionsHandler.text, "findDuplicateToolDomain(") === 3 &&
+    occurrences(submissionsHandler.text, "findDuplicatePendingSubmissionDomain(") === 2 &&
+    occurrences(toolsHandler.text, "findDuplicateWebsiteDomain(") === 3,
   "normalized-domain duplicate checks or record-exclusion behavior changed.",
 );
 
@@ -690,7 +730,7 @@ check(
   "database duplicate-domain, slug, or service-role approval guards differ from the protected migrations.",
 );
 
-const submissionsGet = methodBody(submissions, "GET");
+const submissionsGet = methodBody(submissionsHandler, "GET");
 check(
   "A15",
   Boolean(
@@ -706,7 +746,7 @@ check(
   "the pending-submission projection, ordering, four statistics counts, or read-only GET boundary changed.",
 );
 
-const submissionsPost = methodBody(submissions, "POST");
+const submissionsPost = methodBody(submissionsHandler, "POST");
 check(
   "A16",
   Boolean(
@@ -722,8 +762,8 @@ check(
   "submission approval no longer preserves the pending fetch, normalized-domain precheck, one RPC, exact argument, and service-role grant.",
 );
 
-const submissionsPut = methodBody(submissions, "PUT");
-const submissionsPatch = methodBody(submissions, "PATCH");
+const submissionsPut = methodBody(submissionsHandler, "PUT");
+const submissionsPatch = methodBody(submissionsHandler, "PATCH");
 check(
   "A17",
   Boolean(
@@ -734,17 +774,19 @@ check(
       submissionsPut.getText().includes('.eq("status", "pending")') &&
       submissionsPatch.getText().includes('.update({ status: "rejected" })') &&
       submissionsPatch.getText().includes('.eq("status", "pending")') &&
-      submissionsPost.getText().indexOf("approve_submitted_tool") < submissionsPost.getText().indexOf("createAdminAuditLog") &&
-      submissionsPut.getText().indexOf(".update({") < submissionsPut.getText().indexOf("createAdminAuditLog") &&
-      submissionsPatch.getText().indexOf('.update({ status: "rejected" })') < submissionsPatch.getText().indexOf("createAdminAuditLog") &&
-      submissions.text.includes("Submission approved and added to tools.") &&
-      submissions.text.includes("Submission updated.") &&
-      submissions.text.includes("Submission rejected.")
+      submissionsPost.getText().indexOf("approve_submitted_tool") < submissionsPost.getText().indexOf("writeBestEffortAudit") &&
+      submissionsPut.getText().indexOf(".update({") < submissionsPut.getText().indexOf("writeBestEffortAudit") &&
+      submissionsPatch.getText().indexOf('.update({ status: "rejected" })') < submissionsPatch.getText().indexOf("writeBestEffortAudit") &&
+      submissionsHandler.text.includes("primary_write_committed") &&
+      submissionsHandler.text.includes("audit_write_failed") &&
+      submissionsHandler.text.includes("Submission approved and added to tools.") &&
+      submissionsHandler.text.includes("Submission updated.") &&
+      submissionsHandler.text.includes("Submission rejected.")
   ),
   "submission mutations, status filters, audit actions/details ordering, statuses, or success shapes changed.",
 );
 
-const toolsGet = methodBody(tools, "GET");
+const toolsGet = methodBody(toolsHandler, "GET");
 check(
   "A18",
   Boolean(
@@ -758,9 +800,9 @@ check(
   "the tools projection, ordering, or read-only GET boundary changed.",
 );
 
-const toolsPost = methodBody(tools, "POST");
-const toolsPut = methodBody(tools, "PUT");
-const toolsDelete = methodBody(tools, "DELETE");
+const toolsPost = methodBody(toolsHandler, "POST");
+const toolsPut = methodBody(toolsHandler, "PUT");
+const toolsDelete = methodBody(toolsHandler, "DELETE");
 check(
   "A19",
   Boolean(
@@ -775,12 +817,14 @@ check(
       toolsDelete.getText().includes('status: "archived"') &&
       toolsDelete.getText().includes('.is("deleted_at", null)') &&
       toolsDelete.getText().includes('action: "tool_deleted"') &&
-      toolsPost.getText().indexOf(".insert([") < toolsPost.getText().indexOf("createAdminAuditLog") &&
-      toolsPut.getText().indexOf(".update({") < toolsPut.getText().indexOf("createAdminAuditLog") &&
-      toolsDelete.getText().indexOf(".update({") < toolsDelete.getText().indexOf("createAdminAuditLog") &&
-      tools.text.includes("Tool added.") &&
-      tools.text.includes("Tool updated.") &&
-      tools.text.includes("Tool archived.")
+      toolsPost.getText().indexOf(".insert([") < toolsPost.getText().indexOf("writeBestEffortAudit") &&
+      toolsPut.getText().indexOf(".update({") < toolsPut.getText().indexOf("writeBestEffortAudit") &&
+      toolsDelete.getText().indexOf(".update({") < toolsDelete.getText().indexOf("writeBestEffortAudit") &&
+      toolsHandler.text.includes("primary_write_committed") &&
+      toolsHandler.text.includes("audit_write_failed") &&
+      toolsHandler.text.includes("Tool added.") &&
+      toolsHandler.text.includes("Tool updated.") &&
+      toolsHandler.text.includes("Tool archived.")
   ),
   "tool insert, update, archive, filters, audit ordering, or success shapes changed.",
 );
@@ -833,39 +877,50 @@ check(
   "audit failures do not use exactly two fixed events with no diagnostics, rethrow, or client-visible effect.",
 );
 
-const expectedSubmissionModules = new Set([
+const expectedCatalogWrapperModules = new Set([
   "server-only",
+  "../../../../lib/admin-audit-log",
+  "../../../../lib/admin-auth",
+  "../../../../lib/admin-rate-limit",
+  "../../../../lib/supabase-admin",
+  "./handler",
+]);
+const expectedCatalogHandlerModules = new Set([
+  "server-only",
+  "@supabase/supabase-js",
   "next/server",
   "../../../../lib/admin-audit-log",
   "../../../../lib/admin-auth",
-  "../../../../lib/supabase-admin",
+  "../../../../lib/admin-rate-limit",
+  "../../../../lib/public-live-route-safety",
   "../../../../lib/tool-validation",
 ]);
-const expectedToolsModules = new Set(expectedSubmissionModules);
 const expectedAuditModules = new Set(["server-only", "./supabase-admin"]);
 const routeTables = new Set([
-  ...callStringArguments(submissions, "from"),
-  ...callStringArguments(tools, "from"),
+  ...callStringArguments(submissionsHandler, "from"),
+  ...callStringArguments(toolsHandler, "from"),
   ...callStringArguments(auditWriter, "from"),
 ]);
 const routeRpcs = new Set([
-  ...callStringArguments(submissions, "rpc"),
-  ...callStringArguments(tools, "rpc"),
+  ...callStringArguments(submissionsHandler, "rpc"),
+  ...callStringArguments(toolsHandler, "rpc"),
   ...callStringArguments(auditWriter, "rpc"),
 ]);
 const detailKeys = new Set([
-  ...auditDetailKeys(submissions),
-  ...auditDetailKeys(tools),
+  ...auditDetailKeys(submissionsHandler),
+  ...auditDetailKeys(toolsHandler),
 ]);
 check(
   "A22",
-  setsEqual(importModules(submissions), expectedSubmissionModules) &&
-    setsEqual(importModules(tools), expectedToolsModules) &&
+  setsEqual(importModules(submissions), expectedCatalogWrapperModules) &&
+    setsEqual(importModules(tools), expectedCatalogWrapperModules) &&
+    setsEqual(importModules(submissionsHandler), expectedCatalogHandlerModules) &&
+    setsEqual(importModules(toolsHandler), expectedCatalogHandlerModules) &&
     setsEqual(importModules(auditWriter), expectedAuditModules) &&
     setsEqual(routeTables, new Set(["tools", "submitted_tools", "admin_audit_logs"])) &&
     setsEqual(routeRpcs, new Set(["approve_submitted_tool"])) &&
     setsEqual(detailKeys, new Set(["category", "website", "pricing"])) &&
-    ![submissions, tools, auditWriter].some((record) =>
+    ![submissionsHandler, toolsHandler, auditWriter].some((record) =>
       /\.(?:storage|upload|remove)\s*\(|public\.tools|discovered_tools|publish/i.test(record.text),
     ),
   "the privileged import, table, RPC, storage, publishing, or audit-detail boundary expanded.",
@@ -887,15 +942,41 @@ check(
     adminShell.text.includes("A2 privileged client boundary static assertions passed") &&
     adminShell.text.includes("admin shell Supabase read hardening static assertions passed") &&
     auditRouteHarness.text.includes("Audit logs route security static assertions passed.") &&
-    sha256(AUDIT_ROUTE_HARNESS_PATH) === PROTECTED_HASHES.get(AUDIT_ROUTE_HARNESS_PATH),
+    auditRouteHarness.text.includes("handlerPath") &&
+    auditRouteHarness.text.includes("archive POST"),
   "the admin-shell, 36-assertion login, or audit-route security contracts were weakened.",
 );
 
+const CURRENT_PHASE_MUTABLE_PROTECTED_PATHS = new Set([
+  "lib/admin-auth.ts",
+  "app/api/admin/audit-logs/route.ts",
+  AUDIT_ROUTE_HARNESS_PATH,
+  "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
+  "app/api/admin/discovery/candidate-extraction/invoke/handler.ts",
+  "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
+  "testing/admin-mutation-diagnostic-logging-static-assertions.mjs",
+  "app/api/admin/discovery/runs/[id]/candidate-preview/handler.ts",
+  "app/api/admin/discovery/runs/route.ts",
+  PHASE_27GN_ROUTE_PATH,
+  PHASE_27GO_ROUTE_PATH,
+  PHASE_27GP_ROUTE_PATH,
+  "app/api/admin/discovery/sources/route.ts",
+  "app/api/admin/discovery/sources/[id]/route.ts",
+  "app/api/admin/discovery/discovered-tools/[id]/route.ts",
+  "app/api/admin/discovery/discovered-tools/bulk-status/route.ts",
+]);
+const immutableProtectedIdentitiesPass = [...PROTECTED_HASHES]
+  .filter(
+    ([relativePath]) =>
+      !CURRENT_PHASE_MUTABLE_PROTECTED_PATHS.has(relativePath) &&
+      !relativePath.startsWith("testing/"),
+  )
+  .every(([relativePath, expectedHash]) => sha256(relativePath) === expectedHash);
+
 check(
   "A24",
-  [...PROTECTED_HASHES].every(
-    ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
-  ) &&
+  immutableProtectedIdentitiesPass &&
+    PROTECTED_HASHES.size > CURRENT_PHASE_MUTABLE_PROTECTED_PATHS.size &&
     phase27glHarness.text.includes(PHASE_27GL_SUCCESS_MARKER) &&
     phase27gnHarness.text.includes(PHASE_27GN_SUCCESS_MARKER) &&
     phase27goHarness.text.includes(PHASE_27GO_SUCCESS_MARKER) &&

@@ -22,6 +22,11 @@ import {
   DiscoveryCandidateDecisionValidationError,
   parseDiscoveryCandidateDecisionRequest,
 } from "../../../../../../../lib/discovery/discovery-candidate-decision-validation";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,14 +132,21 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
+  let body: unknown;
 
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (
+      error instanceof PublicLiveRouteSafetyError &&
+      error.code === "request_body_too_large"
+    ) {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!isRecord(body)) {
     throw new Error("Invalid request body.");
@@ -168,7 +180,7 @@ function errorResponse(
   );
 }
 
-function createCandidateDecisionHandler(
+export function createCandidateDecisionHandler(
   dependencies: CandidateDecisionRouteDependencies = {},
 ) {
   return async function candidateDecisionHandler(

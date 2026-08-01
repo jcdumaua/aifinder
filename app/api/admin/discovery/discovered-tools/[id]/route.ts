@@ -8,6 +8,11 @@ import {
   getAdminRateLimitResponseData,
 } from "../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +39,58 @@ function isValidUuid(value: string) {
   );
 }
 
+function pickSafeFields(value: unknown, fields: readonly string[]) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(
+    fields.filter((field) => Object.hasOwn(record, field)).map((field) => [field, record[field]]),
+  );
+}
+
+const SAFE_TOOL_FIELDS = [
+  "id", "name", "slug", "description", "website", "canonical_url", "category",
+  "pricing", "logo_url", "platforms", "discovery_score", "status", "source_id",
+  "run_id", "approved_tool_id", "duplicate_of_discovered_tool_id",
+  "duplicate_of_tool_id", "rejected_reason", "reviewed_at", "created_at", "updated_at",
+] as const;
+const SAFE_EVIDENCE_FIELDS = [
+  "id", "discovered_tool_id", "source_url", "final_url", "page_title",
+  "meta_description", "logo_url", "pricing_text", "confidence_score", "fetched_at",
+  "created_at", "updated_at",
+] as const;
+const SAFE_DUPLICATE_FIELDS = [
+  "id", "discovered_tool_id", "candidate_type", "candidate_tool_id",
+  "candidate_submission_id", "candidate_discovered_tool_id", "match_type", "match_score",
+  "is_blocking", "reason", "created_at",
+] as const;
+const SAFE_AUDIT_FIELDS = ["id", "action", "actor_label", "message", "created_at"] as const;
+const SAFE_SOURCE_FIELDS = [
+  "id", "name", "slug", "description", "url", "source_type", "is_active",
+  "last_run_at", "created_at", "updated_at",
+] as const;
+const SAFE_RUN_FIELDS = [
+  "id", "source_id", "status", "started_at", "finished_at", "created_at", "updated_at",
+] as const;
+
+function toSafeDiscoveredToolDetailResponse(input: {
+  tool: unknown;
+  source: unknown;
+  run: unknown;
+  evidence: unknown[];
+  duplicateCandidates: unknown[];
+  auditEvents: unknown[];
+}) {
+  return {
+    tool: pickSafeFields(input.tool, SAFE_TOOL_FIELDS),
+    source: pickSafeFields(input.source, SAFE_SOURCE_FIELDS),
+    run: pickSafeFields(input.run, SAFE_RUN_FIELDS),
+    evidence: input.evidence.map((row) => pickSafeFields(row, SAFE_EVIDENCE_FIELDS)),
+    duplicateCandidates: input.duplicateCandidates.map((row) =>
+      pickSafeFields(row, SAFE_DUPLICATE_FIELDS)),
+    auditEvents: input.auditEvents.map((row) => pickSafeFields(row, SAFE_AUDIT_FIELDS)),
+  };
+}
+
 export async function GET(request: Request, context: RouteContext) {
   const adminSession = verifyAdminSession(request);
 
@@ -51,7 +108,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const { data: tool, error: toolError } = await supabaseAdmin
     .from("discovered_tools")
-    .select("*")
+    .select(SAFE_TOOL_FIELDS.join(", "))
     .eq("id", id)
     .maybeSingle();
 
@@ -61,13 +118,15 @@ export async function GET(request: Request, context: RouteContext) {
     return jsonResponse({ error: "Failed to fetch discovered tool." }, 500);
   }
 
-  if (!tool) {
+  const safeTool = pickSafeFields(tool, SAFE_TOOL_FIELDS);
+
+  if (!safeTool) {
     return jsonResponse({ error: "Discovered tool not found." }, 404);
   }
 
   const { data: evidence, error: evidenceError } = await supabaseAdmin
     .from("discovery_evidence")
-    .select("*")
+    .select(SAFE_EVIDENCE_FIELDS.join(", "))
     .eq("discovered_tool_id", id)
     .order("created_at", { ascending: false });
 
@@ -79,7 +138,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const { data: duplicateCandidates, error: duplicateError } = await supabaseAdmin
     .from("discovery_duplicate_candidates")
-    .select("*")
+    .select(SAFE_DUPLICATE_FIELDS.join(", "))
     .eq("discovered_tool_id", id)
     .order("created_at", { ascending: false });
 
@@ -91,7 +150,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const { data: auditEvents, error: auditError } = await supabaseAdmin
       .from("discovery_audit_events")
-      .select("id, action, actor_id, actor_label, message, metadata, created_at")
+      .select(SAFE_AUDIT_FIELDS.join(", "))
       .eq("discovered_tool_id", id)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -103,11 +162,11 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
   const { data: source, error: sourceError } =
-    typeof tool.source_id === "string"
+    typeof safeTool.source_id === "string"
       ? await supabaseAdmin
           .from("discovery_sources")
-          .select("id, name, slug, source_type, is_active, last_run_at, url")
-          .eq("id", tool.source_id)
+          .select(SAFE_SOURCE_FIELDS.join(", "))
+          .eq("id", safeTool.source_id)
           .maybeSingle()
       : { data: null, error: null };
 
@@ -118,11 +177,11 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const { data: run, error: runError } =
-    typeof tool.run_id === "string"
+    typeof safeTool.run_id === "string"
       ? await supabaseAdmin
           .from("discovery_runs")
-          .select("id, source_id, status, stats, error_log, started_at, finished_at, created_at")
-          .eq("id", tool.run_id)
+          .select(SAFE_RUN_FIELDS.join(", "))
+          .eq("id", safeTool.run_id)
           .maybeSingle()
       : { data: null, error: null };
 
@@ -133,14 +192,14 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   return jsonResponse({
-    data: {
-      tool,
+    data: toSafeDiscoveredToolDetailResponse({
+      tool: safeTool,
       source,
       run,
       evidence: evidence || [],
       duplicateCandidates: duplicateCandidates || [],
-        auditEvents: auditEvents || [],
-    },
+      auditEvents: auditEvents || [],
+    }),
   });
 }
 
@@ -161,6 +220,15 @@ const DISCOVERY_AUDIT_ACTION_BY_STATUS: Record<string, string> = {
 };
 
 const MAX_REASON_LENGTH = 500;
+const MAX_BODY_SIZE_BYTES = 20 * 1024;
+
+type DiscoveredToolStatusDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+  now?: () => string;
+};
 
 async function readJsonBody(request: Request) {
   const contentType = request.headers.get("content-type") || "";
@@ -169,14 +237,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > 20 * 1024) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -203,8 +274,12 @@ function getOptionalReason(value: unknown) {
   return reason;
 }
 
-export async function PATCH(request: Request, context: RouteContext) {
-  const adminSession = verifyAdminSession(request);
+export function createDiscoveredToolStatusHandler(
+  dependencies: DiscoveredToolStatusDependencies = {},
+) {
+ return async function discoveredToolStatusHandler(request: Request, context: RouteContext) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovered_tool_status_update_unauthorized");
@@ -212,14 +287,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolStatus,
     actor: adminSession.actor,
@@ -263,9 +338,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const { data: existingTool, error: existingToolError } = await supabaseAdmin
+  const { data: existingTool, error: existingToolError } = await client
     .from("discovered_tools")
-    .select("id, status")
+    .select("id, status, rejected_reason, updated_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -290,29 +365,32 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   }
 
+  const writtenUpdatedAt = (dependencies.now ?? (() => new Date().toISOString()))();
   const updatePayload: Record<string, string> = {
     status,
-    updated_at: new Date().toISOString(),
+    updated_at: writtenUpdatedAt,
   };
 
   if (status === "rejected" && reason) {
     updatePayload.rejected_reason = reason;
   }
 
-  const { data: updatedTool, error: updateError } = await supabaseAdmin
+  const { data: updatedTool, error: updateError } = await client
     .from("discovered_tools")
     .update(updatePayload)
     .eq("id", id)
+    .eq("status", existingTool.status)
+    .eq("updated_at", existingTool.updated_at)
     .select("id, status, rejected_reason, updated_at")
-    .single();
+    .maybeSingle();
 
-  if (updateError) {
+  if (updateError || !updatedTool) {
     console.error("discovered_tool_status_update_failed");
 
     return jsonResponse({ error: "Failed to update discovered tool." }, 500);
   }
 
-  const { error: auditError } = await supabaseAdmin
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert({
       discovered_tool_id: id,
@@ -330,14 +408,29 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (auditError) {
     console.error("discovered_tool_status_update_audit_failed");
 
-    return jsonResponse(
-      { error: "Status updated, but audit logging failed." },
-      500
-    );
+    const { error: compensationError } = await client
+      .from("discovered_tools")
+      .update({
+        status: existingTool.status,
+        rejected_reason: existingTool.rejected_reason,
+        updated_at: existingTool.updated_at,
+      })
+      .eq("id", id)
+      .eq("status", status)
+      .eq("updated_at", writtenUpdatedAt);
+
+    if (compensationError) {
+      console.error("discovered_tool_status_update_compensation_failed");
+    }
+
+    return jsonResponse({ error: "Failed to update discovered tool." }, 500);
   }
 
   return jsonResponse({
     success: true,
     data: updatedTool,
   });
+ };
 }
+
+export const PATCH = createDiscoveredToolStatusHandler();

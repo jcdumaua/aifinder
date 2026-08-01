@@ -95,6 +95,33 @@ test("rejects malformed tokens", () => {
   }
 });
 
+test("rejects oversized cursor envelopes and decoded string fields", () => {
+  const oversizedToken = "a".repeat(2_049);
+  const oversizedEncodedPayload = `${"a".repeat(1_537)}.${"b".repeat(43)}`;
+  const oversizedSignature = `a.${"b".repeat(44)}`;
+  const oversizedLastValue = encodeCandidateStagingQueueCursor({
+    ...basePayload,
+    lastValue: "x".repeat(129),
+  });
+
+  for (const token of [
+    oversizedToken,
+    oversizedEncodedPayload,
+    oversizedSignature,
+    oversizedLastValue,
+  ]) {
+    assert.deepEqual(decodeCandidateStagingQueueCursor(token), {
+      ok: false,
+      errorCode: "invalid_cursor",
+    });
+  }
+
+  assert.equal(source.includes("MAX_CURSOR_TOKEN_LENGTH"), true);
+  assert.equal(source.includes("MAX_CURSOR_ENCODED_PAYLOAD_LENGTH"), true);
+  assert.equal(source.includes("MAX_CURSOR_SIGNATURE_LENGTH"), true);
+  assert.equal(source.includes("MAX_CURSOR_STRING_FIELD_LENGTH"), true);
+});
+
 test("rejects unsupported cursor versions", () => {
   const token = encodeCandidateStagingQueueCursor({
     ...basePayload,

@@ -1,50 +1,28 @@
-import { NextResponse } from "next/server";
+import "server-only";
+
 import { createAdminAuditLog } from "../../../../lib/admin-audit-log";
 import {
   ADMIN_CSRF_COOKIE_NAME,
   ADMIN_SESSION_COOKIE_NAME,
+  verifyAdminCsrfRequest,
   verifyAdminSession,
 } from "../../../../lib/admin-auth";
+import {
+  createLogoutHandler,
+  type AdminLogoutHandlerDependencies,
+} from "./handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonResponse(data: object, status = 200) {
-  return NextResponse.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-}
+const secureCookies = process.env.NODE_ENV === "production";
 
-export async function POST(request: Request) {
-  const adminSession = verifyAdminSession(request);
-
-  if (!adminSession.isAdmin) {
-    return jsonResponse(
-      {
-        success: false,
-        message: "Unauthorized.",
-      },
-      401
-    );
-  }
-
-  await createAdminAuditLog({
-    request,
-    action: "admin_logout",
-  });
-
-  const response = jsonResponse({
-    success: true,
-    message: "Admin logged out.",
-  });
-
+const clearAdminCookies: AdminLogoutHandlerDependencies["clearAdminCookies"] = (
+  response,
+) => {
   response.cookies.set(ADMIN_SESSION_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies,
     sameSite: "strict",
     maxAge: 0,
     path: "/",
@@ -52,11 +30,18 @@ export async function POST(request: Request) {
 
   response.cookies.set(ADMIN_CSRF_COOKIE_NAME, "", {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies,
     sameSite: "strict",
     maxAge: 0,
     path: "/",
   });
+};
 
-  return response;
-}
+export const POST = createLogoutHandler({
+  verifySession: verifyAdminSession,
+  verifyCsrf: verifyAdminCsrfRequest,
+  async writeAudit(request) {
+    await createAdminAuditLog({ request, action: "admin_logout" });
+  },
+  clearAdminCookies,
+});

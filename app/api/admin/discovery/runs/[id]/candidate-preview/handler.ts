@@ -1,14 +1,17 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { getReadOnlyAdminSession } from "../../../../../../../lib/admin-auth-read-only";
+import {
+  verifyAdminSession,
+  type VerifyAdminSessionResult,
+} from "../../../../../../../lib/admin-auth";
 import {
   getCandidateExtractionPreviewForRun,
   type CandidateExtractionPreviewInput,
   type CandidateExtractionPreviewResult,
 } from "../../../../../../../lib/discovery/discovery-candidate-preview-provider";
 
-type AdminSession = Awaited<ReturnType<typeof getReadOnlyAdminSession>>;
+type AdminSession = VerifyAdminSessionResult;
 type AdminSessionActor = NonNullable<AdminSession["actor"]>;
 
 export type CandidatePreviewRouteContext = {
@@ -18,7 +21,9 @@ export type CandidatePreviewRouteContext = {
 };
 
 export type CandidatePreviewRouteDependencies = {
-  verifySession?: (request: Request) => AdminSession;
+  verifySession?: (
+    request: Request,
+  ) => AdminSession | Promise<AdminSession>;
   getCandidatePreview?: (
     input: CandidateExtractionPreviewInput,
   ) =>
@@ -72,13 +77,11 @@ export function createCandidatePreviewRouteHandler(
     request: Request,
     context: CandidatePreviewRouteContext,
   ) {
-    const verifySession = dependencies.verifySession ?? getReadOnlyAdminSession;
+    const verifySession = dependencies.verifySession ?? verifyAdminSession;
     const adminSession = await verifySession(request);
 
     if (!adminSession.isAdmin || !adminSession.actor) {
-      console.warn("Unauthorized candidate preview request.", {
-        errors: adminSession.errors,
-      });
+      console.warn("candidate_preview_unauthorized");
 
       return jsonResponse({ error: "Unauthorized" }, 401);
     }

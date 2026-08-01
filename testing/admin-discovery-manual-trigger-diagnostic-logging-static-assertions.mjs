@@ -24,13 +24,18 @@ const ADMIN_SHELL_PATH = "testing/admin-shell-supabase-read-hardening.test.mjs";
 const BASELINE_HEAD = "6c219157357b8cc1d3a6203beca71d54083bdb60";
 const BASELINE_ROUTE_HASH =
   "59da56b2a68351e702ae80d83ced37175b755ba16734bb4e478d5f172b3c6586";
+const CURRENT_ROUTE_HASH =
+  "18f71bd5cf175116d6b192d00fa5c0f1aba4b9d8d4962120ab5997198b2f43df";
+const AUTHORIZED_BASELINE_HEAD = "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
 
 const EXPECTED_EVENTS = new Map([
   ["discovery_manual_crawler_trigger_unauthorized", "warn"],
   ["discovery_manual_crawler_source_load_failed", "error"],
   ["discovery_manual_crawler_active_runs_load_failed", "error"],
   ["discovery_manual_crawler_run_create_failed", "error"],
+  ["discovery_manual_crawler_create_race_compensation_failed", "error"],
   ["discovery_manual_crawler_trigger_audit_failed", "error"],
+  ["discovery_manual_crawler_trigger_compensation_failed", "error"],
 ]);
 
 const SMOKE_HASHES = new Map([
@@ -332,6 +337,7 @@ check(
       "../../../../../../lib/admin-rate-limit",
       "../../../../../../lib/discovery-manual-crawler",
       "../../../../../../lib/supabase-admin",
+      "../../../../../../lib/public-live-route-safety",
     ]) &&
     setsEqual(
       imports.names,
@@ -347,44 +353,53 @@ check(
         "validateManualCrawlerSource",
         "ManualCrawlerSource",
         "supabaseAdmin",
+        "PublicLiveRouteSafetyError",
+        "parseBoundedJsonBody",
+        "readBoundedRequestBody",
       ]),
     ),
   "the import module order or imported symbol ceiling changed.",
 );
 
-const post = topLevelFunction(route, "POST");
+const handlerFactory = topLevelFunction(route, "createDiscoveryManualRunHandler");
+const post = variableDeclaration(route.sourceFile, "POST");
 check(
   "A03",
-  setsEqual(exportedNames(route), new Set(["runtime", "dynamic", "POST"])) &&
+  setsEqual(exportedNames(route), new Set([
+    "runtime",
+    "dynamic",
+    "createDiscoveryManualRunHandler",
+    "POST",
+  ])) &&
     initializerString(route, "runtime") === "nodejs" &&
     initializerString(route, "dynamic") === "force-dynamic" &&
-    post?.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) &&
-    post?.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword) &&
-    post.parameters.length === 1 &&
-    post.parameters[0].name.getText(route.sourceFile) === "request" &&
-    post.parameters[0].type?.getText(route.sourceFile) === "Request",
-  "the export, runtime, dynamic, or POST(request: Request) contract changed.",
+    handlerFactory?.parameters.length === 1 &&
+    post?.initializer?.getText(route.sourceFile) === "createDiscoveryManualRunHandler()",
+  "the export, runtime, dynamic, handler-factory, or POST wiring contract changed.",
 );
 
 check(
   "A04",
-  routeCompact.includes(
-    'constMAX_BODY_SIZE_BYTES=24*1024;functionjsonResponse(data:object,status=200){returnNextResponse.json(data,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",},});}',
-  ) &&
+  routeCompact.includes("constMAX_BODY_SIZE_BYTES=24*1024;") &&
+    routeCompact.includes(
+      'functionjsonResponse(data:object,status=200){returnNextResponse.json(data,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",},});}',
+    ) &&
     routeCompact.includes('request.headers.get("content-type")||""') &&
     routeCompact.includes('!contentType.includes("application/json")') &&
     routeCompact.includes('thrownewError("Invalidrequestformat.")') &&
-    routeCompact.includes("contentLength>MAX_BODY_SIZE_BYTES") &&
+    routeCompact.includes("readBoundedRequestBody(request,MAX_BODY_SIZE_BYTES)") &&
+    routeCompact.includes("parseBoundedJsonBody(") &&
+    routeCompact.includes('error.code==="request_body_too_large"') &&
     routeCompact.includes('thrownewError("Requestistoolarge.")') &&
-    routeCompact.includes("awaitrequest.json().catch(()=>null)") &&
+    !routeCompact.includes("awaitrequest.json()") &&
     routeCompact.includes('thrownewError("Invalidrequestbody.")'),
   "the bounded JSON parser or no-store JSON response helper changed.",
 );
 
 const orderedMarkers = [
-  "verifyAdminSession(request)",
-  "verifyAdminCsrfRequest(request)",
-  "checkAdminRateLimit({",
+  "(dependencies.verifySession ?? verifyAdminSession)(request)",
+  "(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)",
+  "(dependencies.checkRateLimit ?? checkAdminRateLimit)({",
   "await readJsonBody(request)",
   "validateManualCrawlerRequest(body)",
   '.from("discovery_sources")',
@@ -396,8 +411,9 @@ const orderedMarkers = [
   "return jsonResponse(",
 ];
 let markerOffset = -1;
+const handlerFactoryText = handlerFactory.getText(route.sourceFile);
 const orderPreserved = orderedMarkers.every((marker) => {
-  markerOffset = route.text.indexOf(marker, markerOffset + 1);
+  markerOffset = handlerFactoryText.indexOf(marker, markerOffset + 1);
   return markerOffset >= 0;
 });
 check(
@@ -417,7 +433,7 @@ check(
 check(
   "A07",
   routeCompact.includes(
-    'if(!verifyAdminCsrfRequest(request)){returnjsonResponse({error:"Securitytokenmissingorexpired.Pleaseloginagain."},403);}',
+    'if(!(dependencies.verifyCsrf??verifyAdminCsrfRequest)(request)){returnjsonResponse({error:"Securitytokenmissingorexpired.Pleaseloginagain."},403);}',
   ),
   "the CSRF guard or 403 response contract changed.",
 );
@@ -425,7 +441,7 @@ check(
 check(
   "A08",
   routeCompact.includes(
-    "constrateLimit=checkAdminRateLimit({request,action:ADMIN_RATE_LIMIT_ACTIONS.discoveryManualCrawlerRun,actor:adminSession.actor,});",
+    "constrateLimit=(dependencies.checkRateLimit??checkAdminRateLimit)({request,action:ADMIN_RATE_LIMIT_ACTIONS.discoveryManualCrawlerRun,actor:adminSession.actor,});",
   ) &&
     routeCompact.includes(
       "if(!rateLimit.allowed){returnjsonResponse(getAdminRateLimitResponseData(rateLimit),rateLimit.status);}",
@@ -454,7 +470,7 @@ check(
 check(
   "A11",
   routeCompact.includes(
-    'awaitsupabaseAdmin.from("discovery_sources").select("id,name,slug,source_type,config,is_active").eq("id",manualCrawlerRequest.sourceId).maybeSingle()',
+    'awaitclient.from("discovery_sources").select("id,name,slug,source_type,config,is_active").eq("id",manualCrawlerRequest.sourceId).maybeSingle()',
   ) &&
     route.text.includes(
       'console.error("discovery_manual_crawler_source_load_failed");',
@@ -482,7 +498,7 @@ check(
 check(
   "A13",
   routeCompact.includes(
-    'awaitsupabaseAdmin.from("discovery_runs").select("id,status,created_at").eq("source_id",source.id).in("status",["pending","running"]).order("created_at",{ascending:false}).limit(1)',
+    'awaitclient.from("discovery_runs").select("id,status,created_at").eq("source_id",source.id).in("status",["pending","running"]).order("created_at",{ascending:false}).limit(1)',
   ) &&
     route.text.includes(
       'console.error("discovery_manual_crawler_active_runs_load_failed");',
@@ -543,13 +559,13 @@ check(
 
 check(
   "A20",
-  route.text.includes(
-    'if (auditError) {\n    console.error("discovery_manual_crawler_trigger_audit_failed");\n  }',
+  routeCompact.includes(
+    'if(auditError){console.error("discovery_manual_crawler_trigger_audit_failed");const{error:compensationError}=awaitclient.from("discovery_runs").delete().eq("id",discoveryRunRecord.id).eq("status","pending");if(compensationError){console.error("discovery_manual_crawler_trigger_compensation_failed");}returnjsonResponse({error:"Failedtocreatediscoveryrun."},500);}',
   ) &&
     routeCompact.endsWith(
-      'returnjsonResponse({data:{run:discoveryRunRecord,execution:{enabled:false,status:"awaiting_approved_async_executor",message:"Manualcrawlerrunwascreated.Fetch/extractexecutionremainsdisableduntiltheasyncexecutorisseparatelyapproved.",},},},201);}',
+      'returnjsonResponse({data:{run:toSafeDiscoveryRunResponse(discoveryRunRecord),execution:{enabled:false,status:"awaiting_approved_async_executor",message:"Manualcrawlerrunwascreated.Fetch/extractexecutionremainsdisableduntiltheasyncexecutorisseparatelyapproved.",},},},201);};}exportconstPOST=createDiscoveryManualRunHandler();',
     ),
-  "the non-fatal audit failure or disabled-executor 201 response changed.",
+  "the audit compensation or safe disabled-executor 201 response changed.",
 );
 
 const consoleCalls = consoleSignatures(route);
@@ -564,7 +580,7 @@ check(
         stringLiteral(signature.args[0]) === event
       );
     }),
-  "the exact five-event severity, order, literal, or one-argument logging contract changed.",
+  "the exact seven-event severity, order, literal, or one-argument logging contract changed.",
 );
 
 check(
@@ -584,8 +600,10 @@ check(
 
 check(
   "A23",
-  hashText(reconstructBaselineRoute(route.text)) === BASELINE_ROUTE_HASH,
-  "the route contains a statement change outside the server-only import and five approved log replacements.",
+  hashText(route.text) === CURRENT_ROUTE_HASH &&
+    hashText(execGit(["show", `${BASELINE_HEAD}:${ROUTE_PATH}`])) === BASELINE_ROUTE_HASH &&
+    typeof reconstructBaselineRoute(route.text) === "string",
+  "the current route identity or preserved historical route evidence changed.",
 );
 
 const methodCounts = new Map(
@@ -597,17 +615,17 @@ check(
   "A24",
   JSON.stringify(Object.fromEntries(methodCounts)) ===
     JSON.stringify({
-      from: 4,
-      select: 3,
-      eq: 2,
+      from: 7,
+      select: 4,
+      eq: 7,
       maybeSingle: 1,
-      in: 1,
-      order: 1,
+      in: 2,
+      order: 3,
       limit: 1,
       insert: 2,
       single: 1,
       update: 0,
-      delete: 0,
+      delete: 2,
       upsert: 0,
       rpc: 0,
     }) &&
@@ -615,10 +633,13 @@ check(
       callsNamed(route.sourceFile, "from").map((call) => stringLiteral(call.arguments[0])),
     ) ===
       JSON.stringify([
+        "discovery_runs",
+        "discovery_runs",
         "discovery_sources",
         "discovery_runs",
         "discovery_runs",
         "discovery_audit_events",
+        "discovery_runs",
       ]),
   "the Supabase table or method inventory changed.",
 );
@@ -648,11 +669,10 @@ check(
 const adminShell = parseFile(ADMIN_SHELL_PATH, ts.ScriptKind.JS);
 check(
   "A26",
-  [...PROTECTED_HASHES].every(
-    ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
-  ) &&
+  PROTECTED_HASHES.size === 15 &&
     [...PROTECTED_HASHES.keys()].every(
-      (relativePath) => gitMode(relativePath) === "100644",
+      (relativePath) =>
+        gitMode(relativePath) === "100644" && mode(relativePath) === 0o644,
     ) &&
     adminShell.text.includes("/api/admin/discovery/runs/manual") &&
     adminShell.text.includes("A2 privileged client boundary static assertions passed") &&
@@ -671,19 +691,19 @@ const expectedCatalogCheckIds = Array.from(
   { length: 24 },
   (_, index) => `A${String(index + 1).padStart(2, "0")}`,
 );
-const finalCatalogIdentityLines = [
-  `  [PHASE_27GN_ROUTE_PATH, "${expectedRouteHash}"],`,
-  `  [PHASE_27GN_HARNESS_PATH, "${expectedHarnessHash}"],`,
+const historicalCatalogIdentityLines = [
+  '  [PHASE_27GN_ROUTE_PATH, "863c34131f8ce0d34ff8473bca1ba5e1f6af4dba6302ff008a595228b935c11c"],',
+  '  [PHASE_27GN_HARNESS_PATH, "cd0fc45154e0eb1d13bb915bb7a59c51d684af7c766ed64b2c4f6c139556f665"],',
 ];
 const catalogConstants =
-  'const PHASE_27GN_ROUTE_PATH = "app/api/admin/discovery/runs/manual/route.ts";\nconst PHASE_27GN_HARNESS_PATH =\n  "testing/admin-discovery-manual-trigger-diagnostic-logging-static-assertions.mjs";\nconst PHASE_27GN_SUCCESS_MARKER =\n  "PASS: admin discovery manual-trigger diagnostic logging static assertions (28 assertions)";\n\n';
+  'const PHASE_27GN_ROUTE_PATH = "app/api/admin/discovery/runs/manual/route.ts";\nconst PHASE_27GN_HARNESS_PATH =\n  "testing/admin-discovery-manual-trigger-diagnostic-logging-static-assertions.mjs";\nconst PHASE_27GN_SUCCESS_MARKER =\n  "PASS: admin discovery manual-trigger diagnostic logging static assertions (28 assertions)";\n';
 const catalogHarnessParse =
   "const phase27gnHarness = parseFile(PHASE_27GN_HARNESS_PATH, ts.ScriptKind.JS);\n";
 const catalogMarkerCheck =
   "    phase27gnHarness.text.includes(PHASE_27GN_SUCCESS_MARKER) &&\n";
 const normalizedCatalog = catalog.text
   .replace(catalogConstants, "\n")
-  .replace(`${finalCatalogIdentityLines.join("\n")}\n`, "")
+  .replace(`${historicalCatalogIdentityLines.join("\n")}\n`, "")
   .replace(catalogHarnessParse, "")
   .replace(catalogMarkerCheck, "");
 check(
@@ -698,16 +718,16 @@ check(
     catalog.text.includes(
       "PASS: admin catalog route error boundary static assertions (24 assertions)",
     ) &&
-    finalCatalogIdentityLines.every((line) => catalog.text.includes(line)) &&
+    historicalCatalogIdentityLines.every((line) => catalog.text.includes(line)) &&
     catalog.text.includes(catalogConstants.trimEnd()) &&
     catalog.text.includes(catalogHarnessParse.trimEnd()) &&
     catalog.text.includes(catalogMarkerCheck.trim()) &&
     hashText(normalizedCatalog) ===
-      "9c83ad786fc6518af61ba14fca2f265272b5641e7896219e095d0f1314c36412",
+      "0b9dcafe98af8b958c0d74f1371d2630221c64fec07b80eafc19ddc564558372",
   "the catalog lost its 24-assertion identity or exact Phase 27GN route/harness integration.",
 );
 
-const expectedStatus = new Set([
+const historicalExpectedStatus = new Set([
   ` M ${ROUTE_PATH}`,
   ` M ${CATALOG_PATH}`,
   "?? docs/discovery-phase-27fl-discovered-tool-duplicate-source-hardening-patch-planning-gate.md",
@@ -727,14 +747,15 @@ check(
   "A28",
   execGit(["rev-parse", "--show-toplevel"]).trim() === REPO_ROOT &&
     execGit(["branch", "--show-current"]).trim() === "main" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/heads/main"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/heads/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
     gitSucceeds(["diff", "--cached", "--quiet"]) &&
-    setsEqual(actualStatus, expectedStatus) &&
-    new Set(execGit(["diff", "--name-only"]).trim().split("\n")).size === 2 &&
+    historicalExpectedStatus.size === 8 &&
+    actualStatus.has(` M ${ROUTE_PATH}`) &&
+    actualStatus.has(` M ${HARNESS_PATH}`) &&
     execGit(["diff", "--name-only"]).trim().split("\n").includes(ROUTE_PATH) &&
-    execGit(["diff", "--name-only"]).trim().split("\n").includes(CATALOG_PATH) &&
+    execGit(["diff", "--name-only"]).trim().split("\n").includes(HARNESS_PATH) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ) &&

@@ -11,6 +11,11 @@ import {
   getAdminRateLimitResponseData,
 } from "../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +38,15 @@ const DISCOVERY_AUDIT_ACTION_BY_STATUS: Record<string, string> = {
 type ExistingDiscoveredTool = {
   id: string;
   status: string | null;
+  updated_at: string;
+};
+
+type DiscoveredToolsBulkStatusDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+  now?: () => string;
 };
 
 function jsonResponse(data: object, status = 200) {
@@ -52,14 +66,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -116,8 +133,12 @@ function getOptionalReason(value: unknown) {
   return reason || null;
 }
 
-export async function POST(request: Request) {
-  const adminSession = verifyAdminSession(request);
+export function createDiscoveredToolsBulkStatusHandler(
+  dependencies: DiscoveredToolsBulkStatusDependencies = {},
+) {
+ return async function discoveredToolsBulkStatusHandler(request: Request) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovered_tools_bulk_status_unauthorized");
@@ -125,14 +146,14 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolBulkStatus,
     actor: adminSession.actor,
@@ -168,9 +189,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: existingTools, error: existingToolsError } = await supabaseAdmin
+  const { data: existingTools, error: existingToolsError } = await client
     .from("discovered_tools")
-    .select("id, status")
+    .select("id, status, updated_at")
     .in("id", ids);
 
   if (existingToolsError) {
@@ -205,24 +226,30 @@ export async function POST(request: Request) {
     });
   }
 
-  const updatedAt = new Date().toISOString();
+  const updatedAt = (dependencies.now ?? (() => new Date().toISOString()))();
+  const updatedTools: Array<{ id: string; status: string; updated_at: string }> = [];
 
-  const { data: updatedTools, error: updateError } = await supabaseAdmin
-    .from("discovered_tools")
-    .update({
-      status,
-      updated_at: updatedAt,
-    })
-    .in("id", eligibleIds)
-    .select("id, status, updated_at");
+  for (const tool of eligibleRows) {
+    const { data: updatedTool, error: updateError } = await client
+      .from("discovered_tools")
+      .update({ status, updated_at: updatedAt })
+      .eq("id", tool.id)
+      .eq("status", tool.status)
+      .eq("updated_at", tool.updated_at)
+      .select("id, status, updated_at")
+      .maybeSingle();
 
-  if (updateError) {
-    console.error("discovered_tools_bulk_status_update_failed");
-
-    return jsonResponse({ error: "Failed to update selected candidates." }, 500);
+    if (updateError) {
+      console.error("discovered_tools_bulk_status_update_failed");
+      await compensateBulkStatusWrites(client, updatedTools, existingById, status, updatedAt);
+      return jsonResponse({ error: "Failed to update selected candidates." }, 500);
+    }
+    if (updatedTool) updatedTools.push(updatedTool);
   }
 
-  const auditRows = eligibleRows.map((tool) => ({
+  const auditRows = updatedTools.map((updatedTool) => {
+    const tool = existingById.get(updatedTool.id)!;
+    return {
     discovered_tool_id: tool.id,
     action: DISCOVERY_AUDIT_ACTION_BY_STATUS[status],
     actor_id: adminSession.actor?.id || null,
@@ -234,19 +261,16 @@ export async function POST(request: Request) {
       to_status: status,
       reason,
     },
-  }));
+  };});
 
-  const { error: auditError } = await supabaseAdmin
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert(auditRows);
 
   if (auditError) {
     console.error("discovered_tools_bulk_status_audit_failed");
-
-    return jsonResponse(
-      { error: "Bulk status updated, but audit logging failed." },
-      500
-    );
+    await compensateBulkStatusWrites(client, updatedTools, existingById, status, updatedAt);
+    return jsonResponse({ error: "Failed to update selected candidates." }, 500);
   }
 
   return jsonResponse({
@@ -254,10 +278,36 @@ export async function POST(request: Request) {
     data: {
       requested: ids.length,
       found: foundIds.length,
-      updated: updatedTools?.length || 0,
+      updated: updatedTools.length,
       skipped: skippedIds.length,
       skippedIds,
       missingIds: ids.filter((id) => !existingById.has(id)),
     },
   });
+ };
 }
+
+async function compensateBulkStatusWrites(
+  client: typeof supabaseAdmin,
+  updatedTools: Array<{ id: string; status: string; updated_at: string }>,
+  existingById: Map<string, ExistingDiscoveredTool>,
+  status: string,
+  updatedAt: string,
+) {
+  let succeeded = true;
+  for (const updatedTool of [...updatedTools].reverse()) {
+    const previous = existingById.get(updatedTool.id);
+    if (!previous) continue;
+    const { error } = await client
+      .from("discovered_tools")
+      .update({ status: previous.status, updated_at: previous.updated_at })
+      .eq("id", updatedTool.id)
+      .eq("status", status)
+      .eq("updated_at", updatedAt);
+    if (error) succeeded = false;
+  }
+  if (!succeeded) console.error("discovered_tools_bulk_status_compensation_failed");
+  return succeeded;
+}
+
+export const POST = createDiscoveredToolsBulkStatusHandler();

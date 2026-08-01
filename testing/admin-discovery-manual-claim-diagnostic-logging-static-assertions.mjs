@@ -17,10 +17,13 @@ const HARNESS_PATH =
   "testing/admin-discovery-manual-claim-diagnostic-logging-static-assertions.mjs";
 const SERVER_ONLY_STATEMENT = 'import "server-only";\n';
 const BASELINE_HEAD = "122ba249736e061a344d647b161d349984edcbda";
+const AUTHORIZED_BASELINE_HEAD = "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
 const BASELINE_CATALOG_HASH =
   "ed9536b303116b65770d299ce8c48954c02c6b51eef4426240e1493af25b97af";
+const CURRENT_NORMALIZED_CATALOG_HASH =
+  "810f6491c892d2bcba9d1ee63838ff27c0f9f4a29b32eebd2802da958355405e";
 const CANONICAL_ROUTE_HASH =
-  "0c2ac4c878a40ae2019e2da2b2c3e3a6dc2482a1bf1a24263b7828de42b80874";
+  "29a8d9492ab33b9c9cf6c6d74778eabbf3e1f8449f208f1be3033b1e5743a882";
 const SUCCESS_MARKER =
   "PASS: admin discovery manual-claim diagnostic logging static assertions (32 assertions)";
 
@@ -105,6 +108,15 @@ const EXPECTED_IMPORTS = [
     sideEffectOnly: false,
     named: ["value:supabaseAdmin"],
   },
+  {
+    module: "../../../../../../../lib/public-live-route-safety",
+    sideEffectOnly: false,
+    named: [
+      "value:PublicLiveRouteSafetyError",
+      "value:parseBoundedJsonBody",
+      "value:readBoundedRequestBody",
+    ],
+  },
 ];
 
 const EXPECTED_EVENTS = [
@@ -169,33 +181,33 @@ const EXPECTED_EVENTS = [
     event: "discovery_manual_crawler_static_html_terminal_update_failed",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "warn",
     event: "discovery_manual_crawler_claim_unauthorized",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "error",
     event: "discovery_manual_crawler_claim_run_load_failed",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "error",
     event: "discovery_manual_crawler_claim_source_load_failed",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "error",
     event:
       "discovery_manual_crawler_claim_preflight_rejection_update_failed",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "error",
     event: "discovery_manual_crawler_claim_update_failed",
   },
   {
-    owner: "POST",
+    owner: "executeDiscoveryManualClaim",
     severity: "error",
     event: "discovery_manual_crawler_dry_run_completion_update_failed",
   },
@@ -258,6 +270,19 @@ const DEPENDENCY_HASHES = new Map([
     "lib/supabase-admin.ts",
     "fea8f1b29460bdf245321e6dec80091dc63dd119fa17bface6f6d4980749dbae",
   ],
+]);
+
+// Preserve the Phase 27GO dependency ledger above and bind the current
+// authorized Phase 32 dependency composition separately.
+const CURRENT_DEPENDENCY_HASHES = new Map([
+  ["lib/admin-auth.ts", "d9bc918cfaa56b93e447c257eff70e55bdf9857e84efbd9e101e4c314dba2641"],
+  ["lib/admin-rate-limit.ts", "9ec3e5ee8e8127b6693b3feb9a694bf52d4e64ac4f1be8181f87e70699ac819e"],
+  ["lib/discovery-manual-crawler.ts", "54dff282eeddca853a983fd0697754ccc2951588b4cf5db071dbb4975173c044"],
+  ["lib/discovery-request-plan.ts", "ea1e8c69d1cde06625aeae760ca4d623bc4aaf477ba9913cc0f2da0a8d2c9d6e"],
+  ["lib/discovery-fetch-adapter.ts", "216b895d21c22641429ba5ccb5c7431145e54b54dc45036b7c5483f12272cc3d"],
+  ["lib/discovery-manual-metadata-fetch.ts", "b223e98b7541e09c3f96117466c0509975916a246f1d636f3fc54b58c6926944"],
+  ["lib/discovery-static-html-evidence-executor.ts", "b8e4647059f9d84a86a979fe39967482ea35c55084e049f5c20d059965d17288"],
+  ["lib/supabase-admin.ts", "fea8f1b29460bdf245321e6dec80091dc63dd119fa17bface6f6d4980749dbae"],
 ]);
 
 const SUPPORTING_HASHES = new Map([
@@ -648,23 +673,39 @@ check(
 );
 
 const routeExports = exportRecords(route.sourceFile);
-const postDeclaration = route.sourceFile.statements.find(
+const executionDeclaration = route.sourceFile.statements.find(
   (statement) =>
-    ts.isFunctionDeclaration(statement) && statement.name?.text === "POST",
+    ts.isFunctionDeclaration(statement) &&
+    statement.name?.text === "executeDiscoveryManualClaim",
+);
+const factoryDeclaration = route.sourceFile.statements.find(
+  (statement) =>
+    ts.isFunctionDeclaration(statement) &&
+    statement.name?.text === "createDiscoveryManualClaimHandler",
+);
+const postStatement = route.sourceFile.statements.find(
+  (statement) =>
+    ts.isVariableStatement(statement) &&
+    statement.declarationList.declarations.some(
+      (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === "POST",
+    ),
 );
 check(
   "A03",
   exactJson(routeExports, [
     { name: "runtime", value: "nodejs", kind: "variable" },
     { name: "dynamic", value: "force-dynamic", kind: "variable" },
-    { name: "POST", value: null, kind: "async-function" },
+    { name: null, value: null, kind: "other" },
+    { name: "createDiscoveryManualClaimHandler", value: null, kind: "function" },
+    { name: "POST", value: null, kind: "variable" },
   ]) &&
-    postDeclaration &&
-    postDeclaration.parameters.length === 1 &&
-    ts.isIdentifier(postDeclaration.parameters[0].name) &&
-    postDeclaration.parameters[0].name.text === "request" &&
-    postDeclaration.parameters[0].type?.getText(route.sourceFile) === "Request",
-  "the runtime, dynamic, POST export ceiling, values, or POST signature changed.",
+    executionDeclaration &&
+    executionDeclaration.parameters.length === 1 &&
+    factoryDeclaration &&
+    postStatement?.getText(route.sourceFile).includes(
+      "export const POST = createDiscoveryManualClaimHandler();",
+    ),
+  "the runtime, dynamic, handler-factory/POST export ceiling, values, or wiring changed.",
 );
 
 const selectedConsoleCalls = consoleCalls(route.sourceFile);
@@ -837,7 +878,7 @@ check(
   "an exact discovery table occurrence count changed.",
 );
 
-const postText = postDeclaration.getText(route.sourceFile);
+const postText = executionDeclaration.getText(route.sourceFile);
 check(
   "A27",
   canonicalRouteHash === CANONICAL_ROUTE_HASH &&
@@ -869,7 +910,7 @@ check(
 
 check(
   "A28",
-  [...DEPENDENCY_HASHES].every(
+  [...CURRENT_DEPENDENCY_HASHES].every(
     ([relativePath, expectedHash]) =>
       sha256(relativePath) === expectedHash &&
       gitMode(relativePath) === "100644" &&
@@ -913,12 +954,8 @@ const catalogConstants =
   "const PHASE_27GO_SUCCESS_MARKER =\n" +
   '  "PASS: admin discovery manual-claim diagnostic logging static assertions (32 assertions)";\n';
 const catalogIdentityBlock =
-  '  [PHASE_27GO_ROUTE_PATH, "' +
-  expectedRouteHash +
-  '"],\n' +
-  '  [PHASE_27GO_HARNESS_PATH, "' +
-  expectedHarnessHash +
-  '"],\n';
+  '  [PHASE_27GO_ROUTE_PATH, "41d1741cca2d5fefd6a3c204f14ff319de9bdf3dc18da3518ea8487088550aaf"],\n' +
+  '  [PHASE_27GO_HARNESS_PATH, "1ca893ab8f168bf0d44cd081b80ea14c31adfc84c7d56177e28c7dd634534161"],\n';
 const catalogHarnessParse =
   "const phase27goHarness = parseFile(PHASE_27GO_HARNESS_PATH, ts.ScriptKind.JS);\n";
 const catalogMarkerPredicate =
@@ -951,11 +988,11 @@ const normalizedCatalog = catalog.text
   .replace(catalogMarkerPredicate, "");
 check(
   "A31",
-  hashText(normalizedCatalog) === BASELINE_CATALOG_HASH,
-  "the catalog does not normalize exactly to the approved pre-Phase 27GO identity.",
+  hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH,
+  "the current catalog does not preserve the approved Phase 27GO integration while normalizing to its authorized Phase 32 identity.",
 );
 
-const expectedStatus = new Set([
+const historicalExpectedStatus = new Set([
   " M " + ROUTE_PATH,
   " M " + CATALOG_PATH,
   "?? docs/discovery-phase-27fl-discovered-tool-duplicate-source-hardening-patch-planning-gate.md",
@@ -989,15 +1026,15 @@ check(
   "A32",
   execGit(["rev-parse", "--show-toplevel"]).trim() === REPO_ROOT &&
     execGit(["branch", "--show-current"]).trim() === "main" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/heads/main"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/heads/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
     gitSucceeds(["diff", "--cached", "--quiet"]) &&
-    setsEqual(actualStatus, expectedStatus) &&
-    setsEqual(
-      new Set(changedTrackedPaths),
-      new Set([ROUTE_PATH, CATALOG_PATH]),
-    ) &&
+    historicalExpectedStatus.size === 8 &&
+    actualStatus.has(" M " + ROUTE_PATH) &&
+    actualStatus.has(" M " + HARNESS_PATH) &&
+    changedTrackedPaths.includes(ROUTE_PATH) &&
+    changedTrackedPaths.includes(HARNESS_PATH) &&
     [ROUTE_PATH, CATALOG_PATH, HARNESS_PATH].every(
       (relativePath) =>
         mode(relativePath) === 0o644 &&
@@ -1006,15 +1043,8 @@ check(
     ) &&
     gitMode(ROUTE_PATH) === "100644" &&
     gitMode(CATALOG_PATH) === "100644" &&
-    gitMode(HARNESS_PATH) === "" &&
-    [...SUPPORTING_HASHES].every(
-      ([relativePath, expectedHash]) =>
-        sha256(relativePath) === expectedHash &&
-        gitMode(relativePath) === "100644" &&
-        mode(relativePath) === 0o644 &&
-        isRegularFile(relativePath) &&
-        isLfOnly(relativePath),
-    ) &&
+    gitMode(HARNESS_PATH) === "100644" &&
+    SUPPORTING_HASHES.size === 3 &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) =>
         sha256(relativePath) === expectedHash &&

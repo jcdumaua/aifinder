@@ -1,5 +1,7 @@
 "use server";
 
+import "server-only";
+
 import { createDefaultHomepageControlDraftValues } from "./homepage-control-defaults";
 import { parseHomepageControlConfigRow } from "./homepage-control-parser";
 import {
@@ -13,7 +15,29 @@ import {
   normalizeHomepageToolPlacementConfigs,
   validateHomepageControlConfigRow,
 } from "./homepage-control-validation";
-import { supabaseAdmin } from "./supabase-admin";
+
+type HomepageControlAdminClient = Pick<
+  (typeof import("./supabase-admin"))["supabaseAdmin"],
+  "from" | "rpc"
+>;
+
+export type HomepageControlAdminDependencies = {
+  client: HomepageControlAdminClient;
+  now?: () => string;
+};
+
+async function createDefaultHomepageControlAdminDependencies(): Promise<HomepageControlAdminDependencies> {
+  const { supabaseAdmin } = await import("./supabase-admin");
+
+  return {
+    client: supabaseAdmin,
+    now: () => new Date().toISOString(),
+  };
+}
+
+function dependencyTimestamp(dependencies: HomepageControlAdminDependencies) {
+  return (dependencies.now ?? (() => new Date().toISOString()))();
+}
 
 export type HomepageControlActor = {
   id: string | null;
@@ -175,7 +199,8 @@ function isMissingColumnError(errorMessage: string, columnName: string) {
 }
 
 async function validateHomepageToolPlacementsForPublish(
-  config: HomepageControlConfigRow
+  config: HomepageControlConfigRow,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<HomepageToolPlacementPublishValidationResult> {
   const normalizedResult = normalizeHomepageToolPlacementConfigs(
     config.tool_placements,
@@ -204,7 +229,7 @@ async function validateHomepageToolPlacementsForPublish(
     return { errors, warnings };
   }
 
-  const { data: publicSafeRows, error: publicSafeError } = await supabaseAdmin
+  const { data: publicSafeRows, error: publicSafeError } = await dependencies.client
     .from("public_safe_tools")
     .select("slug")
     .in("slug", uniqueSlugs);
@@ -629,10 +654,11 @@ function getUnsupportedToolReferences(value: unknown) {
 }
 
 function buildDraftValidationRow(
-  actorId: string | null
+  actorId: string | null,
+  dependencies: HomepageControlAdminDependencies
 ): HomepageControlConfigRow {
   const draftValues = createDefaultHomepageControlDraftValues();
-  const timestamp = new Date().toISOString();
+  const timestamp = dependencyTimestamp(dependencies);
 
   return {
     id: "pending-homepage-control-draft",
@@ -646,17 +672,78 @@ function buildDraftValidationRow(
   };
 }
 
-async function cleanupUnauditedDraft(draftId: string) {
-  const { error } = await supabaseAdmin
+async function cleanupUnauditedDraft(
+  draftId: string,
+  version: number,
+  dependencies: HomepageControlAdminDependencies
+) {
+  const { data, error } = await dependencies.client
     .from("homepage_control_configs")
     .delete()
-    .eq("id", draftId);
+    .eq("id", draftId)
+    .eq("status", "draft")
+    .eq("version", version)
+    .select("id")
+    .maybeSingle();
 
-  return error?.message ?? null;
+  return !error && Boolean(data);
+}
+
+function getCreatedDraftMutationIdentity(value: unknown) {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !isValidHomepageControlConfigId(value.id) ||
+    value.status !== "draft" ||
+    typeof value.version !== "number" ||
+    !Number.isInteger(value.version) ||
+    value.version < 1
+  ) {
+    return null;
+  }
+
+  return { id: value.id, version: value.version };
+}
+
+type HomepageChecklistMutationIdentity = Pick<
+  HomepageControlChecklistRun,
+  "id" | "config_id" | "updated_at"
+>;
+
+function getHomepageChecklistMutationIdentity(
+  value: unknown
+): HomepageChecklistMutationIdentity | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !UUID_PATTERN.test(value.id) ||
+    typeof value.config_id !== "string" ||
+    !isValidHomepageControlConfigId(value.config_id) ||
+    typeof value.updated_at !== "string" ||
+    value.updated_at.length === 0
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    config_id: value.config_id,
+    updated_at: value.updated_at,
+  };
 }
 
 export async function createHomepageControlDraft(
   actor: HomepageControlActor
+): Promise<CreateHomepageControlDraftResult> {
+  return createHomepageControlDraftWithDependencies(
+    actor,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function createHomepageControlDraftWithDependencies(
+  actor: HomepageControlActor,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<CreateHomepageControlDraftResult> {
   try {
     const normalizedActor = normalizeActor(actor);
@@ -669,7 +756,10 @@ export async function createHomepageControlDraft(
       };
     }
 
-    const validationRow = buildDraftValidationRow(normalizedActor.id);
+    const validationRow = buildDraftValidationRow(
+      normalizedActor.id,
+      dependencies
+    );
     const validationResult = validateHomepageControlConfigRow(validationRow);
 
     if (!validationResult.isValid) {
@@ -681,7 +771,7 @@ export async function createHomepageControlDraft(
     }
 
     const draftValues = createDefaultHomepageControlDraftValues();
-    const { data: insertedDraft, error: draftInsertError } = await supabaseAdmin
+    const { data: insertedDraft, error: draftInsertError } = await dependencies.client
       .from("homepage_control_configs")
       .insert({
         ...draftValues,
@@ -696,9 +786,7 @@ export async function createHomepageControlDraft(
     if (draftInsertError) {
       return {
         draft: null,
-        errors: [
-          `Failed to create Homepage Control Room draft: ${draftInsertError.message}`,
-        ],
+        errors: ["Failed to create Homepage Control Room draft."],
         warnings: validationResult.warnings,
       };
     }
@@ -706,14 +794,33 @@ export async function createHomepageControlDraft(
     const parsedDraft = parseHomepageControlConfigRow(insertedDraft);
 
     if (!parsedDraft.success || !parsedDraft.row) {
+      const insertedIdentity = getCreatedDraftMutationIdentity(insertedDraft);
+      const cleanupConfirmed = insertedIdentity
+        ? await cleanupUnauditedDraft(
+            insertedIdentity.id,
+            insertedIdentity.version,
+            dependencies
+          )
+        : false;
+      const warnings = [
+        ...validationResult.warnings,
+        ...parsedDraft.warnings,
+      ];
+
+      if (!cleanupConfirmed) {
+        warnings.push(
+          "Homepage Control Room draft cleanup could not be confirmed."
+        );
+      }
+
       return {
         draft: null,
         errors: parsedDraft.errors,
-        warnings: [...validationResult.warnings, ...parsedDraft.warnings],
+        warnings,
       };
     }
 
-    const { error: auditInsertError } = await supabaseAdmin
+    const { error: auditInsertError } = await dependencies.client
       .from("homepage_control_audit_events")
       .insert({
         config_id: parsedDraft.row.id,
@@ -728,20 +835,22 @@ export async function createHomepageControlDraft(
       });
 
     if (auditInsertError) {
-      const cleanupError = await cleanupUnauditedDraft(parsedDraft.row.id);
+      const cleanupConfirmed = await cleanupUnauditedDraft(
+        parsedDraft.row.id,
+        parsedDraft.row.version,
+        dependencies
+      );
       const warnings = [...validationResult.warnings, ...parsedDraft.warnings];
 
-      if (cleanupError) {
+      if (!cleanupConfirmed) {
         warnings.push(
-          `Failed to clean up unaudited Homepage Control Room draft: ${cleanupError}`
+          "Homepage Control Room draft cleanup could not be confirmed."
         );
       }
 
       return {
         draft: null,
-        errors: [
-          `Failed to create Homepage Control Room audit event: ${auditInsertError.message}`,
-        ],
+        errors: ["Failed to create Homepage Control Room audit event."],
         warnings,
       };
     }
@@ -751,20 +860,26 @@ export async function createHomepageControlDraft(
       errors: [],
       warnings: [...validationResult.warnings, ...parsedDraft.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       draft: null,
-      errors: [`Unexpected Homepage Control Room draft error: ${message}`],
+      errors: ["Unexpected Homepage Control Room draft error."],
       warnings: [],
     };
   }
 }
 
 export async function listHomepageControlConfigs(): Promise<ListHomepageControlConfigsResult> {
+  return listHomepageControlConfigsWithDependencies(
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function listHomepageControlConfigsWithDependencies(
+  dependencies: HomepageControlAdminDependencies
+): Promise<ListHomepageControlConfigsResult> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await dependencies.client
       .from("homepage_control_configs")
       .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
       .order("updated_at", { ascending: false })
@@ -773,9 +888,7 @@ export async function listHomepageControlConfigs(): Promise<ListHomepageControlC
     if (error) {
       return {
         configs: [],
-        errors: [
-          `Failed to list Homepage Control Room configs: ${error.message}`,
-        ],
+        errors: ["Failed to list Homepage Control Room configs."],
         warnings: [],
       };
     }
@@ -800,12 +913,10 @@ export async function listHomepageControlConfigs(): Promise<ListHomepageControlC
       errors,
       warnings,
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       configs: [],
-      errors: [`Unexpected Homepage Control Room list error: ${message}`],
+      errors: ["Unexpected Homepage Control Room list error."],
       warnings: [],
     };
   }
@@ -813,6 +924,16 @@ export async function listHomepageControlConfigs(): Promise<ListHomepageControlC
 
 export async function getHomepageControlConfigById(
   id: string
+): Promise<GetHomepageControlConfigResult> {
+  return getHomepageControlConfigByIdWithDependencies(
+    id,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function getHomepageControlConfigByIdWithDependencies(
+  id: string,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<GetHomepageControlConfigResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -823,7 +944,7 @@ export async function getHomepageControlConfigById(
       };
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await dependencies.client
       .from("homepage_control_configs")
       .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
       .eq("id", id)
@@ -832,9 +953,7 @@ export async function getHomepageControlConfigById(
     if (error) {
       return {
         config: null,
-        errors: [
-          `Failed to fetch Homepage Control Room config: ${error.message}`,
-        ],
+        errors: ["Failed to fetch Homepage Control Room config."],
         warnings: [],
       };
     }
@@ -862,14 +981,10 @@ export async function getHomepageControlConfigById(
       errors: [],
       warnings: parsed.warnings,
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       config: null,
-      errors: [
-        `Unexpected Homepage Control Room config fetch error: ${message}`,
-      ],
+      errors: ["Unexpected Homepage Control Room config fetch error."],
       warnings: [],
     };
   }
@@ -878,8 +993,21 @@ export async function getHomepageControlConfigById(
 export async function getHomepageControlPreviewChecklist(
   id: string
 ): Promise<GetHomepageControlPreviewChecklistResult> {
+  return getHomepageControlPreviewChecklistWithDependencies(
+    id,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function getHomepageControlPreviewChecklistWithDependencies(
+  id: string,
+  dependencies: HomepageControlAdminDependencies
+): Promise<GetHomepageControlPreviewChecklistResult> {
   try {
-    const configResult = await getHomepageControlConfigById(id);
+    const configResult = await getHomepageControlConfigByIdWithDependencies(
+      id,
+      dependencies
+    );
 
     if (!configResult.config) {
       return {
@@ -890,7 +1018,7 @@ export async function getHomepageControlPreviewChecklist(
       };
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await dependencies.client
       .from("homepage_control_checklist_runs")
       .select(HOMEPAGE_CONTROL_CHECKLIST_RUN_SELECT)
       .eq("config_id", configResult.config.id)
@@ -902,9 +1030,7 @@ export async function getHomepageControlPreviewChecklist(
       return {
         run: null,
         checklist: configResult.config.pre_publish_checklist,
-        errors: [
-          `Failed to fetch Homepage Control Room preview checklist: ${error.message}`,
-        ],
+        errors: ["Failed to fetch Homepage Control Room preview checklist."],
         warnings: configResult.warnings,
       };
     }
@@ -935,24 +1061,60 @@ export async function getHomepageControlPreviewChecklist(
       errors: [],
       warnings: [...configResult.warnings, ...parsedRun.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       run: null,
       checklist: [],
       errors: [
-        `Unexpected Homepage Control Room preview checklist fetch error: ${message}`,
+        "Unexpected Homepage Control Room preview checklist fetch error.",
       ],
       warnings: [],
     };
   }
 }
 
+async function compensatePreviewChecklistAuditFailure(
+  previousRun: HomepageControlChecklistRun | null,
+  writtenRun: HomepageChecklistMutationIdentity,
+  dependencies: HomepageControlAdminDependencies
+) {
+  const query = previousRun
+    ? dependencies.client
+        .from("homepage_control_checklist_runs")
+        .update({
+          checklist: previousRun.checklist,
+          completed_by: previousRun.completed_by,
+          completed_at: previousRun.completed_at,
+        })
+    : dependencies.client.from("homepage_control_checklist_runs").delete();
+  const { data, error } = await query
+    .eq("id", writtenRun.id)
+    .eq("config_id", writtenRun.config_id)
+    .eq("updated_at", writtenRun.updated_at)
+    .select("id")
+    .maybeSingle();
+
+  return !error && Boolean(data);
+}
+
 export async function updateHomepageControlPreviewChecklist(
   id: string,
   payload: unknown,
   actor: HomepageControlActor
+): Promise<UpdateHomepageControlPreviewChecklistResult> {
+  return updateHomepageControlPreviewChecklistWithDependencies(
+    id,
+    payload,
+    actor,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function updateHomepageControlPreviewChecklistWithDependencies(
+  id: string,
+  payload: unknown,
+  actor: HomepageControlActor,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<UpdateHomepageControlPreviewChecklistResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -986,7 +1148,10 @@ export async function updateHomepageControlPreviewChecklist(
       };
     }
 
-    const configResult = await getHomepageControlConfigById(id);
+    const configResult = await getHomepageControlConfigByIdWithDependencies(
+      id,
+      dependencies
+    );
 
     if (!configResult.config) {
       return {
@@ -1008,7 +1173,8 @@ export async function updateHomepageControlPreviewChecklist(
       };
     }
 
-    const currentChecklistResult = await getHomepageControlPreviewChecklist(id);
+    const currentChecklistResult =
+      await getHomepageControlPreviewChecklistWithDependencies(id, dependencies);
     const warnings = [
       ...configResult.warnings,
       ...currentChecklistResult.warnings,
@@ -1030,8 +1196,8 @@ export async function updateHomepageControlPreviewChecklist(
       warnings
     );
     const isComplete = areRequiredChecklistItemsComplete(mergedChecklist);
-    const timestamp = new Date().toISOString();
-    const { data: updatedRun, error: upsertError } = await supabaseAdmin
+    const timestamp = dependencyTimestamp(dependencies);
+    const { data: updatedRun, error: upsertError } = await dependencies.client
       .from("homepage_control_checklist_runs")
       .upsert(
         {
@@ -1050,9 +1216,7 @@ export async function updateHomepageControlPreviewChecklist(
       return {
         success: false,
         run: null,
-        errors: [
-          `Failed to update Homepage Control Room preview checklist: ${upsertError.message}`,
-        ],
+        errors: ["Failed to update Homepage Control Room preview checklist."],
         warnings,
       };
     }
@@ -1060,15 +1224,31 @@ export async function updateHomepageControlPreviewChecklist(
     const parsedRun = parseHomepageControlChecklistRunRow(updatedRun);
 
     if (!parsedRun.run) {
+      const writtenIdentity = getHomepageChecklistMutationIdentity(updatedRun);
+      const compensationConfirmed = writtenIdentity
+        ? await compensatePreviewChecklistAuditFailure(
+            currentChecklistResult.run,
+            writtenIdentity,
+            dependencies
+          )
+        : false;
+      const compensationWarnings = [...warnings, ...parsedRun.warnings];
+
+      if (!compensationConfirmed) {
+        compensationWarnings.push(
+          "Homepage Control Room preview checklist compensation could not be confirmed."
+        );
+      }
+
       return {
         success: false,
         run: null,
         errors: parsedRun.errors,
-        warnings: [...warnings, ...parsedRun.warnings],
+        warnings: compensationWarnings,
       };
     }
 
-    const { error: auditInsertError } = await supabaseAdmin
+    const { error: auditInsertError } = await dependencies.client
       .from("homepage_control_audit_events")
       .insert({
         config_id: configResult.config.id,
@@ -1085,13 +1265,27 @@ export async function updateHomepageControlPreviewChecklist(
       });
 
     if (auditInsertError) {
+      const compensationConfirmed =
+        await compensatePreviewChecklistAuditFailure(
+          currentChecklistResult.run,
+          parsedRun.run,
+          dependencies
+        );
+      const compensationWarnings = [...warnings, ...parsedRun.warnings];
+
+      if (!compensationConfirmed) {
+        compensationWarnings.push(
+          "Homepage Control Room preview checklist compensation could not be confirmed."
+        );
+      }
+
       return {
         success: false,
         run: null,
         errors: [
-          `Failed to create Homepage Control Room preview checklist audit event: ${auditInsertError.message}`,
+          "Failed to create Homepage Control Room preview checklist audit event.",
         ],
-        warnings: [...warnings, ...parsedRun.warnings],
+        warnings: compensationWarnings,
       };
     }
 
@@ -1101,14 +1295,12 @@ export async function updateHomepageControlPreviewChecklist(
       errors: [],
       warnings: [...warnings, ...parsedRun.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       success: false,
       run: null,
       errors: [
-        `Unexpected Homepage Control Room preview checklist update error: ${message}`,
+        "Unexpected Homepage Control Room preview checklist update error.",
       ],
       warnings: [],
     };
@@ -1119,6 +1311,20 @@ export async function recordHomepageControlPreview(
   id: string,
   actor: HomepageControlActor,
   version?: number
+): Promise<RecordHomepageControlPreviewResult> {
+  return recordHomepageControlPreviewWithDependencies(
+    id,
+    actor,
+    version,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function recordHomepageControlPreviewWithDependencies(
+  id: string,
+  actor: HomepageControlActor,
+  version: number | undefined,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<RecordHomepageControlPreviewResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -1141,14 +1347,14 @@ export async function recordHomepageControlPreview(
 
     const metadata: Record<string, unknown> = {
       source: "homepage-control-preview",
-      previewedAt: new Date().toISOString(),
+      previewedAt: dependencyTimestamp(dependencies),
     };
 
     if (typeof version === "number" && Number.isFinite(version)) {
       metadata.version = version;
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await dependencies.client
       .from("homepage_control_audit_events")
       .insert({
         config_id: id,
@@ -1160,10 +1366,7 @@ export async function recordHomepageControlPreview(
       });
 
     if (error) {
-      console.error(
-        "Homepage Control Room preview audit insert failed:",
-        error.message
-      );
+      console.error("homepage_control_preview_audit_insert_failed");
 
       return {
         success: false,
@@ -1177,13 +1380,8 @@ export async function recordHomepageControlPreview(
       errors: [],
       warnings: [],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
-    console.error(
-      "Unexpected Homepage Control Room preview audit error:",
-      message
-    );
+  } catch {
+    console.error("homepage_control_preview_audit_unexpected_failure");
 
     return {
       success: false,
@@ -1196,6 +1394,18 @@ export async function recordHomepageControlPreview(
 export async function publishHomepageControlConfig(
   id: string,
   actor: HomepageControlActor
+): Promise<PublishHomepageControlConfigResult> {
+  return publishHomepageControlConfigWithDependencies(
+    id,
+    actor,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function publishHomepageControlConfigWithDependencies(
+  id: string,
+  actor: HomepageControlActor,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<PublishHomepageControlConfigResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -1218,7 +1428,10 @@ export async function publishHomepageControlConfig(
       };
     }
 
-    const configResult = await getHomepageControlConfigById(id);
+    const configResult = await getHomepageControlConfigByIdWithDependencies(
+      id,
+      dependencies
+    );
 
     if (!configResult.config) {
       return {
@@ -1230,7 +1443,8 @@ export async function publishHomepageControlConfig(
     }
 
     const placementValidation = await validateHomepageToolPlacementsForPublish(
-      configResult.config
+      configResult.config,
+      dependencies
     );
 
     if (placementValidation.errors.length > 0) {
@@ -1246,7 +1460,7 @@ export async function publishHomepageControlConfig(
       };
     }
 
-    const { data, error } = await supabaseAdmin.rpc(
+    const { data, error } = await dependencies.client.rpc(
       "publish_homepage_control_config",
       {
         p_config_id: id,
@@ -1256,7 +1470,7 @@ export async function publishHomepageControlConfig(
     );
 
     if (error) {
-      console.error("Homepage Control Room publish RPC failed:", error.message);
+      console.error("homepage_control_publish_rpc_failed");
 
       return {
         success: false,
@@ -1301,10 +1515,8 @@ export async function publishHomepageControlConfig(
       errors: [],
       warnings: [...configResult.warnings, ...placementValidation.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
-    console.error("Unexpected Homepage Control Room publish error:", message);
+  } catch {
+    console.error("homepage_control_publish_unexpected_failure");
 
     return {
       success: false,
@@ -1318,6 +1530,18 @@ export async function publishHomepageControlConfig(
 export async function markHomepageControlConfigAsPreview(
   id: string,
   actor: HomepageControlActor
+): Promise<MarkHomepageControlConfigAsPreviewResult> {
+  return markHomepageControlConfigAsPreviewWithDependencies(
+    id,
+    actor,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function markHomepageControlConfigAsPreviewWithDependencies(
+  id: string,
+  actor: HomepageControlActor,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<MarkHomepageControlConfigAsPreviewResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -1340,7 +1564,10 @@ export async function markHomepageControlConfigAsPreview(
       };
     }
 
-    const currentResult = await getHomepageControlConfigById(id);
+    const currentResult = await getHomepageControlConfigByIdWithDependencies(
+      id,
+      dependencies
+    );
 
     if (!currentResult.config) {
       return {
@@ -1377,7 +1604,11 @@ export async function markHomepageControlConfigAsPreview(
       errors.push("Hero title is required before moving to preview.");
     }
 
-    const hydratedPlacements = await hydrateHomepagePreviewToolPlacements(current);
+    const hydratedPlacements =
+      await hydrateHomepagePreviewToolPlacementsWithDependencies(
+        current,
+        dependencies
+      );
     warnings.push(...hydratedPlacements.warnings);
 
     if (hydratedPlacements.errors.length > 0) {
@@ -1410,16 +1641,19 @@ export async function markHomepageControlConfigAsPreview(
       };
     }
 
-    const updatedAt = new Date().toISOString();
-    const { data: updatedConfig, error: updateError } = await supabaseAdmin
+    const updatedAt = dependencyTimestamp(dependencies);
+    const nextVersion = current.version + 1;
+    const { data: updatedConfig, error: updateError } = await dependencies.client
       .from("homepage_control_configs")
       .update({
         status: "preview",
+        version: nextVersion,
         updated_by: normalizedActor.id,
         updated_at: updatedAt,
       })
       .eq("id", current.id)
       .eq("status", "draft")
+      .eq("version", current.version)
       .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
       .maybeSingle();
 
@@ -1427,9 +1661,7 @@ export async function markHomepageControlConfigAsPreview(
       return {
         success: false,
         data: null,
-        errors: [
-          `Failed to move Homepage Control Room config to preview: ${updateError.message}`,
-        ],
+        errors: ["Failed to move Homepage Control Room config to preview."],
         warnings,
       };
     }
@@ -1438,7 +1670,7 @@ export async function markHomepageControlConfigAsPreview(
       return {
         success: false,
         data: null,
-        errors: ["Config was not found or is no longer a draft."],
+        errors: ["Config was not found, is no longer a draft, or changed."],
         warnings,
       };
     }
@@ -1447,19 +1679,24 @@ export async function markHomepageControlConfigAsPreview(
 
     if (!parsedConfig.success || !parsedConfig.row) {
       const rollbackWarnings = [...warnings, ...parsedConfig.warnings];
-      const { error: rollbackError } = await supabaseAdmin
+      const { data: rollbackData, error: rollbackError } =
+        await dependencies.client
         .from("homepage_control_configs")
         .update({
           status: current.status,
+          version: current.version,
           updated_by: current.updated_by,
           updated_at: current.updated_at,
         })
         .eq("id", current.id)
-        .eq("status", "preview");
+        .eq("status", "preview")
+        .eq("version", nextVersion)
+        .select("id, version")
+        .maybeSingle();
 
-      if (rollbackError) {
+      if (rollbackError || !rollbackData) {
         rollbackWarnings.push(
-          `Failed to roll back invalid Homepage Control Room preview transition: ${rollbackError.message}`
+          "Homepage Control Room preview compensation could not be confirmed."
         );
       }
 
@@ -1471,7 +1708,7 @@ export async function markHomepageControlConfigAsPreview(
       };
     }
 
-    const { error: auditInsertError } = await supabaseAdmin
+    const { error: auditInsertError } = await dependencies.client
       .from("homepage_control_audit_events")
       .insert({
         config_id: parsedConfig.row.id,
@@ -1489,28 +1726,31 @@ export async function markHomepageControlConfigAsPreview(
 
     if (auditInsertError) {
       const rollbackWarnings = [...warnings, ...parsedConfig.warnings];
-      const { error: rollbackError } = await supabaseAdmin
+      const { data: rollbackData, error: rollbackError } =
+        await dependencies.client
         .from("homepage_control_configs")
         .update({
           status: current.status,
+          version: current.version,
           updated_by: current.updated_by,
           updated_at: current.updated_at,
         })
         .eq("id", current.id)
-        .eq("status", "preview");
+        .eq("status", "preview")
+        .eq("version", nextVersion)
+        .select("id, version")
+        .maybeSingle();
 
-      if (rollbackError) {
+      if (rollbackError || !rollbackData) {
         rollbackWarnings.push(
-          `Failed to roll back unaudited Homepage Control Room preview transition: ${rollbackError.message}`
+          "Homepage Control Room preview compensation could not be confirmed."
         );
       }
 
       return {
         success: false,
         data: null,
-        errors: [
-          `Failed to create Homepage Control Room audit event: ${auditInsertError.message}`,
-        ],
+        errors: ["Failed to create Homepage Control Room audit event."],
         warnings: rollbackWarnings,
       };
     }
@@ -1521,13 +1761,11 @@ export async function markHomepageControlConfigAsPreview(
       errors: [],
       warnings: [...warnings, ...parsedConfig.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       success: false,
       data: null,
-      errors: [`Unexpected Homepage Control Room preview transition error: ${message}`],
+      errors: ["Unexpected Homepage Control Room preview transition error."],
       warnings: [],
     };
   }
@@ -1537,6 +1775,20 @@ export async function updateHomepageControlDraft(
   id: string,
   payload: unknown,
   actor: HomepageControlActor
+): Promise<UpdateHomepageControlDraftResult> {
+  return updateHomepageControlDraftWithDependencies(
+    id,
+    payload,
+    actor,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function updateHomepageControlDraftWithDependencies(
+  id: string,
+  payload: unknown,
+  actor: HomepageControlActor,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<UpdateHomepageControlDraftResult> {
   try {
     if (!isValidHomepageControlConfigId(id)) {
@@ -1567,7 +1819,10 @@ export async function updateHomepageControlDraft(
       };
     }
 
-    const currentResult = await getHomepageControlConfigById(id);
+    const currentResult = await getHomepageControlConfigByIdWithDependencies(
+      id,
+      dependencies
+    );
 
     if (!currentResult.config) {
       return {
@@ -1596,10 +1851,12 @@ export async function updateHomepageControlDraft(
       payloadResult.data,
       validationWarnings
     );
-    const updatedAt = new Date().toISOString();
+    const updatedAt = dependencyTimestamp(dependencies);
+    const nextVersion = current.version + 1;
     const validationRow: HomepageControlConfigRow = {
       ...current,
       ...mergedValues,
+      version: nextVersion,
       updated_by: normalizedActor.id,
       updated_at: updatedAt,
     };
@@ -1618,6 +1875,7 @@ export async function updateHomepageControlDraft(
 
     const safeUpdate = {
       ...mergedValues,
+      version: nextVersion,
       validation_warnings: [
         ...validationWarnings,
         ...validationResult.warnings,
@@ -1626,20 +1884,19 @@ export async function updateHomepageControlDraft(
       updated_at: updatedAt,
     };
 
-    const { data: updatedDraft, error: updateError } = await supabaseAdmin
+    const { data: updatedDraft, error: updateError } = await dependencies.client
       .from("homepage_control_configs")
       .update(safeUpdate)
       .eq("id", id)
       .eq("status", "draft")
+      .eq("version", current.version)
       .select(HOMEPAGE_CONTROL_CONFIG_SELECT)
       .maybeSingle();
 
     if (updateError) {
       return {
         draft: null,
-        errors: [
-          `Failed to update Homepage Control Room draft: ${updateError.message}`,
-        ],
+        errors: ["Failed to update Homepage Control Room draft."],
         warnings: validationWarnings,
       };
     }
@@ -1647,7 +1904,7 @@ export async function updateHomepageControlDraft(
     if (!updatedDraft) {
       return {
         draft: null,
-        errors: ["Draft was not found or is no longer editable."],
+        errors: ["Draft was not found, is no longer editable, or changed."],
         warnings: validationWarnings,
       };
     }
@@ -1655,14 +1912,43 @@ export async function updateHomepageControlDraft(
     const parsedDraft = parseHomepageControlConfigRow(updatedDraft);
 
     if (!parsedDraft.success || !parsedDraft.row) {
+      const { data: compensationData, error: compensationError } =
+        await dependencies.client
+          .from("homepage_control_configs")
+          .update({
+            config: current.config,
+            content: current.content,
+            pre_publish_checklist: current.pre_publish_checklist,
+            validation_errors: current.validation_errors,
+            validation_warnings: current.validation_warnings,
+            version: current.version,
+            updated_by: current.updated_by,
+            updated_at: current.updated_at,
+          })
+          .eq("id", current.id)
+          .eq("status", "draft")
+          .eq("version", nextVersion)
+          .select("id, version")
+          .maybeSingle();
+      const compensationWarnings = [
+        ...validationWarnings,
+        ...parsedDraft.warnings,
+      ];
+
+      if (compensationError || !compensationData) {
+        compensationWarnings.push(
+          "Homepage Control Room draft compensation could not be confirmed."
+        );
+      }
+
       return {
         draft: null,
         errors: parsedDraft.errors,
-        warnings: [...validationWarnings, ...parsedDraft.warnings],
+        warnings: compensationWarnings,
       };
     }
 
-    const { error: auditInsertError } = await supabaseAdmin
+    const { error: auditInsertError } = await dependencies.client
       .from("homepage_control_audit_events")
       .insert({
         config_id: parsedDraft.row.id,
@@ -1684,32 +1970,35 @@ export async function updateHomepageControlDraft(
       });
 
     if (auditInsertError) {
-      const { error: rollbackError } = await supabaseAdmin
-        .from("homepage_control_configs")
-        .update({
-          config: current.config,
-          content: current.content,
-          pre_publish_checklist: current.pre_publish_checklist,
-          validation_errors: current.validation_errors,
-          validation_warnings: current.validation_warnings,
-          updated_by: current.updated_by,
-          updated_at: current.updated_at,
-        })
-        .eq("id", current.id)
-        .eq("status", "draft");
+      const { data: rollbackData, error: rollbackError } =
+        await dependencies.client
+          .from("homepage_control_configs")
+          .update({
+            config: current.config,
+            content: current.content,
+            pre_publish_checklist: current.pre_publish_checklist,
+            validation_errors: current.validation_errors,
+            validation_warnings: current.validation_warnings,
+            version: current.version,
+            updated_by: current.updated_by,
+            updated_at: current.updated_at,
+          })
+          .eq("id", current.id)
+          .eq("status", "draft")
+          .eq("version", nextVersion)
+          .select("id, version")
+          .maybeSingle();
       const warnings = [...validationWarnings, ...parsedDraft.warnings];
 
-      if (rollbackError) {
+      if (rollbackError || !rollbackData) {
         warnings.push(
-          `Failed to roll back unaudited Homepage Control Room draft update: ${rollbackError.message}`
+          "Homepage Control Room draft compensation could not be confirmed."
         );
       }
 
       return {
         draft: null,
-        errors: [
-          `Failed to create Homepage Control Room audit event: ${auditInsertError.message}`,
-        ],
+        errors: ["Failed to create Homepage Control Room audit event."],
         warnings,
       };
     }
@@ -1719,12 +2008,10 @@ export async function updateHomepageControlDraft(
       errors: [],
       warnings: [...validationWarnings, ...parsedDraft.warnings],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       draft: null,
-      errors: [`Unexpected Homepage Control Room update error: ${message}`],
+      errors: ["Unexpected Homepage Control Room update error."],
       warnings: [],
     };
   }
@@ -1732,6 +2019,16 @@ export async function updateHomepageControlDraft(
 
 export async function hydrateHomepagePreviewToolPlacements(
   config: HomepageControlConfigRow
+): Promise<HydrateHomepagePreviewToolPlacementsResult> {
+  return hydrateHomepagePreviewToolPlacementsWithDependencies(
+    config,
+    await createDefaultHomepageControlAdminDependencies()
+  );
+}
+
+export async function hydrateHomepagePreviewToolPlacementsWithDependencies(
+  config: HomepageControlConfigRow,
+  dependencies: HomepageControlAdminDependencies
 ): Promise<HydrateHomepagePreviewToolPlacementsResult> {
   try {
     const placementRecords = config.tool_placements
@@ -1788,7 +2085,7 @@ export async function hydrateHomepagePreviewToolPlacements(
       };
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await dependencies.client
       .from("tools")
       .select("id, name, category, description, website, pricing")
       .in("id", uniqueToolIds);
@@ -1796,7 +2093,7 @@ export async function hydrateHomepagePreviewToolPlacements(
     if (error) {
       return {
         placements: [],
-        errors: [`Failed to hydrate homepage preview tools: ${error.message}`],
+        errors: ["Failed to hydrate homepage preview tools."],
         warnings: [],
       };
     }
@@ -1839,12 +2136,10 @@ export async function hydrateHomepagePreviewToolPlacements(
       errors: [],
       warnings: [],
     };
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error.";
-
+  } catch {
     return {
       placements: [],
-      errors: [`Unexpected homepage preview hydration error: ${message}`],
+      errors: ["Unexpected homepage preview hydration error."],
       warnings: [],
     };
   }

@@ -172,15 +172,15 @@ const EXPECTED_ROUTE_TEST_NAMES = new Set([
 const PROTECTED_HASHES = new Map([
   [
     AUTH_PATH,
-    "b00a3c0f3b4728647e3fea202c2e3b57663a4e567888b828a765df4ba83181dc",
+    "d9bc918cfaa56b93e447c257eff70e55bdf9857e84efbd9e101e4c314dba2641",
   ],
   [
     READ_MODEL_PATH,
-    "f1e32581f8e3960dd9b41ea52615bf56b23141bfe7a4e9a1d82b3ac5da1de765",
+    "9f54e06e86df5420231d80e61b0659738cb994cfe5fa2bda7b6b1e24985d3684",
   ],
   [
     CURSOR_PATH,
-    "59dea937168c3fa72e2d11997d66965bffded2619f539682bd6dce638e9afaf5",
+    "b34ced3bb2a437c496e0858fa2fce74e4079a9de9bf6941080869ba9a75eded8",
   ],
   [
     SUPABASE_ADMIN_PATH,
@@ -188,19 +188,19 @@ const PROTECTED_HASHES = new Map([
   ],
   [
     READ_MODEL_TEST_PATH,
-    "2f759bcb0639364918098d4716edda09c83bf46fb950a441caa8231399c45381",
+    "c9c894026c1528277a5be4310dd04160c88584bdf04abc3d8b4e5592f0c1229d",
   ],
   [
     CURSOR_TEST_PATH,
-    "81e0decaa264b3229a947d3b173a0e72d69076b60a7adee4080649fb8ceb028b",
+    "1f7f8a5f3c1069963c27f8517f4e1926c8ca6914a917212a6ad9a41ef9444421",
   ],
   [
     PHASE_27GB_ROUTE_PATH,
-    "f42eb9f67823bcd5e0797e7d52991eb64fe8a4caec72f06c0cc52041a1a4e3fb",
+    "e5c59f39dd7395525728cbc282505832da6b1f822f862f0cd56015a445dc02fd",
   ],
   [
     PHASE_27GB_HARNESS_PATH,
-    "ad3d3cdd2773eba2aa62cd04b14a194c77e110699591d7be302414c13934f59d",
+    "34675ed052de7a7987f632f1d4bdcd2e445f3c981d60cad3351586365fcce618",
   ],
 ]);
 
@@ -960,6 +960,20 @@ check(
 const defaultLimit = topLevelVariable(readModel, "DEFAULT_LIMIT");
 const maxLimit = topLevelVariable(readModel, "MAX_LIMIT");
 const maxSearchLength = topLevelVariable(readModel, "MAX_SEARCH_LENGTH");
+const unsafeSearchPattern = topLevelVariable(
+  readModel,
+  "UNSAFE_POSTGREST_SEARCH_PATTERN",
+);
+const normalizeSearch = topLevelFunction(readModel, "normalizeSearch");
+const normalizeSearchText = normalizeSearch
+  ? nodeText(normalizeSearch, readModel)
+  : "";
+const searchRejectionPosition = normalizeSearchText.indexOf(
+  "rejectUnsafeSearchGrammar(search)",
+);
+const normalizedSearchReturnPosition = normalizeSearchText.indexOf(
+  "return trimmed",
+);
 const listFunction = topLevelFunction(
   readModel,
   "listDiscoveryCandidateStagingQueueItems",
@@ -978,8 +992,13 @@ check(
       "trimmed.length > MAX_SEARCH_LENGTH",
       "Search term is too long.",
       "Optional filters must be non-empty and bounded.",
-    ]),
-  "the default/maximum limit, limit + 1 query ceiling, or 120-character text bounds changed.",
+      "Search contains unsupported filter grammar.",
+    ]) &&
+    Boolean(unsafeSearchPattern) &&
+    searchRejectionPosition >= 0 &&
+    normalizedSearchReturnPosition >= 0 &&
+    searchRejectionPosition < normalizedSearchReturnPosition,
+  "the limit, text bounds, or pre-query PostgREST search grammar rejection changed.",
 );
 
 const assertUuidCalls = listFunction
@@ -1016,6 +1035,37 @@ const cursorConsoleCalls = collect(
     ts.isPropertyAccessExpression(node.expression) &&
     node.expression.expression.getText(cursor.sourceFile) === "console",
 );
+const maxCursorTokenLength = topLevelVariable(
+  cursor,
+  "MAX_CURSOR_TOKEN_LENGTH",
+);
+const maxCursorEncodedPayloadLength = topLevelVariable(
+  cursor,
+  "MAX_CURSOR_ENCODED_PAYLOAD_LENGTH",
+);
+const maxDecodedPayloadLength = topLevelVariable(
+  cursor,
+  "MAX_DECODED_PAYLOAD_LENGTH",
+);
+const maxCursorSignatureLength = topLevelVariable(
+  cursor,
+  "MAX_CURSOR_SIGNATURE_LENGTH",
+);
+const maxCursorStringFieldLength = topLevelVariable(
+  cursor,
+  "MAX_CURSOR_STRING_FIELD_LENGTH",
+);
+const decodeCursorFunction = topLevelFunction(
+  cursor,
+  "decodeCandidateStagingQueueCursor",
+);
+const validCursorPayloadFunction = topLevelFunction(cursor, "isValidPayload");
+const decodeCursorText = decodeCursorFunction
+  ? compact(nodeText(decodeCursorFunction, cursor))
+  : "";
+const validCursorPayloadText = validCursorPayloadFunction
+  ? compact(nodeText(validCursorPayloadFunction, cursor))
+  : "";
 check(
   "A16",
   sideEffectServerOnlyIsFirst(cursor) &&
@@ -1028,6 +1078,21 @@ check(
       "filtersHash: input.filtersHash",
       "lastCandidateId: input.lastCandidateId.toLowerCase()",
     ]) &&
+    numericLiteral(maxCursorTokenLength?.declaration.initializer) === 2_048 &&
+    numericLiteral(maxCursorEncodedPayloadLength?.declaration.initializer) ===
+      1_536 &&
+    numericLiteral(maxDecodedPayloadLength?.declaration.initializer) === 1_024 &&
+    numericLiteral(maxCursorSignatureLength?.declaration.initializer) === 43 &&
+    numericLiteral(maxCursorStringFieldLength?.declaration.initializer) === 128 &&
+    containsAll(decodeCursorText, [
+      "trimmed.length>MAX_CURSOR_TOKEN_LENGTH",
+      "encodedPayload.length>MAX_CURSOR_ENCODED_PAYLOAD_LENGTH",
+      "signature.length!==MAX_CURSOR_SIGNATURE_LENGTH",
+      'Buffer.byteLength(decodedPayload,"utf8")>MAX_DECODED_PAYLOAD_LENGTH',
+    ]) &&
+    validCursorPayloadText.includes(
+      "payload.lastValue.length>MAX_CURSOR_STRING_FIELD_LENGTH",
+    ) &&
     containsAll(readModel.text, [
       "decoded.payload.filtersHash !== context.filtersHash",
       "decoded.payload.sortKey !== context.sortKey",
@@ -1038,7 +1103,7 @@ check(
       '"candidate_queue_cursor_version_unsupported"',
     ]) &&
     cursorConsoleCalls.length === 0,
-  "the signed/versioned/filter-bound cursor or safe diagnostic boundary changed.",
+  "the signed/filter-bound cursor, pre-HMAC ceilings, or safe diagnostic boundary changed.",
 );
 
 const handlerDynamicImports = dynamicImportBindings(handler);

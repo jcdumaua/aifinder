@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { register } from "node:module";
 import test from "node:test";
@@ -14,6 +13,14 @@ export async function resolve(specifier, context, nextResolve) {
     };
   }
 
+  if (specifier.includes("public-live-route-safety")) {
+    const source = 'export class PublicLiveRouteSafetyError extends Error { constructor(code) { super(code); this.code = code; } } export async function readBoundedRequestBody(request, maximumBytes) { const bytes = new Uint8Array(await request.arrayBuffer()); if (bytes.byteLength > maximumBytes) throw new PublicLiveRouteSafetyError("request_body_too_large"); return new TextDecoder().decode(bytes); } export function parseBoundedJsonBody(body) { try { return JSON.parse(body); } catch { throw new PublicLiveRouteSafetyError("invalid_json_body"); } }';
+    return {
+      url: "data:text/javascript," + encodeURIComponent(source),
+      shortCircuit: true,
+    };
+  }
+
   return nextResolve(specifier, context);
 }
 `)}`,
@@ -22,10 +29,6 @@ export async function resolve(specifier, context, nextResolve) {
 register(nextServerTestLoader, import.meta.url);
 await import("./register-typescript-test-loader.mjs");
 
-const {
-  ADMIN_CSRF_COOKIE_NAME,
-  ADMIN_SESSION_COOKIE_NAME,
-} = await import("../lib/admin-auth.ts");
 const {
   CANDIDATE_EXTRACTION_LIVE_STAGING_MAX_CANDIDATES,
   CANDIDATE_EXTRACTION_MANUAL_API_LIVE_STAGING_MODE,
@@ -47,7 +50,6 @@ const ALLOWED_RATE_LIMIT = {
   windowSeconds: 600,
 };
 
-const ADMIN_SESSION_SECRET = "phase-10q-test-admin-session-secret";
 const CSRF_TOKEN =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const SOURCE_ID = "22222222-2222-4222-8222-222222222222";
@@ -55,31 +57,20 @@ const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const AUDIT_ID = "33333333-3333-4333-8333-333333333333";
 let routeRequestCounter = 1;
 
-process.env.ADMIN_SESSION_SECRET = ADMIN_SESSION_SECRET;
+const VERIFIED_ADMIN_SESSION = {
+  isAdmin: true,
+  actor: { id: "synthetic-admin", label: "Synthetic Admin" },
+  errors: [],
+};
 
-function signSession(payload) {
-  return createHmac("sha256", ADMIN_SESSION_SECRET)
-    .update(payload)
-    .digest("hex");
-}
-
-function createAdminSessionCookie() {
-  const payload = `admin:${Date.now() + 60 * 60 * 1000}`;
-  const signature = signSession(payload);
-
-  return `${ADMIN_SESSION_COOKIE_NAME}=${encodeURIComponent(
-    `${payload}.${signature}`,
-  )}`;
-}
-
-function createCookieHeader({ includeSession = true, includeCsrf = true } = {}) {
-  const cookies = [];
-
-  if (includeSession) cookies.push(createAdminSessionCookie());
-  if (includeCsrf) cookies.push(`${ADMIN_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`);
-
-  return cookies.join("; ");
-}
+const SYNTHETIC_AUTH_DEPENDENCIES = {
+  verifySession() {
+    return VERIFIED_ADMIN_SESSION;
+  },
+  verifyCsrf() {
+    return true;
+  },
+};
 
 function createBody(overrides = {}) {
   return {
@@ -168,7 +159,6 @@ function createRequest({
       headers: {
         "content-type": "application/json",
         "x-forwarded-for": `203.0.113.${routeRequestCounter++}`,
-        cookie: createCookieHeader({ includeSession, includeCsrf }),
         ...(csrfHeader ? { "x-csrf-token": csrfHeader } : {}),
         ...headers,
       },
@@ -178,7 +168,24 @@ function createRequest({
 }
 
 async function invokeRoute(options = {}) {
-  const response = await POST(createRequest(options));
+  const isolatedPost = createCandidateExtractionInvokeHandler({
+    verifySession() {
+      return options.includeSession === false
+        ? { isAdmin: false, actor: null, errors: ["synthetic_unauthorized"] }
+        : VERIFIED_ADMIN_SESSION;
+    },
+    verifyCsrf() {
+      return options.includeCsrf !== false &&
+        (options.csrfHeader === undefined || options.csrfHeader === CSRF_TOKEN);
+    },
+    checkRateLimit() {
+      return ALLOWED_RATE_LIMIT;
+    },
+    resolveLiveStagingOptions() {
+      return {};
+    },
+  });
+  const response = await isolatedPost(createRequest(options));
   const data = await response.json();
 
   return { response, data };
@@ -186,6 +193,7 @@ async function invokeRoute(options = {}) {
 
 async function invokeIsolatedRoute(options = {}) {
   const isolatedPost = createCandidateExtractionInvokeHandler({
+    ...SYNTHETIC_AUTH_DEPENDENCIES,
     checkRateLimit() {
       return ALLOWED_RATE_LIMIT;
     },
@@ -215,6 +223,7 @@ test("server-created route dependency can stage one mocked manual API candidate"
   const calls = [];
 
   const livePost = createCandidateExtractionInvokeHandler({
+    ...SYNTHETIC_AUTH_DEPENDENCIES,
     checkRateLimit() {
       return ALLOWED_RATE_LIMIT;
     },
@@ -319,6 +328,7 @@ test("default route resolver stages accepted preview through mocked preview depe
   const stageCalls = [];
 
   const defaultWiredPost = createCandidateExtractionInvokeHandler({
+    ...SYNTHETIC_AUTH_DEPENDENCIES,
     checkRateLimit() {
       return ALLOWED_RATE_LIMIT;
     },
@@ -387,6 +397,7 @@ test("default route resolver fails closed when preview is rejected", async () =>
   let stageCalled = false;
 
   const defaultWiredPost = createCandidateExtractionInvokeHandler({
+    ...SYNTHETIC_AUTH_DEPENDENCIES,
     checkRateLimit() {
       return ALLOWED_RATE_LIMIT;
     },
@@ -435,6 +446,7 @@ test("client URL override fields are rejected before resolver execution", async 
   for (const field of forbiddenFields) {
     let resolverCalled = false;
     const isolatedPost = createCandidateExtractionInvokeHandler({
+      ...SYNTHETIC_AUTH_DEPENDENCIES,
       checkRateLimit() {
         return ALLOWED_RATE_LIMIT;
       },
@@ -613,28 +625,36 @@ test("unsupported raw payload fields are rejected without echoing payload", asyn
 });
 
 test("rate-limit rejection returns a safe response", async () => {
-  let lastResponse = null;
-  let lastData = null;
+  let resolverCalled = false;
+  const deniedPost = createCandidateExtractionInvokeHandler({
+    ...SYNTHETIC_AUTH_DEPENDENCIES,
+    checkRateLimit() {
+      return {
+        allowed: false,
+        limit: 10,
+        remaining: 0,
+        resetAt: Date.now() + 60_000,
+        retryAfterSeconds: 60,
+        windowSeconds: 600,
+        status: 429,
+        responseData: {
+          error: "Too many admin requests. Please wait and try again.",
+          metadata: { retryAfterSeconds: 60 },
+        },
+      };
+    },
+    resolveLiveStagingOptions() {
+      resolverCalled = true;
+      return {};
+    },
+  });
+  const response = await deniedPost(createRequest());
+  const data = await response.json();
 
-  for (let index = 0; index < 20; index += 1) {
-    const { response, data } = await invokeRoute({
-      body: createBody({
-        invocation_reason: `Manual admin rate-limit route test ${index}.`,
-      }),
-      headers: {
-        "x-forwarded-for": "198.51.100.10",
-      },
-    });
-
-    lastResponse = response;
-    lastData = data;
-
-    if (response.status === 429) break;
-  }
-
-  assert.equal(lastResponse.status, 429);
-  assert.equal(lastData.error, "Too many admin requests. Please wait and try again.");
-  assertNoRawPayloadLeak(lastData);
+  assert.equal(response.status, 429);
+  assert.equal(data.error, "Too many admin requests. Please wait and try again.");
+  assert.equal(resolverCalled, false);
+  assertNoRawPayloadLeak(data);
 });
 
 

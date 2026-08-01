@@ -7,6 +7,11 @@ import {
 } from "../../../../../../lib/admin-auth";
 import { updateHomepageControlDraft } from "../../../../../../lib/homepage-control-admin";
 import type { HomepageControlConfigRow } from "../../../../../../lib/homepage-control-types";
+import {
+  parseBoundedJsonBody,
+  PublicLiveRouteSafetyError,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,14 +36,13 @@ type HomepageControlDraftUpdateResponse = {
 
 type HomepageDraftRequestErrorCode =
   | "invalid_content_type"
-  | "request_too_large"
   | "invalid_request_body";
 
 class HomepageDraftRequestError extends Error {
   constructor(
     readonly code: HomepageDraftRequestErrorCode,
     readonly publicMessage: string,
-    readonly status: 400 | 413 | 415
+    readonly status: 400 | 415
   ) {
     super(publicMessage);
     this.name = "HomepageDraftRequestError";
@@ -84,7 +88,9 @@ function isBoundedValidationError(message: string) {
     message === "Checklist must be an array." ||
     message === "Checklist items must include id and completed fields." ||
     message === "Homepage Control Room config not found." ||
-    message === "Only draft Homepage Control Room configs can be updated."
+    message === "Only draft Homepage Control Room configs can be updated." ||
+    message === "Only draft Homepage Control Room configs can be edited." ||
+    message === "Draft was not found, is no longer editable, or changed."
   );
 }
 
@@ -93,8 +99,7 @@ function isBoundedValidationWarning(message: string) {
     message === "Hero title is empty." ||
     message === "Hero title is short; confirm it is clear enough." ||
     message === "Hero subtitle is empty." ||
-    message === "Hero subtitle is short; confirm it explains the homepage." ||
-    message.startsWith("Unknown checklist item ignored: ")
+    message === "Hero subtitle is short; confirm it explains the homepage."
   );
 }
 
@@ -117,9 +122,12 @@ function classifyDependencyResult(
 }
 
 async function readJsonBody(request: NextRequest) {
-  const contentType = request.headers.get("content-type") || "";
+  const contentType = (request.headers.get("content-type") || "")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
 
-  if (!contentType.includes("application/json")) {
+  if (contentType !== "application/json") {
     throw new HomepageDraftRequestError(
       "invalid_content_type",
       "Invalid request format.",
@@ -127,18 +135,11 @@ async function readJsonBody(request: NextRequest) {
     );
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new HomepageDraftRequestError(
-      "request_too_large",
-      "Request is too large.",
-      413
-    );
-  }
-
-  const body = await request.json().catch(() => null);
+  const boundedBody = await readBoundedRequestBody(
+    request,
+    MAX_BODY_SIZE_BYTES
+  );
+  const body = parseBoundedJsonBody(boundedBody);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new HomepageDraftRequestError(
@@ -208,7 +209,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         result.warnings
       );
 
-      if (classification.hasOperationalFailure || !result.draft) {
+      if (
+        classification.hasOperationalFailure ||
+        result.errors.length === 0
+      ) {
         console.error("homepage_draft_update_failed");
         return genericFailureResponse(400);
       }
@@ -233,6 +237,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       warnings: boundedWarnings,
     });
   } catch (caught) {
+    if (caught instanceof PublicLiveRouteSafetyError) {
+      const tooLarge = caught.code === "request_body_too_large";
+      return jsonResponse(
+        {
+          success: false,
+          data: null,
+          errors: [tooLarge ? "Request is too large." : "Invalid request body."],
+          warnings: [],
+        },
+        tooLarge ? 413 : 400
+      );
+    }
+
     if (caught instanceof HomepageDraftRequestError) {
       return jsonResponse(
         {

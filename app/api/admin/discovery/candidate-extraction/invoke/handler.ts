@@ -22,6 +22,11 @@ import {
 import type {
   AdminRateLimitResult,
 } from "../../../../../../lib/admin-rate-limit";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
 
 const MAX_BODY_SIZE_BYTES = 8 * 1024;
 const CLIENT_ADMIN_IDENTITY_FIELD = "invoked_by_admin_user_id";
@@ -57,14 +62,21 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
+  let body: unknown;
 
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (
+      error instanceof PublicLiveRouteSafetyError &&
+      error.code === "request_body_too_large"
+    ) {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!isRecord(body)) {
     throw new Error("Invalid request body.");
@@ -99,6 +111,9 @@ type CandidateExtractionRouteRateLimitInput = {
 };
 
 export type CandidateExtractionRouteDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  invokePipeline?: typeof invokeCandidateExtractionStagingPipeline;
   resolveLiveStagingOptions?: (
     input: CandidateExtractionRouteLiveStagingResolverInput,
   ) =>
@@ -115,7 +130,7 @@ export function createCandidateExtractionInvokeHandler(
   dependencies: CandidateExtractionRouteDependencies = {},
 ) {
   return async function candidateExtractionInvokeHandler(request: Request) {
-  const adminSession = verifyAdminSession(request);
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("Unauthorized candidate extraction invocation request.", {
@@ -125,7 +140,7 @@ export function createCandidateExtractionInvokeHandler(
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403,
@@ -227,7 +242,7 @@ export function createCandidateExtractionInvokeHandler(
           },
         );
 
-    const result = await invokeCandidateExtractionStagingPipeline(
+    const result = await (dependencies.invokePipeline ?? invokeCandidateExtractionStagingPipeline)(
       invocationInput,
       liveStagingOptions,
     );

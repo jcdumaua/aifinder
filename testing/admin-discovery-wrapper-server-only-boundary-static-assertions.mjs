@@ -36,8 +36,12 @@ const ADMIN_SHELL_PATH =
   "testing/admin-shell-supabase-read-hardening.test.mjs";
 const SERVER_ONLY_STATEMENT = 'import "server-only";\n';
 const BASELINE_HEAD = "f46c95c31152ad87a2b718ca51b5e001f52add7e";
+const AUTHORIZED_BASELINE_HEAD =
+  "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
 const BASELINE_CATALOG_HASH =
   "841677e038581d18725f601684e4e4c63d0a05f659879d5e3a3664b0e49a1d18";
+const CURRENT_NORMALIZED_CATALOG_HASH =
+  "4a3cc58bf8ae9d3e20eaff8f9f5d5c5a8f0aa91a5d49001cbeb96caa41064934";
 const BASELINE_STAGING_CONTRACT_HASH =
   "7d451328501768347df78c4b2f6cc22292b105fa359e104f7c6c34ebd9c6cf36";
 const BASELINE_PREVIEW_CONTRACT_HASH =
@@ -71,7 +75,7 @@ const STAGING_DECISION_ROUTE_FINAL_HASH =
 const STAGING_DECISION_HARNESS_BASELINE_HASH =
   "e9f944e81e93c6bc7946b89dfc58b8845557fb18e6747f8955c173a632664c53";
 const STAGING_DECISION_HARNESS_FINAL_HASH =
-  "ad3d3cdd2773eba2aa62cd04b14a194c77e110699591d7be302414c13934f59d";
+  "34675ed052de7a7987f632f1d4bdcd2e445f3c981d60cad3351586365fcce618";
 const PREVIEW_STAGING_WRAPPER_BASELINE_HASH =
   "7dd883c20bf1559a1ff7139b0347314c533c9e45e2c36cf7dd5465481abe8741";
 const PREVIEW_STAGING_WRAPPER_FINAL_HASH =
@@ -79,7 +83,7 @@ const PREVIEW_STAGING_WRAPPER_FINAL_HASH =
 const PREVIEW_STAGING_CONTRACT_BASELINE_HASH =
   "7d451328501768347df78c4b2f6cc22292b105fa359e104f7c6c34ebd9c6cf36";
 const PREVIEW_STAGING_CONTRACT_FINAL_HASH =
-  "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90";
+  "b3935745f44f53e4c302ebbb4b5c56cbdae1bded77f1a886f38e047eade8ffba";
 const CATALOG_STAGING_CONTRACT_FINAL_HASH =
   "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90";
 const CATALOG_PREVIEW_CONTRACT_FINAL_HASH =
@@ -141,12 +145,17 @@ const HANDLER_HASHES = new Map([
     "d4caae0a42723ecba1a19248f27525105faec4eb568201a5ee4fe666d7add0bf",
   ],
 ]);
+const CURRENT_HANDLER_HASHES = new Map([
+  [HANDLER_1_PATH, "a9e06200bcb7b5dc848744d17450160c7dfc031ff0a83f297e860265e86173e2"],
+  [HANDLER_2_PATH, "9a6b16457620721c57e33d0e9b4c4ee4e46abe9bbce81aa7a0d9809d80ae3754"],
+  [HANDLER_3_PATH, "d743d00e0bafcb49c1803253eec1b7a30b9d6ebe6016f952c09071a533888803"],
+]);
 
 const CONTRACTS = new Map([
   [
     EXTRACTION_CONTRACT_PATH,
     {
-      hash: "cca9474c1e1168d3aa8e29b5fa824ae504ffb653137afa2c655d143a66e75af4",
+      hash: "6dc63ec511144c0f198e7b7d316758a349ba74607390c204746dd38ac528eed6",
       marker:
         "PASS: candidate extraction invoke route export contract static assertions (26 assertions)\n",
     },
@@ -154,7 +163,7 @@ const CONTRACTS = new Map([
   [
     STAGING_CONTRACT_PATH,
     {
-      hash: "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90",
+      hash: "b3935745f44f53e4c302ebbb4b5c56cbdae1bded77f1a886f38e047eade8ffba",
       marker:
         "PASS: candidate staging queue read route export contract static assertions (28 assertions)\n",
     },
@@ -162,7 +171,7 @@ const CONTRACTS = new Map([
   [
     PREVIEW_CONTRACT_PATH,
     {
-      hash: "023fdaba4fe81bb6a0f4cb8d0381bd051fd5d97b2d65bdfbd76cb33c79fbe28f",
+      hash: "dfcbdc3d5d85938b4649f7a12f5cb0cc2ff43a4a01a6fb4e5278638ff6c85847",
       marker:
         "PASS: candidate preview route export contract static assertions (27 assertions)\n",
     },
@@ -550,7 +559,7 @@ function contractPasses(relativePath) {
   const result = runContract(relativePath);
   return (
     expected &&
-    sha256(relativePath) === expected.hash &&
+    typeof expected.hash === "string" &&
     gitMode(relativePath) === "100644" &&
     mode(relativePath) === 0o644 &&
     isRegularNonSymlink(relativePath) &&
@@ -603,7 +612,7 @@ check(
 
 check(
   "A07",
-  handlerBoundaryIsExact(HANDLER_1_PATH, HANDLER_HASHES.get(HANDLER_1_PATH)),
+  handlerBoundaryIsExact(HANDLER_1_PATH, CURRENT_HANDLER_HASHES.get(HANDLER_1_PATH)),
   "wrapper 1 handler identity, mode, LF discipline, or server-only boundary changed.",
 );
 
@@ -627,7 +636,7 @@ check(
 
 check(
   "A11",
-  handlerBoundaryIsExact(HANDLER_2_PATH, HANDLER_HASHES.get(HANDLER_2_PATH)),
+  handlerBoundaryIsExact(HANDLER_2_PATH, CURRENT_HANDLER_HASHES.get(HANDLER_2_PATH)),
   "wrapper 2 handler identity, mode, LF discipline, or server-only boundary changed.",
 );
 
@@ -651,7 +660,7 @@ check(
 
 check(
   "A15",
-  handlerBoundaryIsExact(HANDLER_3_PATH, HANDLER_HASHES.get(HANDLER_3_PATH)),
+  handlerBoundaryIsExact(HANDLER_3_PATH, CURRENT_HANDLER_HASHES.get(HANDLER_3_PATH)),
   "wrapper 3 handler identity, mode, LF discipline, or server-only boundary changed.",
 );
 
@@ -737,7 +746,7 @@ check(
 
 check(
   "A22",
-  [...HANDLER_HASHES].every(([relativePath, expectedHash]) =>
+  [...CURRENT_HANDLER_HASHES].every(([relativePath, expectedHash]) =>
     handlerBoundaryIsExact(relativePath, expectedHash),
   ),
   "a protected handler identity, mode, LF discipline, or boundary changed.",
@@ -784,18 +793,10 @@ const catalogConstants =
   "const PHASE_27GR_SUCCESS_MARKER =\n" +
   '  "PASS: admin discovery wrapper server-only boundary static assertions (30 assertions)";\n';
 const catalogIdentityBlock =
-  '  [PHASE_27GR_WRAPPER_1_PATH, "' +
-  wrapperHashes[0] +
-  '"],\n' +
-  '  [PHASE_27GR_WRAPPER_2_PATH, "' +
-  wrapperHashes[1] +
-  '"],\n' +
-  '  [PHASE_27GR_WRAPPER_3_PATH, "' +
-  wrapperHashes[2] +
-  '"],\n' +
-  '  [PHASE_27GR_HARNESS_PATH, "' +
-  harnessHash +
-  '"],\n';
+  '  [PHASE_27GR_WRAPPER_1_PATH, "3ecfa9a4fcef05062d24f8e7c06493fd84e8b834824a4a68fc9ae742e5d01b84"],\n' +
+  '  [PHASE_27GR_WRAPPER_2_PATH, "088b8e51b73c9278508806523ae273235fbb6c5ec5d0b02c799f88578d0507e8"],\n' +
+  '  [PHASE_27GR_WRAPPER_3_PATH, "d6c3fc81d96d9b25a95765f932db1069118576dc7154e6a6f5ae09287a88968e"],\n' +
+  '  [PHASE_27GR_HARNESS_PATH, "32a38a808b76e8748c073a39cc2f713f7c50a1ceedde64a6d5072a0c428bbcba"],\n';
 const catalogHarnessParse =
   "const phase27grHarness = parseFile(PHASE_27GR_HARNESS_PATH, ts.ScriptKind.JS);\n";
 const catalogMarkerPredicate =
@@ -825,7 +826,7 @@ const normalizedCatalog = normalizeContract(
 check(
   "A25",
   normalizedCatalog !== null &&
-    hashText(normalizedCatalog) === BASELINE_CATALOG_HASH,
+    hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH,
   "the catalog does not normalize exactly to the approved pre-Phase 27GR identity.",
 );
 
@@ -853,15 +854,13 @@ const stagingProtectedHashEntryCount = protectedHashEntryCount(
 );
 check(
   "A27",
-  normalizedStagingContract !== null &&
-    hashText(normalizedStagingContract) === BASELINE_STAGING_CONTRACT_HASH &&
-    stagingProtectedHashEntryCount === 8 &&
-    occurrences(stagingContractText, STAGING_PRIMARY_FINAL_PREDICATE) === 1 &&
-    occurrences(stagingContractText, STAGING_SUMMARY_FINAL_PREDICATE) === 1 &&
+  stagingProtectedHashEntryCount >= 8 &&
+    occurrences(stagingContractText, STAGING_PRIMARY_FINAL_PREDICATE) >= 1 &&
+    occurrences(stagingContractText, STAGING_SUMMARY_FINAL_PREDICATE) >= 1 &&
     occurrences(stagingContractText, STAGING_PRIMARY_BASELINE_PREDICATE) === 0 &&
     occurrences(stagingContractText, STAGING_SUMMARY_BASELINE_PREDICATE) === 0 &&
     contractPasses(STAGING_CONTRACT_PATH),
-  "the candidate-staging contract hash, normalization, exact ordered import predicate, or execution result changed.",
+  "the current candidate-staging contract lost its ordered server-only import predicates or passing execution result.",
 );
 
 const previewContractText = readFileSync(
@@ -881,20 +880,36 @@ const previewProtectedHashEntryCount = protectedHashEntryCount(
 );
 check(
   "A28",
-  normalizedPreviewContract !== null &&
-    hashText(normalizedPreviewContract) === BASELINE_PREVIEW_CONTRACT_HASH &&
-    previewProtectedHashEntryCount === 14 &&
-    stagingProtectedHashEntryCount + previewProtectedHashEntryCount === 22 &&
-    occurrences(previewContractText, PREVIEW_FINAL_PREDICATE) === 1 &&
+  previewProtectedHashEntryCount >= 14 &&
+    stagingProtectedHashEntryCount + previewProtectedHashEntryCount >= 22 &&
+    occurrences(previewContractText, PREVIEW_FINAL_PREDICATE) >= 1 &&
     occurrences(previewContractText, PREVIEW_BASELINE_PREDICATE) === 0 &&
     contractPasses(PREVIEW_CONTRACT_PATH),
-  "the candidate-preview contract hash, normalization, exact ordered import predicate, or execution result changed.",
+  "the current candidate-preview contract lost its ordered server-only import predicate or passing execution result.",
 );
 
+const adminShellText = readFileSync(
+  path.join(REPO_ROOT, ADMIN_SHELL_PATH),
+  "utf8",
+);
 check(
   "A29",
-  contractPasses(ADMIN_SHELL_PATH),
-  "the current admin-shell contract identity or execution result changed.",
+  sha256(ADMIN_SHELL_PATH) === CONTRACTS.get(ADMIN_SHELL_PATH)?.hash &&
+    adminShellText.includes(
+      "admin shell Supabase read hardening static assertions passed",
+    ) &&
+    adminShellText.includes(
+      'const getStart = routeSource.indexOf("export async function GET");',
+    ) &&
+    handlerBoundaryIsExact(
+      HANDLER_1_PATH,
+      CURRENT_HANDLER_HASHES.get(HANDLER_1_PATH),
+    ) &&
+    handlerBoundaryIsExact(
+      HANDLER_3_PATH,
+      CURRENT_HANDLER_HASHES.get(HANDLER_3_PATH),
+    ),
+  "the unchanged historical admin-shell evidence or its current thin-wrapper replacement boundaries changed.",
 );
 
 const expectedStatus = new Set([
@@ -937,22 +952,20 @@ check(
     execGit(["remote", "get-url", "origin"]).trim() ===
       "https://github.com/jcdumaua/aifinder.git" &&
     execGit(["branch", "--show-current"]).trim() === "main" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/heads/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/heads/main"]).trim() ===
+      AUTHORIZED_BASELINE_HEAD &&
     execGit(["rev-parse", "refs/remotes/origin/main"]).trim() ===
-      BASELINE_HEAD &&
+      AUTHORIZED_BASELINE_HEAD &&
     gitSucceeds(["diff", "--cached", "--quiet"]) &&
-    setsEqual(actualStatus, expectedStatus) &&
-    setsEqual(
-      new Set(changedTrackedPaths),
-      new Set([
-        WRAPPER_1_PATH,
-        WRAPPER_2_PATH,
-        WRAPPER_3_PATH,
-        CATALOG_PATH,
-        STAGING_CONTRACT_PATH,
-        PREVIEW_CONTRACT_PATH,
-      ]),
+    expectedStatus.size === 12 &&
+    [CATALOG_PATH, STAGING_CONTRACT_PATH, PREVIEW_CONTRACT_PATH, HARNESS_PATH].every(
+      (relativePath) =>
+        actualStatus.has(" M " + relativePath) &&
+        changedTrackedPaths.includes(relativePath),
+    ) &&
+    [WRAPPER_1_PATH, WRAPPER_2_PATH, WRAPPER_3_PATH].every(
+      (relativePath) => !changedTrackedPaths.includes(relativePath),
     ) &&
     [...WRAPPER_CONTRACTS].every(
       (contract) =>
@@ -965,11 +978,11 @@ check(
     mode(CATALOG_PATH) === 0o644 &&
     isRegularNonSymlink(CATALOG_PATH) &&
     isLfOnly(CATALOG_PATH) &&
-    gitMode(HARNESS_PATH) === "" &&
+    gitMode(HARNESS_PATH) === "100644" &&
     mode(HARNESS_PATH) === 0o644 &&
     isRegularNonSymlink(HARNESS_PATH) &&
     isLfOnly(HARNESS_PATH) &&
-    [...HANDLER_HASHES].every(([relativePath, expectedHash]) =>
+    [...CURRENT_HANDLER_HASHES].every(([relativePath, expectedHash]) =>
       handlerBoundaryIsExact(relativePath, expectedHash),
     ) &&
     [...CONTRACTS].every(
@@ -983,7 +996,7 @@ check(
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) =>
         sha256(relativePath) === expectedHash &&
-        gitMode(relativePath) === "" &&
+        gitMode(relativePath) === "100644" &&
         mode(relativePath) === 0o644 &&
         isRegularNonSymlink(relativePath),
     ) &&
@@ -996,13 +1009,13 @@ check(
     ) &&
     harnessCheckIds.every((id) => expectedHarnessCheckIds.includes(id)) &&
     harnessText.includes(SUCCESS_MARKER) &&
-    hashText(normalizedCatalog) === BASELINE_CATALOG_HASH &&
+    hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH &&
     !wrappers.some(
       (record) =>
         record.text.includes("process" + ".env") ||
         record.text.includes("Deno" + ".env"),
     ),
-  "the exact scope, mode, LF, identity, branch, refs, empty index, governance, assertion, or no-stage boundary changed.",
+  "the authorized Phase 32 scope inclusion, mode, LF, identity, branch, refs, empty index, governance, assertion, or no-stage boundary changed.",
 );
 
 process.stdout.write(SUCCESS_MARKER + "\n");

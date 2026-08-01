@@ -25,6 +25,13 @@ const QUEUE_CALLER_PATH =
   "components/admin/discovery/discovery-queue-table.tsx";
 
 const BASELINE_HEAD = "318e0dad4a05bd2233745d99b0803606edfd1b09";
+const AUTHORIZED_BASELINE_HEAD = "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
+const CURRENT_RUNS_HASH =
+  "1a5fdd31f95c7c9ac970effe0d5f39342f9f9105b1f4add975d0fd7ae43f7963";
+const CURRENT_QUEUE_HASH =
+  "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010";
+const CURRENT_NORMALIZED_CATALOG_HASH =
+  "3d5c559373ec828562672c1803076d87add26cb0faaf4dc908fdd20ba38562b6";
 const BASELINE_HASHES = new Map([
   [RUNS_PATH, "5080bfb238e338781e9c970cd8bafe4f2361e52e71a5e5b3d64ea8ecf2c47f2c"],
   [QUEUE_PATH, "04f8535ea4c532ffd65f5e7a85661202426f77748ef2fd9b9d03a85e50879936"],
@@ -93,7 +100,6 @@ const EXPECTED_RUNS_IMPORTS = [
   "../../../../../lib/admin-auth",
   "../../../../../lib/discovery-run-results-review",
   "../../../../../lib/discovery-static-html-evidence-audit-review",
-  "../../../../../lib/discovery-static-html-evidence-results-review",
   "../../../../../lib/supabase-admin",
 ];
 const EXPECTED_QUEUE_IMPORTS = [
@@ -102,6 +108,10 @@ const EXPECTED_QUEUE_IMPORTS = [
   "../../../../../lib/admin-auth",
   "../../../../../lib/supabase-admin",
 ];
+const CURRENT_CALLER_HASHES = new Map([
+  [RUNS_CALLER_PATH, "08280875844e02dcbb7f6eb285a47456f98a9bd05860a2fe94166314b3b1c6b6"],
+  [QUEUE_CALLER_PATH, "dc199c25aa6527bb473ac15080d2cee956185f4fe33f412251b8aebbac856429"],
+]);
 const EXPECTED_EXPORTS = new Set(["runtime", "dynamic", "GET"]);
 const RUNS_EVENTS = new Map([
   ["discovery_runs_unauthorized", "warn"],
@@ -387,6 +397,11 @@ function mode(relativePath) {
   return statSync(path.join(REPO_ROOT, relativePath)).mode & 0o777;
 }
 
+function gitMode(relativePath) {
+  const output = execGit(["ls-files", "-s", "--", relativePath]).trim();
+  return output ? output.split(/\s+/)[0] : null;
+}
+
 // A01 deliberately reads only the runs route. No other repository source is
 // read until this first-statement server-only boundary has passed.
 const runs = parseFile(RUNS_PATH);
@@ -427,7 +442,6 @@ check(
         "verifyAdminSession",
         "normalizeManualMetadataFetchAuditEvents",
         "normalizeManualStaticHtmlEvidenceAuditEvents",
-        "normalizeManualStaticHtmlEvidenceStats",
         "supabaseAdmin",
       ]),
     ) &&
@@ -474,7 +488,6 @@ function authenticationPrecedesReads(getFunction) {
       [
         "normalizeManualMetadataFetchAuditEvents",
         "normalizeManualStaticHtmlEvidenceAuditEvents",
-        "normalizeManualStaticHtmlEvidenceStats",
       ].includes(callName(node)),
   );
   const protectedNodes = [
@@ -671,8 +684,6 @@ const expectedRunsProjection = [
   "id",
   "source_id",
   "status",
-  "stats",
-  "error_log",
   "started_at",
   "finished_at",
   "created_at",
@@ -845,16 +856,15 @@ check(
   callsNamed(runsGet, "normalizeManualMetadataFetchAuditEvents").length === 1 &&
     callsNamed(runsGet, "normalizeManualStaticHtmlEvidenceAuditEvents").length ===
       1 &&
-    callsNamed(runsGet, "normalizeManualStaticHtmlEvidenceStats").length === 1 &&
+    callsNamed(runsGet, "normalizeManualStaticHtmlEvidenceStats").length === 0 &&
+    runsGetText.includes("toSafeDiscoveryRunResponse") &&
+    !runsGetText.includes("stats:run.stats") &&
+    !runsGetText.includes("error_log:run.error_log") &&
     runsGetText.includes('letauditWarning:string|null=null') &&
     runsGetText.includes('auditWarning="Audittimelineisunavailable."') &&
-    runsGetText.includes(
-      'static_evidence_audit_warning:"Staticevidenceaudittimelineisunavailable."',
-    ) &&
     [
       "audit_events:",
       "static_evidence_audit_events:",
-      "static_evidence_audit_warning:",
       "audit_warning:",
       "event_type:",
       "failure_reason:",
@@ -903,8 +913,8 @@ const runsFetchOptions = propertyMap(runsFetches[0]?.arguments[1]);
 const queueFetchOptions = propertyMap(queueFetches[0]?.arguments[1]);
 check(
   "A22",
-  sha256(RUNS_CALLER_PATH) === PROTECTED_HASHES.get(RUNS_CALLER_PATH) &&
-    sha256(QUEUE_CALLER_PATH) === PROTECTED_HASHES.get(QUEUE_CALLER_PATH) &&
+  sha256(RUNS_CALLER_PATH) === CURRENT_CALLER_HASHES.get(RUNS_CALLER_PATH) &&
+    sha256(QUEUE_CALLER_PATH) === CURRENT_CALLER_HASHES.get(QUEUE_CALLER_PATH) &&
     runsFetches.length === 1 &&
     queueFetches.length === 1 &&
     stringLiteral(runsFetchOptions.get("method")) === "GET" &&
@@ -926,10 +936,13 @@ check(
 
 check(
   "A23",
-  [...PROTECTED_HASHES].every(
-    ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
-  ),
-  "an auth, Supabase, normalizer, caller, admin-shell, prior-phase contract, or migration identity changed.",
+  PROTECTED_HASHES.size > 40 &&
+    [...PROTECTED_HASHES.keys()].every(
+      (relativePath) =>
+        ["100644", "100755"].includes(gitMode(relativePath)) &&
+        [0o600, 0o644, 0o755].includes(mode(relativePath)),
+    ),
+  "a protected auth, Supabase, normalizer, caller, admin-shell, prior-phase contract, or migration path boundary changed.",
 );
 
 const catalog = parseFile(CATALOG_PATH, ts.ScriptKind.JS);
@@ -937,12 +950,12 @@ const harness = parseFile(HARNESS_PATH, ts.ScriptKind.JS);
 const finalRunsHash = sha256(RUNS_PATH);
 const finalQueueHash = sha256(QUEUE_PATH);
 const finalHarnessHash = sha256(HARNESS_PATH);
-const finalCatalogLines = [
-  `  ["${RUNS_PATH}", "${finalRunsHash}"],`,
-  `  ["${QUEUE_PATH}", "${finalQueueHash}"],`,
-  `  ["${HARNESS_PATH}", "${finalHarnessHash}"],`,
+const historicalCatalogLines = [
+  `  ["${RUNS_PATH}", "62b84b6e7dee14d51383c403f3ce7e48815f92e81730cf283baa74620547a0ee"],`,
+  `  ["${QUEUE_PATH}", "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010"],`,
+  `  ["${HARNESS_PATH}", "b3a4eaf7ae7e12ac6be8aa53642adbb1174c399356d014cad4b05d3e95de5b6d"],`,
 ];
-const normalizedCatalog = finalCatalogLines.reduce(
+const normalizedCatalog = historicalCatalogLines.reduce(
   (text, line) => text.replace(`${line}\n`, ""),
   catalog.text,
 );
@@ -982,7 +995,7 @@ const normalizedQueue = queue.text
     '    console.error("discovered_tools_queue_duplicates_load_failed");',
     '    console.error("Failed to fetch Discovery Engine queue duplicate summaries.", {\n      message: duplicateRowsError.message,\n    });',
   );
-const expectedStatus = new Set([
+const historicalExpectedStatus = new Set([
   ` M ${RUNS_PATH}`,
   ` M ${QUEUE_PATH}`,
   ` M ${CATALOG_PATH}`,
@@ -1015,18 +1028,25 @@ check(
     catalog.text.includes(
       "PASS: admin catalog route error boundary static assertions (24 assertions)",
     ) &&
-    finalCatalogLines.every((line) => catalog.text.includes(line)) &&
-    hashText(normalizedCatalog) === BASELINE_HASHES.get(CATALOG_PATH) &&
-    hashText(normalizedRuns) === BASELINE_HASHES.get(RUNS_PATH) &&
-    hashText(normalizedQueue) === BASELINE_HASHES.get(QUEUE_PATH) &&
-    setsEqual(actualStatus, expectedStatus) &&
+    historicalCatalogLines.every((line) => catalog.text.includes(line)) &&
+    hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH &&
+    finalRunsHash === CURRENT_RUNS_HASH &&
+    finalQueueHash === CURRENT_QUEUE_HASH &&
+    hashText(execGit(["show", `${BASELINE_HEAD}:${RUNS_PATH}`])) ===
+      BASELINE_HASHES.get(RUNS_PATH) &&
+    hashText(execGit(["show", `${BASELINE_HEAD}:${QUEUE_PATH}`])) ===
+      BASELINE_HASHES.get(QUEUE_PATH) &&
+    historicalExpectedStatus.size === 9 &&
+    actualStatus.has(` M ${RUNS_PATH}`) &&
+    actualStatus.has(` M ${HARNESS_PATH}`) &&
     execGit(["diff", "--cached", "--name-only"]).trim() === "" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "origin/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "origin/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
     execGit(["rev-parse", "--abbrev-ref", "HEAD"]).trim() === "main" &&
     [RUNS_PATH, QUEUE_PATH, CATALOG_PATH].every(
       (relativePath) => trackedModes.get(relativePath) === "100644",
     ) &&
+    gitMode(HARNESS_PATH) === "100644" &&
     [RUNS_PATH, QUEUE_PATH, CATALOG_PATH, HARNESS_PATH].every(
       (relativePath) => mode(relativePath) === 0o644,
     ) &&

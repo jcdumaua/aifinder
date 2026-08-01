@@ -236,6 +236,11 @@ assertIncludes(
 
 assertIncludes(
   route,
+  "export function createCandidateDecisionHandler(",
+  "A4 decision route fabricated execution seam",
+);
+assertIncludes(
+  route,
   "export const POST = createCandidateDecisionHandler();",
   "A4 decision route",
 );
@@ -262,6 +267,18 @@ assertIncludes(
   '"Candidate decision could not be applied."',
   "A4 decision route bounded fallback error",
 );
+for (const marker of [
+  "PublicLiveRouteSafetyError",
+  "readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES)",
+  "parseBoundedJsonBody(",
+  'error.code === "request_body_too_large"',
+  'throw new Error("Request is too large.")',
+]) {
+  assertIncludes(route, marker, "A4 decision route actual-byte body boundary");
+}
+for (const marker of ["await request.json()", "process.env", "createClient("]) {
+  assertNotIncludes(route, marker, "A4 decision route fabricated capability boundary");
+}
 
 console.log("A4 admin mutation route boundary static assertions passed.");
 

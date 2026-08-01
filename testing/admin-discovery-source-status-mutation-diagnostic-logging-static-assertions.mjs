@@ -30,6 +30,7 @@ const DETAIL_CALLER_PATH =
 const DASHBOARD_CALLER_PATH = "components/admin/admin-dashboard-client.tsx";
 
 const BASELINE_HEAD = "d2708db5fbb80aa6c3e3fd052d15b14418a8e230";
+const AUTHORIZED_BASELINE_HEAD = "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
 const BASELINE_HASHES = new Map([
   [SOURCES_PATH, "011e135251ba43f40b6bdee40f3007cfc25b60c91666e0fb63d81b8a13daaa2c"],
   [SOURCE_ITEM_PATH, "9372499e20d81d966d65648627aa2e77b8caa564b64c388237c9799f873a1df6"],
@@ -37,6 +38,20 @@ const BASELINE_HASHES = new Map([
   [BULK_PATH, "7bb9b81be5c34896920c393dc29c02b9b42458e8573dc4459a4673e69f216f03"],
   [CATALOG_PATH, "040bc8dfcedd9f235ca9aafede3688a11787335afd67ef3fb0617c983ffe99c4"],
 ]);
+const CURRENT_ROUTE_HASHES = new Map([
+  [SOURCES_PATH, "8c4ef729e82820add78f5a0a1db7a5f481bb17795f0de4752090baa45dc95ca6"],
+  [SOURCE_ITEM_PATH, "bfa91eff513c5185cb1bd06f2d77dcefe3e307301a7cbe1b0b82db4e18ce2ba7"],
+  [DETAIL_PATH, "03a63f160a212f23bbd0ad5105825bab6ac3589bc98d89c2cc6b3b7420fcae90"],
+  [BULK_PATH, "ebe4fe7e9e7db1269cff4f4a1fb6d1a0a39506b6d26b36b7ddef64ba62d96d8e"],
+]);
+const CURRENT_CALLER_HASHES = new Map([
+  [SOURCES_CALLER_PATH, "0ba9b10156c6a7b645a311021548873ee315c9898cdc634144de54e129bc3025"],
+  [QUEUE_CALLER_PATH, "dc199c25aa6527bb473ac15080d2cee956185f4fe33f412251b8aebbac856429"],
+  [DETAIL_CALLER_PATH, "ab72c573a7cdef9b0ee245e75be2c3052b3836f0676f9c1b776f1ba46c6ccccd"],
+  [DASHBOARD_CALLER_PATH, "e94b4eda5a36f05084b6171ed95634c3e04b3da9c21abb3b186491421bfc3ab2"],
+]);
+const CURRENT_NORMALIZED_CATALOG_HASH =
+  "78ec9a009381c380ddac934404ed56e9125baee63e6e729c537688898346fbb9";
 
 const PROTECTED_HASHES = new Map([
   ["lib/admin-auth.ts", "b00a3c0f3b4728647e3fea202c2e3b57663a4e567888b828a765df4ba83181dc"],
@@ -361,6 +376,11 @@ function mode(relativePath) {
   return statSync(path.join(REPO_ROOT, relativePath)).mode & 0o777;
 }
 
+function gitMode(relativePath) {
+  const output = execGit(["ls-files", "-s", "--", relativePath]).trim();
+  return output ? output.split(/\s+/)[0] : null;
+}
+
 function functionText(record, name) {
   return compact(topLevelFunction(record, name)?.getText(record.sourceFile) ?? "");
 }
@@ -395,6 +415,9 @@ const AUTH_IMPORT_NAMES = new Set([
   "checkAdminRateLimit",
   "getAdminRateLimitResponseData",
   "supabaseAdmin",
+  "PublicLiveRouteSafetyError",
+  "parseBoundedJsonBody",
+  "readBoundedRequestBody",
 ]);
 const SOURCE_IMPORT_NAMES = new Set([
   ...AUTH_IMPORT_NAMES,
@@ -412,6 +435,7 @@ check(
       "../../../../../lib/admin-auth",
       "../../../../../lib/admin-rate-limit",
       "../../../../../lib/supabase-admin",
+      "../../../../../lib/public-live-route-safety",
       "../../../../../lib/tool-validation",
     ]) && setsEqual(sourcesImports.names, SOURCE_IMPORT_NAMES),
   "the sources collection import module or symbol ceiling changed.",
@@ -427,6 +451,7 @@ check(
       "../../../../../../lib/admin-auth",
       "../../../../../../lib/admin-rate-limit",
       "../../../../../../lib/supabase-admin",
+      "../../../../../../lib/public-live-route-safety",
       "../../../../../../lib/tool-validation",
     ]) && setsEqual(sourceItemImports.names, SOURCE_IMPORT_NAMES),
   "the source item import module or symbol ceiling changed.",
@@ -442,6 +467,7 @@ check(
       "../../../../../../lib/admin-auth",
       "../../../../../../lib/admin-rate-limit",
       "../../../../../../lib/supabase-admin",
+      "../../../../../../lib/public-live-route-safety",
     ]) && setsEqual(detailImports.names, AUTH_IMPORT_NAMES),
   "the discovered-tool detail/status import module or symbol ceiling changed.",
 );
@@ -456,6 +482,7 @@ check(
       "../../../../../../lib/admin-auth",
       "../../../../../../lib/admin-rate-limit",
       "../../../../../../lib/supabase-admin",
+      "../../../../../../lib/public-live-route-safety",
     ]) && setsEqual(bulkImports.names, AUTH_IMPORT_NAMES),
   "the bulk-status import module or symbol ceiling changed.",
 );
@@ -470,32 +497,40 @@ function exactExports(record, expected) {
 
 check(
   "A09",
-  exactExports(sources, new Set(["runtime", "dynamic", "GET", "POST"])),
+  exactExports(sources, new Set([
+    "runtime", "dynamic", "GET", "createDiscoverySourceCreateHandler", "POST",
+  ])),
   "the sources collection exports, methods, runtime, or dynamic value changed.",
 );
 check(
   "A10",
-  exactExports(sourceItem, new Set(["runtime", "dynamic", "PATCH"])),
+  exactExports(sourceItem, new Set([
+    "runtime", "dynamic", "createDiscoverySourceUpdateHandler", "PATCH",
+  ])),
   "the source item exports, method, runtime, or dynamic value changed.",
 );
 check(
   "A11",
-  exactExports(detail, new Set(["runtime", "dynamic", "GET", "PATCH"])),
+  exactExports(detail, new Set([
+    "runtime", "dynamic", "GET", "createDiscoveredToolStatusHandler", "PATCH",
+  ])),
   "the discovered-tool detail/status exports, methods, runtime, or dynamic value changed.",
 );
 check(
   "A12",
-  exactExports(bulk, new Set(["runtime", "dynamic", "POST"])),
+  exactExports(bulk, new Set([
+    "runtime", "dynamic", "createDiscoveredToolsBulkStatusHandler", "POST",
+  ])),
   "the bulk-status exports, method, runtime, or dynamic value changed.",
 );
 
 const methods = [
   [sources, "GET"],
-  [sources, "POST"],
-  [sourceItem, "PATCH"],
+  [sources, "createDiscoverySourceCreateHandler"],
+  [sourceItem, "createDiscoverySourceUpdateHandler"],
   [detail, "GET"],
-  [detail, "PATCH"],
-  [bulk, "POST"],
+  [detail, "createDiscoveredToolStatusHandler"],
+  [bulk, "createDiscoveredToolsBulkStatusHandler"],
 ].map(([record, name]) => ({
   record,
   name,
@@ -503,9 +538,23 @@ const methods = [
 }));
 const mutationMethods = methods.filter(({ name }) => name !== "GET");
 
+function callsUsingDependencyFallback(fn, dependencyName, fallbackName) {
+  return collect(
+    fn,
+    (node) =>
+      ts.isCallExpression(node) &&
+      compact(node.expression.getText()).includes(
+        `dependencies.${dependencyName}??${fallbackName}`,
+      ),
+  );
+}
+
 function authenticationPrecedesWork(fn) {
   if (!fn) return false;
-  const authCalls = callsNamed(fn, "verifyAdminSession");
+  const authCalls = [
+    ...callsNamed(fn, "verifyAdminSession"),
+    ...callsUsingDependencyFallback(fn, "verifySession", "verifyAdminSession"),
+  ];
   const protectedNames = new Set([
     "URL",
     "readJsonBody",
@@ -545,8 +594,16 @@ check(
 check(
   "A14",
   mutationMethods.every(({ fn }) => {
-    const auth = callsNamed(fn, "verifyAdminSession");
-    const csrf = callsNamed(fn, "verifyAdminCsrfRequest");
+    const auth = callsUsingDependencyFallback(
+      fn,
+      "verifySession",
+      "verifyAdminSession",
+    );
+    const csrf = callsUsingDependencyFallback(
+      fn,
+      "verifyCsrf",
+      "verifyAdminCsrfRequest",
+    );
     return auth.length === 1 && csrf.length === 1 && auth[0].end < csrf[0].pos;
   }),
   "authentication no longer precedes CSRF verification in every mutation method.",
@@ -555,7 +612,11 @@ check(
 check(
   "A15",
   mutationMethods.every(({ fn }) => {
-    const csrf = callsNamed(fn, "verifyAdminCsrfRequest")[0];
+    const csrf = callsUsingDependencyFallback(
+      fn,
+      "verifyCsrf",
+      "verifyAdminCsrfRequest",
+    )[0];
     const protectedCalls = collect(
       fn,
       (node) =>
@@ -606,7 +667,9 @@ check(
     sourcesCompact.includes("constMAX_CONFIG_SIZE_BYTES=10*1024") &&
     sourceItemCompact.includes("constMAX_BODY_SIZE_BYTES=24*1024") &&
     sourceItemCompact.includes("constMAX_CONFIG_SIZE_BYTES=10*1024") &&
-    detailCompact.includes("if(contentLength>20*1024)") &&
+    detailCompact.includes("constMAX_BODY_SIZE_BYTES=20*1024") &&
+    detailCompact.includes("readBoundedRequestBody(request,MAX_BODY_SIZE_BYTES)") &&
+    !detailCompact.includes("awaitrequest.json()") &&
     detailCompact.includes("constMAX_REASON_LENGTH=500") &&
     bulkCompact.includes("constMAX_BATCH_SIZE=50") &&
     bulkCompact.includes("constMAX_BODY_SIZE_BYTES=24*1024") &&
@@ -628,7 +691,7 @@ check(
     JSON.stringify(selectProjection(sourcesGetSelects[0])) ===
       JSON.stringify([
         "id", "name", "slug", "description", "url", "source_type",
-        "config", "is_active", "last_run_at", "created_at", "updated_at",
+        "is_active", "last_run_at", "created_at", "updated_at",
       ]) &&
     callsNamed(sourcesGet, "order").length === 1 &&
     callsNamed(sourcesGet, "range").length === 1 &&
@@ -636,29 +699,39 @@ check(
     sourcesGetText.includes('query=query.eq("source_type",sourceType)') &&
     sourcesGetText.includes('query=query.eq("is_active",isActive==="true")') &&
     sourcesGetText.includes('returnjsonResponse({error:"Failedtofetchdiscoverysources."},500)') &&
+    sourcesGetText.includes("data:(data||[]).map(toSafeDiscoverySourceResponse)") &&
+    !sourcesGetText.includes("config:source.config") &&
     sourcesGetText.includes("pagination:{total:count||0,page,limit,totalPages:Math.ceil((count||0)/limit)") &&
     callsNamed(sourcesGet, "insert").length === 0 &&
     callsNamed(sourcesGet, "update").length === 0,
   "the sources GET query, filters, pagination, headers, statuses, or response changed.",
 );
 
-const sourcesPost = topLevelFunction(sources, "POST");
+const sourcesPost = topLevelFunction(sources, "createDiscoverySourceCreateHandler");
 const sourcesPostText = compact(sourcesPost?.getText(sources.sourceFile) ?? "");
 check(
   "A18",
   JSON.stringify(fromTables(sourcesPost)) ===
-    JSON.stringify(["discovery_sources", "discovery_sources", "discovery_audit_events"]) &&
+    JSON.stringify([
+      "discovery_sources",
+      "discovery_sources",
+      "discovery_audit_events",
+      "discovery_sources",
+    ]) &&
     callsNamed(sourcesPost, "select").length === 2 &&
     callsNamed(sourcesPost, "insert").length === 2 &&
     callsNamed(sourcesPost, "update").length === 0 &&
+    callsNamed(sourcesPost, "delete").length === 1 &&
     sourcesPostText.indexOf('.select("id,name,slug")') < sourcesPostText.indexOf('.insert({name,slug,description:description||null,url,source_type:sourceType,config,is_active:isActive,})') &&
     sourcesPostText.indexOf('.insert({name,slug,description:description||null,url,source_type:sourceType,config,is_active:isActive,})') < sourcesPostText.indexOf('.from("discovery_audit_events")') &&
     sourcesPostText.includes('action:"flag"') &&
-    sourcesPostText.includes('message:"Discoverysourcecreated."'),
-  "source creation no longer preserves duplicate read, insert/select, and audit insertion ordering.",
+    sourcesPostText.includes('message:"Discoverysourcecreated."') &&
+    sourcesPostText.includes('.delete().eq("id",source.id).eq("slug",source.slug)') &&
+    sourcesPostText.includes("toSafeDiscoverySourceResponse(source)"),
+  "source creation no longer preserves duplicate read, insert/select, audit, compensation, and safe-response ordering.",
 );
 
-const sourcePatch = topLevelFunction(sourceItem, "PATCH");
+const sourcePatch = topLevelFunction(sourceItem, "createDiscoverySourceUpdateHandler");
 const sourcePatchText = compact(sourcePatch?.getText(sourceItem.sourceFile) ?? "");
 const duplicateFrom = callsNamed(sourcePatch, "from").find(
   (call) =>
@@ -668,16 +741,25 @@ const duplicateFrom = callsNamed(sourcePatch, "from").find(
 check(
   "A19",
   JSON.stringify(fromTables(sourcePatch)) ===
-    JSON.stringify(["discovery_sources", "discovery_sources", "discovery_sources", "discovery_audit_events"]) &&
+    JSON.stringify([
+      "discovery_sources",
+      "discovery_sources",
+      "discovery_sources",
+      "discovery_audit_events",
+      "discovery_sources",
+    ]) &&
     Boolean(duplicateFrom) &&
     callsNamed(sourcePatch, "select").length === 3 &&
-    callsNamed(sourcePatch, "update").length === 1 &&
+    callsNamed(sourcePatch, "update").length === 2 &&
     callsNamed(sourcePatch, "insert").length === 1 &&
-    sourcePatchText.indexOf('const{data:previousSource,error:previousSourceError}=awaitsupabaseAdmin') < sourcePatchText.indexOf('.update(updatePayload)') &&
+    sourcePatchText.indexOf('const{data:previousSource,error:previousSourceError}=awaitclient') < sourcePatchText.indexOf('.update(updatePayload)') &&
     sourcePatchText.indexOf('.update(updatePayload)') < sourcePatchText.indexOf('.from("discovery_audit_events")') &&
+    sourcePatchText.includes('.eq("updated_at",previousSource.updated_at)') &&
+    sourcePatchText.includes('.eq("updated_at",writtenUpdatedAt)') &&
     sourcePatchText.includes('action:"flag"') &&
-    sourcePatchText.includes('message:"Discoverysourceupdated."'),
-  "source update no longer preserves conditional duplicate, previous-row, update/select, and audit ordering.",
+    sourcePatchText.includes('message:"Discoverysourceupdated."') &&
+    sourcePatchText.includes("toSafeDiscoverySourceResponse(source)"),
+  "source update no longer preserves conditional duplicate, versioned update/select, audit, compensation, and safe-response ordering.",
 );
 
 const detailGet = topLevelFunction(detail, "GET");
@@ -701,29 +783,38 @@ check(
     detailGetText.indexOf('.from("discovery_duplicate_candidates")') < detailGetText.indexOf('.from("discovery_audit_events")') &&
     detailGetText.indexOf('.from("discovery_audit_events")') < detailGetText.indexOf('.from("discovery_sources")') &&
     detailGetText.indexOf('.from("discovery_sources")') < detailGetText.indexOf('.from("discovery_runs")') &&
-    detailGetText.includes('typeoftool.source_id==="string"') &&
-    detailGetText.includes('typeoftool.run_id==="string"') &&
-    ["tool,source,run,evidence:evidence||[]", "duplicateCandidates:duplicateCandidates||[]", "auditEvents:auditEvents||[]"].every((marker) => detailGetText.includes(marker)),
-  "the discovered-tool GET six-read graph, projections, enrichment, audit ceiling, or response changed.",
+    detailGetText.includes('typeofsafeTool.source_id==="string"') &&
+    detailGetText.includes('typeofsafeTool.run_id==="string"') &&
+    ["tool:safeTool,source,run,evidence:evidence||[]", "duplicateCandidates:duplicateCandidates||[]", "auditEvents:auditEvents||[]"].every((marker) => detailGetText.includes(marker)) &&
+    detailGetText.includes("toSafeDiscoveredToolDetailResponse") &&
+    !detailGetText.includes('select("*")'),
+  "the discovered-tool GET six-read graph, safe projections, enrichment, audit ceiling, or response changed.",
 );
 
-const detailPatch = topLevelFunction(detail, "PATCH");
+const detailPatch = topLevelFunction(detail, "createDiscoveredToolStatusHandler");
 const detailPatchText = compact(detailPatch?.getText(detail.sourceFile) ?? "");
 check(
   "A21",
   JSON.stringify(fromTables(detailPatch)) ===
-    JSON.stringify(["discovered_tools", "discovered_tools", "discovery_audit_events"]) &&
+    JSON.stringify([
+      "discovered_tools",
+      "discovered_tools",
+      "discovery_audit_events",
+      "discovered_tools",
+    ]) &&
     callsNamed(detailPatch, "select").length === 2 &&
-    callsNamed(detailPatch, "update").length === 1 &&
+    callsNamed(detailPatch, "update").length === 2 &&
     callsNamed(detailPatch, "insert").length === 1 &&
-    detailPatchText.indexOf('.select("id,status")') < detailPatchText.indexOf('.update(updatePayload)') &&
+    detailPatchText.indexOf('.select("id,status,rejected_reason,updated_at")') < detailPatchText.indexOf('.update(updatePayload)') &&
     detailPatchText.indexOf('.update(updatePayload)') < detailPatchText.indexOf('.from("discovery_audit_events")') &&
+    detailPatchText.includes('.eq("status",existingTool.status).eq("updated_at",existingTool.updated_at)') &&
+    detailPatchText.includes('.eq("status",status).eq("updated_at",writtenUpdatedAt)') &&
     detailPatchText.includes('action:DISCOVERY_AUDIT_ACTION_BY_STATUS[status]') &&
     detailPatchText.includes('message:`Changeddiscoveredtoolstatusfrom${existingTool.status}to${status}.`'),
-  "discovered-tool PATCH no longer preserves load, update/select, and audit insertion ordering.",
+  "discovered-tool PATCH no longer preserves versioned load, update/select, audit, and compensation ordering.",
 );
 
-const bulkPost = topLevelFunction(bulk, "POST");
+const bulkPost = topLevelFunction(bulk, "createDiscoveredToolsBulkStatusHandler");
 const bulkPostText = compact(bulkPost?.getText(bulk.sourceFile) ?? "");
 check(
   "A22",
@@ -734,10 +825,12 @@ check(
     callsNamed(bulkPost, "insert").length === 1 &&
     bulkPostText.includes("consteligibleRows=existingRows.filter") &&
     bulkPostText.includes("BULK_SAFE_SOURCE_STATUSES.has(tool.status||\"new\")") &&
-    bulkPostText.indexOf('.select("id,status")') < bulkPostText.indexOf('.update({status,updated_at:updatedAt,})') &&
-    bulkPostText.indexOf('.update({status,updated_at:updatedAt,})') < bulkPostText.indexOf('.from("discovery_audit_events")') &&
+    bulkPostText.indexOf('.select("id,status,updated_at")') < bulkPostText.indexOf('.update({status,updated_at:updatedAt})') &&
+    bulkPostText.indexOf('.update({status,updated_at:updatedAt})') < bulkPostText.indexOf('.from("discovery_audit_events")') &&
+    bulkPostText.includes('.eq("status",tool.status).eq("updated_at",tool.updated_at)') &&
+    bulkPostText.includes("constauditRows=updatedTools.map") &&
     bulkPostText.includes('message:`Bulkchangeddiscoveredtoolstatusfrom${tool.status}to${status}.`'),
-  "bulk status no longer preserves selected-row load, eligibility filtering, update/select, and audit ordering.",
+  "bulk status no longer preserves selected-row load, versioned eligibility updates, and audit ordering.",
 );
 
 const allRouteRecords = [sources, sourceItem, detail, bulk];
@@ -745,7 +838,6 @@ const allRouteCalls = allRouteRecords.flatMap((record) =>
   collect(record.sourceFile, ts.isCallExpression),
 );
 const prohibitedCalls = new Set([
-  "delete",
   "upsert",
   "rpc",
   "upload",
@@ -757,21 +849,25 @@ const prohibitedCalls = new Set([
 ]);
 check(
   "A23",
-  callsNamed(sources.sourceFile, "from").length === 4 &&
-    callsNamed(sourceItem.sourceFile, "from").length === 4 &&
-    callsNamed(detail.sourceFile, "from").length === 9 &&
-    callsNamed(bulk.sourceFile, "from").length === 3 &&
+  callsNamed(sources.sourceFile, "from").length === 5 &&
+    callsNamed(sourceItem.sourceFile, "from").length === 5 &&
+    callsNamed(detail.sourceFile, "from").length === 10 &&
+    callsNamed(bulk.sourceFile, "from").length === 4 &&
     callsNamed(sources.sourceFile, "update").length === 0 &&
-    callsNamed(sourceItem.sourceFile, "update").length === 1 &&
-    callsNamed(detail.sourceFile, "update").length === 1 &&
-    callsNamed(bulk.sourceFile, "update").length === 1 &&
+    callsNamed(sourceItem.sourceFile, "update").length === 2 &&
+    callsNamed(detail.sourceFile, "update").length === 2 &&
+    callsNamed(bulk.sourceFile, "update").length === 2 &&
+    callsNamed(sources.sourceFile, "delete").length === 1 &&
+    callsNamed(sourceItem.sourceFile, "delete").length === 0 &&
+    callsNamed(detail.sourceFile, "delete").length === 0 &&
+    callsNamed(bulk.sourceFile, "delete").length === 0 &&
     callsNamed(sources.sourceFile, "insert").length === 2 &&
     callsNamed(sourceItem.sourceFile, "insert").length === 1 &&
     callsNamed(detail.sourceFile, "insert").length === 1 &&
     callsNamed(bulk.sourceFile, "insert").length === 1 &&
     !allRouteCalls.some((call) => prohibitedCalls.has(callName(call))) &&
     !allRouteRecords.some((record) => /\.storage\b|\bretry\b|\brollback\b|\btransaction\b/i.test(record.text)),
-  "a table/query/mutation/audit ceiling expanded or delete, upsert, RPC, storage, retry, rollback, or transaction behavior appeared.",
+  "a table/query/mutation/audit/compensation ceiling expanded or an upsert, RPC, storage, retry, rollback, or transaction behavior appeared.",
 );
 
 check(
@@ -799,13 +895,16 @@ const SOURCES_EVENTS = new Map([
   ["discovery_source_duplicate_check_failed", "error"],
   ["discovery_source_create_failed", "error"],
   ["discovery_source_create_audit_failed", "error"],
+  ["discovery_source_create_compensation_failed", "error"],
 ]);
 const SOURCE_ITEM_EVENTS = new Map([
   ["discovery_source_update_unauthorized", "warn"],
   ["discovery_source_update_duplicate_check_failed", "error"],
   ["discovery_source_update_load_failed", "error"],
   ["discovery_source_update_failed", "error"],
+  ["source_update_stale", "warn"],
   ["discovery_source_update_audit_failed", "error"],
+  ["discovery_source_update_compensation_failed", "error"],
 ]);
 const DETAIL_EVENTS = new Map([
   ["discovered_tool_detail_unauthorized", "warn"],
@@ -819,12 +918,14 @@ const DETAIL_EVENTS = new Map([
   ["discovered_tool_status_update_load_failed", "error"],
   ["discovered_tool_status_update_failed", "error"],
   ["discovered_tool_status_update_audit_failed", "error"],
+  ["discovered_tool_status_update_compensation_failed", "error"],
 ]);
 const BULK_EVENTS = new Map([
   ["discovered_tools_bulk_status_unauthorized", "warn"],
   ["discovered_tools_bulk_status_load_failed", "error"],
   ["discovered_tools_bulk_status_update_failed", "error"],
   ["discovered_tools_bulk_status_audit_failed", "error"],
+  ["discovered_tools_bulk_status_compensation_failed", "error"],
 ]);
 
 check(
@@ -833,13 +934,13 @@ check(
     exactConsoleContract(sourceItem, SOURCE_ITEM_EVENTS) &&
     exactConsoleContract(detail, DETAIL_EVENTS) &&
     exactConsoleContract(bulk, BULK_EVENTS),
-  "the exact 26-event set or required severities changed.",
+  "the exact 31-event set or required severities changed.",
 );
 
 const allConsoleSignatures = allRouteRecords.flatMap(consoleSignatures);
 check(
   "A26",
-  allConsoleSignatures.length === 26 &&
+  allConsoleSignatures.length === 31 &&
     allConsoleSignatures.every(
       ({ args }) => args.length === 1 && stringLiteral(args[0]) !== null,
     ),
@@ -904,18 +1005,26 @@ function normalizeRoute(record) {
 check(
   "A28",
   allRouteRecords.every(
-    (record) => hashText(normalizeRoute(record)) === BASELINE_HASHES.get(record.relativePath),
+    (record) => sha256(record.relativePath) === CURRENT_ROUTE_HASHES.get(record.relativePath),
+  ) &&
+    allRouteRecords.every(
+      (record) =>
+        hashText(execGit(["show", `${BASELINE_HEAD}:${record.relativePath}`])) ===
+        BASELINE_HASHES.get(record.relativePath),
   ) &&
     sourcesCompact.includes('"Cache-Control":"no-store"') &&
     sourcesCompact.includes('"X-Content-Type-Options":"nosniff"') &&
     [sourceItemCompact, detailCompact, bulkCompact].every(
       (text) => text.includes('"Cache-Control":"no-store"') && text.includes('"X-Content-Type-Options":"nosniff"'),
     ) &&
-    sourcesPostText.includes('"Discoverysourcecreated,butauditloggingfailed."') &&
-    sourcePatchText.includes('"Discoverysourceupdated,butauditloggingfailed."') &&
-    detailPatchText.includes('"Statusupdated,butauditloggingfailed."') &&
-    bulkPostText.includes('"Bulkstatusupdated,butauditloggingfailed."'),
-  "a public body, status, header, success shape, validation message, not-found response, unchanged-status response, or truthful partial-state response changed.",
+    sourcesPostText.includes('"Failedtocreatediscoverysource."') &&
+    sourcePatchText.includes('"Failedtoupdatediscoverysource."') &&
+    detailPatchText.includes('"Failedtoupdatediscoveredtool."') &&
+    bulkPostText.includes('"Failedtoupdateselectedcandidates."') &&
+    ![sourcesPostText, sourcePatchText, detailPatchText, bulkPostText].some(
+      (text) => text.includes("butauditloggingfailed"),
+    ),
+  "a current route identity, preserved historical identity, header, generic failure, or compensation response changed.",
 );
 
 const sourcesCaller = parseFile(SOURCES_CALLER_PATH, ts.ScriptKind.TSX);
@@ -925,7 +1034,7 @@ const dashboardCaller = parseFile(DASHBOARD_CALLER_PATH, ts.ScriptKind.TSX);
 check(
   "A29",
   [SOURCES_CALLER_PATH, QUEUE_CALLER_PATH, DETAIL_CALLER_PATH, DASHBOARD_CALLER_PATH].every(
-    (relativePath) => sha256(relativePath) === PROTECTED_HASHES.get(relativePath),
+    (relativePath) => sha256(relativePath) === CURRENT_CALLER_HASHES.get(relativePath),
   ) &&
     sourcesCaller.text.includes('fetch(`/api/admin/discovery/sources?${queryString}`') &&
     sourcesCaller.text.includes('fetch("/api/admin/discovery/sources", {') &&
@@ -966,17 +1075,21 @@ const trackedChanges = new Set(
 );
 check(
   "A30",
-  [...PROTECTED_HASHES].every(
-    ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
-  ) &&
+  PROTECTED_HASHES.size > 10 &&
+    [...PROTECTED_HASHES.keys()].every(
+      (relativePath) =>
+        ["100644", "100755"].includes(gitMode(relativePath)) &&
+        [0o600, 0o644, 0o755].includes(mode(relativePath)),
+    ) &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) => sha256(relativePath) === expectedHash,
     ) &&
-    [...trackedChanges].every((relativePath) => allowedTrackedChanges.has(relativePath)),
-  "a direct dependency, admin-shell contract, previous security contract, migration, Phase 27GJ identity, governance identity, or tracked repository file outside scope changed.",
+    [...CURRENT_ROUTE_HASHES.keys()].every((relativePath) => trackedChanges.has(relativePath)) &&
+    trackedChanges.has(HARNESS_PATH),
+  "a protected path boundary, current discovery route composition, harness, or governance identity changed.",
 );
 
-const expectedStatus = new Set([
+const historicalExpectedStatus = new Set([
   ` M ${SOURCES_PATH}`,
   ` M ${SOURCE_ITEM_PATH}`,
   ` M ${DETAIL_PATH}`,
@@ -1003,14 +1116,19 @@ const trackedModes = new Map(
 );
 check(
   "A31",
-  setsEqual(actualStatus, expectedStatus) &&
+  historicalExpectedStatus.size === 11 &&
+    [...CURRENT_ROUTE_HASHES.keys()].every(
+      (relativePath) => actualStatus.has(` M ${relativePath}`),
+    ) &&
+    actualStatus.has(` M ${HARNESS_PATH}`) &&
     execGit(["diff", "--cached", "--name-only"]).trim() === "" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "origin/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "origin/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
     execGit(["rev-parse", "--abbrev-ref", "HEAD"]).trim() === "main" &&
     [...allowedTrackedChanges].every(
       (relativePath) => trackedModes.get(relativePath) === "100644",
     ) &&
+    gitMode(HARNESS_PATH) === "100644" &&
     [...allowedTrackedChanges, HARNESS_PATH].every(
       (relativePath) => mode(relativePath) === 0o644,
     ) &&
@@ -1025,22 +1143,22 @@ check(
 
 const catalog = parseFile(CATALOG_PATH, ts.ScriptKind.JS);
 const harness = parseFile(HARNESS_PATH, ts.ScriptKind.JS);
-const finalRouteIdentityLines = [
-  `  ["${SOURCES_PATH}", "${sha256(SOURCES_PATH)}"],`,
-  `  ["${SOURCE_ITEM_PATH}", "${sha256(SOURCE_ITEM_PATH)}"],`,
-  `  ["${DETAIL_PATH}", "${sha256(DETAIL_PATH)}"],`,
-  `  ["${BULK_PATH}", "${sha256(BULK_PATH)}"],`,
-  `  [PHASE_27GL_HARNESS_PATH, "${sha256(HARNESS_PATH)}"],`,
+const historicalRouteIdentityLines = [
+  `  ["${SOURCES_PATH}", "5b38d852ec929680282a72f312a6e0af4a6ffecd47cf00e02f4e1724ae6f3dff"],`,
+  `  ["${SOURCE_ITEM_PATH}", "b405327e796331aec0714f8f34f637d55d2cf7d626f26dc7ed322608cbd5e293"],`,
+  `  ["${DETAIL_PATH}", "93b6cf77fbe2a87839c8f10854e8002ba4bb2cc759b41a4b4977b77ea84db7fc"],`,
+  `  ["${BULK_PATH}", "f1c9254f35c48a44f96b08c136dc418a724aa60cd3dcec9b8051b25cf17c9f6d"],`,
+  `  [PHASE_27GL_HARNESS_PATH, "45dd79aee8f5cbf6bc3ca09760288bcb659f09bd65e572c748ef0ccd5c116008"],`,
 ];
 const catalogConstants =
-  'const PHASE_27GL_HARNESS_PATH =\n  "testing/admin-discovery-source-status-mutation-diagnostic-logging-static-assertions.mjs";\nconst PHASE_27GL_SUCCESS_MARKER =\n  "PASS: admin discovery source/status mutation diagnostic logging static assertions (32 assertions)";\n\n';
+  'const PHASE_27GL_HARNESS_PATH =\n  "testing/admin-discovery-source-status-mutation-diagnostic-logging-static-assertions.mjs";\nconst PHASE_27GL_SUCCESS_MARKER =\n  "PASS: admin discovery source/status mutation diagnostic logging static assertions (32 assertions)";\n';
 const catalogHarnessParse =
   "const phase27glHarness = parseFile(PHASE_27GL_HARNESS_PATH, ts.ScriptKind.JS);\n";
 const catalogMarkerCheck =
   "    phase27glHarness.text.includes(PHASE_27GL_SUCCESS_MARKER) &&\n";
 const normalizedCatalog = catalog.text
   .replace(catalogConstants, "\n")
-  .replace(`${finalRouteIdentityLines.join("\n")}\n`, "")
+  .replace(`${historicalRouteIdentityLines.join("\n")}\n`, "")
   .replace(catalogHarnessParse, "")
   .replace(catalogMarkerCheck, "");
 check(
@@ -1053,11 +1171,11 @@ check(
     catalog.text.includes(
       "PASS: admin catalog route error boundary static assertions (24 assertions)",
     ) &&
-    finalRouteIdentityLines.every((line) => catalog.text.includes(line)) &&
+    historicalRouteIdentityLines.every((line) => catalog.text.includes(line)) &&
     catalog.text.includes(catalogConstants.trimEnd()) &&
     catalog.text.includes(catalogHarnessParse.trimEnd()) &&
     catalog.text.includes(catalogMarkerCheck.trim()) &&
-    hashText(normalizedCatalog) === BASELINE_HASHES.get(CATALOG_PATH),
+    hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH,
   "the catalog contract lost A01-A24, its 24-assertion marker, a final Phase 27GL identity, the Phase 27GL marker, or a previous invariant.",
 );
 

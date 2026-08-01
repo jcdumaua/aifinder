@@ -34,7 +34,8 @@ assertNotIncludes(route, '"use client"', "discovered tool duplicate route");
 assertNotIncludes(route, "'use client'", "discovered tool duplicate route");
 assertIncludes(route, 'export const runtime = "nodejs";', "discovered tool duplicate route");
 assertIncludes(route, 'export const dynamic = "force-dynamic";', "discovered tool duplicate route");
-assertRegex(route, /export\s+async\s+function\s+POST\s*\(/, "duplicate POST");
+assertRegex(route, /export\s+function\s+createDiscoveredToolDuplicateHandler\s*\(/, "duplicate handler factory");
+assertIncludes(route, "export const POST = createDiscoveredToolDuplicateHandler();", "duplicate POST wiring");
 assertNoRegex(route, /export\s+async\s+function\s+(?:PUT|PATCH|DELETE)\s*\(/, "extra mutation handlers");
 
 // 8-14: authorization and ordering.

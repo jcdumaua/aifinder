@@ -49,6 +49,12 @@ export type CandidateStagingQueueNextCursorInput = {
 const CURSOR_VERSION = 1;
 const CURSOR_PARTS = 2;
 const HMAC_ALGORITHM = "sha256";
+const MAX_CURSOR_TOKEN_LENGTH = 2_048;
+const MAX_CURSOR_ENCODED_PAYLOAD_LENGTH = 1_536;
+const MAX_DECODED_PAYLOAD_LENGTH = 1_024;
+const MAX_CURSOR_SIGNATURE_LENGTH = 43;
+const MAX_CURSOR_STRING_FIELD_LENGTH = 128;
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -142,12 +148,22 @@ function isValidPayload(value: unknown): value is CandidateStagingQueueCursorPay
     return false;
   }
   if (
+    typeof payload.lastValue === "string" &&
+    payload.lastValue.length > MAX_CURSOR_STRING_FIELD_LENGTH
+  ) {
+    return false;
+  }
+  if (
     typeof payload.lastCandidateId !== "string" ||
     !UUID_PATTERN.test(payload.lastCandidateId)
   ) {
     return false;
   }
-  if (typeof payload.filtersHash !== "string" || payload.filtersHash.length === 0) {
+  if (
+    typeof payload.filtersHash !== "string" ||
+    payload.filtersHash.length !== MAX_CURSOR_SIGNATURE_LENGTH ||
+    !BASE64URL_PATTERN.test(payload.filtersHash)
+  ) {
     return false;
   }
 
@@ -198,6 +214,11 @@ export function decodeCandidateStagingQueueCursor(
   token: string,
 ): CandidateStagingQueueCursorDecodeResult {
   const trimmed = token.trim();
+
+  if (trimmed.length === 0 || trimmed.length > MAX_CURSOR_TOKEN_LENGTH) {
+    return { ok: false, errorCode: "invalid_cursor" };
+  }
+
   const parts = trimmed.split(".");
 
   if (parts.length !== CURSOR_PARTS || !parts[0] || !parts[1]) {
@@ -205,6 +226,16 @@ export function decodeCandidateStagingQueueCursor(
   }
 
   const [encodedPayload, signature] = parts;
+
+  if (
+    encodedPayload.length > MAX_CURSOR_ENCODED_PAYLOAD_LENGTH ||
+    signature.length !== MAX_CURSOR_SIGNATURE_LENGTH ||
+    !BASE64URL_PATTERN.test(encodedPayload) ||
+    !BASE64URL_PATTERN.test(signature)
+  ) {
+    return { ok: false, errorCode: "invalid_cursor" };
+  }
+
   const expectedSignature = signPayload(encodedPayload);
 
   if (!expectedSignature || !safeSignatureMatches(signature, expectedSignature)) {
@@ -214,7 +245,13 @@ export function decodeCandidateStagingQueueCursor(
   let parsed: unknown;
 
   try {
-    parsed = JSON.parse(fromBase64Url(encodedPayload));
+    const decodedPayload = fromBase64Url(encodedPayload);
+
+    if (Buffer.byteLength(decodedPayload, "utf8") > MAX_DECODED_PAYLOAD_LENGTH) {
+      return { ok: false, errorCode: "invalid_cursor" };
+    }
+
+    parsed = JSON.parse(decodedPayload);
   } catch {
     return { ok: false, errorCode: "invalid_cursor" };
   }

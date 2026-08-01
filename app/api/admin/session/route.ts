@@ -1,3 +1,5 @@
+import "server-only";
+
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "../../../../lib/admin-auth";
 

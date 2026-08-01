@@ -56,6 +56,7 @@ const EXPECTED_HANDLER_MODULES = new Set([
   "../../../../../../lib/admin-rate-limit",
   "../../../../../../lib/discovery/discovery-candidate-extraction-invocation",
   "../../../../../../lib/discovery/discovery-candidate-preview-live-staging-resolver",
+  "../../../../../../lib/public-live-route-safety",
 ]);
 
 const EXPECTED_HANDLER_IMPORTS = new Set([
@@ -71,14 +72,23 @@ const EXPECTED_HANDLER_IMPORTS = new Set([
   "CandidateExtractionInvocationOptions",
   "resolveCandidatePreviewLiveStagingOptions",
   "CandidatePreviewLiveStagingResolverDependencies",
+  "PublicLiveRouteSafetyError",
+  "parseBoundedJsonBody",
+  "readBoundedRequestBody",
 ]);
 
 const EXPECTED_SEAMS = new Set([
+  "verifySession",
+  "verifyCsrf",
+  "invokePipeline",
   "resolveLiveStagingOptions",
   "getCandidatePreview",
   "stageCandidate",
   "checkRateLimit",
 ]);
+const EXPECTED_TEST_SEAMS = new Set(
+  [...EXPECTED_SEAMS].filter((name) => name !== "invokePipeline"),
+);
 
 const EXPECTED_BODY_FIELDS = new Set([
   "discovery_source_id",
@@ -166,6 +176,15 @@ const PINNED_HASHES = new Map([
     "b14d5915778be4449eccea9b2269ab02c5158fd8ea9b553fe78a7717ab0029e0",
   ],
 ]);
+const CURRENT_MUTABLE_PINNED_HASHES = new Map([
+  ["lib/admin-auth.ts", "d9bc918cfaa56b93e447c257eff70e55bdf9857e84efbd9e101e4c314dba2641"],
+  ["lib/admin-rate-limit.ts", "9ec3e5ee8e8127b6693b3feb9a694bf52d4e64ac4f1be8181f87e70699ac819e"],
+  ["app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts", "bef1fdc692300da991097d5a886a1388375d6688cd1d0288f1d8d093e481ab6c"],
+]);
+
+function currentPinnedHash(relativePath) {
+  return CURRENT_MUTABLE_PINNED_HASHES.get(relativePath) ?? PINNED_HASHES.get(relativePath);
+}
 
 function fail(id, reason) {
   process.stderr.write(id + " fails because " + reason + "\n");
@@ -620,7 +639,7 @@ check(
   "A06",
   dependencyType &&
     isExported(dependencyType) &&
-    dependencyMembers.length === 4 &&
+    dependencyMembers.length === 7 &&
     dependencyMembers.every((member) => Boolean(member.questionToken)) &&
     setsEqual(dependencyNames, EXPECTED_SEAMS) &&
     containsAll(dependencyTypeText, [
@@ -629,7 +648,7 @@ check(
       'CandidatePreviewLiveStagingResolverDependencies["stageCandidate"]',
       "AdminRateLimitResult",
     ]),
-  HANDLER_PATH + " does not preserve exactly the four approved dependency seams.",
+  HANDLER_PATH + " does not preserve exactly the seven approved dependency seams.",
 );
 
 const handlerImports = importDetails(handler);
@@ -643,8 +662,23 @@ check(
   HANDLER_PATH + " does not preserve the approved direct import graph.",
 );
 
-const sessionCalls = callsNamed(requestHandler, "verifyAdminSession");
-const csrfCalls = callsNamed(requestHandler, "verifyAdminCsrfRequest");
+const dependencyFallbackCalls = (dependencyName, fallbackName) =>
+  collect(
+    requestHandler,
+    (node) =>
+      ts.isCallExpression(node) &&
+      compact(node.expression.getText(handler.sourceFile)).includes(
+        `dependencies.${dependencyName}??${fallbackName}`,
+      ),
+  );
+const sessionCalls = dependencyFallbackCalls(
+  "verifySession",
+  "verifyAdminSession",
+);
+const csrfCalls = dependencyFallbackCalls(
+  "verifyCsrf",
+  "verifyAdminCsrfRequest",
+);
 const rateCalls = [
   ...callsNamed(requestHandler, "checkRateLimit"),
   ...callsNamed(requestHandler, "checkAdminRateLimit"),
@@ -654,8 +688,8 @@ const resolverCalls = [
   ...callsNamed(requestHandler, "resolveLiveStagingOptions"),
   ...callsNamed(requestHandler, "resolveCandidatePreviewLiveStagingOptions"),
 ];
-const pipelineCalls = callsNamed(
-  requestHandler,
+const pipelineCalls = dependencyFallbackCalls(
+  "invokePipeline",
   "invokeCandidateExtractionStagingPipeline",
 );
 const sessionPosition = sessionCalls[0]?.getStart(handler.sourceFile) ?? Infinity;
@@ -664,7 +698,7 @@ check(
   "A08",
   sessionCalls.length === 1 &&
     compact(nodeText(sessionCalls[0], handler)) ===
-      "verifyAdminSession(request)" &&
+      "(dependencies.verifySession??verifyAdminSession)(request)" &&
     csrfCalls.every(
       (call) => sessionPosition < call.getStart(handler.sourceFile),
     ) &&
@@ -735,7 +769,7 @@ check(
 
 const csrfIf = ifStatementContaining(
   requestHandler,
-  "!verifyAdminCsrfRequest(request)",
+  "!(dependencies.verifyCsrf??verifyAdminCsrfRequest)(request)",
   handler,
 );
 const csrfBranchText = csrfIf ? nodeText(csrfIf.thenStatement, handler) : "";
@@ -819,7 +853,7 @@ check(
     compact(nodeText(rateLimitResponse.arguments[1], handler)) ===
       "rateLimit.status" &&
     sha256("lib/admin-rate-limit.ts") ===
-      PINNED_HASHES.get("lib/admin-rate-limit.ts"),
+      currentPinnedHash("lib/admin-rate-limit.ts"),
   HANDLER_PATH + " does not preserve the shared rate-limit rejection response.",
 );
 
@@ -862,12 +896,13 @@ check(
     setsEqual(parserMessages, expectedParserMessages) &&
     containsAll(compact(readJsonBodyText), [
       'contentType.includes("application/json")',
-      'request.headers.get("content-length")',
-      "Number(contentLengthHeader)",
-      "contentLength>MAX_BODY_SIZE_BYTES",
-      "request.json().catch(()=>null)",
+      "parseBoundedJsonBody(",
+      "readBoundedRequestBody(request,MAX_BODY_SIZE_BYTES)",
+      "errorinstanceofPublicLiveRouteSafetyError",
+      'error.code==="request_body_too_large"',
       "!isRecord(body)",
     ]) &&
+    !compact(readJsonBodyText).includes("request.json()") &&
     parserTry?.catchClause?.variableDeclaration?.name.getText(
       handler.sourceFile,
     ) === "error" &&
@@ -1271,10 +1306,9 @@ check(
 
 const outerTry = collect(requestHandler, ts.isTryStatement).find(
   (statement) =>
-    callsNamed(
-      statement.tryBlock,
-      "invokeCandidateExtractionStagingPipeline",
-    ).length === 1,
+    pipelineCalls.length === 1 &&
+    statement.tryBlock.pos < pipelineCalls[0].pos &&
+    pipelineCalls[0].end < statement.tryBlock.end,
 );
 const resultResponsePosition =
   resultResponse?.getStart(handler.sourceFile) ?? Infinity;
@@ -1386,9 +1420,11 @@ check(
       handlerTestImport.bindings,
       new Set(["createCandidateExtractionInvokeHandler"]),
     ) &&
-    testFactoryCalls.length === 5 &&
+    testFactoryCalls.length === 7 &&
     factoryArgumentsAreObjects &&
-    setsEqual(injectedSeamNames, EXPECTED_SEAMS) &&
+    setsEqual(injectedSeamNames, EXPECTED_TEST_SEAMS) &&
+    !routeTest.text.includes("process.env") &&
+    !routeTest.text.includes('../lib/admin-auth.ts') &&
     noRawLeakHelper &&
     containsAll(nodeText(noRawLeakHelper, routeTest), [
       "<script",
@@ -1410,14 +1446,14 @@ check(
     !routeTestImport.bindings.has(
       "createCandidateExtractionInvokeHandler",
     ),
-  ROUTE_TEST_PATH + " does not preserve all 18 tests and five injected seams.",
+  ROUTE_TEST_PATH + " does not preserve all 18 tests, six injected seams, and the no-environment boundary.",
 );
 
 for (const [relativePath, expectedHash] of PINNED_HASHES) {
   check(
     "A26",
     existsSync(path.join(REPO_ROOT, relativePath)) &&
-      sha256(relativePath) === expectedHash,
+      sha256(relativePath) === currentPinnedHash(relativePath),
     relativePath + " does not match its pinned read-only SHA-256 identity.",
   );
 }

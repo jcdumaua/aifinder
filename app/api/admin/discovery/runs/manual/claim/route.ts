@@ -41,6 +41,11 @@ import {
   type ManualStaticHtmlEvidenceSummary,
 } from "../../../../../../../lib/discovery-static-html-evidence-executor";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,6 +128,20 @@ function jsonResponse(data: object, status = 200) {
   });
 }
 
+function toSafeDiscoveryRunResponse(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const run = value as Record<string, unknown>;
+  return {
+    id: run.id ?? null,
+    source_id: run.source_id ?? null,
+    status: run.status ?? null,
+    started_at: run.started_at ?? null,
+    finished_at: run.finished_at ?? null,
+    created_at: run.created_at ?? null,
+    updated_at: run.updated_at ?? null,
+  };
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -134,14 +153,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!isRecord(body)) {
     throw new Error("Invalid request body.");
@@ -1071,7 +1093,7 @@ async function completeMetadataFetchSmokeRun({
 
     return jsonResponse({
       data: {
-        run: completedRunRecord,
+        run: toSafeDiscoveryRunResponse(completedRunRecord),
         execution: {
           enabled: true,
           mode: METADATA_FETCH_SMOKE_EXECUTION_MODE,
@@ -1380,7 +1402,7 @@ async function completeManualMetadataFetchRun({
 
   return jsonResponse({
     data: {
-      run: finalRunRecord,
+      run: toSafeDiscoveryRunResponse(finalRunRecord),
       execution: {
         enabled: true,
         mode: MANUAL_METADATA_FETCH_EXECUTION_MODE,
@@ -1674,7 +1696,7 @@ async function completeManualStaticHtmlEvidenceRun({
 
   return jsonResponse({
     data: {
-      run: completedRunRecord,
+      run: toSafeDiscoveryRunResponse(completedRunRecord),
       execution: {
         enabled: true,
         mode: MANUAL_STATIC_HTML_DERIVED_EVIDENCE_EXECUTION_MODE,
@@ -1688,7 +1710,7 @@ async function completeManualStaticHtmlEvidenceRun({
   });
 }
 
-export async function POST(request: Request) {
+async function executeDiscoveryManualClaim(request: Request) {
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
@@ -2205,7 +2227,7 @@ export async function POST(request: Request) {
 
   return jsonResponse({
     data: {
-      run: completedRunRecord,
+      run: toSafeDiscoveryRunResponse(completedRunRecord),
       execution: {
         enabled: false,
         mode: "dry_run",
@@ -2216,3 +2238,17 @@ export async function POST(request: Request) {
     },
   });
 }
+
+export type DiscoveryManualClaimDependencies = {
+  execute?: (request: Request) => Promise<Response>;
+};
+
+export function createDiscoveryManualClaimHandler(
+  dependencies: DiscoveryManualClaimDependencies = {},
+) {
+  return async function discoveryManualClaimHandler(request: Request) {
+    return (dependencies.execute ?? executeDiscoveryManualClaim)(request);
+  };
+}
+
+export const POST = createDiscoveryManualClaimHandler();

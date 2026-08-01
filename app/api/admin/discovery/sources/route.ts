@@ -12,6 +12,11 @@ import {
 } from "../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../lib/public-live-route-safety";
+import {
   validateHttpsUrl,
   validateTextField,
 } from "../../../../../lib/tool-validation";
@@ -22,6 +27,13 @@ export const dynamic = "force-dynamic";
 const VALID_SOURCE_TYPES = new Set(["rss", "api", "scraper", "manual", "webhook"]);
 const MAX_BODY_SIZE_BYTES = 24 * 1024;
 const MAX_CONFIG_SIZE_BYTES = 10 * 1024;
+
+type DiscoverySourceCreateDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+};
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -52,14 +64,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -129,6 +144,23 @@ function getBooleanValue(value: unknown, fallback: boolean) {
   return value;
 }
 
+function toSafeDiscoverySourceResponse(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  return {
+    id: source.id ?? null,
+    name: source.name ?? null,
+    slug: source.slug ?? null,
+    description: source.description ?? null,
+    url: source.url ?? null,
+    source_type: source.source_type ?? null,
+    is_active: source.is_active ?? null,
+    last_run_at: source.last_run_at ?? null,
+    created_at: source.created_at ?? null,
+    updated_at: source.updated_at ?? null,
+  };
+}
+
 export async function GET(request: Request) {
   const adminSession = verifyAdminSession(request);
 
@@ -164,7 +196,6 @@ export async function GET(request: Request) {
         "description",
         "url",
         "source_type",
-        "config",
         "is_active",
         "last_run_at",
         "created_at",
@@ -192,7 +223,7 @@ export async function GET(request: Request) {
   }
 
   return jsonResponse({
-    data: data || [],
+    data: (data || []).map(toSafeDiscoverySourceResponse),
     pagination: {
       total: count || 0,
       page,
@@ -202,8 +233,12 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  const adminSession = verifyAdminSession(request);
+export function createDiscoverySourceCreateHandler(
+  dependencies: DiscoverySourceCreateDependencies = {},
+) {
+ return async function discoverySourceCreateHandler(request: Request) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovery_source_create_unauthorized");
@@ -211,14 +246,14 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoverySourceCreate,
     actor: adminSession.actor,
@@ -273,7 +308,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: existingSource, error: existingSourceError } = await supabaseAdmin
+  const { data: existingSource, error: existingSourceError } = await client
     .from("discovery_sources")
     .select("id, name, slug")
     .eq("slug", slug)
@@ -295,7 +330,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: source, error: insertError } = await supabaseAdmin
+  const { data: source, error: insertError } = await client
     .from("discovery_sources")
     .insert({
       name,
@@ -317,7 +352,7 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Failed to create discovery source." }, 500);
   }
 
-  const { error: auditError } = await supabaseAdmin
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert({
       discovered_tool_id: null,
@@ -337,18 +372,27 @@ export async function POST(request: Request) {
   if (auditError) {
     console.error("discovery_source_create_audit_failed");
 
-    return jsonResponse(
-      { error: "Discovery source created, but audit logging failed." },
-      500
-    );
+    const { error: compensationError } = await client
+      .from("discovery_sources")
+      .delete()
+      .eq("id", source.id)
+      .eq("slug", source.slug);
+    if (compensationError) {
+      console.error("discovery_source_create_compensation_failed");
+    }
+
+    return jsonResponse({ error: "Failed to create discovery source." }, 500);
   }
 
   return jsonResponse(
     {
       success: true,
       message: "Discovery source created.",
-      data: { source },
+      data: { source: toSafeDiscoverySourceResponse(source) },
     },
     201
   );
+ };
 }
+
+export const POST = createDiscoverySourceCreateHandler();

@@ -491,7 +491,7 @@ test("applies optional duplicate, confidence, and search filters safely", async 
     {
       duplicateCheckStatus: "unchecked",
       confidenceBucket: "medium",
-      search: "Example, Tool",
+      search: "Example Tool",
     },
     { client },
   );
@@ -501,9 +501,45 @@ test("applies optional duplicate, confidence, and search filters safely", async 
     { column: "confidence_bucket", value: "medium" },
   ]);
   assert.equal(recorder.orCalls.length, 1);
-  assert.match(recorder.orCalls[0], /candidate_name\.ilike\.%Example  Tool%/);
-  assert.match(recorder.orCalls[0], /candidate_website_url\.ilike\.%Example  Tool%/);
-  assert.match(recorder.orCalls[0], /source_domain\.ilike\.%Example  Tool%/);
+  assert.match(recorder.orCalls[0], /candidate_name\.ilike\.%Example Tool%/);
+  assert.match(recorder.orCalls[0], /candidate_website_url\.ilike\.%Example Tool%/);
+  assert.match(recorder.orCalls[0], /source_domain\.ilike\.%Example Tool%/);
+});
+
+test("rejects unsafe PostgREST search grammar before query construction", async () => {
+  for (const search of [
+    "comma,operator",
+    "group(or)",
+    'quoted"value',
+    "control\u0001value",
+  ]) {
+    const { client, recorder } = createFakeClient();
+
+    await expectCode(
+      () => listDiscoveryCandidateStagingQueueItems({ search }, { client }),
+      "invalid_status_filter",
+    );
+
+    assert.equal(recorder.orCalls.length, 0);
+  }
+
+  const normalizeSearchStart = source.indexOf("function normalizeSearch");
+  const escapeSearchStart = source.indexOf(
+    "function escapePostgrestLikePattern",
+    normalizeSearchStart,
+  );
+  const normalizeSearchSource = source.slice(
+    normalizeSearchStart,
+    escapeSearchStart,
+  );
+  const rejectionPosition = normalizeSearchSource.indexOf(
+    "rejectUnsafeSearchGrammar(search)",
+  );
+  const returnPosition = normalizeSearchSource.indexOf("return trimmed");
+
+  assert.ok(rejectionPosition >= 0);
+  assert.ok(returnPosition >= 0);
+  assert.ok(rejectionPosition < returnPosition);
 });
 
 test("returns next cursor for timestamp first page when an extra row exists", async () => {

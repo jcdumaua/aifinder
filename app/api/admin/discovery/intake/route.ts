@@ -11,6 +11,11 @@ import {
 } from "../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../lib/public-live-route-safety";
+import {
   getNormalizedDomain,
   validateHttpsUrl,
   validateOptionalLogoUrl,
@@ -36,6 +41,14 @@ type DuplicateWarning = {
   matchType: "normalized_domain";
   matchScore: number;
   reason: string;
+};
+
+type DiscoveryIntakeDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+  now?: () => string;
 };
 
 function getOptionalUuid(value: unknown, fieldName: string) {
@@ -67,14 +80,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -160,40 +176,43 @@ function getOptionalUrl(value: unknown, fieldName: string) {
   return validateHttpsUrl(value, fieldName, { required: true });
 }
 
-async function cleanupDiscoveredTool(
+async function compensateDiscoveryIntake(
+  client: typeof supabaseAdmin,
   discoveredToolId: string,
   discoveryRunId?: string | null
 ) {
-  await supabaseAdmin
-    .from("discovery_audit_events")
-    .delete()
-    .eq("discovered_tool_id", discoveredToolId);
+  let succeeded = true;
+  const reverseSteps = [
+    ["discovery_audit_events", "discovered_tool_id", discoveredToolId],
+    ["discovery_duplicate_candidates", "discovered_tool_id", discoveredToolId],
+    ["discovery_evidence", "discovered_tool_id", discoveredToolId],
+    ["discovered_tools", "id", discoveredToolId],
+  ] as const;
 
-  await supabaseAdmin
-    .from("discovery_duplicate_candidates")
-    .delete()
-    .eq("discovered_tool_id", discoveredToolId);
-
-  await supabaseAdmin
-    .from("discovery_evidence")
-    .delete()
-    .eq("discovered_tool_id", discoveredToolId);
-
-  await supabaseAdmin
-    .from("discovered_tools")
-    .delete()
-    .eq("id", discoveredToolId);
+  for (const [table, column, value] of reverseSteps) {
+    const { error } = await client.from(table).delete().eq(column, value);
+    if (error) succeeded = false;
+  }
 
   if (discoveryRunId) {
-    await supabaseAdmin
+    const { error } = await client
       .from("discovery_runs")
       .delete()
       .eq("id", discoveryRunId);
+    if (error) succeeded = false;
   }
+
+  if (!succeeded) console.error("discovery_intake_compensation_failed");
+  return succeeded;
 }
 
-export async function POST(request: Request) {
-  const adminSession = verifyAdminSession(request);
+export function createDiscoveryIntakeHandler(
+  dependencies: DiscoveryIntakeDependencies = {},
+) {
+ return async function discoveryIntakeHandler(request: Request) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const now = dependencies.now ?? (() => new Date().toISOString());
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovery_manual_intake_unauthorized");
@@ -201,14 +220,14 @@ export async function POST(request: Request) {
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoveryManualIntake,
     actor: adminSession.actor,
@@ -283,7 +302,7 @@ export async function POST(request: Request) {
   }
 
   const { data: existingDiscoveredTools, error: existingDiscoveredError } =
-    await supabaseAdmin
+    await client
       .from("discovered_tools")
       .select("id, name, slug, status, normalized_domain, created_at")
       .eq("normalized_domain", normalizedDomain)
@@ -311,7 +330,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: liveTools, error: liveToolsError } = await supabaseAdmin
+  const { data: liveTools, error: liveToolsError } = await client
     .from("tools")
     .select("id, name, slug, status, deleted_at, normalized_domain")
     .eq("normalized_domain", normalizedDomain)
@@ -325,7 +344,7 @@ export async function POST(request: Request) {
   }
 
   const { data: pendingSubmissions, error: pendingSubmissionsError } =
-    await supabaseAdmin
+    await client
       .from("submitted_tools")
       .select("id, name, status, normalized_domain")
       .eq("normalized_domain", normalizedDomain)
@@ -381,7 +400,7 @@ export async function POST(request: Request) {
 
   if (sourceId) {
     const { data: discoverySource, error: discoverySourceError } =
-      await supabaseAdmin
+      await client
         .from("discovery_sources")
         .select("id, name, is_active")
         .eq("id", sourceId)
@@ -403,9 +422,9 @@ export async function POST(request: Request) {
   }
 
   const intakeStatus = duplicateWarnings.length > 0 ? "duplicate" : "new";
-  const runTimestamp = new Date().toISOString();
+  const runTimestamp = now();
 
-  const { data: discoveryRun, error: discoveryRunError } = await supabaseAdmin
+  const { data: discoveryRun, error: discoveryRunError } = await client
     .from("discovery_runs")
     .insert({
       source_id: sourceId,
@@ -433,7 +452,7 @@ export async function POST(request: Request) {
   const discoveryRunId = discoveryRun.id as string;
 
   const { data: discoveredTool, error: discoveredInsertError } =
-    await supabaseAdmin
+    await client
       .from("discovered_tools")
       .insert({
         name,
@@ -464,7 +483,7 @@ export async function POST(request: Request) {
   if (discoveredInsertError) {
     console.error("discovery_manual_intake_discovered_tool_insert_failed");
 
-    await supabaseAdmin
+    await client
       .from("discovery_runs")
       .delete()
       .eq("id", discoveryRunId);
@@ -477,7 +496,7 @@ export async function POST(request: Request) {
 
   const discoveredToolId = discoveredTool.id as string;
 
-  const { data: evidence, error: evidenceError } = await supabaseAdmin
+  const { data: evidence, error: evidenceError } = await client
     .from("discovery_evidence")
     .insert({
       discovered_tool_id: discoveredToolId,
@@ -497,7 +516,7 @@ export async function POST(request: Request) {
         duplicate_warnings: duplicateWarnings,
       },
       confidence_score: discoveryScore,
-      fetched_at: new Date().toISOString(),
+      fetched_at: now(),
     })
     .select("id")
     .single();
@@ -505,7 +524,7 @@ export async function POST(request: Request) {
   if (evidenceError) {
     console.error("discovery_manual_intake_evidence_insert_failed");
 
-    await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
+    await compensateDiscoveryIntake(client, discoveredToolId, discoveryRunId);
 
     return jsonResponse(
       { error: "Intake candidate created, but evidence creation failed." },
@@ -519,7 +538,7 @@ export async function POST(request: Request) {
     const primaryDuplicate = duplicateWarnings[0];
 
     const { data: duplicateCandidate, error: duplicateError } =
-      await supabaseAdmin
+      await client
         .from("discovery_duplicate_candidates")
         .insert({
           discovered_tool_id: discoveredToolId,
@@ -544,7 +563,7 @@ export async function POST(request: Request) {
     if (duplicateError) {
       console.error("discovery_manual_intake_duplicate_candidate_insert_failed");
 
-      await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
+      await compensateDiscoveryIntake(client, discoveredToolId, discoveryRunId);
 
       return jsonResponse(
         { error: "Intake candidate created, but duplicate recording failed." },
@@ -557,7 +576,7 @@ export async function POST(request: Request) {
 
   const auditAction = intakeStatus === "duplicate" ? "mark-duplicate" : "flag";
 
-  const { error: auditError } = await supabaseAdmin
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert({
       discovered_tool_id: discoveredToolId,
@@ -584,16 +603,13 @@ export async function POST(request: Request) {
   if (auditError) {
     console.error("discovery_manual_intake_audit_insert_failed");
 
-    await cleanupDiscoveredTool(discoveredToolId, discoveryRunId);
+    await compensateDiscoveryIntake(client, discoveredToolId, discoveryRunId);
 
-    return jsonResponse(
-      { error: "Intake candidate created, but audit logging failed." },
-      500
-    );
+    return jsonResponse({ error: "Failed to create intake candidate." }, 500);
   }
 
   if (sourceId) {
-    const { error: sourceUpdateError } = await supabaseAdmin
+    const { error: sourceUpdateError } = await client
       .from("discovery_sources")
       .update({ last_run_at: runTimestamp })
       .eq("id", sourceId);
@@ -621,4 +637,7 @@ export async function POST(request: Request) {
     },
     201
   );
+ };
 }
+
+export const POST = createDiscoveryIntakeHandler();

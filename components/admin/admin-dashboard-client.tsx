@@ -1269,7 +1269,11 @@ export default function AdminDashboardClient({
     }
   }
 
-  async function fetchCsrfToken() {
+  async function fetchCsrfToken({
+    logoutOnUnauthorized = true,
+  }: {
+    logoutOnUnauthorized?: boolean;
+  } = {}) {
     try {
       const response = await fetch("/api/admin/csrf", {
         method: "GET",
@@ -1281,7 +1285,9 @@ export default function AdminDashboardClient({
 
       if (response.status === 401) {
         showError("Your admin session expired. Please log in again.");
-        logoutAdmin();
+        if (logoutOnUnauthorized) {
+          logoutAdmin();
+        }
         return "";
       }
 
@@ -1498,18 +1504,20 @@ export default function AdminDashboardClient({
 
   async function logoutAdmin() {
     try {
-      const headers: Record<string, string> = {};
+      const secureToken =
+        csrfToken ||
+        (await fetchCsrfToken({ logoutOnUnauthorized: false }));
 
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
+      if (secureToken) {
+        await fetch("/api/admin/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            "x-csrf-token": secureToken,
+          },
+        });
       }
-
-      await fetch("/api/admin/logout", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers,
-      });
     } catch {
       // Continue clearing local UI state even if logout request fails.
     }

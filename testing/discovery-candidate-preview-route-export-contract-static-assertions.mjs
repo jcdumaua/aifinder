@@ -87,12 +87,13 @@ const HTTP_METHODS = new Set([
 const EXPECTED_HANDLER_MODULES = new Set([
   "server-only",
   "next/server",
-  "../../../../../../../lib/admin-auth-read-only",
+  "../../../../../../../lib/admin-auth",
   "../../../../../../../lib/discovery/discovery-candidate-preview-provider",
 ]);
 const EXPECTED_HANDLER_IMPORTS = new Set([
   "NextResponse",
-  "getReadOnlyAdminSession",
+  "verifyAdminSession",
+  "VerifyAdminSessionResult",
   "getCandidateExtractionPreviewForRun",
   "CandidateExtractionPreviewInput",
   "CandidateExtractionPreviewResult",
@@ -103,6 +104,7 @@ const EXPECTED_SEAMS = new Set([
 ]);
 const EXPECTED_ROUTE_TEST_NAMES = new Set([
   "route exports GET only",
+  "handler uses canonical session verification and fixed unauthorized diagnostics",
   "unauthenticated request returns 401 and does not call provider",
   "missing server-derived admin actor returns 403",
   "route derives admin actor from session id and ignores client query identity",
@@ -177,7 +179,7 @@ const EXPECTED_PREVIEW_FIELDS = new Set([
 ]);
 
 const PROTECTED_HASHES = new Map([
-  [AUTH_PATH, "b5f82ebf0923b610d4ade7bf4e53b6d622fd8c8eab37f61d2edb1e5d0defff38"],
+  [AUTH_PATH, "8caf79bf2df912ccab8419e04c6fc1a553b08afcd1fd5776531aab7453a5cf66"],
   [PROVIDER_PATH, "9e5c3c4acb44a9e43c6ce3e86f5a8542af34a16f7e0bb266976b8804044bbd66"],
   [SUPABASE_ADMIN_PATH, "0c631c4e02ead5fe423c30a3c6126aa494fa8fd62d7a987ffd9fd7669c62eaf0"],
   [DATABASE_TYPES_PATH, "7173e35d74fa7f59ff3469c2d7e1c95984cfcf37c00b934b1b48ec0f39f1d72c"],
@@ -190,7 +192,7 @@ const PROTECTED_HASHES = new Map([
   [PHASE_27GC_ROUTE_PATH, "088b8e51b73c9278508806523ae273235fbb6c5ec5d0b02c799f88578d0507e8"],
   [PHASE_27GC_ADMIN_SHELL_PATH, "85e2207dd61820862c998c9cd4f2fc118cb24445184e0c44af79887867b4b9e1"],
   [PHASE_27GC_ROUTE_TEST_PATH, "ce80eec655b466158f906dec382462998638c21fb43a422a53c219ddc3a54a99"],
-  [PHASE_27GC_HARNESS_PATH, "a3ff6bfeaf8e05aded5ebbabbf512ed87d23db7295c0227b9d66b2a9e8890a90"],
+  [PHASE_27GC_HARNESS_PATH, "b3935745f44f53e4c302ebbb4b5c56cbdae1bded77f1a886f38e047eade8ffba"],
 ]);
 
 function fail(id, reason) {
@@ -606,18 +608,12 @@ const unauthorizedConsoleCalls = unauthorizedIf
   ? callsNamed(unauthorizedIf, "warn")
   : [];
 const unauthorizedArgs = unauthorizedConsoleCalls[0]?.arguments ?? [];
-const unauthorizedObject = unauthorizedArgs[1] &&
-  ts.isObjectLiteralExpression(unauthorizedArgs[1])
-  ? propertyMap(unauthorizedArgs[1])
-  : new Map();
 check("A08",
   Boolean(unauthorizedIf) && unauthorizedConsoleCalls.length === 1 &&
-  unauthorizedArgs.length === 2 &&
+  unauthorizedArgs.length === 1 &&
   unauthorizedArgs[0].getText(handler.sourceFile) ===
-    '"Unauthorized candidate preview request."' &&
-  unauthorizedObject.size === 1 && unauthorizedObject.has("errors") &&
-  compact(unauthorizedObject.get("errors").getText(handler.sourceFile)) ===
-    "errors:adminSession.errors" &&
+    '"candidate_preview_unauthorized"' &&
+  !unauthorizedText.includes("adminSession.errors") &&
   unauthorizedText.includes('returnjsonResponse({error:"Unauthorized"},401)') &&
   callsNamed(unauthorizedIf, "getCandidatePreview").length === 0,
   "the unauthorized predicate, warning, 401 response, or fail-closed branch changed.");
@@ -956,7 +952,7 @@ const dynamicTestImports = collect(routeTest.sourceFile, (node) =>
   ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword);
 check("A25",
   setsEqual(currentRouteTestNames, EXPECTED_ROUTE_TEST_NAMES) &&
-  currentRouteTestNames.size === 14 && testFactoryCalls.length === 1 &&
+  currentRouteTestNames.size === 15 && testFactoryCalls.length === 1 &&
   setsEqual(new Set(testFactoryInput.keys()), EXPECTED_SEAMS) &&
   routeTest.text.includes("handlerSource") &&
   routeTest.text.includes("routeSource") &&
@@ -974,7 +970,7 @@ check("A25",
     "assertNoRawPayloadLeak", ".insert(", ".upsert(", ".update(", ".delete(",
     "verifySession", "getCandidatePreview",
   ]),
-  "the 14-case transformed-handler test seam or thin-route source checks changed.");
+  "the 15-case transformed-handler test seam or thin-route source checks changed.");
 
 const sourceHarnessMarkers = new Set(
   callsNamed(sourceAuthHarness.sourceFile, "assertEquals")

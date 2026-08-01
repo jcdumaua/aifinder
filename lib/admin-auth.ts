@@ -1,7 +1,13 @@
+import "server-only";
+
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 export const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
 export const ADMIN_CSRF_COOKIE_NAME = "aifinder_admin_csrf_token";
+
+const MAX_COOKIE_HEADER_LENGTH = 8 * 1024;
+const MAX_COOKIE_VALUE_LENGTH = 4 * 1024;
+const CSRF_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
 
 export type VerifiedAdminActor = {
   id: string | null;
@@ -32,15 +38,31 @@ function safeCompare(first: string, second: string) {
 function getCookieValue(request: Request, cookieName: string) {
   const cookieHeader = request.headers.get("cookie") || "";
 
+  if (!cookieHeader || cookieHeader.length > MAX_COOKIE_HEADER_LENGTH) {
+    return "";
+  }
+
   const cookies = cookieHeader.split(";").map((cookie) => cookie.trim());
 
-  const matchingCookie = cookies.find((cookie) =>
-    cookie.startsWith(`${cookieName}=`)
-  );
+  const matchingCookie = cookies.find((cookie) => {
+    const separatorIndex = cookie.indexOf("=");
+    return separatorIndex > 0 && cookie.slice(0, separatorIndex) === cookieName;
+  });
 
   if (!matchingCookie) return "";
 
-  return decodeURIComponent(matchingCookie.slice(cookieName.length + 1));
+  const rawValue = matchingCookie.slice(matchingCookie.indexOf("=") + 1);
+
+  if (!rawValue || rawValue.length > MAX_COOKIE_VALUE_LENGTH) {
+    return "";
+  }
+
+  try {
+    const decodedValue = decodeURIComponent(rawValue);
+    return decodedValue.length <= MAX_COOKIE_VALUE_LENGTH ? decodedValue : "";
+  } catch {
+    return "";
+  }
 }
 
 export function verifyAdminSession(request: Request): VerifyAdminSessionResult {
@@ -119,6 +141,36 @@ export function createAdminCsrfToken() {
   return randomBytes(32).toString("hex");
 }
 
+function getExpectedAdminCsrfToken(request: Request) {
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+  const session = getCookieValue(request, ADMIN_SESSION_COOKIE_NAME);
+
+  if (!sessionSecret || !session || !verifyAdminSession(request).isAdmin) {
+    return "";
+  }
+
+  return signSession(`csrf:${session}`, sessionSecret);
+}
+
+export function getOrCreateAdminCsrfToken(request: Request) {
+  const expectedToken = getExpectedAdminCsrfToken(request);
+
+  if (!expectedToken) {
+    return "";
+  }
+
+  const existingToken = getCookieValue(request, ADMIN_CSRF_COOKIE_NAME);
+
+  if (
+    CSRF_TOKEN_PATTERN.test(existingToken) &&
+    safeCompare(existingToken, expectedToken)
+  ) {
+    return existingToken;
+  }
+
+  return expectedToken;
+}
+
 export function verifyAdminCsrfRequest(request: Request) {
   const method = request.method.toUpperCase();
 
@@ -128,20 +180,24 @@ export function verifyAdminCsrfRequest(request: Request) {
 
   const csrfHeader = request.headers.get("x-csrf-token") || "";
   const csrfCookie = getCookieValue(request, ADMIN_CSRF_COOKIE_NAME);
+  const expectedToken = getExpectedAdminCsrfToken(request);
 
-  if (!csrfHeader || !csrfCookie) {
+  if (!csrfHeader || !csrfCookie || !expectedToken) {
     return false;
   }
 
-  if (!/^[a-f0-9]{64}$/i.test(csrfHeader)) {
+  if (!CSRF_TOKEN_PATTERN.test(csrfHeader)) {
     return false;
   }
 
-  if (!/^[a-f0-9]{64}$/i.test(csrfCookie)) {
+  if (!CSRF_TOKEN_PATTERN.test(csrfCookie)) {
     return false;
   }
 
-  return safeCompare(csrfHeader, csrfCookie);
+  return (
+    safeCompare(csrfHeader, expectedToken) &&
+    safeCompare(csrfCookie, expectedToken)
+  );
 }
 
 export function isAuthorizedAdminRequest(request: Request) {

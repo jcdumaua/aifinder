@@ -52,6 +52,7 @@ const UUID_PATTERN =
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 50;
 const MAX_SEARCH_LENGTH = 120;
+const UNSAFE_POSTGREST_SEARCH_PATTERN = /[\u0000-\u001f\u007f,()"]/u;
 
 export type CandidateStagingQueueStatusFilter =
   (typeof DISCOVERY_CANDIDATE_STAGING_QUEUE_ACTIVE_STATUSES)[number];
@@ -403,12 +404,23 @@ function applyCursorFilter(
   );
 }
 
+function rejectUnsafeSearchGrammar(search: string): void {
+  if (UNSAFE_POSTGREST_SEARCH_PATTERN.test(search)) {
+    fail(
+      "invalid_status_filter",
+      "Search contains unsupported filter grammar.",
+    );
+  }
+}
+
 function normalizeSearch(search: string | undefined): string | null {
   if (search === undefined) {
     return null;
   }
 
-  const trimmed = search.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
+  rejectUnsafeSearchGrammar(search);
+
+  const trimmed = search.trim();
 
   if (trimmed.length === 0) {
     return null;
@@ -418,7 +430,7 @@ function normalizeSearch(search: string | undefined): string | null {
     fail("candidate_queue_read_failed", "Search term is too long.");
   }
 
-  return trimmed.replace(/,/g, " ");
+  return trimmed;
 }
 
 function escapePostgrestLikePattern(value: string): string {

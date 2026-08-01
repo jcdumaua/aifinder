@@ -11,6 +11,11 @@ import {
   getAdminRateLimitResponseData,
 } from "../../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
+import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../../lib/public-live-route-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +41,16 @@ const VALID_MATCH_TYPES = new Set([
 ]);
 
 const MAX_REASON_LENGTH = 500;
+const MAX_BODY_SIZE_BYTES = 20 * 1024;
 const GENERIC_OPERATIONAL_ERROR = "Failed to mark duplicate.";
+
+type DiscoveredToolDuplicateDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+  now?: () => string;
+};
 
 function jsonResponse(data: object, status = 200) {
   return NextResponse.json(data, {
@@ -65,14 +79,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > 20 * 1024) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -123,23 +140,61 @@ function getMatchScore(value: unknown) {
   return score;
 }
 
-export async function POST(request: Request, context: RouteContext) {
+async function compensateDiscoveredToolDuplicate(input: {
+  client: typeof supabaseAdmin;
+  discoveredToolId: string;
+  duplicateCandidateId: string;
+  previousStatus: string;
+  previousUpdatedAt: string;
+  writtenUpdatedAt: string;
+  restoreStatus: boolean;
+}) {
+  if (input.restoreStatus) {
+    const { error: restoreError } = await input.client
+      .from("discovered_tools")
+      .update({ status: input.previousStatus, updated_at: input.previousUpdatedAt })
+      .eq("id", input.discoveredToolId)
+      .eq("status", "duplicate")
+      .eq("updated_at", input.writtenUpdatedAt);
+    if (restoreError) {
+      console.error("discovered_tool_duplicate_compensation_failed");
+      return false;
+    }
+  }
+
+  const { error: deleteError } = await input.client
+    .from("discovery_duplicate_candidates")
+    .delete()
+    .eq("id", input.duplicateCandidateId)
+    .eq("discovered_tool_id", input.discoveredToolId);
+  if (deleteError) {
+    console.error("discovered_tool_duplicate_compensation_failed");
+    return false;
+  }
+  return true;
+}
+
+export function createDiscoveredToolDuplicateHandler(
+  dependencies: DiscoveredToolDuplicateDependencies = {},
+) {
+ return async function discoveredToolDuplicateHandler(request: Request, context: RouteContext) {
   try {
-    const adminSession = verifyAdminSession(request);
+    const client = dependencies.client ?? supabaseAdmin;
+    const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
     if (!adminSession.isAdmin || !adminSession.actor) {
       console.warn("discovered_tool_duplicate_unauthorized");
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    if (!verifyAdminCsrfRequest(request)) {
+    if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
       return jsonResponse(
         { error: "Security token missing or expired. Please log in again." },
         403
       );
     }
 
-    const rateLimit = checkAdminRateLimit({
+    const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
       request,
       action: ADMIN_RATE_LIMIT_ACTIONS.discoveryToolDuplicate,
       actor: adminSession.actor,
@@ -220,9 +275,9 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const { data: discoveredTool, error: discoveredToolError } =
-      await supabaseAdmin
+      await client
         .from("discovered_tools")
-        .select("id, status")
+        .select("id, status, updated_at")
         .eq("id", id)
         .maybeSingle();
 
@@ -236,7 +291,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const { data: duplicateCandidate, error: duplicateError } =
-      await supabaseAdmin
+      await client
         .from("discovery_duplicate_candidates")
         .insert({
           discovered_tool_id: id,
@@ -249,7 +304,7 @@ export async function POST(request: Request, context: RouteContext) {
           is_blocking: true,
           reason,
         })
-        .select("*")
+        .select("id, discovered_tool_id, candidate_type, candidate_tool_id, candidate_submission_id, candidate_discovered_tool_id, match_type, match_score, is_blocking, reason, created_at")
         .single();
 
     if (duplicateError) {
@@ -257,22 +312,34 @@ export async function POST(request: Request, context: RouteContext) {
       return operationalFailureResponse();
     }
 
-    const { data: updatedTool, error: updateError } = await supabaseAdmin
+    const writtenUpdatedAt = (dependencies.now ?? (() => new Date().toISOString()))();
+    const { data: updatedTool, error: updateError } = await client
       .from("discovered_tools")
       .update({
         status: "duplicate",
-        updated_at: new Date().toISOString(),
+        updated_at: writtenUpdatedAt,
       })
       .eq("id", id)
+      .eq("status", discoveredTool.status)
+      .eq("updated_at", discoveredTool.updated_at)
       .select("id, status, updated_at")
-      .single();
+      .maybeSingle();
 
-    if (updateError) {
+    if (updateError || !updatedTool) {
       console.error("discovered_tool_duplicate_status_update_failed");
+      await compensateDiscoveredToolDuplicate({
+        client,
+        discoveredToolId: id,
+        duplicateCandidateId: duplicateCandidate.id,
+        previousStatus: discoveredTool.status,
+        previousUpdatedAt: discoveredTool.updated_at,
+        writtenUpdatedAt,
+        restoreStatus: false,
+      });
       return operationalFailureResponse();
     }
 
-    const { error: auditError } = await supabaseAdmin
+    const { error: auditError } = await client
       .from("discovery_audit_events")
       .insert({
         discovered_tool_id: id,
@@ -295,6 +362,15 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (auditError) {
       console.error("discovered_tool_duplicate_audit_insert_failed");
+      await compensateDiscoveredToolDuplicate({
+        client,
+        discoveredToolId: id,
+        duplicateCandidateId: duplicateCandidate.id,
+        previousStatus: discoveredTool.status,
+        previousUpdatedAt: discoveredTool.updated_at,
+        writtenUpdatedAt,
+        restoreStatus: true,
+      });
       return operationalFailureResponse();
     }
 
@@ -312,4 +388,7 @@ export async function POST(request: Request, context: RouteContext) {
     console.error("discovered_tool_duplicate_unexpected_failure");
     return operationalFailureResponse();
   }
+ };
 }
+
+export const POST = createDiscoveredToolDuplicateHandler();

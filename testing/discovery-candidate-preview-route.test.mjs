@@ -196,6 +196,23 @@ test("route exports GET only", () => {
   assert.equal(handlerSource.startsWith('import "server-only";'), true);
 });
 
+test("handler uses canonical session verification and fixed unauthorized diagnostics", () => {
+  assert.equal(
+    handlerSource.includes(
+      'from "../../../../../../../lib/admin-auth"',
+    ),
+    true,
+  );
+  assert.equal(handlerSource.includes("verifyAdminSession"), true);
+  assert.equal(handlerSource.includes("getReadOnlyAdminSession"), false);
+  assert.equal(handlerSource.includes("admin-auth-read-only"), false);
+  assert.equal(
+    handlerSource.includes('console.warn("candidate_preview_unauthorized")'),
+    true,
+  );
+  assert.equal(handlerSource.includes("adminSession.errors"), false);
+});
+
 test("unauthenticated request returns 401 and does not call provider", async () => {
   const calls = [];
   const handler = createHandler({

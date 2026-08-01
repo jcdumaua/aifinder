@@ -17,6 +17,7 @@ const LOGIN_PATH = "app/admin-login/page.tsx";
 const PREVIEW_PATH = "app/admin/homepage-control/[id]/preview/page.tsx";
 const SHARED_PATH = "components/admin/admin-dashboard-client.tsx";
 const AUDIT_PATH = "app/api/admin/audit-logs/route.ts";
+const AUDIT_HANDLER_PATH = "app/api/admin/audit-logs/handler.ts";
 const DISCOVERY_SOURCES_PATH =
   "components/admin/discovery/discovery-sources-panel.tsx";
 const DISCOVERY_RUNS_PATH =
@@ -29,11 +30,13 @@ const BASELINE = "3a43f8c9b01997487e20725ddcb38a4b7ce19676";
 const INTEGRATION_BASELINE =
   "2570765ca0e769888286e42456d2f27d831f46df";
 const INTEGRATION_TREE = "2503e7cf964a4e5bc3f6121aa04dfc5f2e3128e1";
+const HISTORICAL_ROUTE_INVENTORY_DIGEST =
+  "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed";
 const TERMINAL_ASSURANCE_RESULT =
   "PASS_TERMINAL_AUTHENTICATED_BROWSER_ASSURANCE";
 const EXPECTED_SOURCE_SHA256 = Object.freeze({
   [SHARED_PATH]:
-    "136ca5994e95faad6225b041023f3ea89084a28ba77cc26608ac5001509592e8",
+    "e94b4eda5a36f05084b6171ed95634c3e04b3da9c21abb3b186491421bfc3ab2",
   [DISCOVERY_QUEUE_PATH]:
     "dc199c25aa6527bb473ac15080d2cee956185f4fe33f412251b8aebbac856429",
   [DISCOVERY_DETAIL_PATH]:
@@ -668,31 +671,46 @@ function verifySharedClient() {
 }
 
 function verifyAuditRoute() {
-  const parsed = parse(AUDIT_PATH);
+  const wrapper = parse(AUDIT_PATH);
+  const parsed = parse(AUDIT_HANDLER_PATH);
+  requireContract(
+    wrapper.text.includes('import "server-only";') &&
+      wrapper.text.includes("createAdminAuditLogsHandler") &&
+      wrapper.text.includes("verifySession: verifyAdminSession") &&
+      wrapper.text.includes("verifyCsrf: verifyAdminCsrfRequest") &&
+      wrapper.text.includes("export const GET = handlers.GET") &&
+      wrapper.text.includes("export const POST = handlers.POST"),
+    "AUTH_STATIC_AUDIT_WRAPPER",
+  );
   const getText = functionText(parsed, "GET");
   const postText = functionText(parsed, "POST");
+  const archiveResultText = functionText(parsed, "archiveResultResponse");
   const archiveText = functionText(parsed, "archiveOverflowAuditLogs");
-  const storageRollback = functionText(parsed, "removeArchiveStorageObject");
-  const metadataRollback = functionText(parsed, "rollbackArchiveMetadata");
+  const storageRollback = functionText(parsed, "removeArchiveObject");
+  const metadataRollback = functionText(parsed, "deleteArchiveMetadata");
   requireContract(
-    getText.includes("isAuthorizedAdminRequest(request)") &&
-      getText.includes("getRecentAuditLogs()") &&
-      getText.includes("getAuditArchives()") &&
+    getText.includes(
+      "requireSecurity(request, ADMIN_RATE_LIMIT_ACTIONS.auditLogsRead, false)",
+    ) &&
+      getText.includes('dependencies.client.from("admin_audit_logs")') &&
+      getText.includes('dependencies.client.from("admin_audit_archives")') &&
       !getText.includes("archiveOverflowAuditLogs") &&
       !/\.(?:upload|insert|update|upsert|delete|remove|rpc)\s*\(/u.test(getText),
     "AUDIT_LOG_GET_PURE_READ",
   );
-  const sessionIndex = postText.indexOf("isAuthorizedAdminRequest(request)");
-  const csrfIndex = postText.indexOf("verifyAdminCsrfRequest(request)");
+  const sessionIndex = postText.indexOf("requireSecurity(request");
+  const csrfIndex = postText.indexOf(
+    "ADMIN_RATE_LIMIT_ACTIONS.auditLogsArchive, true",
+  );
   const archiveIndex = postText.indexOf("archiveOverflowAuditLogs()");
   requireContract(
     sessionIndex >= 0 &&
       csrfIndex > sessionIndex &&
       archiveIndex > csrfIndex &&
-      postText.includes("ARCHIVE_NOT_REQUIRED") &&
-      postText.includes("ARCHIVE_COMPLETED") &&
-      postText.includes("ARCHIVE_FAILED") &&
-      postText.includes("archived_count: result.archivedCount") &&
+      archiveResultText.includes("ARCHIVE_NOT_REQUIRED") &&
+      archiveResultText.includes("ARCHIVE_COMPLETED") &&
+      archiveResultText.includes("ARCHIVE_FAILED") &&
+      archiveResultText.includes("archived_count: result.archivedCount") &&
       !/(?:fileName|file_name|storagePath|storage_path|caught|exception)\s*[,}]/u.test(
         postText,
       ),
@@ -706,21 +724,21 @@ function verifyAuditRoute() {
       insertIndex > uploadIndex &&
       liveDeleteIndex > insertIndex &&
       archiveText.includes("if (uploadError)") &&
-      archiveText.includes("if (archiveInsertError)") &&
-      archiveText.includes("await removeArchiveStorageObject(storagePath)") &&
+      archiveText.includes("if (metadataError)") &&
+      archiveText.includes("await removeArchiveObject(storagePath)") &&
       archiveText.includes("if (deleteError)") &&
-      archiveText.includes("await rollbackArchiveMetadata(storagePath)") &&
-      archiveText.lastIndexOf("await removeArchiveStorageObject(storagePath)") >
+      archiveText.includes("await deleteArchiveMetadata(storagePath)") &&
+      archiveText.lastIndexOf("await removeArchiveObject(storagePath)") >
         archiveText.indexOf("if (deleteError)") &&
       storageRollback.includes(".remove([storagePath])") &&
       storageRollback.includes(
-        "audit_logs_archive_storage_rollback_failed",
+        "audit_logs_archive_compensation_failed",
       ) &&
       metadataRollback.includes('.from("admin_audit_archives")') &&
       metadataRollback.includes(".delete()") &&
       metadataRollback.includes('.eq("storage_path", storagePath)') &&
       metadataRollback.includes(
-        "audit_logs_archive_metadata_rollback_failed",
+        "audit_logs_archive_compensation_failed",
       ) &&
       archiveText.includes("MAX_ARCHIVE_BATCH"),
     "AUTH_STATIC_ARCHIVE_COMPENSATION",
@@ -875,6 +893,7 @@ function verifyImmutableAuthBoundary() {
   const session = source("app/api/admin/session/route.ts");
   const csrf = source("app/api/admin/csrf/route.ts");
   const logout = source("app/api/admin/logout/route.ts");
+  const logoutHandler = source("app/api/admin/logout/handler.ts");
   requireContract(
     proxy.includes("hasActiveAdminSessionCookie") &&
       proxy.includes("ADMIN_SESSION_COOKIE_NAME") &&
@@ -885,12 +904,18 @@ function verifyImmutableAuthBoundary() {
       login.includes("response.cookies.set(ADMIN_SESSION_COOKIE_NAME") &&
       session.includes("verifyAdminSession(request)") &&
       csrf.includes("isAuthorizedAdminRequest(request)") &&
-      csrf.includes("createAdminCsrfToken()") &&
+      csrf.includes("getOrCreateAdminCsrfToken(request)") &&
       csrf.includes("response.cookies.set(ADMIN_CSRF_COOKIE_NAME") &&
-      logout.includes("verifyAdminSession(request)") &&
+      logout.includes("createLogoutHandler") &&
+      logout.includes("verifySession: verifyAdminSession") &&
+      logout.includes("verifyCsrf: verifyAdminCsrfRequest") &&
       logout.includes("response.cookies.set(ADMIN_SESSION_COOKIE_NAME") &&
       logout.includes("response.cookies.set(ADMIN_CSRF_COOKIE_NAME") &&
-      (logout.match(/maxAge:\s*0/gu) ?? []).length === 2,
+      (logout.match(/maxAge:\s*0/gu) ?? []).length === 2 &&
+      logoutHandler.includes("dependencies.verifySession(request)") &&
+      logoutHandler.includes("dependencies.verifyCsrf(request)") &&
+      logoutHandler.indexOf("await dependencies.writeAudit") <
+        logoutHandler.indexOf("dependencies.clearAdminCookies(response)"),
     "AUTH_STATIC_SESSION_CSRF_BOUNDARY",
   );
 }
@@ -1938,7 +1963,7 @@ function verifyGovernance() {
       plan.source_matrix.lines === 1067 &&
       plan.source_matrix.mode === "0644" &&
       plan.source_matrix.route_inventory_digest ===
-        "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed" &&
+        HISTORICAL_ROUTE_INVENTORY_DIGEST &&
       plan.source_matrix.entry_count === 69 &&
       plan.source_matrix.launch_blocking_count === 46 &&
       plan.workstream.id === "AUTHENTICATED_BROWSER_RUNTIME" &&
@@ -2092,7 +2117,7 @@ function verifyGovernance() {
     (entry) => entry.path === AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
   );
   requireContract(
-    safety.entries.length === 107 &&
+    safety.entries.length === 115 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_CORE")
         .length === 5 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_POLICY")
@@ -2101,7 +2126,7 @@ function verifyGovernance() {
         (entry) => entry.ci_disposition === "VALIDATE_ONLY",
       ).length === 18 &&
       safety.entries.filter((entry) => entry.ci_disposition === "DENY")
-        .length === 78 &&
+        .length === 86 &&
       selfEntry?.role === "EXECUTABLE" &&
       selfEntry.safety_class === "SAFE_STATIC_CORE" &&
       selfEntry.ci_disposition === "RUN_CORE" &&

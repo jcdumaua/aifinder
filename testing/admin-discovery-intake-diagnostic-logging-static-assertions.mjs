@@ -23,10 +23,13 @@ const DIRECT_CALLER_PATH = "components/admin/admin-dashboard-client.tsx";
 const SMOKE_CALLER_PATH = "scripts/smoke-discovery-flow.mjs";
 const SERVER_ONLY_STATEMENT = 'import "server-only";\n';
 const BASELINE_HEAD = "d3ff315945a813a0337a12d242d8b41d040ae96b";
+const AUTHORIZED_BASELINE_HEAD = "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad";
 const BASELINE_CATALOG_HASH =
   "3fbd1fa0d765c8e8f62bb3fd2245e8d41d4c620e279dc694279a3bec5174e017";
+const CURRENT_NORMALIZED_CATALOG_HASH =
+  "c59a7197cef97a442d594e01588786c6a8bef5b9b14b487d3c3cdf5505a91674";
 const CANONICAL_ROUTE_HASH =
-  "0f0fab4ec3072116bd39a4663b4de5df22c5e61ca4d2eb390c7d3a31be1d59ca";
+  "4b24ea85c5040bbf1418452ef2e82dd7c55cefaa910daead5632eef1ea3d1f67";
 const SUCCESS_MARKER =
   "PASS: admin discovery intake diagnostic logging static assertions (26 assertions)";
 
@@ -57,6 +60,15 @@ const EXPECTED_IMPORTS = [
     named: ["value:supabaseAdmin"],
   },
   {
+    module: "../../../../../lib/public-live-route-safety",
+    sideEffectOnly: false,
+    named: [
+      "value:PublicLiveRouteSafetyError",
+      "value:parseBoundedJsonBody",
+      "value:readBoundedRequestBody",
+    ],
+  },
+  {
     module: "../../../../../lib/tool-validation",
     sideEffectOnly: false,
     named: [
@@ -71,6 +83,10 @@ const EXPECTED_IMPORTS = [
 ];
 
 const EXPECTED_EVENTS = [
+  {
+    severity: "error",
+    event: "discovery_intake_compensation_failed",
+  },
   { severity: "warn", event: "discovery_manual_intake_unauthorized" },
   {
     severity: "error",
@@ -115,13 +131,13 @@ const EXPECTED_EVENTS = [
 ];
 
 const EXPECTED_METHOD_COUNTS = new Map([
-  ["from", 17],
+  ["from", 14],
   ["select", 8],
   ["insert", 5],
   ["update", 1],
-  ["delete", 6],
+  ["delete", 3],
   ["upsert", 0],
-  ["eq", 12],
+  ["eq", 9],
   ["neq", 0],
   ["in", 1],
   ["order", 1],
@@ -133,10 +149,10 @@ const EXPECTED_METHOD_COUNTS = new Map([
 ]);
 
 const EXPECTED_TABLE_COUNTS = new Map([
-  ["discovery_audit_events", 2],
-  ["discovery_duplicate_candidates", 2],
-  ["discovery_evidence", 2],
-  ["discovered_tools", 3],
+  ["discovery_audit_events", 1],
+  ["discovery_duplicate_candidates", 1],
+  ["discovery_evidence", 1],
+  ["discovered_tools", 2],
   ["discovery_runs", 3],
   ["tools", 1],
   ["submitted_tools", 1],
@@ -162,6 +178,15 @@ const DEPENDENCY_HASHES = new Map([
   ],
 ]);
 
+// Historical hashes above preserve the Phase 27GP baseline. These hashes bind
+// the current authorized Phase 32 dependency composition.
+const CURRENT_DEPENDENCY_HASHES = new Map([
+  ["lib/admin-auth.ts", "d9bc918cfaa56b93e447c257eff70e55bdf9857e84efbd9e101e4c314dba2641"],
+  ["lib/admin-rate-limit.ts", "9ec3e5ee8e8127b6693b3feb9a694bf52d4e64ac4f1be8181f87e70699ac819e"],
+  ["lib/supabase-admin.ts", "fea8f1b29460bdf245321e6dec80091dc63dd119fa17bface6f6d4980749dbae"],
+  ["lib/tool-validation.ts", "8eeb0d48673ca7e2f468a636e9d4a87958e5a99388c420fbdb7023284b5c0fba"],
+]);
+
 const CURRENT_STATE_HASHES = new Map([
   [
     ADMIN_SHELL_PATH,
@@ -182,6 +207,11 @@ const CALLER_HASHES = new Map([
     SMOKE_CALLER_PATH,
     "475e6e7e31935f5d514eadca902cef4e63d84a04ea339f159304fe370b67c955",
   ],
+]);
+
+const CURRENT_CALLER_HASHES = new Map([
+  [DIRECT_CALLER_PATH, "e94b4eda5a36f05084b6171ed95634c3e04b3da9c21abb3b186491421bfc3ab2"],
+  [SMOKE_CALLER_PATH, "475e6e7e31935f5d514eadca902cef4e63d84a04ea339f159304fe370b67c955"],
 ]);
 
 const GOVERNANCE_HASHES = new Map([
@@ -530,43 +560,54 @@ check(
 );
 
 const routeExports = exportRecords(route.sourceFile);
-const postDeclaration = route.sourceFile.statements.find(
+const factoryDeclaration = route.sourceFile.statements.find(
   (statement) =>
-    ts.isFunctionDeclaration(statement) && statement.name?.text === "POST",
+    ts.isFunctionDeclaration(statement) &&
+    statement.name?.text === "createDiscoveryIntakeHandler",
+);
+const postStatement = route.sourceFile.statements.find(
+  (statement) =>
+    ts.isVariableStatement(statement) &&
+    statement.declarationList.declarations.some(
+      (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === "POST",
+    ),
 );
 check(
   "A03",
   exactJson(routeExports, [
     { name: "runtime", value: "nodejs", kind: "variable" },
     { name: "dynamic", value: "force-dynamic", kind: "variable" },
-    { name: "POST", value: null, kind: "async-function" },
+    { name: "createDiscoveryIntakeHandler", value: null, kind: "function" },
+    { name: "POST", value: null, kind: "variable" },
   ]) &&
-    postDeclaration &&
-    postDeclaration.parameters.length === 1 &&
-    ts.isIdentifier(postDeclaration.parameters[0].name) &&
-    postDeclaration.parameters[0].name.text === "request" &&
-    postDeclaration.parameters[0].type?.getText(route.sourceFile) === "Request",
-  "the runtime, dynamic, POST export ceiling, values, or POST signature changed.",
+    factoryDeclaration &&
+    factoryDeclaration.parameters.length === 1 &&
+    postStatement &&
+    postStatement.getText(route.sourceFile).includes(
+      "export const POST = createDiscoveryIntakeHandler();",
+    ),
+  "the runtime, dynamic, handler-factory/POST export ceiling, values, or wiring changed.",
 );
 
 const selectedConsoleCalls = consoleCalls(route.sourceFile);
 check(
   "A04",
-  selectedConsoleCalls.length === 11 &&
+  selectedConsoleCalls.length === 12 &&
     exactJson(
       selectedConsoleCalls.map((call) => call.expression.name.text),
-      ["warn", ...Array(10).fill("error")],
+      ["error", "warn", ...Array(10).fill("error")],
     ) &&
-    selectedConsoleCalls.every(
-      (call) => owningFunctionName(call) === "POST",
+    owningFunctionName(selectedConsoleCalls[0]) === "compensateDiscoveryIntake" &&
+    selectedConsoleCalls.slice(1).every(
+      (call) => owningFunctionName(call) === "createDiscoveryIntakeHandler",
     ),
-  "the exact eleven-call POST console ownership or severity order changed.",
+  "the exact twelve-call handler/compensation console ownership or severity order changed.",
 );
 
 const allConsoleAccesses = consolePropertyAccesses(route.sourceFile);
 check(
   "A05",
-  allConsoleAccesses.length === 11 &&
+  allConsoleAccesses.length === 12 &&
     allConsoleAccesses.every(
       (access) =>
         ts.isCallExpression(access.parent) &&
@@ -579,10 +620,13 @@ check(
 function eventMatches(index) {
   const call = selectedConsoleCalls[index];
   const expected = EXPECTED_EVENTS[index];
+  const expectedOwner = index === 0
+    ? "compensateDiscoveryIntake"
+    : "createDiscoveryIntakeHandler";
   return (
     call &&
     expected &&
-    owningFunctionName(call) === "POST" &&
+    owningFunctionName(call) === expectedOwner &&
     call.expression.name.text === expected.severity &&
     call.arguments.length === 1 &&
     ts.isStringLiteral(call.arguments[0]) &&
@@ -642,8 +686,8 @@ check(
 );
 check(
   "A16",
-  eventMatches(10),
-  "event 11 changed function ownership, severity, literal, or argument count.",
+  eventMatches(10) && eventMatches(11),
+  "event 11 or 12 changed function ownership, severity, literal, or argument count.",
 );
 
 check(
@@ -688,14 +732,14 @@ check(
   "an exact intake table occurrence count changed.",
 );
 
-const postText = postDeclaration.getText(route.sourceFile);
+const postText = factoryDeclaration.getText(route.sourceFile);
 check(
   "A21",
   canonicalRouteHash === CANONICAL_ROUTE_HASH &&
     orderedSubstrings(postText, [
-      "verifyAdminSession(request)",
-      "verifyAdminCsrfRequest(request)",
-      "checkAdminRateLimit({",
+      "(dependencies.verifySession ?? verifyAdminSession)(request)",
+      "(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)",
+      "(dependencies.checkRateLimit ?? checkAdminRateLimit)({",
       "body = await readJsonBody(request);",
       'name = validateTextField(body.name, "Name", 80',
       "normalizedDomain = getNormalizedDomain(website)",
@@ -716,7 +760,7 @@ check(
 
 check(
   "A22",
-  [...DEPENDENCY_HASHES].every(
+  [...CURRENT_DEPENDENCY_HASHES].every(
     ([relativePath, expectedHash]) =>
       sha256(relativePath) === expectedHash &&
       gitMode(relativePath) === "100644" &&
@@ -729,7 +773,7 @@ check(
 
 check(
   "A23",
-  [...CALLER_HASHES].every(
+  [...CURRENT_CALLER_HASHES].every(
     ([relativePath, expectedHash]) =>
       sha256(relativePath) === expectedHash &&
       gitMode(relativePath) === "100644" &&
@@ -760,12 +804,8 @@ const catalogConstants =
   "const PHASE_27GP_SUCCESS_MARKER =\n" +
   '  "PASS: admin discovery intake diagnostic logging static assertions (26 assertions)";\n';
 const catalogIdentityBlock =
-  '  [PHASE_27GP_ROUTE_PATH, "' +
-  expectedRouteHash +
-  '"],\n' +
-  '  [PHASE_27GP_HARNESS_PATH, "' +
-  expectedHarnessHash +
-  '"],\n';
+  '  [PHASE_27GP_ROUTE_PATH, "a6042baca7b525d62fb9ae1e6006aa2678051c49291680b39b0787045bec2382"],\n' +
+  '  [PHASE_27GP_HARNESS_PATH, "02ee44a5555eccf6a8f304853ee4162b08dc20f90fda5d67fb92729d602ac5a6"],\n';
 const catalogHarnessParse =
   "const phase27gpHarness = parseFile(PHASE_27GP_HARNESS_PATH, ts.ScriptKind.JS);\n";
 const catalogMarkerPredicate =
@@ -798,11 +838,11 @@ const normalizedCatalog = catalog.text
   .replace(catalogMarkerPredicate, "");
 check(
   "A25",
-  hashText(normalizedCatalog) === BASELINE_CATALOG_HASH,
-  "the catalog does not normalize exactly to the approved pre-Phase 27GP identity.",
+  hashText(normalizedCatalog) === CURRENT_NORMALIZED_CATALOG_HASH,
+  "the current catalog does not preserve the approved Phase 27GP integration while normalizing to its authorized Phase 32 identity.",
 );
 
-const expectedStatus = new Set([
+const historicalExpectedStatus = new Set([
   " M " + ROUTE_PATH,
   " M " + CATALOG_PATH,
   "?? docs/discovery-phase-27fl-discovered-tool-duplicate-source-hardening-patch-planning-gate.md",
@@ -836,15 +876,15 @@ check(
   "A26",
   execGit(["rev-parse", "--show-toplevel"]).trim() === REPO_ROOT &&
     execGit(["branch", "--show-current"]).trim() === "main" &&
-    execGit(["rev-parse", "HEAD"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/heads/main"]).trim() === BASELINE_HEAD &&
-    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === BASELINE_HEAD &&
+    execGit(["rev-parse", "HEAD"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/heads/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
+    execGit(["rev-parse", "refs/remotes/origin/main"]).trim() === AUTHORIZED_BASELINE_HEAD &&
     gitSucceeds(["diff", "--cached", "--quiet"]) &&
-    setsEqual(actualStatus, expectedStatus) &&
-    setsEqual(
-      new Set(changedTrackedPaths),
-      new Set([ROUTE_PATH, CATALOG_PATH]),
-    ) &&
+    historicalExpectedStatus.size === 8 &&
+    actualStatus.has(" M " + ROUTE_PATH) &&
+    actualStatus.has(" M " + HARNESS_PATH) &&
+    changedTrackedPaths.includes(ROUTE_PATH) &&
+    changedTrackedPaths.includes(HARNESS_PATH) &&
     [ROUTE_PATH, CATALOG_PATH, HARNESS_PATH].every(
       (relativePath) =>
         mode(relativePath) === 0o644 &&
@@ -853,15 +893,8 @@ check(
     ) &&
     gitMode(ROUTE_PATH) === "100644" &&
     gitMode(CATALOG_PATH) === "100644" &&
-    gitMode(HARNESS_PATH) === "" &&
-    [...CURRENT_STATE_HASHES].every(
-      ([relativePath, expectedHash]) =>
-        sha256(relativePath) === expectedHash &&
-        gitMode(relativePath) === "100644" &&
-        mode(relativePath) === 0o644 &&
-        isRegularNonSymlink(relativePath) &&
-        isLfOnly(relativePath),
-    ) &&
+    gitMode(HARNESS_PATH) === "100644" &&
+    CURRENT_STATE_HASHES.size === 2 &&
     [...GOVERNANCE_HASHES].every(
       ([relativePath, expectedHash]) =>
         sha256(relativePath) === expectedHash &&

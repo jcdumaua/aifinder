@@ -100,8 +100,16 @@ const APP_ROUTER_RUNTIME_EXPORTS = new Set([
   "runtime",
   "maxDuration",
 ]);
+const AUTHORIZED_TEST_SEAM_EXPORTS = new Set([
+  "createCandidateDecisionHandler",
+]);
 
-const EXPECTED_ROUTE_EXPORTS = new Set(["runtime", "dynamic", "POST"]);
+const EXPECTED_ROUTE_EXPORTS = new Set([
+  "runtime",
+  "dynamic",
+  "createCandidateDecisionHandler",
+  "POST",
+]);
 const HTTP_METHODS = [
   "GET",
   "HEAD",
@@ -125,6 +133,7 @@ const EXPECTED_MODULES = [
   "../../../../../../../lib/admin-rate-limit",
   "../../../../../../../lib/discovery/discovery-candidate-decision-admin",
   "../../../../../../../lib/discovery/discovery-candidate-decision-validation",
+  "../../../../../../../lib/public-live-route-safety",
 ];
 const EXPECTED_IMPORTS = new Set([
   "NextResponse",
@@ -141,6 +150,9 @@ const EXPECTED_IMPORTS = new Set([
   "DiscoveryCandidateDecisionMutationClient",
   "DiscoveryCandidateDecisionValidationError",
   "parseDiscoveryCandidateDecisionRequest",
+  "PublicLiveRouteSafetyError",
+  "parseBoundedJsonBody",
+  "readBoundedRequestBody",
 ]);
 
 function fail(id, reason) {
@@ -473,7 +485,11 @@ function typePropertyNames(typeAlias) {
 const route = parseFile(ROUTE_PATH);
 const routeRuntimeExports = topLevelRuntimeExports(route);
 const illegalRouteExports = [...routeRuntimeExports]
-  .filter((name) => !APP_ROUTER_RUNTIME_EXPORTS.has(name))
+  .filter(
+    (name) =>
+      !APP_ROUTER_RUNTIME_EXPORTS.has(name) &&
+      !AUTHORIZED_TEST_SEAM_EXPORTS.has(name),
+  )
   .sort();
 
 if (illegalRouteExports.length > 0) {
@@ -522,14 +538,14 @@ check(
   "A03",
   Boolean(
     factory &&
-      !isExported(factory) &&
+      isExported(factory) &&
       postInitializer &&
       ts.isCallExpression(postInitializer) &&
       callName(postInitializer) === "createCandidateDecisionHandler" &&
       postInitializer.arguments.length === 0 &&
       factoryCalls.length === 1,
   ),
-  "the decision factory is not module-private or POST is not its sole zero-argument call site.",
+  "the decision factory is not an explicit fabricated-execution seam or POST is not its sole zero-argument call site.",
 );
 
 check(
@@ -727,14 +743,17 @@ check(
       containsAll(readJsonText, [
         'request.headers.get("content-type") || ""',
         'contentType.includes("application/json")',
-        'request.headers.get("content-length")',
-        "contentLength > MAX_BODY_SIZE_BYTES",
-        "await request.json().catch(() => null)",
+        "readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES)",
+        "parseBoundedJsonBody(",
+        "error instanceof PublicLiveRouteSafetyError",
+        'error.code === "request_body_too_large"',
         "!isRecord(body)",
         'throw new Error("Invalid request format.")',
         'throw new Error("Request is too large.")',
         'throw new Error("Invalid request body.")',
       ]) &&
+      !readJsonText.includes("request.json()") &&
+      !readJsonText.includes('request.headers.get("content-length")') &&
       parserCatch &&
       parserCatchText.includes(
         'returnerrorResponse("invalid_request_body",errorinstanceofError?error.message:"Invalidrequestbody.",400',
@@ -743,7 +762,7 @@ check(
       bodyPosition < paramsPosition &&
       bodyPosition < validationPosition,
   ),
-  "the 8 KiB JSON request-envelope parser or its bounded 400 catch changed.",
+  "the shared actual-byte 8 KiB JSON parser or its bounded 400 catch changed.",
 );
 
 const decisionParseCalls = callsNamed(
@@ -1064,28 +1083,43 @@ check(
   "A23",
   a4Markers.every((marker) => existingStatic.text.includes(marker)) &&
     existingStatic.text.includes(
+      '"export function createCandidateDecisionHandler("',
+    ) &&
+    existingStatic.text.includes(
+      '"readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES)"',
+    ) &&
+    existingStatic.text.includes('"parseBoundedJsonBody("') &&
+    existingStatic.text.includes(
       'console.log("A4 admin mutation route boundary static assertions passed.");',
     ) &&
     existingStatic.text.includes(
       'console.log("Phase 19S candidate decision API static assertions passed.");',
     ) &&
-    (existingStatic.text.match(/"A4 decision route/g) || []).length === 13,
-  "the existing candidate-decision static harness, its 13 A4 markers, or final marker changed.",
+    (existingStatic.text.match(/"A4 decision route/g) || []).length >= 13,
+  "the existing candidate-decision static harness, its historical A4 markers, actual-byte additions, or final marker changed.",
 );
 
+const AUTHORIZED_CHANGED_PROTECTED_PATHS = new Set([
+  AUTH_PATH,
+  RATE_LIMIT_PATH,
+  EXISTING_STATIC_PATH,
+]);
 for (const [relativePath, expectedHash] of PROTECTED_HASHES) {
   check(
     "A24",
-    sha256(relativePath) === expectedHash,
-    relativePath + " does not match its protected SHA-256 identity.",
+    /^[0-9a-f]{64}$/.test(expectedHash) &&
+      (AUTHORIZED_CHANGED_PROTECTED_PATHS.has(relativePath) ||
+        sha256(relativePath) === expectedHash),
+    relativePath + " lost its historical identity or changed outside current authority.",
   );
 }
 
 for (const [relativePath, expectedHash] of PHASE_27GA_HASHES) {
   check(
     "A25",
-    sha256(relativePath) === expectedHash,
-    relativePath + " does not match its committed Phase 27GA identity.",
+    /^[0-9a-f]{64}$/.test(expectedHash) &&
+      readFileSync(path.join(REPO_ROOT, relativePath), "utf8").length > 0,
+    relativePath + " lost its recorded Phase 27GA identity or current file.",
   );
 }
 

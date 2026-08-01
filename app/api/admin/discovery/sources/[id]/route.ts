@@ -12,6 +12,11 @@ import {
 } from "../../../../../../lib/admin-rate-limit";
 import { supabaseAdmin } from "../../../../../../lib/supabase-admin";
 import {
+  PublicLiveRouteSafetyError,
+  parseBoundedJsonBody,
+  readBoundedRequestBody,
+} from "../../../../../../lib/public-live-route-safety";
+import {
   validateHttpsUrl,
   validateTextField,
 } from "../../../../../../lib/tool-validation";
@@ -32,6 +37,15 @@ type DiscoverySourceAuditRow = {
   source_type: string | null;
   config: Record<string, unknown> | null;
   is_active: boolean | null;
+  updated_at: string;
+};
+
+type DiscoverySourceUpdateDependencies = {
+  verifySession?: typeof verifyAdminSession;
+  verifyCsrf?: typeof verifyAdminCsrfRequest;
+  checkRateLimit?: typeof checkAdminRateLimit;
+  client?: typeof supabaseAdmin;
+  now?: () => string;
 };
 
 function jsonResponse(data: object, status = 200) {
@@ -57,14 +71,17 @@ async function readJsonBody(request: Request) {
     throw new Error("Invalid request format.");
   }
 
-  const contentLengthHeader = request.headers.get("content-length");
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
-
-  if (contentLength > MAX_BODY_SIZE_BYTES) {
-    throw new Error("Request is too large.");
+  let body: unknown;
+  try {
+    body = parseBoundedJsonBody(
+      await readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES),
+    );
+  } catch (error) {
+    if (error instanceof PublicLiveRouteSafetyError && error.code === "request_body_too_large") {
+      throw new Error("Request is too large.");
+    }
+    throw new Error("Invalid request body.");
   }
-
-  const body = await request.json().catch(() => null);
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new Error("Invalid request body.");
@@ -128,6 +145,23 @@ function getBooleanValue(value: unknown) {
   }
 
   return value;
+}
+
+function toSafeDiscoverySourceResponse(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  return {
+    id: source.id ?? null,
+    name: source.name ?? null,
+    slug: source.slug ?? null,
+    description: source.description ?? null,
+    url: source.url ?? null,
+    source_type: source.source_type ?? null,
+    is_active: source.is_active ?? null,
+    last_run_at: source.last_run_at ?? null,
+    created_at: source.created_at ?? null,
+    updated_at: source.updated_at ?? null,
+  };
 }
 
 function valuesAreEqual(first: unknown, second: unknown) {
@@ -206,11 +240,15 @@ function buildSourceUpdateAuditMetadata(
   };
 }
 
-export async function PATCH(
+export function createDiscoverySourceUpdateHandler(
+  dependencies: DiscoverySourceUpdateDependencies = {},
+) {
+ return async function discoverySourceUpdateHandler(
   request: Request,
   context: { params: Promise<{ id: string }> }
-) {
-  const adminSession = verifyAdminSession(request);
+ ) {
+  const client = dependencies.client ?? supabaseAdmin;
+  const adminSession = (dependencies.verifySession ?? verifyAdminSession)(request);
 
   if (!adminSession.isAdmin || !adminSession.actor) {
     console.warn("discovery_source_update_unauthorized");
@@ -218,14 +256,14 @@ export async function PATCH(
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  if (!verifyAdminCsrfRequest(request)) {
+  if (!(dependencies.verifyCsrf ?? verifyAdminCsrfRequest)(request)) {
     return jsonResponse(
       { error: "Security token missing or expired. Please log in again." },
       403
     );
   }
 
-  const rateLimit = checkAdminRateLimit({
+  const rateLimit = (dependencies.checkRateLimit ?? checkAdminRateLimit)({
     request,
     action: ADMIN_RATE_LIMIT_ACTIONS.discoverySourceUpdate,
     actor: adminSession.actor,
@@ -312,7 +350,7 @@ export async function PATCH(
 
   if (typeof updatePayload.slug === "string") {
     const { data: existingSource, error: existingSourceError } =
-      await supabaseAdmin
+      await client
         .from("discovery_sources")
         .select("id, name, slug")
         .eq("slug", updatePayload.slug)
@@ -336,9 +374,9 @@ export async function PATCH(
     }
   }
 
-  const { data: previousSource, error: previousSourceError } = await supabaseAdmin
+  const { data: previousSource, error: previousSourceError } = await client
     .from("discovery_sources")
-    .select("id, name, slug, description, url, source_type, config, is_active")
+    .select("id, name, slug, description, url, source_type, config, is_active, updated_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -352,19 +390,27 @@ export async function PATCH(
     return jsonResponse({ error: "Failed to update discovery source." }, 500);
   }
 
-  const { data: source, error: updateError } = await supabaseAdmin
+  const writtenUpdatedAt = (dependencies.now ?? (() => new Date().toISOString()))();
+  updatePayload.updated_at = writtenUpdatedAt;
+  const { data: source, error: updateError } = await client
     .from("discovery_sources")
     .update(updatePayload)
     .eq("id", id)
+    .eq("updated_at", previousSource.updated_at)
     .select(
       "id, name, slug, description, url, source_type, config, is_active, last_run_at, created_at, updated_at"
     )
-    .single();
+    .maybeSingle();
 
   if (updateError) {
     console.error("discovery_source_update_failed");
 
     return jsonResponse({ error: "Failed to update discovery source." }, 500);
+  }
+
+  if (!source) {
+    console.warn("source_update_stale");
+    return jsonResponse({ error: "Discovery source changed before update." }, 409);
   }
 
   const auditMetadata = buildSourceUpdateAuditMetadata(
@@ -373,7 +419,7 @@ export async function PATCH(
     updatePayload
   );
 
-  const { error: auditError } = await supabaseAdmin
+  const { error: auditError } = await client
     .from("discovery_audit_events")
     .insert({
       discovered_tool_id: null,
@@ -387,15 +433,34 @@ export async function PATCH(
   if (auditError) {
     console.error("discovery_source_update_audit_failed");
 
-    return jsonResponse(
-      { error: "Discovery source updated, but audit logging failed." },
-      500
-    );
+    const previous = previousSource as DiscoverySourceAuditRow;
+    const { error: compensationError } = await client
+      .from("discovery_sources")
+      .update({
+        name: previous.name,
+        slug: previous.slug,
+        description: previous.description,
+        url: previous.url,
+        source_type: previous.source_type,
+        config: previous.config,
+        is_active: previous.is_active,
+        updated_at: previous.updated_at,
+      })
+      .eq("id", id)
+      .eq("updated_at", writtenUpdatedAt);
+    if (compensationError) {
+      console.error("discovery_source_update_compensation_failed");
+    }
+
+    return jsonResponse({ error: "Failed to update discovery source." }, 500);
   }
 
   return jsonResponse({
     success: true,
     message: "Discovery source updated.",
-    data: { source },
+    data: { source: toSafeDiscoverySourceResponse(source) },
   });
+ };
 }
+
+export const PATCH = createDiscoverySourceUpdateHandler();
