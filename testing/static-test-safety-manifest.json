@@ -1,13 +1,13 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "7c446a347640f7ef3e7008fdcd36ea83d21dc4a88fabcebd9b735d8267a59d36",
-  "testing_tree_digest_state": "BASELINE_SNAPSHOT_PRESERVED_NOT_RECOMPUTED_OUTSIDE_EXACT_READ_SCOPE",
+  "testing_tree_digest": "f4ec71924bd2d2c24b4901b1e92d16ad99ecea951fc339af5f11a3ce75f66b88",
+  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33GA",
   "phase_33fa_c1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "9f9670f7b931f504c1f46efef2d48f3ab75b60ffa0d27c516cb2a4725514bee9"
+    "sha256": "d02afef615d460730b6ad156ae88f1b8bce90da778c904e3c797e864f73a524f"
   },
   "entries": [
     {

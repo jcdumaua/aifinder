@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import {
+  GovernanceError,
+  categoricalFailure,
+  compareExactPathSets,
+  executableSafetyViolations,
+  listRegularFiles,
+  readStrictJson,
+  stableSortedPaths,
+  testingTreeDigest,
+} from "./static-governance-utils.mjs";
 
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
 const SCHEMA_PATH =
@@ -25,6 +35,7 @@ const C1_EXECUTION_SURFACE_PATHS = [
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
+const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
 const ROLES = new Set(["EXECUTABLE", "SUPPORT", "FIXTURE", "CONFIG"]);
 const CLASSES = new Set([
   "SAFE_STATIC_CORE",
@@ -44,6 +55,22 @@ const DISPOSITIONS = new Set([
   "VALIDATE_ONLY",
   "DENY",
 ]);
+const REQUIRED_CORE = new Set([
+  "testing/authenticated-browser-security-static-assertions.mjs",
+  "testing/production-perimeter-static-assertions.mjs",
+  "testing/public-launch-resilience-static-assertions.mjs",
+  "testing/public-live-route-security-static-assertions.mjs",
+  "testing/public-persistence.test.mjs",
+]);
+const REQUIRED_POLICY = new Set([
+  "testing/accessibility-responsive-static-assertions.mjs",
+  "testing/authenticated-live-route-partial-evidence.test.mjs",
+  "testing/public-launch-blocker-registry.test.mjs",
+  "testing/public-production-runtime-planning-manifest.test.mjs",
+  "testing/readiness-coverage-matrix.test.mjs",
+  "testing/static-readiness-workflow-static-assertions.mjs",
+  "testing/static-test-safety-manifest.test.mjs",
+]);
 const DENIED_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
   "LIVE_ROUTE_OR_SERVER",
@@ -52,9 +79,27 @@ const DENIED_CLASSES = new Set([
   "OPERATIONAL_MUTATION",
   "UNPROVEN_DENY",
 ]);
+const PROHIBITED_COMMAND_PARTS = [
+  "npm",
+  "npx",
+  "bash",
+  "sh",
+  "playwright",
+  "next",
+  "supabase",
+  "psql",
+  "sql",
+  "build",
+  "dev",
+  "start",
+];
+
+function fail(stage) {
+  throw new GovernanceError(stage);
+}
 
 function assert(condition, stage) {
-  if (!condition) throw new Error(stage);
+  if (!condition) fail(stage);
 }
 
 function exactArray(actual, expected) {
@@ -79,12 +124,26 @@ function c1ExecutionSurfaceDigest() {
 }
 
 function validateManifest() {
-  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
+  let manifest;
+  try {
+    manifest = readStrictJson(MANIFEST_PATH);
+  } catch (caught) {
+    if (
+      caught instanceof GovernanceError &&
+      caught.stage === "REGULAR_FILE_ABSENT"
+    ) {
+      fail("STATIC_TEST_SAFETY_MANIFEST_ABSENT");
+    }
+    throw caught;
+  }
+
   assert(manifest.manifest_version === 1, "MANIFEST_VERSION");
+  assert(manifest.repository_baseline === BASELINE, "MANIFEST_BASELINE");
+  assert(Array.isArray(manifest.entries), "MANIFEST_ENTRIES");
   assert(
-    manifest.repository_baseline ===
-      "01a5c779f3f47f9619a2cd4a913622e010145afc",
-    "MANIFEST_BASELINE",
+    typeof manifest.testing_tree_digest === "string" &&
+      /^[0-9a-f]{64}$/.test(manifest.testing_tree_digest),
+    "MANIFEST_TREE_DIGEST",
   );
   assert(
     typeof manifest.testing_tree_digest === "string" &&
@@ -92,12 +151,13 @@ function validateManifest() {
     "MANIFEST_DIGEST",
   );
   assert(
-    manifest.testing_tree_digest ===
-      "7c446a347640f7ef3e7008fdcd36ea83d21dc4a88fabcebd9b735d8267a59d36" &&
-      manifest.testing_tree_digest_state ===
-        "BASELINE_SNAPSHOT_PRESERVED_NOT_RECOMPUTED_OUTSIDE_EXACT_READ_SCOPE" &&
-      manifest.phase_33fa_c1_execution_surface_digest?.algorithm ===
-        "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" &&
+    manifest.testing_tree_digest_state ===
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33GA",
+    "MANIFEST_TREE_DIGEST",
+  );
+  assert(
+    manifest.phase_33fa_c1_execution_surface_digest?.algorithm ===
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" &&
       manifest.phase_33fa_c1_execution_surface_digest?.path_count === 9 &&
       manifest.phase_33fa_c1_execution_surface_digest?.excluded_self_path ===
         MANIFEST_PATH &&
@@ -105,30 +165,43 @@ function validateManifest() {
         c1ExecutionSurfaceDigest(),
     "MANIFEST_C1_EXECUTION_SURFACE_DIGEST",
   );
-  assert(
-    Array.isArray(manifest.entries) &&
-      manifest.entries.length === 118 &&
-      new Set(manifest.entries.map((entry) => entry.path)).size === 118,
-    "MANIFEST_ENTRY_SET",
-  );
+
+  const inventory = listRegularFiles("testing");
   const entryPaths = manifest.entries.map((entry) => entry.path);
   assert(
-    exactArray(entryPaths, [...entryPaths].sort()),
+    manifest.entries.length === 118 &&
+      entryPaths.length === new Set(entryPaths).size,
+    "MANIFEST_ENTRY_SET",
+  );
+  assert(
+    entryPaths.length === new Set(entryPaths).size,
+    "MANIFEST_DUPLICATE_PATH",
+  );
+  assert(
+    entryPaths.every((entry, index) => entry === stableSortedPaths(entryPaths)[index]),
     "MANIFEST_PATH_ORDER",
   );
+  const inventoryComparison = compareExactPathSets(entryPaths, inventory);
+  assert(inventoryComparison.equal, "MANIFEST_INVENTORY");
+  assert(
+    manifest.testing_tree_digest === testingTreeDigest(MANIFEST_PATH),
+    "MANIFEST_TREE_DIGEST",
+  );
 
+  const corePaths = new Set();
+  const policyPaths = new Set();
   for (const entry of manifest.entries) {
     assert(
       entry &&
+        typeof entry === "object" &&
         typeof entry.path === "string" &&
-        entry.path.startsWith("testing/") &&
-        ROLES.has(entry.role) &&
-        CLASSES.has(entry.safety_class) &&
-        DISPOSITIONS.has(entry.ci_disposition) &&
         typeof entry.reason_code === "string" &&
         /^[A-Z0-9_]+$/.test(entry.reason_code),
       "MANIFEST_ENTRY_SHAPE",
     );
+    assert(ROLES.has(entry.role), "MANIFEST_ROLE");
+    assert(CLASSES.has(entry.safety_class), "MANIFEST_CLASS");
+    assert(DISPOSITIONS.has(entry.ci_disposition), "MANIFEST_DISPOSITION");
     if (["RUN_CORE", "RUN_POLICY"].includes(entry.ci_disposition)) {
       assert(
         entry.role === "EXECUTABLE" &&
@@ -136,15 +209,75 @@ function validateManifest() {
         "MANIFEST_EXECUTABLE_COMMAND",
       );
     } else {
-      assert(entry.command_argv === null, "MANIFEST_NONEXECUTABLE_COMMAND");
+      assert(
+        entry.command_argv === null,
+        "MANIFEST_NONEXECUTABLE_COMMAND",
+      );
     }
+    if (entry.ci_disposition === "RUN_CORE") {
+      corePaths.add(entry.path);
+      assert(entry.safety_class === "SAFE_STATIC_CORE", "MANIFEST_CORE_CLASS");
+      assert(entry.role === "EXECUTABLE", "MANIFEST_CORE_ROLE");
+      assert(Array.isArray(entry.command_argv), "MANIFEST_COMMAND_ARGV");
+      assert(
+        entry.command_argv.length === 2 &&
+          entry.command_argv[0] === "node" &&
+          entry.command_argv[1] === entry.path,
+        "MANIFEST_CORE_COMMAND",
+      );
+      assert(
+        entry.command_argv.every(
+          (argument) =>
+            typeof argument === "string" &&
+            !PROHIBITED_COMMAND_PARTS.some(
+              (part) => argument.toLowerCase() === part,
+            ),
+        ),
+        "MANIFEST_CORE_COMMAND",
+      );
+      assert(
+        executableSafetyViolations(entry.path).length === 0,
+        "MANIFEST_CORE_SOURCE_SAFETY",
+      );
+    } else if (entry.ci_disposition === "RUN_POLICY") {
+      policyPaths.add(entry.path);
+      assert(
+        entry.safety_class === "SAFE_STATIC_POLICY",
+        "MANIFEST_POLICY_CLASS",
+      );
+      assert(entry.role === "EXECUTABLE", "MANIFEST_POLICY_ROLE");
+      assert(
+        Array.isArray(entry.command_argv) &&
+          entry.command_argv.length === 2 &&
+          entry.command_argv[0] === "node" &&
+          entry.command_argv[1] === entry.path,
+        "MANIFEST_POLICY_COMMAND",
+      );
+    } else {
+      assert(entry.command_argv === null, "MANIFEST_COMMAND_NULLABILITY");
+    }
+
     if (DENIED_CLASSES.has(entry.safety_class)) {
+      assert(entry.ci_disposition === "DENY", "MANIFEST_DENIED_DISPOSITION");
+      assert(entry.command_argv === null, "MANIFEST_DENIED_COMMAND");
       assert(
         entry.ci_disposition === "DENY" && entry.command_argv === null,
         "MANIFEST_DENIED_CLASS",
       );
     }
+    if (["SUPPORT", "FIXTURE", "CONFIG"].includes(entry.role)) {
+      assert(entry.command_argv === null, "MANIFEST_NONEXECUTABLE_COMMAND");
+    }
   }
+
+  assert(
+    compareExactPathSets([...corePaths], [...REQUIRED_CORE]).equal,
+    "MANIFEST_REQUIRED_CORE",
+  );
+  assert(
+    compareExactPathSets([...policyPaths], [...REQUIRED_POLICY]).equal,
+    "MANIFEST_REQUIRED_POLICY",
+  );
 
   const entriesByPath = new Map(
     manifest.entries.map((entry) => [entry.path, entry]),
@@ -185,13 +318,8 @@ function validateManifest() {
     }),
     "MANIFEST_C1_POLICY_SET",
   );
-
-  const core = manifest.entries.filter(
-    (entry) => entry.ci_disposition === "RUN_CORE",
-  ).length;
-  const policyCount = manifest.entries.filter(
-    (entry) => entry.ci_disposition === "RUN_POLICY",
-  ).length;
+  const core = corePaths.size;
+  const policyCount = policyPaths.size;
   const validateOnly = manifest.entries.filter(
     (entry) => entry.ci_disposition === "VALIDATE_ONLY",
   ).length;
@@ -202,22 +330,32 @@ function validateManifest() {
     core === 5 && policyCount === 7 && validateOnly === 20 && denied === 86,
     "MANIFEST_CLASSIFICATION_COUNTS",
   );
-  return { entries: manifest.entries.length, core, policyCount, validateOnly, denied };
+
+  return {
+    entries: manifest.entries.length,
+    core,
+    policy: policyCount,
+    denied,
+    validateOnly,
+  };
 }
 
 try {
   const result = validateManifest();
   console.log(
-    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policyCount} validate_only=${result.validateOnly} denied=${result.denied} authenticated_live_route_partial_evidence_classifications=3 failures=0 internal_failures=0`,
+    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} authenticated_live_route_partial_evidence_classifications=3 failures=0 internal_failures=0`,
   );
 } catch (caught) {
-  const stage =
-    caught instanceof Error && /^[A-Z0-9_]+$/.test(caught.message)
-      ? caught.message
-      : "INTERNAL_MANIFEST_FAILURE";
-  console.log(`EXPECTED_FAIL_${stage}`);
-  console.log(
-    "FAIL_STATIC_TEST_SAFETY_MANIFEST failures=1 internal_failures=0",
-  );
+  if (caught instanceof GovernanceError) {
+    categoricalFailure(caught.stage);
+    console.log(
+      "FAIL_STATIC_TEST_SAFETY_MANIFEST failures=1 internal_failures=0",
+    );
+  } else {
+    console.log("INTERNAL_FAIL_STATIC_TEST_SAFETY_MANIFEST");
+    console.log(
+      "FAIL_STATIC_TEST_SAFETY_MANIFEST failures=0 internal_failures=1",
+    );
+  }
   process.exitCode = 1;
 }

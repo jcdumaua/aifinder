@@ -1,12 +1,120 @@
-import { readFileSync } from "node:fs";
+import path from "node:path";
+import {
+  GovernanceError,
+  appSurfaceDigest,
+  appSurfaceInventory,
+  categoricalFailure,
+  compareExactPathSets,
+  readStrictJson,
+  stableSortedPaths,
+  worktreeGitIdentity,
+} from "./static-governance-utils.mjs";
 
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
 const PARTIAL_EVIDENCE_PATH =
   "testing/authenticated-live-route-partial-evidence.json";
 const GAP_CODE = "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED";
+const RUNTIME_EVIDENCE_PATH =
+  "testing/public-production-runtime-evidence.json";
+const BROWSER_LIVE_EVIDENCE_PATH =
+  "testing/public-browser-live-runtime-evidence.json";
+const LIVE_ROUTE_EVIDENCE_PATH =
+  "testing/public-live-route-runtime-evidence.json";
+const AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH =
+  "testing/authenticated-browser-security-static-assertions.mjs";
+const AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH =
+  "testing/authenticated-browser-static-evidence.json";
+const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
+  "testing/authenticated-browser-runtime-evidence.json";
+const AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS = [
+  AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+  AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+  AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+];
+const AUTHENTICATED_BROWSER_FUTURE_EVIDENCE_PATHS = [
+  "testing/accessibility-qa.spec.ts",
+  "testing/responsive-qa.spec.ts",
+];
 const AUTHENTICATED_AUDIT_ROUTE_PATH =
   "app/api/admin/audit-logs/route.ts";
+const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
+const PUBLIC_ROOTS = new Set([
+  "app/page.tsx",
+  "app/layout.tsx",
+  "app/error.tsx",
+  "app/global-error.tsx",
+  "app/loading.tsx",
+  "app/not-found.tsx",
+  "app/robots.ts",
+  "app/sitemap.ts",
+  "app/manifest.ts",
+  "app/opengraph-image.tsx",
+  "app/twitter-image.tsx",
+]);
+const COVERAGE_STATES = new Set([
+  "STATIC_COVERED",
+  "PARTIAL_STATIC",
+  "NO_STATIC_EVIDENCE",
+  "RUNTIME_EVIDENCE_INTEGRATED",
+  "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+  "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+  "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+]);
+const STATIC_CLASSES = new Set([
+  "SAFE_STATIC_CORE",
+  "SAFE_STATIC_POLICY",
+  "SAFE_STATIC_SUPPORT",
+]);
+const RUNTIME_EVIDENCE_PATHS = [
+  "app/category/[slug]/page.tsx",
+  "app/compare/page.tsx",
+  "app/layout.tsx",
+  "app/not-found.tsx",
+  "app/page.tsx",
+  "app/submit/page.tsx",
+  "app/tool/[slug]/page.tsx",
+];
+const BROWSER_LIVE_EVIDENCE_PATHS = [
+  "app/category/[slug]/error.tsx",
+  "app/compare/error.tsx",
+  "app/error.tsx",
+  "app/global-error.tsx",
+  "app/loading.tsx",
+  "app/manifest.ts",
+  "app/opengraph-image.tsx",
+  "app/robots.ts",
+  "app/sitemap.ts",
+  "app/submit/error.tsx",
+  "app/submit/layout.tsx",
+  "app/tool/[slug]/error.tsx",
+  "app/twitter-image.tsx",
+];
+const LIVE_ROUTE_EVIDENCE_PATHS = [
+  "app/api/homepage-control/published/route.ts",
+  "app/api/submit-tool/route.ts",
+  "app/api/upload-logo/route.ts",
+];
+const AUTHENTICATED_BROWSER_PATHS = [
+  "app/admin-login/layout.tsx",
+  "app/admin-login/page.tsx",
+  "app/admin/analytics/page.tsx",
+  "app/admin/discovered-tools/page.tsx",
+  "app/admin/discovery/page.tsx",
+  "app/admin/discovery/tools/[id]/page.tsx",
+  "app/admin/discovery/tools/page.tsx",
+  "app/admin/homepage-control/[id]/edit/page.tsx",
+  "app/admin/homepage-control/[id]/page.tsx",
+  "app/admin/homepage-control/[id]/preview/page.tsx",
+  "app/admin/homepage-control/page.tsx",
+  "app/admin/layout.tsx",
+  "app/admin/moderation/page.tsx",
+  "app/admin/notifications/page.tsx",
+  "app/admin/page.tsx",
+  "app/admin/security/page.tsx",
+  "app/admin/settings/page.tsx",
+  "app/admin/tools/page.tsx",
+];
 const AUTHENTICATED_LIVE_ROUTE_PATHS = [
   "app/api/admin/audit-logs/route.ts",
   "app/api/admin/csrf/route.ts",
@@ -37,13 +145,21 @@ const AUTHENTICATED_LIVE_ROUTE_PATHS = [
   "app/api/admin/tools/route.ts",
   "app/api/admin/upload-logo/route.ts",
 ];
+const FUTURE_ONLY_CLASSES = new Set([
+  "BROWSER_OR_PLAYWRIGHT",
+  "LIVE_ROUTE_OR_SERVER",
+  "DATABASE_OR_SUPABASE",
+  "NETWORK_OR_EXTERNAL",
+  "OPERATIONAL_MUTATION",
+  "UNPROVEN_DENY",
+]);
 
-function readJson(repositoryPath) {
-  return JSON.parse(readFileSync(repositoryPath, "utf8"));
+function fail(stage) {
+  throw new GovernanceError(stage);
 }
 
 function assert(condition, stage) {
-  if (!condition) throw new Error(stage);
+  if (!condition) fail(stage);
 }
 
 function exactArray(actual, expected) {
@@ -59,31 +175,69 @@ function exactSet(actual, expected) {
     Array.isArray(actual) &&
     actual.length === expected.length &&
     new Set(actual).size === actual.length &&
-    [...actual].sort().every((value, index) => value === [...expected].sort()[index])
+    compareExactPathSets(actual, expected).equal
   );
 }
 
-function validateMatrix() {
-  const matrix = readJson(MATRIX_PATH);
-  const manifest = readJson(MANIFEST_PATH);
-  const evidence = readJson(PARTIAL_EVIDENCE_PATH);
+function surfaceKind(repositoryPath) {
+  return path.basename(repositoryPath, path.extname(repositoryPath));
+}
 
+function visibility(repositoryPath) {
+  return repositoryPath.startsWith("app/admin/") ||
+    repositoryPath.startsWith("app/api/admin/") ||
+    repositoryPath === "app/admin-login/page.tsx" ||
+    repositoryPath === "app/admin-login/layout.tsx"
+    ? "ADMIN"
+    : "PUBLIC";
+}
+
+function validateMatrix() {
+  let matrix;
+  try {
+    matrix = readStrictJson(MATRIX_PATH);
+  } catch (caught) {
+    if (
+      caught instanceof GovernanceError &&
+      caught.stage === "REGULAR_FILE_ABSENT"
+    ) {
+      fail("READINESS_COVERAGE_MATRIX_ABSENT");
+    }
+    throw caught;
+  }
+  const manifest = readStrictJson(MANIFEST_PATH);
+  const evidence = readStrictJson(PARTIAL_EVIDENCE_PATH);
   assert(matrix.matrix_version === 1, "MATRIX_VERSION");
+  assert(matrix.repository_baseline === BASELINE, "MATRIX_BASELINE");
+  assert(Array.isArray(matrix.entries), "MATRIX_ENTRIES");
   assert(
-    matrix.repository_baseline ===
-      "01a5c779f3f47f9619a2cd4a913622e010145afc",
-    "MATRIX_BASELINE",
-  );
-  assert(
-    matrix.route_inventory_digest ===
-      "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
+    typeof matrix.route_inventory_digest === "string" &&
+      /^[0-9a-f]{64}$/.test(matrix.route_inventory_digest),
     "MATRIX_ROUTE_DIGEST",
   );
   assert(
-    Array.isArray(matrix.entries) &&
-      matrix.entries.length === 69 &&
+    matrix.entries.length === 69 &&
       new Set(matrix.entries.map((entry) => entry.path)).size === 69,
     "MATRIX_ENTRY_SET",
+  );
+
+  const inventory = appSurfaceInventory();
+  const paths = matrix.entries.map((entry) => entry.path);
+  assert(paths.length === new Set(paths).size, "MATRIX_DUPLICATE_PATH");
+  assert(
+    paths.every((entry, index) => entry === stableSortedPaths(paths)[index]),
+    "MATRIX_PATH_ORDER",
+  );
+  assert(compareExactPathSets(paths, inventory).equal, "MATRIX_INVENTORY");
+  for (const repositoryPath of inventory) {
+    assert(
+      /^git:[0-9a-f]{40}$/.test(worktreeGitIdentity(repositoryPath)),
+      "MATRIX_ROUTE_IDENTITY_FORMAT",
+    );
+  }
+  assert(
+    matrix.route_inventory_digest === appSurfaceDigest(),
+    "MATRIX_ROUTE_DIGEST",
   );
 
   const authenticated = matrix.entries.filter((entry) =>
@@ -104,6 +258,150 @@ function validateMatrix() {
     "MATRIX_PARTIAL_PATH_EXPANSION",
   );
 
+  const manifestByPath = new Map(
+    manifest.entries.map((entry) => [entry.path, entry]),
+  );
+  for (const entry of matrix.entries) {
+    assert(entry.surface_kind === surfaceKind(entry.path), "MATRIX_SURFACE_KIND");
+    assert(
+      entry.public_or_admin === visibility(entry.path),
+      "MATRIX_VISIBILITY",
+    );
+    assert(
+      typeof entry.url_pattern_or_special_role === "string" &&
+        entry.url_pattern_or_special_role.length > 0,
+      "MATRIX_ROLE",
+    );
+    assert(
+      typeof entry.security_boundary_class === "string" &&
+        /^[A-Z0-9_]+$/.test(entry.security_boundary_class),
+      "MATRIX_SECURITY_BOUNDARY",
+    );
+    assert(Array.isArray(entry.static_evidence_paths), "MATRIX_STATIC_EVIDENCE");
+    assert(Array.isArray(entry.future_evidence_paths), "MATRIX_FUTURE_EVIDENCE");
+    assert(
+      entry.static_evidence_paths.length ===
+        new Set(entry.static_evidence_paths).size,
+      "MATRIX_DUPLICATE_STATIC_EVIDENCE",
+    );
+    assert(
+      entry.future_evidence_paths.length ===
+        new Set(entry.future_evidence_paths).size,
+      "MATRIX_DUPLICATE_FUTURE_EVIDENCE",
+    );
+    assert(COVERAGE_STATES.has(entry.coverage_state), "MATRIX_COVERAGE_STATE");
+    assert(typeof entry.launch_blocking === "boolean", "MATRIX_LAUNCH_BLOCKING");
+    assert(
+      entry.gap_code_or_null === null ||
+        (typeof entry.gap_code_or_null === "string" &&
+          /^[A-Z0-9_]+$/.test(entry.gap_code_or_null)),
+      "MATRIX_GAP_CODE",
+    );
+
+    for (const evidencePath of entry.static_evidence_paths) {
+      const evidence = manifestByPath.get(evidencePath);
+      assert(Boolean(evidence), "MATRIX_UNKNOWN_EVIDENCE");
+      assert(
+        STATIC_CLASSES.has(evidence.safety_class),
+        "MATRIX_DENIED_STATIC_EVIDENCE",
+      );
+    }
+    for (const evidencePath of entry.future_evidence_paths) {
+      const evidence = manifestByPath.get(evidencePath);
+      assert(Boolean(evidence), "MATRIX_UNKNOWN_FUTURE_EVIDENCE");
+      assert(
+        FUTURE_ONLY_CLASSES.has(evidence.safety_class) ||
+          evidence.ci_disposition === "VALIDATE_ONLY",
+        "MATRIX_FUTURE_EVIDENCE_CLASS",
+      );
+    }
+
+    if (entry.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED") {
+      assert(
+        entry.static_evidence_paths.includes(RUNTIME_EVIDENCE_PATH),
+        "MATRIX_RUNTIME_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.static_evidence_paths.length > 0,
+        "MATRIX_COVERED_WITHOUT_EVIDENCE",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_RUNTIME_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (
+      entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED"
+    ) {
+      assert(
+        entry.static_evidence_paths.includes(BROWSER_LIVE_EVIDENCE_PATH),
+        "MATRIX_BROWSER_LIVE_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.static_evidence_paths.length > 0,
+        "MATRIX_COVERED_WITHOUT_EVIDENCE",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_BROWSER_LIVE_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (entry.coverage_state === "LIVE_ROUTE_EVIDENCE_INTEGRATED") {
+      assert(
+        JSON.stringify(entry.static_evidence_paths) ===
+          JSON.stringify([
+            "testing/public-live-route-security-static-assertions.mjs",
+            LIVE_ROUTE_EVIDENCE_PATH,
+          ]),
+        "MATRIX_LIVE_ROUTE_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.future_evidence_paths.length === 0,
+        "MATRIX_LIVE_ROUTE_FUTURE_EVIDENCE",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_LIVE_ROUTE_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (
+      entry.coverage_state === "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED"
+    ) {
+      assert(
+        exactArray(
+          entry.static_evidence_paths,
+          AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS,
+        ),
+        "MATRIX_AUTHENTICATED_BROWSER_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_AUTHENTICATED_BROWSER_EVIDENCE_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (entry.coverage_state === "STATIC_COVERED") {
+      assert(
+        entry.static_evidence_paths.length > 0,
+        "MATRIX_COVERED_WITHOUT_EVIDENCE",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
+    } else if (entry.coverage_state === "PARTIAL_STATIC") {
+      assert(
+        entry.static_evidence_paths.length > 0,
+        "MATRIX_PARTIAL_WITHOUT_EVIDENCE",
+      );
+      assert(entry.launch_blocking, "MATRIX_GAP_NOT_BLOCKING");
+      assert(entry.gap_code_or_null !== null, "MATRIX_GAP_HIDDEN");
+    } else {
+      assert(
+        entry.static_evidence_paths.length === 0,
+        "MATRIX_NO_STATIC_WITH_EVIDENCE",
+      );
+      assert(entry.launch_blocking, "MATRIX_GAP_NOT_BLOCKING");
+      assert(entry.gap_code_or_null !== null, "MATRIX_GAP_HIDDEN");
+    }
+  }
+
   for (const entry of authenticated) {
     assert(
       exactArray(entry.partial_evidence_paths, [PARTIAL_EVIDENCE_PATH]),
@@ -121,8 +419,8 @@ function validateMatrix() {
       assert(
         entry.coverage_state === "PARTIAL_STATIC" &&
           exactArray(entry.static_evidence_paths, [
-            "testing/authenticated-browser-security-static-assertions.mjs",
-            "testing/authenticated-browser-static-evidence.json",
+            AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+            AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
           ]),
         "MATRIX_PARTIAL_STATIC_ROUTE",
       );
@@ -135,18 +433,155 @@ function validateMatrix() {
     }
   }
 
+  const publicCount = matrix.entries.filter(
+    (entry) => entry.public_or_admin === "PUBLIC",
+  ).length;
+  const adminCount = matrix.entries.length - publicCount;
+  const covered = matrix.entries.filter(
+    (entry) => entry.coverage_state === "STATIC_COVERED",
+  ).length;
+  const runtimeEvidenceIntegrated = matrix.entries.filter(
+    (entry) => entry.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED",
+  );
+  const browserLiveEvidenceIntegrated = matrix.entries.filter(
+    (entry) =>
+      entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED",
+  );
+  const liveRouteEvidenceIntegrated = matrix.entries.filter(
+    (entry) => entry.coverage_state === "LIVE_ROUTE_EVIDENCE_INTEGRATED",
+  );
+  const authenticatedBrowserEvidenceIntegrated = matrix.entries.filter(
+    (entry) =>
+      entry.coverage_state ===
+      "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
+  );
+  const unblockedPaths = matrix.entries
+    .filter((entry) => entry.launch_blocking === false)
+    .map((entry) => entry.path);
   const launchBlocking = matrix.entries.filter(
+    (entry) => entry.launch_blocking === true,
+  ).length;
+  const gaps = launchBlocking;
+  const evidenceManifestEntry = manifestByPath.get(RUNTIME_EVIDENCE_PATH);
+  const browserLiveEvidenceManifestEntry = manifestByPath.get(
+    BROWSER_LIVE_EVIDENCE_PATH,
+  );
+  const liveRouteEvidenceManifestEntry = manifestByPath.get(
+    LIVE_ROUTE_EVIDENCE_PATH,
+  );
+  const authenticatedBrowserRuntimeEvidenceManifestEntry = manifestByPath.get(
+    AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
+  );
+  const authenticatedBrowserGapPaths = matrix.entries
+    .filter(
+      (entry) =>
+        entry.gap_code_or_null ===
+        "AUTHENTICATED_BROWSER_EVIDENCE_REQUIRED",
+    )
+    .map((entry) => entry.path);
+  const authenticatedLiveRouteGapPaths = matrix.entries
+    .filter(
+      (entry) =>
+        entry.gap_code_or_null ===
+        "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+    )
+    .map((entry) => entry.path);
+  const authenticatedBrowserEntries = matrix.entries.filter((entry) =>
+    AUTHENTICATED_BROWSER_PATHS.includes(entry.path),
+  );
+  const authenticatedLiveRouteEntries = matrix.entries.filter((entry) =>
+    AUTHENTICATED_LIVE_ROUTE_PATHS.includes(entry.path),
+  );
+  const authenticatedAuditRouteEntry = authenticatedLiveRouteEntries.find(
+    (entry) => entry.path === AUTHENTICATED_AUDIT_ROUTE_PATH,
+  );
+  const authenticatedLiveRouteNoStatic = authenticatedLiveRouteEntries.filter(
+    (entry) => entry.path !== AUTHENTICATED_AUDIT_ROUTE_PATH,
+  );
+  const partialStatic = matrix.entries.filter(
+    (entry) => entry.coverage_state === "PARTIAL_STATIC",
+  );
+  assert(
+    PUBLIC_ROOTS.size > 0 && publicCount > 0 && adminCount > 0,
+    "MATRIX_PARTITION",
+  );
+  assert(
+    matrix.entries.length === 69 &&
+      runtimeEvidenceIntegrated.length === 7 &&
+      browserLiveEvidenceIntegrated.length === 13 &&
+      liveRouteEvidenceIntegrated.length === 3 &&
+      authenticatedBrowserEvidenceIntegrated.length === 18 &&
+      compareExactPathSets(
+        runtimeEvidenceIntegrated.map((entry) => entry.path),
+        RUNTIME_EVIDENCE_PATHS,
+      ).equal &&
+      compareExactPathSets(
+        browserLiveEvidenceIntegrated.map((entry) => entry.path),
+        BROWSER_LIVE_EVIDENCE_PATHS,
+      ).equal &&
+      compareExactPathSets(
+        liveRouteEvidenceIntegrated.map((entry) => entry.path),
+        LIVE_ROUTE_EVIDENCE_PATHS,
+      ).equal &&
+      compareExactPathSets(unblockedPaths, [
+        ...RUNTIME_EVIDENCE_PATHS,
+        ...BROWSER_LIVE_EVIDENCE_PATHS,
+        ...LIVE_ROUTE_EVIDENCE_PATHS,
+        ...AUTHENTICATED_BROWSER_PATHS,
+      ]).equal &&
+      authenticatedBrowserGapPaths.length === 0 &&
+      compareExactPathSets(
+        authenticatedLiveRouteGapPaths,
+        AUTHENTICATED_LIVE_ROUTE_PATHS,
+      ).equal &&
+      authenticatedBrowserEntries.length === 18 &&
+      authenticatedBrowserEntries.every(
+        (entry) =>
+          entry.coverage_state ===
+            "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null &&
+          exactArray(
+            entry.static_evidence_paths,
+            AUTHENTICATED_BROWSER_INTEGRATED_EVIDENCE_PATHS,
+          ) &&
+          exactArray(
+            entry.future_evidence_paths,
+            AUTHENTICATED_BROWSER_FUTURE_EVIDENCE_PATHS,
+          ),
+      ) &&
+      authenticatedAuditRouteEntry?.coverage_state === "PARTIAL_STATIC" &&
+      authenticatedAuditRouteEntry.launch_blocking === true &&
+      exactArray(
+        authenticatedAuditRouteEntry.static_evidence_paths,
+        [
+          AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+          AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+        ],
+      ) &&
+      authenticatedLiveRouteNoStatic.length === 27 &&
+      authenticatedLiveRouteNoStatic.every(
+        (entry) =>
+          entry.coverage_state === "NO_STATIC_EVIDENCE" &&
+          entry.static_evidence_paths.length === 0 &&
+          entry.launch_blocking === true,
+      ) &&
+      partialStatic.length === 1 &&
+      launchBlocking === 28,
+    "MATRIX_RUNTIME_EVIDENCE_PARTITION",
+  );
+
+  const launchBlockingEntries = matrix.entries.filter(
     (entry) => entry.launch_blocking === true,
   );
   assert(
-    launchBlocking.length === 28 &&
+    launchBlockingEntries.length === 28 &&
       exactSet(
-        launchBlocking.map((entry) => entry.path),
+        launchBlockingEntries.map((entry) => entry.path),
         AUTHENTICATED_LIVE_ROUTE_PATHS,
       ),
     "MATRIX_BLOCKER_PARTITION",
   );
-
   assert(
     evidence.summary?.route_files === 28 &&
       evidence.summary?.partial_static_routes === 1 &&
@@ -175,77 +610,119 @@ function validateMatrix() {
       "MATRIX_EVIDENCE_CROSS_LINK",
     );
   }
-
-  const manifestEntry = manifest.entries?.find(
-    (entry) => entry.path === PARTIAL_EVIDENCE_PATH,
-  );
-  assert(
-    manifestEntry?.role === "CONFIG" &&
-      manifestEntry.safety_class === "SAFE_STATIC_SUPPORT" &&
-      manifestEntry.ci_disposition === "VALIDATE_ONLY" &&
-      manifestEntry.command_argv === null &&
-      manifestEntry.reason_code ===
-        "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE",
-    "MATRIX_PARTIAL_EVIDENCE_CLASSIFICATION",
-  );
-
-  const publicCount = matrix.entries.filter(
-    (entry) => entry.public_or_admin === "PUBLIC",
-  ).length;
-  const adminCount = matrix.entries.length - publicCount;
-  const runtimeEvidenceIntegrated = matrix.entries.filter(
-    (entry) => entry.coverage_state === "RUNTIME_EVIDENCE_INTEGRATED",
-  ).length;
-  const browserLiveEvidenceIntegrated = matrix.entries.filter(
-    (entry) => entry.coverage_state === "BROWSER_LIVE_EVIDENCE_INTEGRATED",
-  ).length;
-  const liveRouteEvidenceIntegrated = matrix.entries.filter(
-    (entry) => entry.coverage_state === "LIVE_ROUTE_EVIDENCE_INTEGRATED",
-  ).length;
-  const authenticatedBrowserIntegrated = matrix.entries.filter(
-    (entry) =>
-      entry.coverage_state ===
-      "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
-  ).length;
   assert(
     publicCount === 23 &&
       adminCount === 46 &&
-      runtimeEvidenceIntegrated === 7 &&
-      browserLiveEvidenceIntegrated === 13 &&
-      liveRouteEvidenceIntegrated === 3 &&
-      authenticatedBrowserIntegrated === 18,
+      runtimeEvidenceIntegrated.length === 7 &&
+      browserLiveEvidenceIntegrated.length === 13 &&
+      liveRouteEvidenceIntegrated.length === 3 &&
+      authenticatedBrowserEvidenceIntegrated.length === 18,
     "MATRIX_PRESERVED_PARTITIONS",
   );
 
+  const authenticatedStaticAssertionManifestEntry = manifestByPath.get(
+    AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+  );
+  const authenticatedStaticEvidenceManifestEntry = manifestByPath.get(
+    AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
+  );
+  assert(
+    authenticatedStaticAssertionManifestEntry?.role === "EXECUTABLE" &&
+      authenticatedStaticAssertionManifestEntry.safety_class ===
+        "SAFE_STATIC_CORE" &&
+      authenticatedStaticAssertionManifestEntry.ci_disposition ===
+        "RUN_CORE" &&
+      exactArray(authenticatedStaticAssertionManifestEntry.command_argv, [
+        "node",
+        AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
+      ]) &&
+      authenticatedStaticEvidenceManifestEntry?.role === "CONFIG" &&
+      authenticatedStaticEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      authenticatedStaticEvidenceManifestEntry.ci_disposition ===
+        "VALIDATE_ONLY" &&
+      authenticatedStaticEvidenceManifestEntry.command_argv === null,
+    "MATRIX_AUTHENTICATED_STATIC_EVIDENCE_SAFETY",
+  );
+  assert(
+    evidenceManifestEntry?.role === "CONFIG" &&
+      evidenceManifestEntry.safety_class === "SAFE_STATIC_SUPPORT" &&
+      evidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      evidenceManifestEntry.command_argv === null &&
+      evidenceManifestEntry.reason_code === "FINAL_PUBLIC_RUNTIME_EVIDENCE",
+    "MATRIX_RUNTIME_EVIDENCE_SAFETY",
+  );
+  assert(
+    browserLiveEvidenceManifestEntry?.role === "CONFIG" &&
+      browserLiveEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      browserLiveEvidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      browserLiveEvidenceManifestEntry.command_argv === null &&
+      browserLiveEvidenceManifestEntry.reason_code ===
+        "FINAL_PUBLIC_BROWSER_LIVE_RUNTIME_EVIDENCE",
+    "MATRIX_BROWSER_LIVE_EVIDENCE_SAFETY",
+  );
+  assert(
+    liveRouteEvidenceManifestEntry?.role === "CONFIG" &&
+      liveRouteEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      liveRouteEvidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      liveRouteEvidenceManifestEntry.command_argv === null &&
+      liveRouteEvidenceManifestEntry.reason_code ===
+        "FINAL_PUBLIC_LIVE_ROUTE_RUNTIME_EVIDENCE",
+    "MATRIX_LIVE_ROUTE_EVIDENCE_SAFETY",
+  );
+  assert(
+    authenticatedBrowserRuntimeEvidenceManifestEntry?.role === "CONFIG" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.safety_class ===
+        "SAFE_STATIC_SUPPORT" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.ci_disposition ===
+        "VALIDATE_ONLY" &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.command_argv === null &&
+      authenticatedBrowserRuntimeEvidenceManifestEntry.reason_code ===
+        "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE",
+    "MATRIX_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_SAFETY",
+  );
+  const partialEvidenceManifestEntry = manifestByPath.get(PARTIAL_EVIDENCE_PATH);
+  assert(
+    partialEvidenceManifestEntry?.role === "CONFIG" &&
+      partialEvidenceManifestEntry.safety_class === "SAFE_STATIC_SUPPORT" &&
+      partialEvidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      partialEvidenceManifestEntry.command_argv === null &&
+      partialEvidenceManifestEntry.reason_code ===
+        "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE",
+    "MATRIX_PARTIAL_EVIDENCE_CLASSIFICATION",
+  );
   return {
     entries: matrix.entries.length,
     publicCount,
     adminCount,
-    runtimeEvidenceIntegrated,
-    browserLiveEvidenceIntegrated,
-    liveRouteEvidenceIntegrated,
-    authenticatedBrowserIntegrated,
-    partialStatic: authenticated.filter(
-      (entry) => entry.coverage_state === "PARTIAL_STATIC",
-    ).length,
-    noStatic: authenticated.filter(
-      (entry) => entry.coverage_state === "NO_STATIC_EVIDENCE",
-    ).length,
-    launchBlocking: launchBlocking.length,
+    covered,
+    runtimeEvidenceIntegrated: runtimeEvidenceIntegrated.length,
+    browserLiveEvidenceIntegrated: browserLiveEvidenceIntegrated.length,
+    liveRouteEvidenceIntegrated: liveRouteEvidenceIntegrated.length,
+    authenticatedBrowserIntegrated:
+      authenticatedBrowserEvidenceIntegrated.length,
+    authenticatedLiveRoutePartialStatic: 1,
+    authenticatedLiveRouteNoStatic: authenticatedLiveRouteNoStatic.length,
+    partialStatic: partialStatic.length,
+    launchBlocking,
+    gaps,
   };
 }
 
 try {
   const result = validateMatrix();
   console.log(
-    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=0 runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} browser_live_evidence_integrated=${result.browserLiveEvidenceIntegrated} live_route_evidence_integrated=${result.liveRouteEvidenceIntegrated} authenticated_browser_integrated=${result.authenticatedBrowserIntegrated} authenticated_live_route_partial_static=${result.partialStatic} authenticated_live_route_no_static=${result.noStatic} authenticated_live_route_partial_evidence=28 partial_static=${result.partialStatic} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.launchBlocking} failures=0 internal_failures=0`,
+    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} static_covered=${result.covered} runtime_evidence_integrated=${result.runtimeEvidenceIntegrated} browser_live_evidence_integrated=${result.browserLiveEvidenceIntegrated} live_route_evidence_integrated=${result.liveRouteEvidenceIntegrated} authenticated_browser_integrated=${result.authenticatedBrowserIntegrated} authenticated_live_route_partial_static=${result.authenticatedLiveRoutePartialStatic} authenticated_live_route_no_static=${result.authenticatedLiveRouteNoStatic} authenticated_live_route_partial_evidence=28 partial_static=${result.partialStatic} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
   );
 } catch (caught) {
-  const stage =
-    caught instanceof Error && /^[A-Z0-9_]+$/.test(caught.message)
-      ? caught.message
-      : "INTERNAL_MATRIX_FAILURE";
-  console.log(`EXPECTED_FAIL_${stage}`);
-  console.log("FAIL_READINESS_COVERAGE_MATRIX failures=1 internal_failures=0");
+  if (caught instanceof GovernanceError) {
+    categoricalFailure(caught.stage);
+    console.log("FAIL_READINESS_COVERAGE_MATRIX failures=1 internal_failures=0");
+  } else {
+    console.log("INTERNAL_FAIL_READINESS_COVERAGE_MATRIX");
+    console.log("FAIL_READINESS_COVERAGE_MATRIX failures=0 internal_failures=1");
+  }
   process.exitCode = 1;
 }
