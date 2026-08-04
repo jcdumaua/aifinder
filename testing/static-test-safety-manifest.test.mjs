@@ -18,6 +18,23 @@ const EVIDENCE_PATH =
   "testing/authenticated-live-route-partial-evidence.json";
 const POLICY_PATH =
   "testing/authenticated-live-route-partial-evidence.test.mjs";
+const C2_ANALYZER_PATH =
+  "testing/authenticated-live-route-semantic-analyzer.mjs";
+const C2_ANALYZER_TEST_PATH =
+  "testing/authenticated-live-route-semantic-analyzer.test.mjs";
+const C2_SCHEMA_PATH =
+  "testing/authenticated-live-route-semantic-branch-ledger.schema.json";
+const C2_LEDGER_PATH =
+  "testing/authenticated-live-route-semantic-branch-ledger.json";
+const C2_LEDGER_TEST_PATH =
+  "testing/authenticated-live-route-semantic-branch-ledger.test.mjs";
+const C2_CLASSIFICATION_PATHS = [
+  C2_ANALYZER_PATH,
+  C2_ANALYZER_TEST_PATH,
+  C2_SCHEMA_PATH,
+  C2_LEDGER_PATH,
+  C2_LEDGER_TEST_PATH,
+];
 const C1_POLICY_PATHS = [
   POLICY_PATH,
   "testing/public-launch-blocker-registry.test.mjs",
@@ -32,6 +49,15 @@ const C1_EXECUTION_SURFACE_PATHS = [
   "testing/readiness-coverage-matrix.test.mjs",
   "testing/public-launch-blocker-registry.json",
   "testing/public-launch-blocker-registry.test.mjs",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
+const C2_EXECUTION_SURFACE_PATHS = [
+  C2_ANALYZER_PATH,
+  C2_ANALYZER_TEST_PATH,
+  C2_SCHEMA_PATH,
+  C2_LEDGER_PATH,
+  C2_LEDGER_TEST_PATH,
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
@@ -70,6 +96,8 @@ const REQUIRED_POLICY = new Set([
   "testing/readiness-coverage-matrix.test.mjs",
   "testing/static-readiness-workflow-static-assertions.mjs",
   "testing/static-test-safety-manifest.test.mjs",
+  C2_ANALYZER_TEST_PATH,
+  C2_LEDGER_TEST_PATH,
 ]);
 const DENIED_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
@@ -123,6 +151,15 @@ function c1ExecutionSurfaceDigest() {
   );
 }
 
+function c2ExecutionSurfaceDigest() {
+  return sha256(
+    C2_EXECUTION_SURFACE_PATHS.map((repositoryPath) => {
+      const bytes = readFileSync(repositoryPath);
+      return [repositoryPath, sha256(bytes), bytes.length].join("\0");
+    }).join("\n"),
+  );
+}
+
 function validateManifest() {
   let manifest;
   try {
@@ -135,6 +172,15 @@ function validateManifest() {
       fail("STATIC_TEST_SAFETY_MANIFEST_ABSENT");
     }
     throw caught;
+  }
+
+  if (
+    C2_CLASSIFICATION_PATHS.every(
+      (repositoryPath) =>
+        !manifest.entries?.some((entry) => entry.path === repositoryPath),
+    )
+  ) {
+    fail("MANIFEST_C2_1_EXPECTATIONS_MISSING");
   }
 
   assert(manifest.manifest_version === 1, "MANIFEST_VERSION");
@@ -152,7 +198,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33GA",
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33HA_C2_1",
     "MANIFEST_TREE_DIGEST",
   );
   assert(
@@ -165,11 +211,21 @@ function validateManifest() {
         c1ExecutionSurfaceDigest(),
     "MANIFEST_C1_EXECUTION_SURFACE_DIGEST",
   );
+  assert(
+    manifest.phase_c2_1_execution_surface_digest?.algorithm ===
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" &&
+      manifest.phase_c2_1_execution_surface_digest?.path_count === 7 &&
+      manifest.phase_c2_1_execution_surface_digest?.excluded_self_path ===
+        MANIFEST_PATH &&
+      manifest.phase_c2_1_execution_surface_digest?.sha256 ===
+        c2ExecutionSurfaceDigest(),
+    "MANIFEST_C2_1_EXECUTION_SURFACE_DIGEST",
+  );
 
   const inventory = listRegularFiles("testing");
   const entryPaths = manifest.entries.map((entry) => entry.path);
   assert(
-    manifest.entries.length === 118 &&
+    manifest.entries.length === 123 &&
       entryPaths.length === new Set(entryPaths).size,
     "MANIFEST_ENTRY_SET",
   );
@@ -318,6 +374,69 @@ function validateManifest() {
     }),
     "MANIFEST_C1_POLICY_SET",
   );
+  const c2Contracts = new Map([
+    [
+      C2_ANALYZER_PATH,
+      [
+        "SUPPORT",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER",
+      ],
+    ],
+    [
+      C2_ANALYZER_TEST_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_STATIC_POLICY",
+        "RUN_POLICY",
+        ["node", C2_ANALYZER_TEST_PATH],
+        "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER_POLICY",
+      ],
+    ],
+    [
+      C2_SCHEMA_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_SCHEMA",
+      ],
+    ],
+    [
+      C2_LEDGER_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER",
+      ],
+    ],
+    [
+      C2_LEDGER_TEST_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_STATIC_POLICY",
+        "RUN_POLICY",
+        ["node", C2_LEDGER_TEST_PATH],
+        "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_POLICY",
+      ],
+    ],
+  ]);
+  for (const [repositoryPath, contract] of c2Contracts) {
+    const entry = entriesByPath.get(repositoryPath);
+    assert(
+      entry?.role === contract[0] &&
+        entry.safety_class === contract[1] &&
+        entry.ci_disposition === contract[2] &&
+        JSON.stringify(entry.command_argv) === JSON.stringify(contract[3]) &&
+        entry.reason_code === contract[4],
+      "MANIFEST_C2_1_CLASSIFICATIONS",
+    );
+  }
   const core = corePaths.size;
   const policyCount = policyPaths.size;
   const validateOnly = manifest.entries.filter(
@@ -327,7 +446,7 @@ function validateManifest() {
     (entry) => entry.ci_disposition === "DENY",
   ).length;
   assert(
-    core === 5 && policyCount === 7 && validateOnly === 20 && denied === 86,
+    core === 5 && policyCount === 9 && validateOnly === 23 && denied === 86,
     "MANIFEST_CLASSIFICATION_COUNTS",
   );
 
@@ -343,10 +462,17 @@ function validateManifest() {
 try {
   const result = validateManifest();
   console.log(
-    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} authenticated_live_route_partial_evidence_classifications=3 failures=0 internal_failures=0`,
+    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} authenticated_live_route_partial_evidence_classifications=3 c2_1_semantic_classifications=5 failures=0 internal_failures=0`,
   );
 } catch (caught) {
-  if (caught instanceof GovernanceError) {
+  if (
+    caught instanceof GovernanceError &&
+    caught.stage === "MANIFEST_C2_1_EXPECTATIONS_MISSING"
+  ) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_TEST_SAFETY_MANIFEST_C2_1 missing_classifications=5 total_contract=0 tree_digest=0 failures=1 internal_failures=0",
+    );
+  } else if (caught instanceof GovernanceError) {
     categoricalFailure(caught.stage);
     console.log(
       "FAIL_STATIC_TEST_SAFETY_MANIFEST failures=1 internal_failures=0",

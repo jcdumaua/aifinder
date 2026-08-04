@@ -1,0 +1,683 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/schemas/authenticated-live-route-semantic-branch-ledger.schema.json",
+  "title": "AiFinder authenticated live-route semantic branch ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "artifact_purpose",
+    "repository_baseline",
+    "source_contract",
+    "algorithm_contract",
+    "summary",
+    "routes",
+    "methods",
+    "nodes",
+    "outcomes",
+    "import_boundaries",
+    "request_positions",
+    "governance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "AIFINDER_C2_1_SEMANTIC_BRANCH_LEDGER_V1"
+    },
+    "phase": {
+      "const": "33HA-33HZ"
+    },
+    "artifact_purpose": {
+      "const": "BATCH_C2_1_OFFLINE_SEMANTIC_BRANCH_QUALIFICATION"
+    },
+    "repository_baseline": {
+      "$ref": "#/$defs/repository_baseline"
+    },
+    "source_contract": {
+      "$ref": "#/$defs/source_contract"
+    },
+    "algorithm_contract": {
+      "$ref": "#/$defs/algorithm_contract"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 28,
+      "maxItems": 28,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/route"
+      }
+    },
+    "methods": {
+      "type": "array",
+      "minItems": 37,
+      "maxItems": 37,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/method"
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 409,
+      "maxItems": 409,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 775,
+      "maxItems": 775,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/outcome"
+      }
+    },
+    "import_boundaries": {
+      "type": "array",
+      "minItems": 150,
+      "maxItems": 150,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/import_boundary"
+      }
+    },
+    "request_positions": {
+      "type": "array",
+      "minItems": 27,
+      "maxItems": 27,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/request_position"
+      }
+    },
+    "governance": {
+      "$ref": "#/$defs/governance"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "git_blob": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "repository_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch", "commit", "parent", "tree", "subject"],
+      "properties": {
+        "repository": {
+          "const": "/Users/jamescarlodumaua/aifinder"
+        },
+        "branch": {
+          "const": "main"
+        },
+        "commit": {
+          "const": "bb135e0dc5bfa31b4d5542cca855541014374e44"
+        },
+        "parent": {
+          "const": "c4fa8e9afc66d58e0b68855fd49bd92c0c18b6c9"
+        },
+        "tree": {
+          "const": "768055aed4e67e083e61bc12bb52f850311039e6"
+        },
+        "subject": {
+          "const": "Restore additive static readiness safeguards"
+        }
+      }
+    },
+    "source_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partial_evidence_path",
+        "partial_evidence_sha256",
+        "route_contract_digest",
+        "request_position_contract_digest",
+        "route_count",
+        "method_count",
+        "observed_routes",
+        "unobserved_routes",
+        "wrapper_routes",
+        "imported_opaque_methods",
+        "route_local_methods",
+        "write_scope_create_paths",
+        "write_scope_modify_paths"
+      ],
+      "properties": {
+        "partial_evidence_path": {
+          "const": "testing/authenticated-live-route-partial-evidence.json"
+        },
+        "partial_evidence_sha256": {
+          "const": "68f8493efd59116bc2b1f81876e6c42243e701ae0d44683cb1a8944a74d9178f"
+        },
+        "route_contract_digest": {
+          "const": "d6dddd950dd1f463106f3cc3aca3c659f5106ec22023c8c31d3e1aefe41fd6a9"
+        },
+        "request_position_contract_digest": {
+          "const": "014caf9d9f4e3ada5824ed2025a77166f905ffdc02af9786a98ee26ec2627504"
+        },
+        "route_count": {
+          "const": 28
+        },
+        "method_count": {
+          "const": 37
+        },
+        "observed_routes": {
+          "const": 15
+        },
+        "unobserved_routes": {
+          "const": 13
+        },
+        "wrapper_routes": {
+          "const": 8
+        },
+        "imported_opaque_methods": {
+          "const": 15
+        },
+        "route_local_methods": {
+          "const": 22
+        },
+        "write_scope_create_paths": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            {
+              "const": "testing/authenticated-live-route-semantic-analyzer.mjs"
+            },
+            {
+              "const": "testing/authenticated-live-route-semantic-analyzer.test.mjs"
+            },
+            {
+              "const": "testing/authenticated-live-route-semantic-branch-ledger.schema.json"
+            },
+            {
+              "const": "testing/authenticated-live-route-semantic-branch-ledger.json"
+            },
+            {
+              "const": "testing/authenticated-live-route-semantic-branch-ledger.test.mjs"
+            }
+          ],
+          "items": false
+        },
+        "write_scope_modify_paths": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [
+            {
+              "const": "testing/static-test-safety-manifest.json"
+            },
+            {
+              "const": "testing/static-test-safety-manifest.test.mjs"
+            },
+            {
+              "const": "testing/run-static-readiness.mjs"
+            }
+          ],
+          "items": false
+        }
+      }
+    },
+    "algorithm_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "analyzer_version",
+        "typescript_version",
+        "canonical_json_version",
+        "node_id_version",
+        "method_id_version",
+        "outcome_id_version",
+        "import_id_version",
+        "ownership_version",
+        "helper_semantics"
+      ],
+      "properties": {
+        "analyzer_version": {
+          "const": "AIFINDER_C2_1_ANALYZER_V1"
+        },
+        "typescript_version": {
+          "const": "5.9.3"
+        },
+        "canonical_json_version": {
+          "const": "RECURSIVE_LEXICOGRAPHIC_KEYS_V1"
+        },
+        "node_id_version": {
+          "const": "AIFINDER_C2_1_NODE_V1"
+        },
+        "method_id_version": {
+          "const": "AIFINDER_C2_1_METHOD_V1"
+        },
+        "outcome_id_version": {
+          "const": "AIFINDER_C2_1_OUTCOME_V1"
+        },
+        "import_id_version": {
+          "const": "AIFINDER_C2_1_IMPORT_V1"
+        },
+        "ownership_version": {
+          "const": "LEXICAL_FIXED_POINT_V1"
+        },
+        "helper_semantics": {
+          "const": "UNREAD_FOR_C2_1"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routes",
+        "methods",
+        "ifs",
+        "catches_with_binding",
+        "catches_optional",
+        "catches",
+        "nodes",
+        "outcomes",
+        "observed",
+        "unobserved",
+        "imported_opaque_methods",
+        "route_local_methods",
+        "manual_methods",
+        "fresh_helper_methods",
+        "manual_nodes",
+        "manual_outcomes",
+        "c2_2_candidates",
+        "c2_3_candidates",
+        "c2_4_candidates",
+        "runtime_qualified_nodes",
+        "routes_unblocked",
+        "launch_blockers",
+        "public_launch"
+      ],
+      "properties": {
+        "routes": { "const": 28 },
+        "methods": { "const": 37 },
+        "ifs": { "const": 366 },
+        "catches_with_binding": { "const": 31 },
+        "catches_optional": { "const": 12 },
+        "catches": { "const": 43 },
+        "nodes": { "const": 409 },
+        "outcomes": { "const": 775 },
+        "observed": { "const": 15 },
+        "unobserved": { "const": 13 },
+        "imported_opaque_methods": { "const": 15 },
+        "route_local_methods": { "const": 22 },
+        "manual_methods": { "const": 22 },
+        "fresh_helper_methods": { "const": 15 },
+        "manual_nodes": { "const": 409 },
+        "manual_outcomes": { "const": 775 },
+        "c2_2_candidates": { "const": 0 },
+        "c2_3_candidates": { "const": 0 },
+        "c2_4_candidates": { "const": 0 },
+        "runtime_qualified_nodes": { "const": 0 },
+        "routes_unblocked": { "const": 0 },
+        "launch_blockers": { "const": 28 },
+        "public_launch": { "const": "NO_GO" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_path",
+        "git_blob",
+        "sha256",
+        "bytes",
+        "lf_lines",
+        "observed_status",
+        "exported_method_ids",
+        "if_count",
+        "catch_bound_count",
+        "catch_optional_count",
+        "catch_total",
+        "node_ids",
+        "import_boundary_ids",
+        "structure_state",
+        "behavior_state",
+        "launch_blocking"
+      ],
+      "properties": {
+        "route_path": { "type": "string", "minLength": 1 },
+        "git_blob": { "$ref": "#/$defs/git_blob" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "lf_lines": { "type": "integer", "minimum": 1 },
+        "observed_status": {
+          "enum": ["OBSERVED_PARTIAL_FILE_LEVEL_ONLY", "UNOBSERVED"]
+        },
+        "exported_method_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "if_count": { "type": "integer", "minimum": 0 },
+        "catch_bound_count": { "type": "integer", "minimum": 0 },
+        "catch_optional_count": { "type": "integer", "minimum": 0 },
+        "catch_total": { "type": "integer", "minimum": 0 },
+        "node_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "import_boundary_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "structure_state": { "const": "QUALIFIED_OFFLINE" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" },
+        "launch_blocking": { "const": true }
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "route_path",
+        "http_method",
+        "export_form",
+        "implementation_kind",
+        "direct_node_ids",
+        "reachable_local_helper_node_ids",
+        "import_boundary_ids",
+        "structure_state",
+        "behavior_state",
+        "next_authorities",
+        "reason_codes"
+      ],
+      "properties": {
+        "method_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "http_method": {
+          "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        },
+        "export_form": {
+          "enum": [
+            "FUNCTION_DECLARATION",
+            "CONST_ARROW",
+            "CONST_FUNCTION",
+            "LOCAL_EXPORT_ALIAS",
+            "WRAPPER_INLINE_CALLBACK",
+            "OPAQUE_IMPORTED_BINDING",
+            "OPAQUE_IMPORTED_FACTORY_CALL",
+            "OPAQUE_IMPORTED_FACTORY_MEMBER",
+            "OPAQUE_REEXPORT_FROM"
+          ]
+        },
+        "implementation_kind": {
+          "enum": [
+            "LOCAL_FUNCTION_DECLARATION",
+            "LOCAL_ARROW_FUNCTION",
+            "LOCAL_FUNCTION_EXPRESSION",
+            "LOCAL_WRAPPER_CALLBACK",
+            "IMPORTED_HANDLER_IMPLEMENTATION_UNREAD"
+          ]
+        },
+        "direct_node_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "reachable_local_helper_node_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "import_boundary_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "structure_state": { "const": "QUALIFIED_OFFLINE" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" },
+        "next_authorities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "FRESH_EXACT_HELPER_READ_SCOPE_REQUIRED",
+              "MANUAL_STATIC_REVIEW_REQUIRED"
+            ]
+          }
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "IMPORTED_IMPLEMENTATION_UNREAD",
+              "LOCAL_NODE_REQUIRES_MANUAL_REVIEW"
+            ]
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "route_path",
+        "route_sha256",
+        "kind",
+        "catch_binding",
+        "start_utf16",
+        "end_utf16",
+        "start_line_1_based",
+        "start_column_1_based",
+        "source_span_sha256",
+        "ownership_state",
+        "candidate_exported_method_ids",
+        "outcome_ids",
+        "structure_state",
+        "behavior_state",
+        "next_evidence_classes",
+        "reason_codes"
+      ],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "route_sha256": { "$ref": "#/$defs/sha256" },
+        "kind": { "enum": ["IF", "CATCH"] },
+        "catch_binding": {
+          "enum": ["PARAMETERIZED", "OPTIONAL", "NOT_APPLICABLE"]
+        },
+        "start_utf16": { "type": "integer", "minimum": 0 },
+        "end_utf16": { "type": "integer", "minimum": 1 },
+        "start_line_1_based": { "type": "integer", "minimum": 1 },
+        "start_column_1_based": { "type": "integer", "minimum": 1 },
+        "source_span_sha256": { "$ref": "#/$defs/sha256" },
+        "ownership_state": {
+          "enum": ["UNIQUE", "SHARED", "UNATTRIBUTED"]
+        },
+        "candidate_exported_method_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "outcome_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "structure_state": { "const": "QUALIFIED_OFFLINE" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" },
+        "next_evidence_classes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            { "const": "MANUAL_STATIC_REVIEW_REQUIRED" }
+          ],
+          "items": false
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            { "const": "LOCAL_NODE_REQUIRES_MANUAL_REVIEW" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_id",
+        "node_id",
+        "route_path",
+        "outcome_kind",
+        "structure_state",
+        "behavior_state",
+        "next_evidence_classes",
+        "reason_codes"
+      ],
+      "properties": {
+        "outcome_id": { "$ref": "#/$defs/sha256" },
+        "node_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "outcome_kind": {
+          "enum": ["IF_TRUE", "IF_FALSE_OR_FALLTHROUGH", "CATCH_ENTERED"]
+        },
+        "structure_state": { "const": "QUALIFIED_OFFLINE" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" },
+        "next_evidence_classes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            { "const": "MANUAL_STATIC_REVIEW_REQUIRED" }
+          ],
+          "items": false
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [
+            { "const": "LOCAL_NODE_REQUIRES_MANUAL_REVIEW" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "import_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "import_boundary_id",
+        "route_path",
+        "raw_specifier",
+        "boundary_kind",
+        "resolved_target_or_external",
+        "content_state",
+        "behavior_state"
+      ],
+      "properties": {
+        "import_boundary_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "raw_specifier": { "type": "string", "minLength": 1 },
+        "boundary_kind": {
+          "enum": ["LOCAL_UNREAD", "EXTERNAL_UNREAD", "BUILTIN_UNREAD"]
+        },
+        "resolved_target_or_external": { "type": "string", "minLength": 1 },
+        "content_state": { "const": "UNREAD_FOR_C2_1_SEMANTICS" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" }
+      }
+    },
+    "request_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "case_id",
+        "route_file",
+        "method",
+        "path_template",
+        "status",
+        "pair_position",
+        "pre_post_equal",
+        "source_visible_branch_category",
+        "evidence_identity",
+        "node_ids",
+        "binding_state"
+      ],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 1, "maximum": 27 },
+        "case_id": { "type": "string", "minLength": 1 },
+        "route_file": { "type": "string", "minLength": 1 },
+        "method": {
+          "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        },
+        "path_template": { "type": "string", "minLength": 1 },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "pair_position": { "type": "string", "minLength": 1 },
+        "pre_post_equal": {
+          "type": ["boolean", "null"]
+        },
+        "source_visible_branch_category": { "type": "string", "minLength": 1 },
+        "evidence_identity": { "type": "string", "minLength": 1 },
+        "node_ids": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "binding_state": {
+          "const": "FILE_METHOD_CATEGORY_ONLY_NO_EXACT_NODE_CLAIM"
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matrix_path",
+        "blocker_registry_path",
+        "gap_code",
+        "launch_blocking_routes",
+        "runtime_qualified_nodes",
+        "routes_unblocked",
+        "overall_decision",
+        "execution_authorized",
+        "public_launch"
+      ],
+      "properties": {
+        "matrix_path": { "const": "testing/readiness-coverage-matrix.json" },
+        "blocker_registry_path": {
+          "const": "testing/public-launch-blocker-registry.json"
+        },
+        "gap_code": {
+          "const": "AUTHENTICATED_LIVE_ROUTE_BRANCH_EXECUTION_EVIDENCE_REQUIRED"
+        },
+        "launch_blocking_routes": { "const": 28 },
+        "runtime_qualified_nodes": { "const": 0 },
+        "routes_unblocked": { "const": 0 },
+        "overall_decision": {
+          "const": "NO_GO_PENDING_SEPARATE_AUTHORITIES"
+        },
+        "execution_authorized": { "const": false },
+        "public_launch": { "const": "NO_GO" }
+      }
+    }
+  }
+}

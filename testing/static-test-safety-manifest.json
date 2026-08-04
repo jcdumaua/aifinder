@@ -1,13 +1,19 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "f4ec71924bd2d2c24b4901b1e92d16ad99ecea951fc339af5f11a3ce75f66b88",
-  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33GA",
+  "testing_tree_digest": "639af1950cc8b3289e3a01def4fe22b8bc64cef45455232b344bb5897c2e2746",
+  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33HA_C2_1",
   "phase_33fa_c1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "d02afef615d460730b6ad156ae88f1b8bce90da778c904e3c797e864f73a524f"
+    "sha256": "21be86031ecd8dae848f6a18378e7eed11eac1f730b4221c60df988eb8f0c7c4"
+  },
+  "phase_c2_1_execution_surface_digest": {
+    "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
+    "path_count": 7,
+    "excluded_self_path": "testing/static-test-safety-manifest.json",
+    "sha256": "6484930bff21c2db75bf10e59231e289df7c2303778648db460bc12f7d577e04"
   },
   "entries": [
     {
@@ -210,6 +216,52 @@
         "testing/authenticated-live-route-partial-evidence.test.mjs"
       ],
       "reason_code": "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE_POLICY"
+    },
+    {
+      "path": "testing/authenticated-live-route-semantic-analyzer.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER"
+    },
+    {
+      "path": "testing/authenticated-live-route-semantic-analyzer.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/authenticated-live-route-semantic-analyzer.test.mjs"
+      ],
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER_POLICY"
+    },
+    {
+      "path": "testing/authenticated-live-route-semantic-branch-ledger.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER"
+    },
+    {
+      "path": "testing/authenticated-live-route-semantic-branch-ledger.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_SCHEMA"
+    },
+    {
+      "path": "testing/authenticated-live-route-semantic-branch-ledger.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/authenticated-live-route-semantic-branch-ledger.test.mjs"
+      ],
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_POLICY"
     },
     {
       "path": "testing/authentication-and-session-live-route-static-synthetic.test.mjs",
