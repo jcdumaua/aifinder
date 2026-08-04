@@ -35,6 +35,7 @@ const PER_CHILD_TIMEOUT_MS = 20_000;
 const CORE_TOTAL_TIMEOUT_MS = 60_000;
 const C1_TOTAL_TIMEOUT_MS = 60_000;
 const C2_1_TOTAL_TIMEOUT_MS = 60_000;
+const C2_2_TOTAL_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
 const CORE_CHILD_PATHS = [
   "testing/authenticated-browser-security-static-assertions.mjs",
@@ -66,7 +67,7 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "bab58f31ae433774257435aa0cdd94aa3213fe9c790d73c634f5396ddd4aa222",
+    sha256: "31ea99e47f3af46698a8865c07d4f0084f368980749ca7f148a87912d70125e4",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -77,6 +78,38 @@ const C1_CHILDREN = [
 const EXPECTED_C2_1_CHILD_PATHS = [
   "testing/authenticated-live-route-semantic-analyzer.test.mjs",
   "testing/authenticated-live-route-semantic-branch-ledger.test.mjs",
+];
+const EXPECTED_C2_2_CHILD_PATHS = [
+  "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+];
+const C2_2_CHILDREN = [
+  {
+    path:
+      "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+    sha256: "119a4ed999a9f2039d74110f2ecc516661bd5da330fcaedaab5094afad9d6baa",
+    imports: [
+      "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+      "node:assert/strict",
+      "node:crypto",
+      "node:fs",
+      "node:path",
+    ],
+    readPaths: 31,
+  },
+  {
+    path:
+      "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+    sha256: "064f21379f8ffc5307ddcdc7fbc3f0e511ccb9d6c836779a2b3c14cf1ed1a464",
+    imports: [
+      "node:assert/strict",
+      "node:crypto",
+      "node:fs",
+      "node:path",
+      "typescript",
+    ],
+    readPaths: 39,
+  },
 ];
 const C2_1_CHILDREN = [
   {
@@ -108,6 +141,12 @@ const C2_1_CHILDREN = [
 const C2_1_ANALYZER = {
   path: "testing/authenticated-live-route-semantic-analyzer.mjs",
   sha256: "37d14d7880338a4cde62befa1d36753c03b398c8a441271ba6bb40f1390675b4",
+  imports: ["node:crypto", "typescript"],
+};
+const C2_2_ANALYZER = {
+  path:
+    "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+  sha256: "4db51f950265915389878b0e92396e686af89006620738fee93690e5f793ecdc",
   imports: ["node:crypto", "typescript"],
 };
 const C2_1_ROUTE_PATHS = [
@@ -167,6 +206,33 @@ const AUTHORIZED_C2_1_PATHS = [
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
+const C2_2_ANALYZER_READ_PATHS = [
+  ...C2_1_ROUTE_PATHS,
+  "testing/authenticated-live-route-semantic-branch-ledger.json",
+  "testing/readiness-coverage-matrix.json",
+  "testing/public-launch-blocker-registry.json",
+];
+const C2_2_LEDGER_READ_PATHS = [
+  ...C2_2_ANALYZER_READ_PATHS,
+  "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.schema.json",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.json",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/static-test-safety-manifest.json",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
+const AUTHORIZED_C2_2_PATHS = [
+  "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.schema.json",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.json",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/static-test-safety-manifest.json",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
 const AUTHORIZED_C1_PATHS = [
   "testing/authenticated-live-route-partial-evidence.schema.json",
   "testing/authenticated-live-route-partial-evidence.json",
@@ -208,6 +274,16 @@ const C1_SAFE_ENVIRONMENT = Object.freeze({
 const C2_1_SAFE_ENVIRONMENT = Object.freeze({
   PATH: "/usr/bin:/bin",
   HOME: "/tmp/aifinder-c2-1-no-home",
+  TMPDIR: "/tmp",
+  LANG: "C.UTF-8",
+  LC_ALL: "C.UTF-8",
+  CI: "1",
+  NO_COLOR: "1",
+  NEXT_TELEMETRY_DISABLED: "1",
+});
+const C2_2_SAFE_ENVIRONMENT = Object.freeze({
+  PATH: "/usr/bin:/bin",
+  HOME: "/tmp/aifinder-c2-2-no-home",
   TMPDIR: "/tmp",
   LANG: "C.UTF-8",
   LC_ALL: "C.UTF-8",
@@ -281,6 +357,10 @@ function authorizedC2Snapshot() {
   return pathSetDigest(AUTHORIZED_C2_1_PATHS);
 }
 
+function authorizedC2_2Snapshot() {
+  return pathSetDigest(AUTHORIZED_C2_2_PATHS);
+}
+
 function directStaticModuleEdges(repositoryPath) {
   const { sourceFile } = parseTypeScriptFile(repositoryPath);
   const edges = [];
@@ -351,7 +431,11 @@ function propertyChain(node) {
   return null;
 }
 
-function validateC2LanguageSurface(sourceFile) {
+function c2Stage(family, stage) {
+  return `RUNNER_${family}_${stage}`;
+}
+
+function validateC2LanguageSurface(sourceFile, family = "C2_1") {
   const deniedModuleEscapeMembers = new Set([
     "getBuiltinModule",
     "binding",
@@ -386,16 +470,16 @@ function validateC2LanguageSurface(sourceFile) {
       ts.isIdentifier(node) &&
       deniedNetworkGlobals.has(node.text)
     ) {
-      throw new GovernanceError("RUNNER_C2_1_NETWORK_GLOBAL");
+      throw new GovernanceError(c2Stage(family, "NETWORK_GLOBAL"));
     }
     if (ts.isPropertyAccessExpression(node)) {
       const chain = propertyChain(node);
       if (deniedModuleEscapeMembers.has(node.name.text)) {
-        throw new GovernanceError("RUNNER_C2_1_MODULE_ESCAPE");
+        throw new GovernanceError(c2Stage(family, "MODULE_ESCAPE"));
       }
       if (chain?.startsWith("process.")) {
         if (!allowedProcessChains.has(chain)) {
-          throw new GovernanceError("RUNNER_C2_1_PROCESS_SURFACE");
+          throw new GovernanceError(c2Stage(family, "PROCESS_SURFACE"));
         }
       }
       if (ts.isIdentifier(node.expression) && node.expression.text === "ts") {
@@ -404,7 +488,7 @@ function validateC2LanguageSurface(sourceFile) {
           !allowedTypeScriptMembers.has(member) &&
           !/^is[A-Z][A-Za-z0-9]*$/.test(member)
         ) {
-          throw new GovernanceError("RUNNER_C2_1_TYPESCRIPT_SURFACE");
+          throw new GovernanceError(c2Stage(family, "TYPESCRIPT_SURFACE"));
         }
       }
     }
@@ -413,7 +497,7 @@ function validateC2LanguageSurface(sourceFile) {
       ts.isIdentifier(node.expression) &&
       ["process", "ts"].includes(node.expression.text)
     ) {
-      throw new GovernanceError("RUNNER_C2_1_COMPUTED_SURFACE");
+      throw new GovernanceError(c2Stage(family, "COMPUTED_SURFACE"));
     }
     if (
       ts.isElementAccessExpression(node) &&
@@ -421,14 +505,14 @@ function validateC2LanguageSurface(sourceFile) {
       ts.isStringLiteralLike(node.argumentExpression) &&
       deniedModuleEscapeMembers.has(node.argumentExpression.text)
     ) {
-      throw new GovernanceError("RUNNER_C2_1_MODULE_ESCAPE");
+      throw new GovernanceError(c2Stage(family, "MODULE_ESCAPE"));
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
 }
 
-function literalReadAllowlist(sourceFile) {
+function literalReadAllowlist(sourceFile, family = "C2_1") {
   for (const statement of sourceFile.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
@@ -446,14 +530,16 @@ function literalReadAllowlist(sourceFile) {
       const values = [];
       for (const element of declaration.initializer.arguments[0].elements) {
         if (!ts.isStringLiteralLike(element)) {
-          throw new GovernanceError("RUNNER_C2_1_READ_ALLOWLIST_LITERAL");
+          throw new GovernanceError(
+            c2Stage(family, "READ_ALLOWLIST_LITERAL"),
+          );
         }
         values.push(element.text);
       }
       return values;
     }
   }
-  throw new GovernanceError("RUNNER_C2_1_READ_ALLOWLIST_LITERAL");
+  throw new GovernanceError(c2Stage(family, "READ_ALLOWLIST_LITERAL"));
 }
 
 function flattenLogicalOr(node, output = []) {
@@ -524,21 +610,21 @@ function exactThrowingBlock(statement) {
   );
 }
 
-function validateReadExactC2Structure(readFunction) {
+function validateReadExactC2Structure(readFunction, family = "C2_1") {
   if (
     readFunction.parameters.length !== 1 ||
     !exactIdentifier(readFunction.parameters[0].name, "relativePath") ||
     !readFunction.body ||
     readFunction.body.statements.length !== 9
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER_STRUCTURE");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER_STRUCTURE"));
   }
   const statements = readFunction.body.statements;
   if (
     !ts.isIfStatement(statements[0]) ||
     !exactThrowingBlock(statements[0].thenStatement)
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER_GUARD");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER_GUARD"));
   }
   const predicates = flattenLogicalOr(statements[0].expression);
   const allowPredicate = predicates[3];
@@ -586,7 +672,7 @@ function validateReadExactC2Structure(readFunction) {
       "relativePath",
     )
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER_GUARD");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER_GUARD"));
   }
   const absoluteInitializer = singleVariableInitializer(
     statements[1],
@@ -632,7 +718,7 @@ function validateReadExactC2Structure(readFunction) {
     ) ||
     rootPrefix.operand.arguments[0].right.name.text !== "sep"
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER_ROOT_GUARD");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER_ROOT_GUARD"));
   }
   const metadataPredicates = ts.isIfStatement(statements[4])
     ? flattenLogicalOr(statements[4].expression)
@@ -653,7 +739,7 @@ function validateReadExactC2Structure(readFunction) {
     )
   ) {
     throw new GovernanceError(
-      "RUNNER_C2_1_READ_WRAPPER_REGULAR_FILE_GUARD",
+      c2Stage(family, "READ_WRAPPER_REGULAR_FILE_GUARD"),
     );
   }
   if (
@@ -692,15 +778,20 @@ function validateReadExactC2Structure(readFunction) {
     !ts.isReturnStatement(statements[8]) ||
     !exactIdentifier(statements[8].expression, "bytes")
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER_STRUCTURE");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER_STRUCTURE"));
   }
   return statements[0].expression;
 }
 
-function validateReadExactC2Source(sourceFile, source, expectedPaths) {
-  const actualPaths = literalReadAllowlist(sourceFile);
+function validateReadExactC2Source(
+  sourceFile,
+  source,
+  expectedPaths,
+  { family = "C2_1", wrapperName = "readExactC2" } = {},
+) {
+  const actualPaths = literalReadAllowlist(sourceFile, family);
   if (!exactSet(actualPaths, expectedPaths)) {
-    throw new GovernanceError("RUNNER_C2_1_READ_ALLOWLIST_SET");
+    throw new GovernanceError(c2Stage(family, "READ_ALLOWLIST_SET"));
   }
   let readFunction = null;
   let fsImportNames = null;
@@ -709,7 +800,7 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
   for (const statement of sourceFile.statements) {
     if (
       ts.isFunctionDeclaration(statement) &&
-      statement.name?.text === "readExactC2"
+      statement.name?.text === wrapperName
     ) readFunction = statement;
     if (
       ts.isImportDeclaration(statement) &&
@@ -717,11 +808,11 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
     ) {
       const bindings = statement.importClause?.namedBindings;
       if (!bindings || !ts.isNamedImports(bindings)) {
-        throw new GovernanceError("RUNNER_C2_1_FS_IMPORTS");
+        throw new GovernanceError(c2Stage(family, "FS_IMPORTS"));
       }
       fsImportNames = bindings.elements.map((element) => {
         if (element.propertyName || !ts.isIdentifier(element.name)) {
-          throw new GovernanceError("RUNNER_C2_1_FS_IMPORTS");
+          throw new GovernanceError(c2Stage(family, "FS_IMPORTS"));
         }
         fsImportIdentifiers.add(element.name);
         return element.name.text;
@@ -742,7 +833,9 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
           (statement.declarationList.flags & ts.NodeFlags.Const) !== 0
         ) {
           if (allowlistSetDeclaration) {
-            throw new GovernanceError("RUNNER_C2_1_READ_ALLOWLIST_SET_BINDING");
+            throw new GovernanceError(
+              c2Stage(family, "READ_ALLOWLIST_SET_BINDING"),
+            );
           }
           allowlistSetDeclaration = declaration.name;
         }
@@ -754,9 +847,12 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
     !allowlistSetDeclaration ||
     !exactSet(fsImportNames, ["lstatSync", "readFileSync", "realpathSync"])
   ) {
-    throw new GovernanceError("RUNNER_C2_1_READ_WRAPPER");
+    throw new GovernanceError(c2Stage(family, "READ_WRAPPER"));
   }
-  const allowlistGuardExpression = validateReadExactC2Structure(readFunction);
+  const allowlistGuardExpression = validateReadExactC2Structure(
+    readFunction,
+    family,
+  );
   let negativeHelperCalls = 0;
   const allowedLoopBindings = new Set(["routePath", "repositoryPath"]);
   const exactPathBindings = new Map();
@@ -770,7 +866,7 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
         expectedPaths.includes(declaration.initializer.text)
       ) {
         if (exactPathBindings.has(declaration.name.text)) {
-          throw new GovernanceError("RUNNER_C2_1_READ_CALLSITE");
+          throw new GovernanceError(c2Stage(family, "READ_CALLSITE"));
         }
         exactPathBindings.set(
           declaration.name.text,
@@ -798,7 +894,9 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
       ) {
         fsCallCounts.set(node.text, fsCallCounts.get(node.text) + 1);
       } else {
-        throw new GovernanceError("RUNNER_C2_1_FS_IDENTIFIER_REFERENCE");
+        throw new GovernanceError(
+          c2Stage(family, "FS_IDENTIFIER_REFERENCE"),
+        );
       }
     }
     if (exactIdentifier(node, "READ_ALLOWLIST_SET")) {
@@ -817,28 +915,30 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
       ) {
         // The only permitted use is the first fail-closed guard.
       } else {
-        throw new GovernanceError("RUNNER_C2_1_READ_ALLOWLIST_SET_USAGE");
+        throw new GovernanceError(
+          c2Stage(family, "READ_ALLOWLIST_SET_USAGE"),
+        );
       }
     }
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
       const callName = node.expression.text;
-      if (callName === "readExactC2") {
+      if (callName === wrapperName) {
         if (node.arguments.length !== 1) {
-          throw new GovernanceError("RUNNER_C2_1_READ_CALLSITE");
+          throw new GovernanceError(c2Stage(family, "READ_CALLSITE"));
         }
         const argument = node.arguments[0];
         if (ts.isStringLiteralLike(argument)) {
           if (argument.text === "lib/admin-auth.ts") {
             negativeHelperCalls += 1;
           } else if (!expectedPaths.includes(argument.text)) {
-            throw new GovernanceError("RUNNER_C2_1_READ_CALLSITE");
+            throw new GovernanceError(c2Stage(family, "READ_CALLSITE"));
           }
         } else if (
           !ts.isIdentifier(argument) ||
           (!allowedLoopBindings.has(argument.text) &&
             !exactPathBindings.has(argument.text))
         ) {
-          throw new GovernanceError("RUNNER_C2_1_READ_CALLSITE");
+          throw new GovernanceError(c2Stage(family, "READ_CALLSITE"));
         }
       }
     }
@@ -850,24 +950,26 @@ function validateReadExactC2Source(sourceFile, source, expectedPaths) {
     expectedPaths.includes("lib/admin-auth.ts") ||
     [...fsCallCounts.values()].some((count) => count !== 1)
   ) {
-    throw new GovernanceError("RUNNER_C2_1_NEGATIVE_READ_SELF_CHECK");
+    throw new GovernanceError(
+      c2Stage(family, "NEGATIVE_READ_SELF_CHECK"),
+    );
   }
 }
 
-function validateC2ModuleSource(moduleContract) {
+function validateC2ModuleSource(moduleContract, family = "C2_1") {
   const bytes = readFileSync(moduleContract.path);
   if (digest(bytes) !== moduleContract.sha256) {
-    throw new GovernanceError("RUNNER_C2_1_SOURCE_IDENTITY");
+    throw new GovernanceError(c2Stage(family, "SOURCE_IDENTITY"));
   }
   let parsed;
   try {
     parsed = parseTypeScriptFile(moduleContract.path);
   } catch {
-    throw new GovernanceError("RUNNER_C2_1_PARSE");
+    throw new GovernanceError(c2Stage(family, "PARSE"));
   }
   const imports = directStaticModuleEdges(moduleContract.path);
   if (!exactSet(imports, moduleContract.imports)) {
-    throw new GovernanceError("RUNNER_C2_1_IMPORT_SET");
+    throw new GovernanceError(c2Stage(family, "IMPORT_SET"));
   }
   const typeScriptImports = parsed.sourceFile.statements.filter(
     (statement) =>
@@ -883,18 +985,18 @@ function validateC2ModuleSource(moduleContract) {
       !exactIdentifier(importClause.name, "ts") ||
       importClause.namedBindings
     ) {
-      throw new GovernanceError("RUNNER_C2_1_TYPESCRIPT_BINDING");
+      throw new GovernanceError(c2Stage(family, "TYPESCRIPT_BINDING"));
     }
   } else if (typeScriptImports.length !== 0) {
-    throw new GovernanceError("RUNNER_C2_1_TYPESCRIPT_BINDING");
+    throw new GovernanceError(c2Stage(family, "TYPESCRIPT_BINDING"));
   }
   const source = bytes.toString("utf8");
   for (const [stage, pattern] of C2_1_DENIED_SOURCE_PATTERNS) {
     if (pattern.test(source)) {
-      throw new GovernanceError("RUNNER_C2_1_" + stage);
+      throw new GovernanceError(c2Stage(family, stage));
     }
   }
-  validateC2LanguageSurface(parsed.sourceFile);
+  validateC2LanguageSurface(parsed.sourceFile, family);
   return { source, sourceFile: parsed.sourceFile };
 }
 
@@ -914,6 +1016,32 @@ function validateC2ChildSource(child) {
     validateC2ModuleSource(C2_1_ANALYZER);
   } else if (localEdges.length !== 0) {
     throw new GovernanceError("RUNNER_C2_1_CLOSURE");
+  }
+}
+
+function validateC2_2ChildSource(child) {
+  const parsed = validateC2ModuleSource(child, "C2_2");
+  const expectedPaths = child.readPaths === 31
+    ? C2_2_ANALYZER_READ_PATHS
+    : C2_2_LEDGER_READ_PATHS;
+  validateReadExactC2Source(
+    parsed.sourceFile,
+    parsed.source,
+    expectedPaths,
+    { family: "C2_2", wrapperName: "readExactC2_2" },
+  );
+  const localEdges = child.imports.filter((edge) => edge.startsWith("."));
+  if (child.path.includes("candidate-analyzer.test")) {
+    if (
+      !exactSet(localEdges, [
+        "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+      ])
+    ) {
+      throw new GovernanceError("RUNNER_C2_2_CLOSURE");
+    }
+    validateC2ModuleSource(C2_2_ANALYZER, "C2_2");
+  } else if (localEdges.length !== 0) {
+    throw new GovernanceError("RUNNER_C2_2_CLOSURE");
   }
 }
 
@@ -942,7 +1070,7 @@ function validateManifestForExecution() {
     ) ||
     !compareExactPathSets(paths, inventory).equal ||
     manifest.testing_tree_digest_state !==
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33HA_C2_1" ||
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33IA_C2_2" ||
     manifest.testing_tree_digest !== testingTreeDigest(MANIFEST_PATH)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_INVENTORY");
@@ -976,6 +1104,21 @@ function validateManifestForExecution() {
       pathSetDigest(c2ExecutionSurfacePaths)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_C2_1_DIGEST");
+  }
+
+  const c2_2ExecutionSurfacePaths = AUTHORIZED_C2_2_PATHS.filter(
+    (repositoryPath) => repositoryPath !== MANIFEST_PATH,
+  );
+  if (
+    manifest.phase_c2_2_execution_surface_digest?.algorithm !==
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" ||
+    manifest.phase_c2_2_execution_surface_digest?.path_count !== 7 ||
+    manifest.phase_c2_2_execution_surface_digest?.excluded_self_path !==
+      MANIFEST_PATH ||
+    manifest.phase_c2_2_execution_surface_digest?.sha256 !==
+      pathSetDigest(c2_2ExecutionSurfacePaths)
+  ) {
+    throw new GovernanceError("RUNNER_MANIFEST_C2_2_DIGEST");
   }
 
   const manifestCorePaths = manifest.entries
@@ -1072,7 +1215,33 @@ function validateManifestForExecution() {
   ) {
     throw new GovernanceError("RUNNER_C2_1_POLICY_SET");
   }
-  return { core, c1Policy, c2Policy };
+  const c2_2Policy = [];
+  for (const child of C2_2_CHILDREN) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.path === child.path,
+    );
+    if (
+      entry?.role !== "EXECUTABLE" ||
+      entry.safety_class !== "SAFE_STATIC_POLICY" ||
+      entry.ci_disposition !== "RUN_POLICY" ||
+      JSON.stringify(entry.command_argv) !==
+        JSON.stringify(["node", child.path])
+    ) {
+      throw new GovernanceError("RUNNER_C2_2_MANIFEST_ENTRY");
+    }
+    validateC2_2ChildSource(child);
+    c2_2Policy.push(child);
+  }
+  if (
+    c2_2Policy.length !== 2 ||
+    !exactSet(
+      c2_2Policy.map((entry) => entry.path),
+      EXPECTED_C2_2_CHILD_PATHS,
+    )
+  ) {
+    throw new GovernanceError("RUNNER_C2_2_POLICY_SET");
+  }
+  return { core, c1Policy, c2Policy, c2_2Policy };
 }
 
 function installLegacyCoreManifestProjection(
@@ -1175,6 +1344,67 @@ function installLegacyCoreManifestProjection(
           "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_POLICY",
       },
     ],
+    [
+      "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+      {
+        role: "SUPPORT",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code:
+          "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_ANALYZER",
+      },
+    ],
+    [
+      "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "SAFE_STATIC_POLICY",
+        ci_disposition: "RUN_POLICY",
+        command_argv: [
+          "node",
+          "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+        ],
+        reason_code:
+          "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_ANALYZER_POLICY",
+      },
+    ],
+    [
+      "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.schema.json",
+      {
+        role: "CONFIG",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code:
+          "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_SCHEMA",
+      },
+    ],
+    [
+      "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.json",
+      {
+        role: "CONFIG",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code:
+          "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER",
+      },
+    ],
+    [
+      "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "SAFE_STATIC_POLICY",
+        ci_disposition: "RUN_POLICY",
+        command_argv: [
+          "node",
+          "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+        ],
+        reason_code:
+          "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_POLICY",
+      },
+    ],
   ]);
   const originalReadFileSync = fs.readFileSync.bind(fs);
   const classificationCounts = (entries) => ({
@@ -1198,11 +1428,11 @@ function installLegacyCoreManifestProjection(
     const manifest = JSON.parse(source);
     const currentCounts = classificationCounts(manifest.entries ?? []);
     if (
-      manifest.entries?.length !== 123 ||
+      manifest.entries?.length !== 128 ||
       !exactValue(currentCounts, {
         core: 5,
-        policy: 9,
-        validateOnly: 23,
+        policy: 11,
+        validateOnly: 26,
         denied: 86,
       })
     ) {
@@ -1557,6 +1787,76 @@ async function runC2Policy(c2Policy) {
   );
 }
 
+async function runC2_2Policy(c2_2Policy) {
+  const totalStarted = performance.now();
+  const results = [];
+  for (const child of c2_2Policy) {
+    const remaining =
+      C2_2_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
+    if (remaining <= 0) {
+      throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+    }
+    const authorizedBefore = authorizedC2_2Snapshot();
+    const repositoryBefore = repositoryStateDigest();
+    const result = await runScript(
+      child.path,
+      Math.min(PER_CHILD_TIMEOUT_MS, remaining),
+      {
+        preloads: [SANDBOX_PATH],
+        environment: C2_2_SAFE_ENVIRONMENT,
+      },
+    );
+    const repositoryAfter = repositoryStateDigest();
+    const authorizedAfter = authorizedC2_2Snapshot();
+    const authorizedUnchanged = authorizedBefore === authorizedAfter;
+    const repositoryUnchanged = repositoryBefore === repositoryAfter;
+    const stdout = outputIdentity(result.stdout);
+    const stderr = outputIdentity(result.stderr);
+    const passed =
+      result.exitCode === 0 &&
+      result.signal === null &&
+      result.stderr === "" &&
+      !result.overflow &&
+      !result.timedOut &&
+      !result.spawnError &&
+      authorizedUnchanged &&
+      repositoryUnchanged;
+    results.push({ path: child.path, passed });
+    console.log(
+      "STATIC_C2_2_POLICY path=" +
+        child.path +
+        " exit=" +
+        (result.exitCode ?? "null") +
+        " duration_ms=" +
+        result.durationMs +
+        " stdout_sha256=" +
+        stdout.sha256 +
+        " stdout_bytes=" +
+        stdout.bytes +
+        " stdout_lines=" +
+        stdout.lines +
+        " stderr_sha256=" +
+        stderr.sha256 +
+        " stderr_bytes=" +
+        stderr.bytes +
+        " stderr_lines=" +
+        stderr.lines +
+        " authorized_scope_unchanged=" +
+        authorizedUnchanged +
+        " repository_state_unchanged=" +
+        repositoryUnchanged +
+        " source_identity_verified=true source_policy_verified=true result=" +
+        (passed ? "PASS" : "FAIL"),
+    );
+    if (!passed) {
+      throw new GovernanceError("RUNNER_C2_2_POLICY_COMMAND_FAILED");
+    }
+  }
+  console.log(
+    "PASS_STATIC_READINESS_C2_2_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2",
+  );
+}
+
 function selfTestSnippet(category, body) {
   return [
     "try {",
@@ -1585,10 +1885,19 @@ function replaceUniqueSourceFragment(source, fragment, replacement) {
   return source.slice(0, first) + replacement + source.slice(first + fragment.length);
 }
 
-function expectC2SourcePolicyMutation(source, fragment, expectedStage) {
+function expectC2SourcePolicyMutation(
+  source,
+  fragment,
+  expectedStage,
+  {
+    family = "C2_1",
+    expectedPaths = C2_1_ANALYZER_READ_PATHS,
+    wrapperName = "readExactC2",
+  } = {},
+) {
   const mutated = replaceUniqueSourceFragment(source, fragment, "false");
   const sourceFile = ts.createSourceFile(
-    "c2-1-source-policy-mutation.mjs",
+    family.toLowerCase().replace("_", "-") + "-source-policy-mutation.mjs",
     mutated,
     ts.ScriptTarget.Latest,
     true,
@@ -1598,7 +1907,8 @@ function expectC2SourcePolicyMutation(source, fragment, expectedStage) {
     validateReadExactC2Source(
       sourceFile,
       mutated,
-      C2_1_ANALYZER_READ_PATHS,
+      expectedPaths,
+      { family, wrapperName },
     );
   } catch (caught) {
     if (caught instanceof GovernanceError && caught.stage === expectedStage) {
@@ -1628,7 +1938,45 @@ function validateC2SourcePolicyMutations() {
   );
 }
 
+function validateC2_2SourcePolicyMutations() {
+  const child = C2_2_CHILDREN[0];
+  const source = readFileSync(child.path, "utf8");
+  if (digest(Buffer.from(source, "utf8")) !== child.sha256) {
+    throw new GovernanceError("RUNNER_C2_2_MUTATION_SOURCE_IDENTITY");
+  }
+  const options = {
+    family: "C2_2",
+    expectedPaths: C2_2_ANALYZER_READ_PATHS,
+    wrapperName: "readExactC2_2",
+  };
+  expectC2SourcePolicyMutation(
+    source,
+    "absolutePath === REPOSITORY_ROOT ||\n" +
+      "    !absolutePath.startsWith(REPOSITORY_ROOT + path.sep)",
+    "RUNNER_C2_2_READ_WRAPPER_ROOT_GUARD",
+    options,
+  );
+  expectC2SourcePolicyMutation(
+    source,
+    "!metadata.isFile() || metadata.isSymbolicLink()",
+    "RUNNER_C2_2_READ_WRAPPER_REGULAR_FILE_GUARD",
+    options,
+  );
+}
+
 async function runSelfTest() {
+  if (
+    !exactSet(
+      C2_2_CHILDREN.map((child) => child.path),
+      EXPECTED_C2_2_CHILD_PATHS,
+    )
+  ) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=RUNNER_C2_2_POLICY_SET failures=1 internal_failures=0",
+    );
+    process.exitCode = 1;
+    return;
+  }
   if (
     !exactSet(
       C2_1_CHILDREN.map((child) => child.path),
@@ -1642,6 +1990,8 @@ async function runSelfTest() {
     return;
   }
   validateC2SourcePolicyMutations();
+  const c2_2SourcePolicyStarted = performance.now();
+  validateC2_2SourcePolicyMutations();
   const temporaryDirectory = mkdtempSync(
     path.join(os.tmpdir(), "aifinder-static-readiness-"),
   );
@@ -1661,7 +2011,12 @@ async function runSelfTest() {
     ],
   ];
   try {
-    const results = [];
+    const results = [{ category: "C2_2_SOURCE_POLICY", passed: true }];
+    console.log(
+      "SANDBOX_SELF_TEST family=C2_2_SOURCE_POLICY duration_ms=" +
+        Math.round(performance.now() - c2_2SourcePolicyStarted) +
+        " result=PASS",
+    );
     for (const [category, body] of fixtures) {
       const fixture = path.join(
         temporaryDirectory,
@@ -1706,7 +2061,7 @@ async function runSelfTest() {
   }
 }
 
-function listChildren(core, c1Policy, c2Policy) {
+function listChildren(core, c1Policy, c2Policy, c2_2Policy) {
   for (const entry of core) {
     console.log(
       "STATIC_CORE_LIST path=" +
@@ -1743,6 +2098,17 @@ function listChildren(core, c1Policy, c2Policy) {
   console.log(
     "PASS_STATIC_READINESS_LIST_COMPLETE_C2_1 core=5 c1=4 c2_1=2 total=11",
   );
+  for (const child of c2_2Policy) {
+    console.log(
+      "STATIC_C2_2_POLICY_LIST path=" +
+        child.path +
+        " argv=node," +
+        child.path,
+    );
+  }
+  console.log(
+    "PASS_STATIC_READINESS_LIST_COMPLETE_C2_2 core=5 c1=4 c2_1=2 c2_2=2 total=13",
+  );
 }
 
 try {
@@ -1754,21 +2120,30 @@ try {
   if (option === "--self-test") {
     await runSelfTest();
   } else if (option === "--list") {
-    const { core, c1Policy, c2Policy } = validateManifestForExecution();
-    listChildren(core, c1Policy, c2Policy);
+    const { core, c1Policy, c2Policy, c2_2Policy } =
+      validateManifestForExecution();
+    listChildren(core, c1Policy, c2Policy, c2_2Policy);
   } else if (option === "--c1-policy") {
     const { c1Policy } = validateManifestForExecution();
     await runC1Policy(c1Policy);
   } else if (option === "--c2-1-policy") {
     const { c2Policy } = validateManifestForExecution();
     await runC2Policy(c2Policy);
+  } else if (option === "--c2-2-policy") {
+    const { c2_2Policy } = validateManifestForExecution();
+    await runC2_2Policy(c2_2Policy);
   } else if (option === "") {
-    const { core, c1Policy, c2Policy } = validateManifestForExecution();
+    const { core, c1Policy, c2Policy, c2_2Policy } =
+      validateManifestForExecution();
     await runCore(core);
     await runC1Policy(c1Policy);
     await runC2Policy(c2Policy);
     console.log(
       "PASS_STATIC_READINESS_C2_1_COMPLETE core=5 c1=4 c2_1=2 fail=0 repository_mutations=0",
+    );
+    await runC2_2Policy(c2_2Policy);
+    console.log(
+      "PASS_STATIC_READINESS_C2_2_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 fail=0 repository_mutations=0",
     );
     console.log(
       "PASS_STATIC_READINESS_COMPLETE core=5 c1=4 fail=0 repository_mutations=0",

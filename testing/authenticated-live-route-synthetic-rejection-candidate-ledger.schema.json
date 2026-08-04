@@ -1,0 +1,460 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/schemas/authenticated-live-route-synthetic-rejection-candidate-ledger.schema.json",
+  "title": "AiFinder authenticated live-route synthetic-rejection candidate ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "artifact_purpose",
+    "repository_baseline",
+    "source_contract",
+    "algorithm_contract",
+    "summary",
+    "method_deferrals",
+    "outcome_overlay",
+    "candidates",
+    "governance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "AIFINDER_C2_2_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_V1"
+    },
+    "phase": { "const": "33IA-33IZ" },
+    "artifact_purpose": {
+      "const": "BATCH_C2_2_OFFLINE_SYNTHETIC_REJECTION_CANDIDATE_QUALIFICATION"
+    },
+    "repository_baseline": { "$ref": "#/$defs/repositoryBaseline" },
+    "source_contract": { "$ref": "#/$defs/sourceContract" },
+    "algorithm_contract": { "$ref": "#/$defs/algorithmContract" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "method_deferrals": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/methodDeferral" }
+    },
+    "outcome_overlay": {
+      "type": "array",
+      "minItems": 775,
+      "maxItems": 775,
+      "items": { "$ref": "#/$defs/outcomeOverlay" }
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 580,
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "governance": { "$ref": "#/$defs/governance" }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitBlob": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "qualificationState": {
+      "enum": [
+        "DEFERRED_CATCH_OUTCOME",
+        "DEFERRED_UNATTRIBUTED_IF_OUTCOME",
+        "DEFERRED_IMPLICIT_FALSE_FALLTHROUGH",
+        "DEFERRED_NON_SINGLE_RETURN_BRANCH",
+        "DEFERRED_UNRECOGNIZED_RESPONSE_CONSTRUCTOR",
+        "DEFERRED_NON_LITERAL_4XX_STATUS",
+        "DEFERRED_NON_CLOSED_RESPONSE_DATA",
+        "ELIGIBLE_OFFLINE_SYNTHETIC_REJECTION_CANDIDATE"
+      ]
+    },
+    "responseShape": {
+      "enum": [
+        "NEXT_RESPONSE_JSON",
+        "GLOBAL_RESPONSE_JSON",
+        "GLOBAL_NEW_RESPONSE"
+      ]
+    },
+    "repositoryBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch", "commit", "parent", "tree", "subject"],
+      "properties": {
+        "repository": { "const": "/Users/jamescarlodumaua/aifinder" },
+        "branch": { "const": "main" },
+        "commit": { "const": "132f4d16e7b8b6c7b4585bb794ac7732cead0a73" },
+        "parent": { "const": "bb135e0dc5bfa31b4d5542cca855541014374e44" },
+        "tree": { "const": "757a4905c69d606ed50a4a55d9ab629b52947753" },
+        "subject": { "const": "Add authenticated route branch qualification ledger" }
+      }
+    },
+    "sourceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "c2_1_ledger_path",
+        "c2_1_ledger_sha256",
+        "c2_1_independent_oracle_digest",
+        "route_contract_digest",
+        "request_position_digest",
+        "node_set_digest",
+        "route_paths",
+        "route_identities_verified"
+      ],
+      "properties": {
+        "c2_1_ledger_path": {
+          "const": "testing/authenticated-live-route-semantic-branch-ledger.json"
+        },
+        "c2_1_ledger_sha256": {
+          "const": "d668f5955dd0f7b3c079625711fa873576869039f26263267f1a4821da6090e3"
+        },
+        "c2_1_independent_oracle_digest": {
+          "const": "6e15cd4bc24025892fe7d3985709e48ba56cb2198ea04fe21ec99b08ab2fe172"
+        },
+        "route_contract_digest": {
+          "const": "d6dddd950dd1f463106f3cc3aca3c659f5106ec22023c8c31d3e1aefe41fd6a9"
+        },
+        "request_position_digest": {
+          "const": "014caf9d9f4e3ada5824ed2025a77166f905ffdc02af9786a98ee26ec2627504"
+        },
+        "node_set_digest": {
+          "const": "e93014829e190d478ee8d057289a12bc2703f990b795c3bbf5fdade838dd87d8"
+        },
+        "route_paths": {
+          "type": "array",
+          "minItems": 28,
+          "maxItems": 28,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "route_identities_verified": { "const": 28 }
+      }
+    },
+    "algorithmContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "analyzer_version",
+        "typescript_version",
+        "canonical_json_version",
+        "candidate_id_version",
+        "qualification_state_order",
+        "candidate_count_contract",
+        "first_match_algorithm",
+        "response_shape_order",
+        "helper_semantics"
+      ],
+      "properties": {
+        "analyzer_version": { "const": "AIFINDER_C2_2_CANDIDATE_ANALYZER_V1" },
+        "typescript_version": { "const": "5.9.3" },
+        "canonical_json_version": { "const": "RECURSIVE_LEXICOGRAPHIC_KEYS_V1" },
+        "candidate_id_version": { "const": "AIFINDER_C2_2_CANDIDATE_V1" },
+        "qualification_state_order": { "$ref": "#/$defs/qualificationOrder" },
+        "candidate_count_contract": { "const": "DERIVED_NOT_PREDECLARED" },
+        "first_match_algorithm": { "$ref": "#/$defs/qualificationOrder" },
+        "response_shape_order": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "NEXT_RESPONSE_JSON" },
+            { "const": "GLOBAL_RESPONSE_JSON" },
+            { "const": "GLOBAL_NEW_RESPONSE" }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "helper_semantics": { "const": "UNREAD_FOR_C2_2" }
+      }
+    },
+    "qualificationOrder": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "DEFERRED_CATCH_OUTCOME" },
+        { "const": "DEFERRED_UNATTRIBUTED_IF_OUTCOME" },
+        { "const": "DEFERRED_IMPLICIT_FALSE_FALLTHROUGH" },
+        { "const": "DEFERRED_NON_SINGLE_RETURN_BRANCH" },
+        { "const": "DEFERRED_UNRECOGNIZED_RESPONSE_CONSTRUCTOR" },
+        { "const": "DEFERRED_NON_LITERAL_4XX_STATUS" },
+        { "const": "DEFERRED_NON_CLOSED_RESPONSE_DATA" },
+        { "const": "ELIGIBLE_OFFLINE_SYNTHETIC_REJECTION_CANDIDATE" }
+      ],
+      "items": false,
+      "minItems": 8,
+      "maxItems": 8
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routes",
+        "methods",
+        "nodes",
+        "outcomes",
+        "unique_nodes",
+        "unattributed_nodes",
+        "unique_if_nodes",
+        "unattributed_if_nodes",
+        "unique_catch_nodes",
+        "unattributed_catch_nodes",
+        "eligible_universe_outcomes",
+        "mandatory_deferred_unattributed_if_outcomes",
+        "mandatory_deferred_catch_outcomes",
+        "mandatory_deferred_outcomes",
+        "candidate_outcomes",
+        "candidate_count_contract",
+        "additional_deferred_unique_if_outcomes",
+        "total_deferred_outcomes",
+        "opaque_imported_methods_deferred",
+        "status_histogram",
+        "response_shape_histogram",
+        "deferred_state_histogram",
+        "c2_2_analyzer_ledger_helper_content_reads",
+        "raw_values",
+        "route_execution",
+        "runtime_qualified_nodes",
+        "routes_unblocked",
+        "launch_blockers",
+        "execution_authorized",
+        "public_launch",
+        "candidate_set_digest",
+        "overlay_digest"
+      ],
+      "properties": {
+        "routes": { "const": 28 },
+        "methods": { "const": 37 },
+        "nodes": { "const": 409 },
+        "outcomes": { "const": 775 },
+        "unique_nodes": { "const": 326 },
+        "unattributed_nodes": { "const": 83 },
+        "unique_if_nodes": { "const": 290 },
+        "unattributed_if_nodes": { "const": 76 },
+        "unique_catch_nodes": { "const": 36 },
+        "unattributed_catch_nodes": { "const": 7 },
+        "eligible_universe_outcomes": { "const": 580 },
+        "mandatory_deferred_unattributed_if_outcomes": { "const": 152 },
+        "mandatory_deferred_catch_outcomes": { "const": 43 },
+        "mandatory_deferred_outcomes": { "const": 195 },
+        "candidate_outcomes": { "type": "integer", "minimum": 0, "maximum": 580 },
+        "candidate_count_contract": { "const": "DERIVED_FROM_OVERLAY" },
+        "additional_deferred_unique_if_outcomes": { "type": "integer", "minimum": 0, "maximum": 580 },
+        "total_deferred_outcomes": { "type": "integer", "minimum": 195, "maximum": 775 },
+        "opaque_imported_methods_deferred": { "const": 15 },
+        "status_histogram": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/statusHistogramEntry" }
+        },
+        "response_shape_histogram": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/responseHistogramEntry" }
+        },
+        "deferred_state_histogram": {
+          "type": "array",
+          "maxItems": 7,
+          "items": { "$ref": "#/$defs/deferredHistogramEntry" }
+        },
+        "c2_2_analyzer_ledger_helper_content_reads": { "const": 0 },
+        "raw_values": { "const": 0 },
+        "route_execution": { "const": 0 },
+        "runtime_qualified_nodes": { "const": 0 },
+        "routes_unblocked": { "const": 0 },
+        "launch_blockers": { "const": 28 },
+        "execution_authorized": { "const": false },
+        "public_launch": { "const": "NO_GO" },
+        "candidate_set_digest": { "$ref": "#/$defs/sha256" },
+        "overlay_digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "statusHistogramEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status_code", "count"],
+      "properties": {
+        "status_code": { "type": "integer", "minimum": 400, "maximum": 499 },
+        "count": { "type": "integer", "minimum": 1, "maximum": 580 }
+      }
+    },
+    "responseHistogramEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["response_shape", "count"],
+      "properties": {
+        "response_shape": { "$ref": "#/$defs/responseShape" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 580 }
+      }
+    },
+    "deferredHistogramEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qualification_state", "count"],
+      "properties": {
+        "qualification_state": { "$ref": "#/$defs/qualificationState" },
+        "count": { "type": "integer", "minimum": 1, "maximum": 775 }
+      }
+    },
+    "methodDeferral": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "route_path",
+        "http_method",
+        "qualification_state",
+        "reason_code",
+        "helper_content_read",
+        "execution_state",
+        "behavior_state"
+      ],
+      "properties": {
+        "method_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "http_method": { "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] },
+        "qualification_state": { "const": "DEFERRED_OPAQUE_IMPORTED_METHOD" },
+        "reason_code": { "const": "HELPER_IMPLEMENTATION_UNREAD_REQUIRES_FRESH_SCOPE" },
+        "helper_content_read": { "const": false },
+        "execution_state": { "const": "NOT_EXECUTED" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" }
+      }
+    },
+    "outcomeOverlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_id",
+        "node_id",
+        "route_path",
+        "outcome_kind",
+        "ownership_state",
+        "method_id_or_null",
+        "qualification_state",
+        "reason_code",
+        "candidate_id_or_null",
+        "execution_state",
+        "behavior_state"
+      ],
+      "properties": {
+        "outcome_id": { "$ref": "#/$defs/sha256" },
+        "node_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "outcome_kind": { "enum": ["IF_TRUE", "IF_FALSE_OR_FALLTHROUGH", "CATCH_ENTERED"] },
+        "ownership_state": { "enum": ["UNIQUE", "SHARED", "UNATTRIBUTED"] },
+        "method_id_or_null": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "qualification_state": { "$ref": "#/$defs/qualificationState" },
+        "reason_code": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "candidate_id_or_null": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "execution_state": { "const": "NOT_EXECUTED" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "outcome_id",
+        "node_id",
+        "route_path",
+        "method_id",
+        "http_method",
+        "outcome_kind",
+        "branch_start_utf16",
+        "branch_end_utf16",
+        "branch_span_sha256",
+        "response_shape",
+        "status_code",
+        "eligibility_state",
+        "semantic_family",
+        "execution_state",
+        "behavior_state",
+        "next_authority",
+        "reason_codes"
+      ],
+      "properties": {
+        "candidate_id": { "$ref": "#/$defs/sha256" },
+        "outcome_id": { "$ref": "#/$defs/sha256" },
+        "node_id": { "$ref": "#/$defs/sha256" },
+        "route_path": { "type": "string", "minLength": 1 },
+        "method_id": { "$ref": "#/$defs/sha256" },
+        "http_method": { "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] },
+        "outcome_kind": { "enum": ["IF_TRUE", "IF_FALSE_OR_FALLTHROUGH"] },
+        "branch_start_utf16": { "type": "integer", "minimum": 0 },
+        "branch_end_utf16": { "type": "integer", "minimum": 1 },
+        "branch_span_sha256": { "$ref": "#/$defs/sha256" },
+        "response_shape": { "$ref": "#/$defs/responseShape" },
+        "status_code": { "type": "integer", "minimum": 400, "maximum": 499 },
+        "eligibility_state": { "const": "ELIGIBLE_OFFLINE_SYNTHETIC_REJECTION_CANDIDATE" },
+        "semantic_family": { "const": "UNCLASSIFIED_STATIC_4XX_RESPONSE" },
+        "execution_state": { "const": "NOT_EXECUTED" },
+        "behavior_state": { "const": "NOT_RUNTIME_QUALIFIED" },
+        "next_authority": { "const": "FRESH_HERMETIC_SYNTHETIC_EXECUTION_REVIEW_REQUIRED" },
+        "reason_codes": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "UNIQUE_IF_OUTCOME" },
+            { "const": "EXPLICIT_BRANCH" },
+            { "const": "SINGLE_RETURN_BRANCH" },
+            { "const": "RECOGNIZED_RESPONSE_CONSTRUCTOR" },
+            { "const": "LITERAL_4XX_STATUS" },
+            { "const": "CLOSED_DATA_RESPONSE" }
+          ],
+          "items": false,
+          "minItems": 6,
+          "maxItems": 6
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matrix_path",
+        "blocker_registry_path",
+        "launch_blocking_routes",
+        "runtime_qualified_nodes",
+        "routes_unblocked",
+        "execution_authorized",
+        "public_launch",
+        "actual_synthetic_execution_started",
+        "transformed_route_execution",
+        "application_route_imported",
+        "application_route_executed",
+        "helper_module_read_for_c2_2",
+        "helper_module_imported",
+        "helper_module_executed",
+        "raw_values",
+        "candidate_set_digest",
+        "overlay_digest"
+      ],
+      "properties": {
+        "matrix_path": { "const": "testing/readiness-coverage-matrix.json" },
+        "blocker_registry_path": { "const": "testing/public-launch-blocker-registry.json" },
+        "launch_blocking_routes": { "const": 28 },
+        "runtime_qualified_nodes": { "const": 0 },
+        "routes_unblocked": { "const": 0 },
+        "execution_authorized": { "const": false },
+        "public_launch": { "const": "NO_GO" },
+        "actual_synthetic_execution_started": { "const": false },
+        "transformed_route_execution": { "const": false },
+        "application_route_imported": { "const": false },
+        "application_route_executed": { "const": false },
+        "helper_module_read_for_c2_2": { "const": false },
+        "helper_module_imported": { "const": false },
+        "helper_module_executed": { "const": false },
+        "raw_values": { "const": 0 },
+        "candidate_set_digest": { "$ref": "#/$defs/sha256" },
+        "overlay_digest": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

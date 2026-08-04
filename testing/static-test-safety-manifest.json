@@ -1,19 +1,25 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "639af1950cc8b3289e3a01def4fe22b8bc64cef45455232b344bb5897c2e2746",
-  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33HA_C2_1",
+  "testing_tree_digest": "4777daa5256c5a7a7e96c86731120c928fee8771f58d249bc3c18b69bfa3dd77",
+  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33IA_C2_2",
   "phase_33fa_c1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "21be86031ecd8dae848f6a18378e7eed11eac1f730b4221c60df988eb8f0c7c4"
+    "sha256": "2beb17a2da25043e44485e3850a1f1c291665b463ee7d0c419db6944986c8164"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "6484930bff21c2db75bf10e59231e289df7c2303778648db460bc12f7d577e04"
+    "sha256": "d32d1afbcc8c6ab0b0afba1cff0e8ceebf75101a1f37ccd3f756f9952f5b052a"
+  },
+  "phase_c2_2_execution_surface_digest": {
+    "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
+    "path_count": 7,
+    "excluded_self_path": "testing/static-test-safety-manifest.json",
+    "sha256": "35096b621d84eef3b7fafa7d4891227c5d692aa7878d33d5eb764bdb29f782ce"
   },
   "entries": [
     {
@@ -262,6 +268,52 @@
         "testing/authenticated-live-route-semantic-branch-ledger.test.mjs"
       ],
       "reason_code": "AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER_POLICY"
+    },
+    {
+      "path": "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_ANALYZER"
+    },
+    {
+      "path": "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs"
+      ],
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_ANALYZER_POLICY"
+    },
+    {
+      "path": "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER"
+    },
+    {
+      "path": "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_SCHEMA"
+    },
+    {
+      "path": "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs"
+      ],
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_POLICY"
     },
     {
       "path": "testing/authentication-and-session-live-route-static-synthetic.test.mjs",
