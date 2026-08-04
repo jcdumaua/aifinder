@@ -2,6 +2,13 @@
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
   "testing_tree_digest": "7c446a347640f7ef3e7008fdcd36ea83d21dc4a88fabcebd9b735d8267a59d36",
+  "testing_tree_digest_state": "BASELINE_SNAPSHOT_PRESERVED_NOT_RECOMPUTED_OUTSIDE_EXACT_READ_SCOPE",
+  "phase_33fa_c1_execution_surface_digest": {
+    "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
+    "path_count": 9,
+    "excluded_self_path": "testing/static-test-safety-manifest.json",
+    "sha256": "9f9670f7b931f504c1f46efef2d48f3ab75b60ffa0d27c516cb2a4725514bee9"
+  },
   "entries": [
     {
       "path": "testing/accessibility-qa.spec.ts",
@@ -176,6 +183,33 @@
       "ci_disposition": "VALIDATE_ONLY",
       "command_argv": null,
       "reason_code": "FINAL_AUTHENTICATED_BROWSER_STATIC_EVIDENCE"
+    },
+    {
+      "path": "testing/authenticated-live-route-partial-evidence.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE"
+    },
+    {
+      "path": "testing/authenticated-live-route-partial-evidence.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE_SCHEMA"
+    },
+    {
+      "path": "testing/authenticated-live-route-partial-evidence.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/authenticated-live-route-partial-evidence.test.mjs"
+      ],
+      "reason_code": "AUTHENTICATED_LIVE_ROUTE_PARTIAL_EVIDENCE_POLICY"
     },
     {
       "path": "testing/authentication-and-session-live-route-static-synthetic.test.mjs",

@@ -1,0 +1,2636 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/schemas/authenticated-live-route-partial-evidence.schema.json",
+  "title": "AiFinder authenticated live-route partial evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "artifact_purpose",
+    "baseline",
+    "semantic_count_reconciliation",
+    "summary",
+    "privacy",
+    "evidence_identities",
+    "routes",
+    "request_positions",
+    "governance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "phase": {
+      "const": "33FA-33FZ"
+    },
+    "artifact_purpose": {
+      "const": "authenticated_live_route_partial_evidence"
+    },
+    "baseline": {
+      "$ref": "#/$defs/baseline"
+    },
+    "semantic_count_reconciliation": {
+      "$ref": "#/$defs/semanticReconciliation"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "privacy": {
+      "$ref": "#/$defs/privacy"
+    },
+    "evidence_identities": {
+      "$ref": "#/$defs/evidenceIdentities"
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 28,
+      "maxItems": 28,
+      "uniqueItems": true,
+      "items": false,
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/audit-logs/route.ts",
+                "git_object_identity": "11f8351e53e47803546715445f35ce9259435401",
+                "sha256": "366a5a1cf02a57e305d6d5da79bac4ff8cb958811cfff431b6f5c5042efa2cbd",
+                "bytes": 772,
+                "lf_lines": 26,
+                "exported_methods": [
+                  "GET",
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [
+                  20,
+                  21
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "PARTIAL_STATIC",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/csrf/route.ts",
+                "git_object_identity": "5c0e077b712e58d1218f5aa071f61991bfe2020b",
+                "sha256": "f9842d8166f7406effe9a8a3eef94fb5beda762f828d851a44014a0ce24d4fce",
+                "bytes": 1143,
+                "lf_lines": 49,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 2,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 2
+                },
+                "evidence_tuple_sequences": [
+                  4,
+                  15
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/candidate-extraction/invoke/route.ts",
+                "git_object_identity": "c660e53f8786b66ba8bf78508e142a469b06efb9",
+                "sha256": "3ecfa9a4fcef05062d24f8e7c06493fd84e8b834824a4a68fc9ae742e5d01b84",
+                "bytes": 226,
+                "lf_lines": 6,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [
+                  6
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
+                "git_object_identity": "0bd8380181c0ca81d4dfa31bb059e61d88b084b1",
+                "sha256": "e5c59f39dd7395525728cbc282505832da6b1f822f862f0cd56015a445dc02fd",
+                "bytes": 7565,
+                "lf_lines": 284,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 9,
+                  "catch_clauses_with_binding": 3,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 3,
+                  "decision_catch_total": 12
+                },
+                "evidence_tuple_sequences": [
+                  7
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/candidate-staging-queue/route.ts",
+                "git_object_identity": "d9b3689224647fd1eae0aaac23da99eea3227d59",
+                "sha256": "088b8e51b73c9278508806523ae273235fbb6c5ec5d0b02c799f88578d0507e8",
+                "bytes": 406,
+                "lf_lines": 14,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [
+                  5
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/discovered-tools/route.ts",
+                "git_object_identity": "d6de0af1e87e5b9721c48c7019168e67e1c11143",
+                "sha256": "aedd49386666d12cdda85608d20d850de48c9614570c4965b2fb612f2cd48010",
+                "bytes": 7042,
+                "lf_lines": 258,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 12,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 12
+                },
+                "evidence_tuple_sequences": [
+                  26,
+                  27
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts",
+                "git_object_identity": "8bb834400171b9ac74f103696ecafb7ddc303d0c",
+                "sha256": "6a83a82881e47f1cb187f1ee29751a6d0536dc8dd966d61013135b4104b4bbaa",
+                "bytes": 4148,
+                "lf_lines": 158,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 5,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 1,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 6
+                },
+                "evidence_tuple_sequences": [
+                  8,
+                  16
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts",
+                "git_object_identity": "2f89ddbc194d3dbe33b5b0dd0eea59aa59772099",
+                "sha256": "655529adbbe9f56fd2e36cd24684306bdc66e17cf82e511f224d0bded5752c9c",
+                "bytes": 5103,
+                "lf_lines": 200,
+                "exported_methods": [
+                  "PATCH"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 8,
+                  "catch_clauses_with_binding": 1,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 9
+                },
+                "evidence_tuple_sequences": [
+                  9,
+                  17
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/homepage-control/drafts/[id]/publish/route.ts",
+                "git_object_identity": "c00c6c77855cd0e85b717de32574406436fe3f8d",
+                "sha256": "4ecea4a64249238a71932039b058e97a1ff958bbc1f96c76d94c97b4373d006e",
+                "bytes": 3962,
+                "lf_lines": 154,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 5,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 1,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 6
+                },
+                "evidence_tuple_sequences": [
+                  10,
+                  18
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/homepage-control/drafts/[id]/route.ts",
+                "git_object_identity": "787fce8ed3270bc52e4204b07943f793e275a776",
+                "sha256": "ff644d9defbfea154d10ae61f49e25c2f1c4e12d32c5e9d2e8d61a17fb8bd1d2",
+                "bytes": 6956,
+                "lf_lines": 268,
+                "exported_methods": [
+                  "PATCH"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 9,
+                  "catch_clauses_with_binding": 1,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 10
+                },
+                "evidence_tuple_sequences": [
+                  11
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/homepage-control/drafts/route.ts",
+                "git_object_identity": "8dfd5919285f0f70cd662b33b0e6384a5b1f95ab",
+                "sha256": "436a66b11d1e0eb3b2bdbad0d46fd1bd568e8aa912218fb26d28b0f30f5af1b4",
+                "bytes": 2268,
+                "lf_lines": 94,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 3,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 1,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 4
+                },
+                "evidence_tuple_sequences": [
+                  12,
+                  19
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/login/route.ts",
+                "git_object_identity": "16bdeb300fe46da9b65c5d72ef334de7ebf56947",
+                "sha256": "b5e2c7908a26cfbbaab050436bd81943ae33c1201f8e5f92a9305efba0fe11e2",
+                "bytes": 5308,
+                "lf_lines": 186,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 13,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 2,
+                  "catch_clauses_total": 2,
+                  "decision_catch_total": 15
+                },
+                "evidence_tuple_sequences": [
+                  1,
+                  2,
+                  13
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/session/route.ts",
+                "git_object_identity": "410e0f2f42c1b0c696dd49305704f1daa36e9ffa",
+                "sha256": "ad22481088d2de333714c6d3d72330735ff759eea1aafaf937b713b817e68627",
+                "bytes": 749,
+                "lf_lines": 36,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 1,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 1
+                },
+                "evidence_tuple_sequences": [
+                  3,
+                  14
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/submissions/route.ts",
+                "git_object_identity": "1657fc967e6ad8bb23e3b08a9d0b3c726b7145b8",
+                "sha256": "6bb67d9824c3ee4605fea5b16eb700d6bb76a5dc03ba938f4e71c7d75c8eab90",
+                "bytes": 824,
+                "lf_lines": 26,
+                "exported_methods": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [
+                  22,
+                  23
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/tools/route.ts",
+                "git_object_identity": "9f97f4842e610e862a4568113fcb76550646ab05",
+                "sha256": "1b910eae4fa0d00c8c0bd0a576f8d3bebb7b4238ecfa4a58a22fcded4f94ec29",
+                "bytes": 814,
+                "lf_lines": 26,
+                "exported_methods": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "DELETE"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [
+                  24,
+                  25
+                ],
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts",
+                "git_object_identity": "1c1307831fcc5b838dd64f0577e8b3b9a0a94f79",
+                "sha256": "d4a6ff1dfff91bdaaad6c9ffbcf6156a03c87c7150bf9fab6a51d4bf02da4403",
+                "bytes": 2733,
+                "lf_lines": 107,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 5,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 1,
+                  "catch_clauses_total": 1,
+                  "decision_catch_total": 6
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
+                "git_object_identity": "04f1f0f11047f6a6f356d1b3232669fbb5d3c781",
+                "sha256": "bef1fdc692300da991097d5a886a1388375d6688cd1d0288f1d8d093e481ab6c",
+                "bytes": 11384,
+                "lf_lines": 394,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 27,
+                  "catch_clauses_with_binding": 1,
+                  "catch_clauses_optional_binding": 3,
+                  "catch_clauses_total": 4,
+                  "decision_catch_total": 31
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/discovered-tools/[id]/route.ts",
+                "git_object_identity": "cf360feaf08db2b7cc804eb3f871c7409407bca8",
+                "sha256": "03a63f160a212f23bbd0ad5105825bab6ac3589bc98d89c2cc6b3b7420fcae90",
+                "bytes": 12745,
+                "lf_lines": 436,
+                "exported_methods": [
+                  "GET",
+                  "PATCH"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 28,
+                  "catch_clauses_with_binding": 3,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 3,
+                  "decision_catch_total": 31
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/discovered-tools/bulk-status/route.ts",
+                "git_object_identity": "5091d53ae2d678a760419e40525c6ff616804885",
+                "sha256": "ebe4fe7e9e7db1269cff4f4a1fb6d1a0a39506b6d26b36b7ddef64ba62d96d8e",
+                "bytes": 9052,
+                "lf_lines": 313,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 23,
+                  "catch_clauses_with_binding": 3,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 3,
+                  "decision_catch_total": 26
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/intake/route.ts",
+                "git_object_identity": "14d3cf6bb4e2bf0dfecd7ac4b466b45bc35ef3a8",
+                "sha256": "5d2d479156b4d9a72d825ce07ecd9a2383d58b1070f9d09c3a95f0badb519ec8",
+                "bytes": 18264,
+                "lf_lines": 643,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 40,
+                  "catch_clauses_with_binding": 4,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 4,
+                  "decision_catch_total": 44
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts",
+                "git_object_identity": "8fb23a80f7ae8c49077ff9921ee765a1f5739f29",
+                "sha256": "d6c3fc81d96d9b25a95765f932db1069118576dc7154e6a6f5ae09287a88968e",
+                "bytes": 322,
+                "lf_lines": 12,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/runs/manual/claim/route.ts",
+                "git_object_identity": "701661fdf77dee2130c885cdae93e89ba9076a80",
+                "sha256": "7a183632e34b8ddb38f1433a8d1e02e22c54e0fd1093afa065d6f89d92790101",
+                "bytes": 64477,
+                "lf_lines": 2254,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 76,
+                  "catch_clauses_with_binding": 5,
+                  "catch_clauses_optional_binding": 2,
+                  "catch_clauses_total": 7,
+                  "decision_catch_total": 83
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/runs/manual/route.ts",
+                "git_object_identity": "064260ec939084610785d64a6c917bd04e3bfdc4",
+                "sha256": "18f71bd5cf175116d6b192d00fa5c0f1aba4b9d8d4962120ab5997198b2f43df",
+                "bytes": 9448,
+                "lf_lines": 330,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 18,
+                  "catch_clauses_with_binding": 4,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 4,
+                  "decision_catch_total": 22
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/runs/route.ts",
+                "git_object_identity": "ace39a99c6f7ca6534096b8ca0ade9af9851fd51",
+                "sha256": "1a5fdd31f95c7c9ac970effe0d5f39342f9f9105b1f4add975d0fd7ae43f7963",
+                "bytes": 9462,
+                "lf_lines": 283,
+                "exported_methods": [
+                  "GET"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 18,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 18
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/sources/[id]/route.ts",
+                "git_object_identity": "b68d4b10f6fa54a25efb8b7cc1ff985dbd96087a",
+                "sha256": "bfa91eff513c5185cb1bd06f2d77dcefe3e307301a7cbe1b0b82db4e18ce2ba7",
+                "bytes": 12620,
+                "lf_lines": 466,
+                "exported_methods": [
+                  "PATCH"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 36,
+                  "catch_clauses_with_binding": 3,
+                  "catch_clauses_optional_binding": 1,
+                  "catch_clauses_total": 4,
+                  "decision_catch_total": 40
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/discovery/sources/route.ts",
+                "git_object_identity": "bc2362372282deb204088a09215133041009a08f",
+                "sha256": "8c4ef729e82820add78f5a0a1db7a5f481bb17795f0de4752090baa45dc95ca6",
+                "bytes": 10568,
+                "lf_lines": 398,
+                "exported_methods": [
+                  "GET",
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 28,
+                  "catch_clauses_with_binding": 3,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 3,
+                  "decision_catch_total": 31
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/logout/route.ts",
+                "git_object_identity": "b6fa65aae98acfcaf1dc546e0595e194caa57d37",
+                "sha256": "1807102e5101dd5a5ef852a66dad9dfd2fa0ec87c61754923bdd18715bbed59c",
+                "bytes": 1145,
+                "lf_lines": 47,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/route"
+            },
+            {
+              "const": {
+                "baseline_path": "app/api/admin/upload-logo/route.ts",
+                "git_object_identity": "b332f9089b326fe6f9f3b1e0f78eb4fa1ce194b9",
+                "sha256": "7f1cfbb2f996abff5f354d31ed746ee3b08744b36a085867887d15d7fdf005a7",
+                "bytes": 870,
+                "lf_lines": 27,
+                "exported_methods": [
+                  "POST"
+                ],
+                "source_visible_branch_groups": {
+                  "if_statements": 0,
+                  "catch_clauses_with_binding": 0,
+                  "catch_clauses_optional_binding": 0,
+                  "catch_clauses_total": 0,
+                  "decision_catch_total": 0
+                },
+                "evidence_tuple_sequences": [],
+                "observed_status": "UNOBSERVED",
+                "matrix_link": {
+                  "matrix_path": "testing/readiness-coverage-matrix.json",
+                  "coverage_state": "NO_STATIC_EVIDENCE",
+                  "partial_evidence_path": "testing/authenticated-live-route-partial-evidence.json",
+                  "gap_code": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+                },
+                "blocker_state": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+                "launch_blocking": true,
+                "outside_scope_claims": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE",
+                "remaining_authority_class": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "request_positions": {
+      "type": "array",
+      "minItems": 27,
+      "maxItems": 27,
+      "uniqueItems": true,
+      "items": false,
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 1,
+                "case_id": "B2-CURRENT-002",
+                "method": "POST",
+                "path_template": "/api/admin/login",
+                "status": 415,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/login/route.ts",
+                "source_visible_branch_category": "UNSUPPORTED_CONTENT_TYPE_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 415",
+                  "bounded rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 2,
+                "case_id": "B2-CURRENT-004",
+                "method": "POST",
+                "path_template": "/api/admin/login",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/login/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 3,
+                "case_id": "B2-CURRENT-010",
+                "method": "GET",
+                "path_template": "/api/admin/session",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/session/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 4,
+                "case_id": "B2-CURRENT-013",
+                "method": "GET",
+                "path_template": "/api/admin/csrf",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/csrf/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 5,
+                "case_id": "B2-CURRENT-075",
+                "method": "GET",
+                "path_template": "/api/admin/discovery/candidate-staging-queue",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/discovery/candidate-staging-queue/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 6,
+                "case_id": "B2-CURRENT-095",
+                "method": "POST",
+                "path_template": "/api/admin/discovery/candidate-extraction/invoke",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/discovery/candidate-extraction/invoke/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 7,
+                "case_id": "B2-CURRENT-099",
+                "method": "POST",
+                "path_template": "/api/admin/discovery/candidate-staging-queue/00000000-0000-0000-0000-000000000000/decision",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 8,
+                "case_id": "B2-CURRENT-124",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/mark-preview",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 9,
+                "case_id": "B2-CURRENT-128",
+                "method": "PATCH",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/preview-checklist",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 10,
+                "case_id": "B2-CURRENT-133",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/publish",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/publish/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 11,
+                "case_id": "B2-CURRENT-137",
+                "method": "PATCH",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 12,
+                "case_id": "B2-CURRENT-141",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts",
+                "status": 401,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/route.ts",
+                "source_visible_branch_category": "UNAUTHENTICATED_SESSION_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 401",
+                  "unauthenticated rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 13,
+                "case_id": "B1-B005-LOGIN-SUCCESS",
+                "method": "POST",
+                "path_template": "/api/admin/login",
+                "status": 200,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/login/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_SESSION_ESTABLISHMENT",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 200",
+                  "session-cookie posture checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 14,
+                "case_id": "B1-B012-SESSION-VALID",
+                "method": "GET",
+                "path_template": "/api/admin/session",
+                "status": 200,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/session/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_SESSION_READ",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 200",
+                  "bounded session checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 15,
+                "case_id": "B1-B015-CSRF-VALID",
+                "method": "GET",
+                "path_template": "/api/admin/csrf",
+                "status": 200,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/csrf/route.ts",
+                "source_visible_branch_category": "CSRF_ISSUANCE_AND_VALIDATION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 200",
+                  "CSRF posture and constant-time checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 16,
+                "case_id": "B2-CURRENT-125",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/mark-preview",
+                "status": 403,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_PRE_PRIVILEGED_OR_CSRF_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 403",
+                  "pre-privileged rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 17,
+                "case_id": "B2-CURRENT-129",
+                "method": "PATCH",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/preview-checklist",
+                "status": 403,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_PRE_PRIVILEGED_OR_CSRF_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 403",
+                  "pre-privileged rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 18,
+                "case_id": "B2-CURRENT-134",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts/00000000-0000-0000-0000-000000000000/publish",
+                "status": 403,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/[id]/publish/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_PRE_PRIVILEGED_OR_CSRF_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 403",
+                  "pre-privileged rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 19,
+                "case_id": "B2-CURRENT-142",
+                "method": "POST",
+                "path_template": "/api/admin/homepage-control/drafts",
+                "status": 403,
+                "pair_position": "single",
+                "pre_post_equal": null,
+                "route_file": "app/api/admin/homepage-control/drafts/route.ts",
+                "source_visible_branch_category": "AUTHENTICATED_PRE_PRIVILEGED_OR_CSRF_REJECTION",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed request returned 403",
+                  "pre-privileged rejection checks passed"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 20,
+                "case_id": "B1-B018-AUDIT-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/audit-logs",
+                "status": 200,
+                "pair_position": "pre",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/audit-logs/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 21,
+                "case_id": "B1-B018-AUDIT-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/audit-logs",
+                "status": 200,
+                "pair_position": "post",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/audit-logs/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 22,
+                "case_id": "B1-B029-SUBMISSIONS-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/submissions",
+                "status": 200,
+                "pair_position": "pre",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/submissions/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 23,
+                "case_id": "B1-B029-SUBMISSIONS-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/submissions",
+                "status": 200,
+                "pair_position": "post",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/submissions/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 24,
+                "case_id": "B1-B050-TOOLS-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/tools",
+                "status": 200,
+                "pair_position": "pre",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/tools/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 25,
+                "case_id": "B1-B050-TOOLS-READ-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/tools",
+                "status": 200,
+                "pair_position": "post",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/tools/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 26,
+                "case_id": "B1-B084-DISCOVERY-QUEUE-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/discovery/discovered-tools?page=1&limit=1",
+                "status": 200,
+                "pair_position": "pre",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/discovery/discovered-tools/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/requestPosition"
+            },
+            {
+              "const": {
+                "sequence": 27,
+                "case_id": "B1-B084-DISCOVERY-QUEUE-SUCCESS",
+                "method": "GET",
+                "path_template": "/api/admin/discovery/discovered-tools?page=1&limit=1",
+                "status": 200,
+                "pair_position": "post",
+                "pre_post_equal": true,
+                "route_file": "app/api/admin/discovery/discovered-tools/route.ts",
+                "source_visible_branch_category": "PAIRED_AUTHENTICATED_READ_SUCCESS",
+                "observed_status": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+                "evidence_identity": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573",
+                "what_is_proven": [
+                  "listed pre/post requests returned 200",
+                  "paired redacted responses were equal"
+                ],
+                "what_is_not_proven": [
+                  "complete exported-method qualification",
+                  "complete internal branch coverage",
+                  "privileged mutation success",
+                  "database/storage mutation behavior",
+                  "atomicity/concurrency/compensation/replay/idempotency",
+                  "external side-effect safety",
+                  "imported-helper behavior outside exact scope"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "governance": {
+      "$ref": "#/$defs/governance"
+    }
+  },
+  "$defs": {
+    "evidenceState": {
+      "type": "string",
+      "enum": [
+        "OBSERVED_PARTIAL_FILE_LEVEL_ONLY",
+        "UNOBSERVED",
+        "CONTRADICTED",
+        "NOT_ASSESSED"
+      ]
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit",
+        "parent",
+        "tree",
+        "subject"
+      ],
+      "properties": {
+        "commit": {
+          "const": "b1a96eb855158687f548c65a1232456ed0342b91"
+        },
+        "parent": {
+          "const": "dbaa6374ff73cc7c32cdd5e21bfa6501a91ac0ad"
+        },
+        "tree": {
+          "const": "ad14d618288314647c9b8c69050e25bb027cd30d"
+        },
+        "subject": {
+          "const": "Harden authenticated live routes and synthetic transaction assurance"
+        }
+      }
+    },
+    "semanticReconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "superseded_analyzer_total",
+        "correct_source_total",
+        "if_statements",
+        "catch_clauses_with_binding",
+        "catch_clauses_optional_binding",
+        "catch_clauses_total",
+        "false_member_call_in_superseded_scanner",
+        "formula"
+      ],
+      "properties": {
+        "superseded_analyzer_total": {
+          "const": 398
+        },
+        "correct_source_total": {
+          "const": 409
+        },
+        "if_statements": {
+          "const": 366
+        },
+        "catch_clauses_with_binding": {
+          "const": 31
+        },
+        "catch_clauses_optional_binding": {
+          "const": 12
+        },
+        "catch_clauses_total": {
+          "const": 43
+        },
+        "false_member_call_in_superseded_scanner": {
+          "const": "app/api/admin/login/route.ts:114 request.text().catch"
+        },
+        "formula": {
+          "const": "398 - 1 false member-call match + 12 omitted optional-binding catches = 409"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_files",
+        "exported_methods",
+        "if_statements",
+        "catch_clauses",
+        "decision_catch_points",
+        "observed_files",
+        "unobserved_files",
+        "unique_case_ids",
+        "request_positions",
+        "passing_positions",
+        "launch_blocking_routes",
+        "partial_static_routes",
+        "no_static_evidence_routes"
+      ],
+      "properties": {
+        "route_files": {
+          "const": 28
+        },
+        "exported_methods": {
+          "const": 37
+        },
+        "if_statements": {
+          "const": 366
+        },
+        "catch_clauses": {
+          "const": 43
+        },
+        "decision_catch_points": {
+          "const": 409
+        },
+        "observed_files": {
+          "const": 15
+        },
+        "unobserved_files": {
+          "const": 13
+        },
+        "unique_case_ids": {
+          "const": 23
+        },
+        "request_positions": {
+          "const": 27
+        },
+        "passing_positions": {
+          "const": 27
+        },
+        "launch_blocking_routes": {
+          "const": 28
+        },
+        "partial_static_routes": {
+          "const": 1
+        },
+        "no_static_evidence_routes": {
+          "const": 27
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_production_values_retained",
+        "sensitive_material_retained",
+        "sentinel_uuid",
+        "sentinel_uuid_is_fixed_nonproduction_value"
+      ],
+      "properties": {
+        "raw_production_values_retained": {
+          "const": false
+        },
+        "sensitive_material_retained": {
+          "const": false
+        },
+        "sentinel_uuid": {
+          "const": "00000000-0000-0000-0000-000000000000"
+        },
+        "sentinel_uuid_is_fixed_nonproduction_value": {
+          "const": true
+        }
+      }
+    },
+    "evidenceIdentities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "governance_disposition_closure_sha256",
+        "chatgpt_final_batch_b_audit_sha256",
+        "phase_32py_32pz_final_live_ccr_sha256",
+        "complete_review_bundle_sha256",
+        "redacted_runtime_result_sha256",
+        "outer_operator_receipt_sha256",
+        "network_gate_receipt_sha256",
+        "sanitized_terminal_log_sha256",
+        "route_partition_sha256"
+      ],
+      "properties": {
+        "governance_disposition_closure_sha256": {
+          "const": "c4a1ccc80bfd644503b90f33b73fbe06aabb332064217726e79db237cc8cd767"
+        },
+        "chatgpt_final_batch_b_audit_sha256": {
+          "const": "275e3bc98202bd5ed4def0689974cf82c376ccd04e34f2e6ea74e71e1e6212db"
+        },
+        "phase_32py_32pz_final_live_ccr_sha256": {
+          "const": "ee378c51000c08a8aafa1484b0cb66e8864726d6d5e708ad83cd457206eb34c5"
+        },
+        "complete_review_bundle_sha256": {
+          "const": "4cd5931b1343e06e19adc1a4594cb63280546f509eb2daf38db2f1c328307f64"
+        },
+        "redacted_runtime_result_sha256": {
+          "const": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573"
+        },
+        "outer_operator_receipt_sha256": {
+          "const": "8745e43f26b8344fbec87ac8faa22ded4269dbebaef263557548ad6cc85305d7"
+        },
+        "network_gate_receipt_sha256": {
+          "const": "5bfba3ad0c6afcbf1dd9923c769b6ff5e29f50579b3cd680b1548c1dec9bf97a"
+        },
+        "sanitized_terminal_log_sha256": {
+          "const": "53b9d3ddc481dff0d8dbd44c8d8ed337312593e40f301bea45cce1c555d19f20"
+        },
+        "route_partition_sha256": {
+          "const": "129263489d773c6c3afeb6417d0c5f6dc3939cb7368e5ccc1a023d44cfe81598"
+        }
+      }
+    },
+    "branchGroups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "if_statements",
+        "catch_clauses_with_binding",
+        "catch_clauses_optional_binding",
+        "catch_clauses_total",
+        "decision_catch_total"
+      ],
+      "properties": {
+        "if_statements": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "catch_clauses_with_binding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "catch_clauses_optional_binding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "catch_clauses_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decision_catch_total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "matrixLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matrix_path",
+        "coverage_state",
+        "partial_evidence_path",
+        "gap_code"
+      ],
+      "properties": {
+        "matrix_path": {
+          "const": "testing/readiness-coverage-matrix.json"
+        },
+        "coverage_state": {
+          "enum": [
+            "PARTIAL_STATIC",
+            "NO_STATIC_EVIDENCE"
+          ]
+        },
+        "partial_evidence_path": {
+          "const": "testing/authenticated-live-route-partial-evidence.json"
+        },
+        "gap_code": {
+          "const": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_path",
+        "git_object_identity",
+        "sha256",
+        "bytes",
+        "lf_lines",
+        "exported_methods",
+        "source_visible_branch_groups",
+        "evidence_tuple_sequences",
+        "observed_status",
+        "matrix_link",
+        "blocker_state",
+        "launch_blocking",
+        "outside_scope_claims",
+        "remaining_authority_class"
+      ],
+      "properties": {
+        "baseline_path": {
+          "type": "string",
+          "pattern": "^app/api/admin/.+/route\\.ts$"
+        },
+        "git_object_identity": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lf_lines": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "exported_methods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ]
+          }
+        },
+        "source_visible_branch_groups": {
+          "$ref": "#/$defs/branchGroups"
+        },
+        "evidence_tuple_sequences": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 27
+          }
+        },
+        "observed_status": {
+          "$ref": "#/$defs/evidenceState"
+        },
+        "matrix_link": {
+          "$ref": "#/$defs/matrixLink"
+        },
+        "blocker_state": {
+          "const": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+        },
+        "launch_blocking": {
+          "const": true
+        },
+        "outside_scope_claims": {
+          "const": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE"
+        },
+        "remaining_authority_class": {
+          "const": "AUTHENTICATED_LIVE_ROUTE_RUNTIME_SEPARATE_AUTHORITY_REQUIRED"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "observed_status": {
+                "const": "UNOBSERVED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_tuple_sequences": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "observed_status": {
+                "const": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence_tuple_sequences": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "requestPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "case_id",
+        "method",
+        "path_template",
+        "status",
+        "pair_position",
+        "pre_post_equal",
+        "route_file",
+        "source_visible_branch_category",
+        "observed_status",
+        "evidence_identity",
+        "what_is_proven",
+        "what_is_not_proven"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 27
+        },
+        "case_id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9-]+$"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "path_template": {
+          "type": "string",
+          "pattern": "^/api/admin/"
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "pair_position": {
+          "enum": [
+            "single",
+            "pre",
+            "post"
+          ]
+        },
+        "pre_post_equal": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "route_file": {
+          "type": "string",
+          "pattern": "^app/api/admin/.+/route\\.ts$"
+        },
+        "source_visible_branch_category": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$"
+        },
+        "observed_status": {
+          "const": "OBSERVED_PARTIAL_FILE_LEVEL_ONLY"
+        },
+        "evidence_identity": {
+          "const": "7303c8531defc7fd04baaad4ed97390062c2d7aed797a333e4eec82dd8249573"
+        },
+        "what_is_proven": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "what_is_not_proven": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall_decision",
+        "execution_authorized",
+        "authenticated_live_route_workstream_state",
+        "current_authority",
+        "partial_evidence_state",
+        "outside_scope_claims"
+      ],
+      "properties": {
+        "overall_decision": {
+          "const": "NO_GO_PENDING_SEPARATE_AUTHORITIES"
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "authenticated_live_route_workstream_state": {
+          "const": "BLOCKED_SEPARATE_AUTHORITY_REQUIRED"
+        },
+        "current_authority": {
+          "const": "STATIC_ONLY"
+        },
+        "partial_evidence_state": {
+          "const": "PARTIAL_ONLY_ALL_ROUTES_STILL_BLOCKED"
+        },
+        "outside_scope_claims": {
+          "const": "NOT_INSPECTED_OUTSIDE_EXACT_41_PATH_SCOPE"
+        }
+      }
+    }
+  }
+}

@@ -358,7 +358,10 @@
       "future_evidence_paths": [],
       "coverage_state": "PARTIAL_STATIC",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/csrf/route.ts",
@@ -370,7 +373,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/candidate-extraction/invoke/route.ts",
@@ -382,7 +388,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts",
@@ -394,7 +403,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/candidate-staging-queue/route.ts",
@@ -406,7 +418,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts",
@@ -418,7 +433,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts",
@@ -430,7 +448,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/discovered-tools/[id]/route.ts",
@@ -442,7 +463,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/discovered-tools/bulk-status/route.ts",
@@ -454,7 +478,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/discovered-tools/route.ts",
@@ -466,7 +493,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/intake/route.ts",
@@ -478,7 +508,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts",
@@ -490,7 +523,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/runs/manual/claim/route.ts",
@@ -502,7 +538,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/runs/manual/route.ts",
@@ -514,7 +553,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/runs/route.ts",
@@ -526,7 +568,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/sources/[id]/route.ts",
@@ -538,7 +583,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/discovery/sources/route.ts",
@@ -550,7 +598,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts",
@@ -562,7 +613,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts",
@@ -574,7 +628,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/homepage-control/drafts/[id]/publish/route.ts",
@@ -586,7 +643,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/homepage-control/drafts/[id]/route.ts",
@@ -598,7 +658,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/homepage-control/drafts/route.ts",
@@ -610,7 +673,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/login/route.ts",
@@ -622,7 +688,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/logout/route.ts",
@@ -634,7 +703,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/session/route.ts",
@@ -646,7 +718,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/submissions/route.ts",
@@ -658,7 +733,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/tools/route.ts",
@@ -670,7 +748,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/admin/upload-logo/route.ts",
@@ -682,7 +763,10 @@
       "future_evidence_paths": [],
       "coverage_state": "NO_STATIC_EVIDENCE",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED"
+      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "partial_evidence_paths": [
+        "testing/authenticated-live-route-partial-evidence.json"
+      ]
     },
     {
       "path": "app/api/homepage-control/published/route.ts",
