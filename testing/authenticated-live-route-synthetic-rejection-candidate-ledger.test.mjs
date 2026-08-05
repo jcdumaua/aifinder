@@ -102,10 +102,10 @@ const V1_DEFERRED_ROUTE_PATHS = Object.freeze(
   ROUTE_PATHS.filter((routePath) => !V1_CRITICAL_ROUTE_PATH_SET.has(routePath)),
 );
 const V1_CRITICAL_STATE =
-  "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED";
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
 const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
 const V1_STAGING_GAP =
-  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
+  "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
 const C2_1_LEDGER_PATH =
   "testing/authenticated-live-route-semantic-branch-ledger.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
@@ -1033,7 +1033,11 @@ function currentGovernanceValid(matrix, registry, historicalLedger) {
     matrix.entries.filter((entry) => entry.launch_blocking === true).length === 7 &&
     criticalWorkstream?.entry_count === 7 &&
     criticalWorkstream.state ===
-      "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+    criticalWorkstream.authority_class ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+    criticalWorkstream.next_gate ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
     criticalWorkstream.execution_authorized === false &&
     JSON.stringify(criticalWorkstream.source_paths) ===
       JSON.stringify(V1_CRITICAL_ROUTE_PATHS) &&

@@ -374,12 +374,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -753,12 +756,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -772,12 +778,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -791,12 +800,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -810,12 +822,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -829,12 +844,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -848,12 +866,15 @@
       "static_evidence_paths": [
         "testing/admin-v1-launch-scope.json",
         "testing/admin-v1-launch-scope.test.mjs",
-        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+        "testing/admin-v1-launch-critical-hermetic.test.mjs",
+        "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+        "testing/admin-v1-staging-readiness-evidence.json",
+        "testing/admin-v1-staging-readiness-evidence.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      "coverage_state": "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]

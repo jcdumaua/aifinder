@@ -1,0 +1,232 @@
+{
+  "baseline": "30b57b534c25a7d39d66a5dd29194bee8fe0690b",
+  "environment": {
+    "present_count": 5,
+    "ready": true,
+    "required_count": 5,
+    "service_role_distinct_from_anon": true,
+    "session_secret_distinct_from_password": true,
+    "variables": [
+      {
+        "length_bucket": "VALID_STANDARD_HTTPS_SUPABASE_ORIGIN",
+        "name": "NEXT_PUBLIC_SUPABASE_URL",
+        "present": true
+      },
+      {
+        "length_bucket": "AT_LEAST_32_BYTES",
+        "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "present": true
+      },
+      {
+        "length_bucket": "AT_LEAST_32_BYTES",
+        "name": "SUPABASE_SERVICE_ROLE_KEY",
+        "present": true
+      },
+      {
+        "length_bucket": "AT_LEAST_16_BYTES_NON_PLACEHOLDER",
+        "name": "ADMIN_PASSWORD",
+        "present": true
+      },
+      {
+        "length_bucket": "AT_LEAST_32_BYTES",
+        "name": "ADMIN_SESSION_SECRET",
+        "present": true
+      }
+    ]
+  },
+  "governance": {
+    "current_blockers": 7,
+    "deferred_routes": 21,
+    "execution_authorized": false,
+    "public_launch_decision": "NO_GO_PENDING_SEPARATE_AUTHORITIES"
+  },
+  "network": {
+    "attempts": [
+      {
+        "attempt_ordinal": 1,
+        "completed": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/rest/v1/",
+            "request_id": "openapi",
+            "request_ordinal": 1,
+            "response_bytes": 136474,
+            "response_cap_bytes": 5242880,
+            "status": 200,
+            "status_category": "SUCCESS_2XX"
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/tools?select=id&limit=0",
+            "request_id": "tools",
+            "request_ordinal": 2,
+            "response_bytes": 2,
+            "response_cap_bytes": 131072,
+            "status": 200,
+            "status_category": "SUCCESS_2XX"
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/submitted_tools?select=id&limit=0",
+            "request_id": "submitted_tools",
+            "request_ordinal": 3,
+            "response_bytes": 2,
+            "response_cap_bytes": 131072,
+            "status": 200,
+            "status_category": "SUCCESS_2XX"
+          },
+          {
+            "method": "GET",
+            "path": "/rest/v1/admin_audit_logs?select=id&limit=0",
+            "request_id": "admin_audit_logs",
+            "request_ordinal": 4,
+            "response_bytes": 2,
+            "response_cap_bytes": 131072,
+            "status": 200,
+            "status_category": "SUCCESS_2XX"
+          },
+          {
+            "method": "GET",
+            "path": "/storage/v1/bucket/tool-logos",
+            "request_id": "storage_tool_logos",
+            "request_ordinal": 5,
+            "response_bytes": 193,
+            "response_cap_bytes": 131072,
+            "status": 200,
+            "status_category": "SUCCESS_2XX"
+          }
+        ],
+        "retry_reason": null
+      }
+    ],
+    "attempts_used": 1,
+    "maximum_attempts": 2,
+    "maximum_requests": 10,
+    "methods": [
+      "GET"
+    ],
+    "openapi_response_cap_bytes": 5242880,
+    "other_response_cap_bytes": 131072,
+    "redirect_policy": "MANUAL_DENY",
+    "request_paths": [
+      "/rest/v1/",
+      "/rest/v1/tools?select=id&limit=0",
+      "/rest/v1/submitted_tools?select=id&limit=0",
+      "/rest/v1/admin_audit_logs?select=id&limit=0",
+      "/storage/v1/bucket/tool-logos"
+    ],
+    "requests_made": 5,
+    "requests_per_attempt": 5,
+    "timeout_ms": 10000
+  },
+  "next_authority": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION",
+  "openapi": {
+    "document_present": true,
+    "ready": true,
+    "rpc": {
+      "path_present": true,
+      "submission_id_input_present": true
+    },
+    "tables": {
+      "admin_audit_logs": {
+        "observed_count": 9,
+        "observed_property_set_sha256": "36a1b4e92001528e458857d3dedcae93d1d01df1d3ead177ff990a7b8ccd7e2f",
+        "path_present": true,
+        "required_count": 9,
+        "required_present": true,
+        "required_property_set_sha256": "36a1b4e92001528e458857d3dedcae93d1d01df1d3ead177ff990a7b8ccd7e2f"
+      },
+      "submitted_tools": {
+        "observed_count": 12,
+        "observed_property_set_sha256": "2f5fa3d4d8da4cc62b60107c3c39de03cab5ee0d7b23f6898a35636d360f4feb",
+        "path_present": true,
+        "required_count": 12,
+        "required_present": true,
+        "required_property_set_sha256": "2f5fa3d4d8da4cc62b60107c3c39de03cab5ee0d7b23f6898a35636d360f4feb"
+      },
+      "tools": {
+        "observed_count": 19,
+        "observed_property_set_sha256": "7c13c178aaed8123d52d84226f6ad09bd63e6d6c93a04d4a49a3223476d87c33",
+        "path_present": true,
+        "required_count": 15,
+        "required_present": true,
+        "required_property_set_sha256": "ea9ca5f6487e3e092625ba3b8ae13f2a58efc0415140340d1c2a23170dd095b2"
+      }
+    }
+  },
+  "phase": "33NA-33NZ",
+  "privacy_and_mutation": {
+    "browser_requests": 0,
+    "database_writes": 0,
+    "environment_file_reads": 1,
+    "environment_file_writes": 0,
+    "live_route_requests": 0,
+    "raw_values": 0,
+    "repository_write_paths": [
+      "testing/admin-v1-staging-readiness-evidence.json"
+    ],
+    "repository_writes": 1,
+    "rows_retained": 0,
+    "rpc_calls": 0,
+    "secret_hashes": 0,
+    "storage_object_reads": 0,
+    "storage_writes": 0,
+    "vercel_requests": 0
+  },
+  "result": "PASSED_READ_ONLY_STAGING_DEPENDENCY_READINESS",
+  "schema_version": 1,
+  "source_identities": [
+    {
+      "path": "testing/admin-v1-staging-readiness-core.mjs",
+      "sha256": "d86c6fed951caa8e73ef71e5415848ce75a7cb2f12c47d970a60cf530ce93ac4"
+    },
+    {
+      "path": "testing/admin-v1-staging-readiness-probe.mjs",
+      "sha256": "3a28ece549011ef9a48a42a6d5f099ad03de1f83dcba69259c78e79f585d4c31"
+    },
+    {
+      "path": "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+      "sha256": "b8955a142950a8a0b3d054b0db0e51187d6db74518f4903d1ca14824c16298e3"
+    },
+    {
+      "path": "testing/admin-v1-staging-readiness-evidence.schema.json",
+      "sha256": "46c6cca636daa8b4f1840a96e245ae0d4a4d3aadea2f1567b6b3a49e950e719a"
+    },
+    {
+      "path": "testing/admin-v1-staging-readiness-evidence.test.mjs",
+      "sha256": "d13f2a8783fd4f19de3c9e3e2c3c5f0acbb4597ef280c62438b5674fe7821a90"
+    }
+  ],
+  "storage_bucket": {
+    "bucket_name": "tool-logos",
+    "file_size_limit_ready": true,
+    "identity_ready": true,
+    "mime_types_ready": true,
+    "public_ready": true,
+    "ready": true
+  },
+  "target": {
+    "human_confirmed": true,
+    "origin_count": 1,
+    "origin_sha256": "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777",
+    "project_ref_sha256": "30ea077ffbf9cc9243b35ad3d67348004d32d49078787b5b305b65495ecb2914"
+  },
+  "zero_row_probes": {
+    "admin_audit_logs": {
+      "status": 200,
+      "status_category": "SUCCESS_2XX",
+      "zero_rows": true
+    },
+    "submitted_tools": {
+      "status": 200,
+      "status_category": "SUCCESS_2XX",
+      "zero_rows": true
+    },
+    "tools": {
+      "status": 200,
+      "status_category": "SUCCESS_2XX",
+      "zero_rows": true
+    }
+  }
+}

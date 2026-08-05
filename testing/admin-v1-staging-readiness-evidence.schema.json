@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiFinder Admin V1 staging dependency readiness evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "baseline",
+    "result",
+    "next_authority",
+    "target",
+    "environment",
+    "network",
+    "openapi",
+    "zero_row_probes",
+    "storage_bucket",
+    "privacy_and_mutation",
+    "governance",
+    "source_identities"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "phase": { "const": "33NA-33NZ" },
+    "baseline": { "const": "30b57b534c25a7d39d66a5dd29194bee8fe0690b" },
+    "result": { "const": "PASSED_READ_ONLY_STAGING_DEPENDENCY_READINESS" },
+    "next_authority": { "const": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" },
+    "target": { "$ref": "#/$defs/target" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "network": { "$ref": "#/$defs/network" },
+    "openapi": { "$ref": "#/$defs/openapi" },
+    "zero_row_probes": { "$ref": "#/$defs/zero_row_probes" },
+    "storage_bucket": { "$ref": "#/$defs/storage_bucket" },
+    "privacy_and_mutation": { "$ref": "#/$defs/privacy_and_mutation" },
+    "governance": { "$ref": "#/$defs/governance" },
+    "source_identities": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/source_identity" }
+    }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_ref_sha256", "origin_sha256", "human_confirmed", "origin_count"],
+      "properties": {
+        "project_ref_sha256": { "$ref": "#/$defs/sha256" },
+        "origin_sha256": { "$ref": "#/$defs/sha256" },
+        "human_confirmed": { "const": true },
+        "origin_count": { "const": 1 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ready",
+        "required_count",
+        "present_count",
+        "variables",
+        "service_role_distinct_from_anon",
+        "session_secret_distinct_from_password"
+      ],
+      "properties": {
+        "ready": { "const": true },
+        "required_count": { "const": 5 },
+        "present_count": { "const": 5 },
+        "variables": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/environment_variable" }
+        },
+        "service_role_distinct_from_anon": { "const": true },
+        "session_secret_distinct_from_password": { "const": true }
+      }
+    },
+    "environment_variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "present", "length_bucket"],
+      "properties": {
+        "name": {
+          "enum": [
+            "NEXT_PUBLIC_SUPABASE_URL",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "ADMIN_PASSWORD",
+            "ADMIN_SESSION_SECRET"
+          ]
+        },
+        "present": { "const": true },
+        "length_bucket": {
+          "enum": [
+            "VALID_STANDARD_HTTPS_SUPABASE_ORIGIN",
+            "AT_LEAST_32_BYTES",
+            "AT_LEAST_16_BYTES_NON_PLACEHOLDER"
+          ]
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "methods",
+        "request_paths",
+        "requests_per_attempt",
+        "maximum_attempts",
+        "attempts_used",
+        "maximum_requests",
+        "requests_made",
+        "timeout_ms",
+        "redirect_policy",
+        "openapi_response_cap_bytes",
+        "other_response_cap_bytes",
+        "attempts"
+      ],
+      "properties": {
+        "methods": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "const": "GET" }
+        },
+        "request_paths": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": { "type": "string" }
+        },
+        "requests_per_attempt": { "const": 5 },
+        "maximum_attempts": { "const": 2 },
+        "attempts_used": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "maximum_requests": { "const": 10 },
+        "requests_made": { "type": "integer", "minimum": 5, "maximum": 10 },
+        "timeout_ms": { "const": 10000 },
+        "redirect_policy": { "const": "MANUAL_DENY" },
+        "openapi_response_cap_bytes": { "const": 5242880 },
+        "other_response_cap_bytes": { "const": 131072 },
+        "attempts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/attempt" }
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt_ordinal", "completed", "retry_reason", "requests"],
+      "properties": {
+        "attempt_ordinal": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "completed": { "type": "boolean" },
+        "retry_reason": {
+          "enum": [null, "REQUEST_NETWORK", "REQUEST_RETRYABLE_STATUS"]
+        },
+        "requests": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/request" }
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_ordinal",
+        "request_id",
+        "method",
+        "path",
+        "status",
+        "status_category",
+        "response_bytes",
+        "response_cap_bytes"
+      ],
+      "properties": {
+        "request_ordinal": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "request_id": {
+          "enum": ["openapi", "tools", "submitted_tools", "admin_audit_logs", "storage_tool_logos"]
+        },
+        "method": { "const": "GET" },
+        "path": {
+          "enum": [
+            "/rest/v1/",
+            "/rest/v1/tools?select=id&limit=0",
+            "/rest/v1/submitted_tools?select=id&limit=0",
+            "/rest/v1/admin_audit_logs?select=id&limit=0",
+            "/storage/v1/bucket/tool-logos"
+          ]
+        },
+        "status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+        "status_category": {
+          "enum": [
+            "SUCCESS_2XX",
+            "REDIRECT_3XX",
+            "AUTHENTICATION_401",
+            "AUTHORIZATION_403",
+            "RETRYABLE_GATEWAY",
+            "CLIENT_ERROR_4XX",
+            "SERVER_ERROR_5XX",
+            "TIMEOUT",
+            "CONNECTION_RESET",
+            "NETWORK_ERROR"
+          ]
+        },
+        "response_bytes": { "type": "integer", "minimum": 0, "maximum": 5242880 },
+        "response_cap_bytes": { "enum": [5242880, 131072] }
+      }
+    },
+    "openapi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ready", "document_present", "tables", "rpc"],
+      "properties": {
+        "ready": { "const": true },
+        "document_present": { "const": true },
+        "tables": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tools", "submitted_tools", "admin_audit_logs"],
+          "properties": {
+            "tools": { "$ref": "#/$defs/table_contract" },
+            "submitted_tools": { "$ref": "#/$defs/table_contract" },
+            "admin_audit_logs": { "$ref": "#/$defs/table_contract" }
+          }
+        },
+        "rpc": { "$ref": "#/$defs/rpc_contract" }
+      }
+    },
+    "table_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_present",
+        "required_present",
+        "required_count",
+        "observed_count",
+        "required_property_set_sha256",
+        "observed_property_set_sha256"
+      ],
+      "properties": {
+        "path_present": { "const": true },
+        "required_present": { "const": true },
+        "required_count": { "type": "integer", "minimum": 1 },
+        "observed_count": { "type": "integer", "minimum": 1 },
+        "required_property_set_sha256": { "$ref": "#/$defs/sha256" },
+        "observed_property_set_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "rpc_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path_present", "submission_id_input_present"],
+      "properties": {
+        "path_present": { "const": true },
+        "submission_id_input_present": { "const": true }
+      }
+    },
+    "zero_row_probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools", "submitted_tools", "admin_audit_logs"],
+      "properties": {
+        "tools": { "$ref": "#/$defs/zero_row_probe" },
+        "submitted_tools": { "$ref": "#/$defs/zero_row_probe" },
+        "admin_audit_logs": { "$ref": "#/$defs/zero_row_probe" }
+      }
+    },
+    "zero_row_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "status_category", "zero_rows"],
+      "properties": {
+        "status": { "type": "integer", "minimum": 200, "maximum": 299 },
+        "status_category": { "const": "SUCCESS_2XX" },
+        "zero_rows": { "const": true }
+      }
+    },
+    "storage_bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ready",
+        "bucket_name",
+        "identity_ready",
+        "public_ready",
+        "file_size_limit_ready",
+        "mime_types_ready"
+      ],
+      "properties": {
+        "ready": { "const": true },
+        "bucket_name": { "const": "tool-logos" },
+        "identity_ready": { "const": true },
+        "public_ready": { "const": true },
+        "file_size_limit_ready": { "const": true },
+        "mime_types_ready": { "const": true }
+      }
+    },
+    "privacy_and_mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment_file_reads",
+        "environment_file_writes",
+        "repository_write_paths",
+        "repository_writes",
+        "database_writes",
+        "storage_writes",
+        "storage_object_reads",
+        "rpc_calls",
+        "rows_retained",
+        "raw_values",
+        "secret_hashes",
+        "browser_requests",
+        "live_route_requests",
+        "vercel_requests"
+      ],
+      "properties": {
+        "environment_file_reads": { "const": 1 },
+        "environment_file_writes": { "const": 0 },
+        "repository_write_paths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "const": "testing/admin-v1-staging-readiness-evidence.json" }
+        },
+        "repository_writes": { "const": 1 },
+        "database_writes": { "const": 0 },
+        "storage_writes": { "const": 0 },
+        "storage_object_reads": { "const": 0 },
+        "rpc_calls": { "const": 0 },
+        "rows_retained": { "const": 0 },
+        "raw_values": { "const": 0 },
+        "secret_hashes": { "const": 0 },
+        "browser_requests": { "const": 0 },
+        "live_route_requests": { "const": 0 },
+        "vercel_requests": { "const": 0 }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_blockers", "deferred_routes", "public_launch_decision", "execution_authorized"],
+      "properties": {
+        "current_blockers": { "const": 7 },
+        "deferred_routes": { "const": 21 },
+        "public_launch_decision": { "const": "NO_GO_PENDING_SEPARATE_AUTHORITIES" },
+        "execution_authorized": { "const": false }
+      }
+    },
+    "source_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

@@ -3,10 +3,10 @@
   "source_commit": "ef5cbe7aede041d3fd009126de152b4777d160a5",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "f13e639f57ec2bb37352648361175fcd10ffd5d92d4f938c94b61979b9b65b55",
-    "git_blob": "bad829bf20b5566fb4edb5c01959ee15fd9100f9",
-    "bytes": 48382,
-    "lines": 1259,
+    "sha256": "ff21da9dff79d950534263286b019c4639bf0f895be32b34b6ee2f02b58e2bcf",
+    "git_blob": "2bbd4cfcf058a30ba779e355e4b7dbd372c297a9",
+    "bytes": 50034,
+    "lines": 1280,
     "mode": "0644",
     "route_inventory_digest": "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
     "entry_count": 69,
@@ -228,10 +228,10 @@
     },
     {
       "id": "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
-      "gap_code": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
+      "gap_code": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
       "entry_count": 7,
-      "authority_class": "ADMIN_V1_STAGING_READINESS",
-      "state": "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED",
+      "authority_class": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME",
+      "state": "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED",
       "execution_authorized": false,
       "planning_priority": 5,
       "source_paths": [
@@ -263,7 +263,7 @@
         "SQL",
         "SUPABASE"
       ],
-      "next_gate": "ADMIN_V1_STAGING_READINESS"
+      "next_gate": "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION"
     },
     {
       "id": "AUTHENTICATED_ADMIN_V1_DEFERRED",

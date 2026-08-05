@@ -1054,10 +1054,10 @@ const V1_DEFERRED_PATHS = expectedPaths.filter(
   (entryPath) => !V1_CRITICAL_PATH_SET.has(entryPath),
 );
 const V1_CRITICAL_STATE =
-  "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED";
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
 const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
 const V1_STAGING_GAP =
-  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
+  "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
 
 function routeCoreMatches(route, expected) {
   const groups = route?.source_visible_branch_groups;
@@ -1264,7 +1264,12 @@ function registryWorkstreamsValid(registryDocument) {
   );
   return (
     critical?.entry_count === 7 &&
-    critical.state === "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+    critical.state ===
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+    critical.authority_class ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+    critical.next_gate ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
     critical.execution_authorized === false &&
     same([...critical.source_paths].sort(), [...V1_CRITICAL_PATHS].sort()) &&
     deferred?.entry_count === 21 &&
@@ -1637,7 +1642,8 @@ const assertions = [
       registryWorkstream(
         registry,
         "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
-      )?.state === "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+      )?.state ===
+        "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
       registryWorkstream(
         registry,
         "AUTHENTICATED_ADMIN_V1_DEFERRED",

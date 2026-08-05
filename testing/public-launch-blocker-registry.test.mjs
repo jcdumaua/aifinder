@@ -17,7 +17,7 @@ const EVIDENCE_PATH =
   "testing/authenticated-live-route-partial-evidence.json";
 const HISTORICAL_GAP_CODE = "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED";
 const V1_ADMIN_GAP_CODE =
-  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
+  "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
 const PARTIAL_STATE = "PARTIAL_ONLY_ALL_ROUTES_STILL_BLOCKED";
 const PUBLIC_LIVE_ROUTE_STATIC_EVIDENCE_PATH =
   "testing/public-live-route-security-static-assertions.mjs";
@@ -47,10 +47,10 @@ const AUTHENTICATED_AUDIT_ROUTE_PATH =
 const SOURCE_COMMIT = "ef5cbe7aede041d3fd009126de152b4777d160a5";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "f13e639f57ec2bb37352648361175fcd10ffd5d92d4f938c94b61979b9b65b55",
-  git_blob: "bad829bf20b5566fb4edb5c01959ee15fd9100f9",
-  bytes: 48382,
-  lines: 1259,
+  sha256: "ff21da9dff79d950534263286b019c4639bf0f895be32b34b6ee2f02b58e2bcf",
+  git_blob: "2bbd4cfcf058a30ba779e355e4b7dbd372c297a9",
+  bytes: 50034,
+  lines: 1280,
   mode: "0644",
   route_inventory_digest:
     "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
@@ -222,10 +222,13 @@ const WORKSTREAMS = [
     id: "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
     gap_code: V1_ADMIN_GAP_CODE,
     entry_count: 7,
-    authority_class: "ADMIN_V1_STAGING_READINESS",
-    state: "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED",
+    authority_class:
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME",
+    state:
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED",
     planning_priority: 5,
-    next_gate: "ADMIN_V1_STAGING_READINESS",
+    next_gate:
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION",
   },
   {
     id: "AUTHENTICATED_ADMIN_V1_DEFERRED",
@@ -453,7 +456,7 @@ function matrixModel() {
       v1AdminCriticalEntries.every(
         (entry) =>
           entry.coverage_state ===
-            "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED" &&
+            "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
           entry.launch_blocking === true &&
           entry.gap_code_or_null === V1_ADMIN_GAP_CODE,
       ) &&
@@ -770,7 +773,7 @@ function validateRegistry() {
                   ])
                 : expected.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL"
                   ? entry?.coverage_state ===
-                      "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED" &&
+                      "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
                     entry.launch_blocking === true &&
                     entry.gap_code_or_null === V1_ADMIN_GAP_CODE
                   : entry?.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED" &&
@@ -799,7 +802,8 @@ function validateRegistry() {
         ) ||
           actual.next_gate ===
             "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW" ||
-          actual.next_gate === "ADMIN_V1_STAGING_READINESS" ||
+          actual.next_gate ===
+            "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" ||
           actual.next_gate === "SEPARATE_FUTURE_AUTHORITY_REQUIRED") &&
         !actual.next_gate
           .split("_")
@@ -838,7 +842,7 @@ function validateRegistry() {
       authenticatedEntries.filter(
         (entry) =>
           entry.coverage_state ===
-          "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+          "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
       ).length === 7 &&
       authenticatedEntries.filter(
         (entry) => entry.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED",
@@ -877,10 +881,13 @@ function validateRegistry() {
       authenticatedLiveWorkstream.gap_code === V1_ADMIN_GAP_CODE &&
       authenticatedLiveWorkstream.entry_count === 7 &&
       authenticatedLiveWorkstream.state ===
-        "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+        "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+      authenticatedLiveWorkstream.authority_class ===
+        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
       authenticatedLiveWorkstream.execution_authorized === false &&
       authenticatedLiveWorkstream.planning_priority === 5 &&
-      authenticatedLiveWorkstream.next_gate === "ADMIN_V1_STAGING_READINESS" &&
+      authenticatedLiveWorkstream.next_gate ===
+        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
       exactSet(
         authenticatedLiveWorkstream.source_paths,
         V1_ADMIN_CRITICAL_PATHS,
@@ -963,8 +970,20 @@ function validateRegistry() {
 
 const currentRegistryBlocked = readStrictJson(REGISTRY_PATH).source_matrix
   ?.launch_blocking_count;
+const currentCriticalState = readStrictJson(REGISTRY_PATH).workstreams?.find(
+  (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+)?.state;
 
-if (currentRegistryBlocked !== 7) {
+if (
+  currentRegistryBlocked === 7 &&
+  currentCriticalState !==
+    "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED"
+) {
+  console.log(
+    `EXPECTED_FAIL_PUBLIC_LAUNCH_BLOCKER_REGISTRY_ADMIN_V1_STAGING state=${currentCriticalState} expected=STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED failures=1 internal_failures=0`,
+  );
+  process.exitCode = 1;
+} else if (currentRegistryBlocked !== 7) {
   console.log(
     `EXPECTED_FAIL_PUBLIC_LAUNCH_BLOCKER_REGISTRY_V1_ADMIN blocked=${currentRegistryBlocked} expected=7 failures=1 internal_failures=0`,
   );
@@ -972,7 +991,7 @@ if (currentRegistryBlocked !== 7) {
 } else try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} authenticated_admin_v1_hermetic=${result.v1AdminHermetic} authenticated_admin_v1_deferred=${result.v1AdminDeferred} blocked=${result.blocked} next_active_workstream=ADMIN_V1_STAGING_READINESS decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} authenticated_admin_v1_staging_dependency_ready=${result.v1AdminHermetic} authenticated_admin_v1_deferred=${result.v1AdminDeferred} blocked=${result.blocked} next_active_workstream=ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

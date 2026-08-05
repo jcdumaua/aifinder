@@ -486,7 +486,14 @@ const checks = [
     for (const entry of routeRows) {
       assert(entry.static_evidence_paths.includes(LEDGER_PATH));
       const critical = criticalPaths.includes(entry.url_pattern_or_special_role);
-      assert.equal(entry.coverage_state, critical ? "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED" : "V1_ADMIN_DEFERRED_FAIL_CLOSED");
+      assert.equal(entry.coverage_state, critical ? "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" : "V1_ADMIN_DEFERRED_FAIL_CLOSED");
+      if (critical) {
+        for (const evidencePath of [
+          "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+          "testing/admin-v1-staging-readiness-evidence.json",
+          "testing/admin-v1-staging-readiness-evidence.test.mjs",
+        ]) assert(entry.static_evidence_paths.includes(evidencePath));
+      }
     }
   },
   () => {
@@ -494,6 +501,10 @@ const checks = [
     const critical = registry.workstreams.find((entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL");
     const deferred = registry.workstreams.find((entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED");
     assert.equal(critical.entry_count, 7);
+    assert.equal(critical.gap_code, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED");
+    assert.equal(critical.authority_class, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME");
+    assert.equal(critical.state, "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED");
+    assert.equal(critical.next_gate, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION");
     assert.equal(deferred.entry_count, 21);
     assert.equal(registry.execution_authorized, false);
   },
@@ -531,8 +542,8 @@ const checks = [
     };
     const partialLiterals = literalValues(partial, "partial-evidence.test.mjs");
     const candidateLiterals = literalValues(candidates, "candidate-ledger.test.mjs");
-    for (const marker of ["matrix_partial_evidence_links_28", "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL", "AUTHENTICATED_ADMIN_V1_DEFERRED", "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED", "SAFELY_DISABLED_FOR_V1_LAUNCH"]) assert(partialLiterals.has(marker));
-    for (const marker of ["L18_BLOCKERS_ROUTES_AND_NO_GO", "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL", "AUTHENTICATED_ADMIN_V1_DEFERRED", "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED", "SAFELY_DISABLED_FOR_V1_LAUNCH"]) assert(candidateLiterals.has(marker));
+    for (const marker of ["matrix_partial_evidence_links_28", "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL", "AUTHENTICATED_ADMIN_V1_DEFERRED", "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED", "SAFELY_DISABLED_FOR_V1_LAUNCH"]) assert(partialLiterals.has(marker));
+    for (const marker of ["L18_BLOCKERS_ROUTES_AND_NO_GO", "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL", "AUTHENTICATED_ADMIN_V1_DEFERRED", "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED", "SAFELY_DISABLED_FOR_V1_LAUNCH"]) assert(candidateLiterals.has(marker));
   },
   () => {
     for (const relativePath of ["testing/authenticated-live-route-partial-evidence.test.mjs", "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs"]) {

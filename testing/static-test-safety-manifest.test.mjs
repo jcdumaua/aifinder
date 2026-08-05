@@ -101,6 +101,38 @@ const V1_ADMIN_EXECUTION_SURFACE_PATHS = [
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
+const V1_STAGING_CORE_PATH =
+  "testing/admin-v1-staging-readiness-core.mjs";
+const V1_STAGING_PROBE_PATH =
+  "testing/admin-v1-staging-readiness-probe.mjs";
+const V1_STAGING_SOURCE_POLICY_PATH =
+  "testing/admin-v1-staging-readiness-source-policy.test.mjs";
+const V1_STAGING_SCHEMA_PATH =
+  "testing/admin-v1-staging-readiness-evidence.schema.json";
+const V1_STAGING_EVIDENCE_PATH =
+  "testing/admin-v1-staging-readiness-evidence.json";
+const V1_STAGING_EVIDENCE_TEST_PATH =
+  "testing/admin-v1-staging-readiness-evidence.test.mjs";
+const V1_STAGING_CLASSIFICATION_PATHS = [
+  V1_STAGING_CORE_PATH,
+  V1_STAGING_PROBE_PATH,
+  V1_STAGING_SOURCE_POLICY_PATH,
+  V1_STAGING_SCHEMA_PATH,
+  V1_STAGING_EVIDENCE_PATH,
+  V1_STAGING_EVIDENCE_TEST_PATH,
+];
+const V1_STAGING_EXECUTION_SURFACE_PATHS = [
+  ...V1_STAGING_CLASSIFICATION_PATHS,
+  "testing/admin-v1-launch-scope.test.mjs",
+  "testing/authenticated-live-route-partial-evidence.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/readiness-coverage-matrix.json",
+  "testing/readiness-coverage-matrix.test.mjs",
+  "testing/public-launch-blocker-registry.json",
+  "testing/public-launch-blocker-registry.test.mjs",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
 const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
 const ROLES = new Set(["EXECUTABLE", "SUPPORT", "FIXTURE", "CONFIG"]);
 const CLASSES = new Set([
@@ -143,6 +175,8 @@ const REQUIRED_POLICY = new Set([
   C2_2_LEDGER_TEST_PATH,
   V1_ADMIN_SCOPE_TEST_PATH,
   V1_ADMIN_HERMETIC_TEST_PATH,
+  V1_STAGING_SOURCE_POLICY_PATH,
+  V1_STAGING_EVIDENCE_TEST_PATH,
 ]);
 const DENIED_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
@@ -223,6 +257,15 @@ function v1AdminExecutionSurfaceDigest() {
   );
 }
 
+function v1StagingExecutionSurfaceDigest() {
+  return sha256(
+    V1_STAGING_EXECUTION_SURFACE_PATHS.map((repositoryPath) => {
+      const bytes = readFileSync(repositoryPath);
+      return [repositoryPath, sha256(bytes), bytes.length].join("\0");
+    }).join("\n"),
+  );
+}
+
 function validateManifest() {
   let manifest;
   try {
@@ -270,7 +313,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33KA_V1_ADMIN",
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33NA_V1_STAGING",
     "MANIFEST_TREE_DIGEST",
   );
   assert(
@@ -313,11 +356,22 @@ function validateManifest() {
         v1AdminExecutionSurfaceDigest(),
     "MANIFEST_V1_ADMIN_EXECUTION_SURFACE_DIGEST",
   );
+  assert(
+    manifest.phase_33na_v1_staging_execution_surface_digest?.algorithm ===
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" &&
+      manifest.phase_33na_v1_staging_execution_surface_digest?.path_count ===
+        15 &&
+      manifest.phase_33na_v1_staging_execution_surface_digest
+        ?.excluded_self_path === MANIFEST_PATH &&
+      manifest.phase_33na_v1_staging_execution_surface_digest?.sha256 ===
+        v1StagingExecutionSurfaceDigest(),
+    "MANIFEST_V1_STAGING_EXECUTION_SURFACE_DIGEST",
+  );
 
   const inventory = listRegularFiles("testing");
   const entryPaths = manifest.entries.map((entry) => entry.path);
   assert(
-    manifest.entries.length === 132 &&
+    manifest.entries.length === 138 &&
       entryPaths.length === new Set(entryPaths).size,
     "MANIFEST_ENTRY_SET",
   );
@@ -647,6 +701,79 @@ function validateManifest() {
       "MANIFEST_V1_ADMIN_CLASSIFICATIONS",
     );
   }
+  const v1StagingContracts = new Map([
+    [
+      V1_STAGING_CORE_PATH,
+      [
+        "SUPPORT",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "ADMIN_V1_STAGING_READINESS_CORE",
+      ],
+    ],
+    [
+      V1_STAGING_PROBE_PATH,
+      [
+        "EXECUTABLE",
+        "DATABASE_OR_SUPABASE",
+        "DENY",
+        null,
+        "ADMIN_V1_STAGING_READINESS_LIVE_PROBE_DENIED",
+      ],
+    ],
+    [
+      V1_STAGING_SOURCE_POLICY_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_STATIC_POLICY",
+        "RUN_POLICY",
+        ["node", V1_STAGING_SOURCE_POLICY_PATH],
+        "ADMIN_V1_STAGING_READINESS_SOURCE_POLICY",
+      ],
+    ],
+    [
+      V1_STAGING_SCHEMA_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "ADMIN_V1_STAGING_READINESS_EVIDENCE_SCHEMA",
+      ],
+    ],
+    [
+      V1_STAGING_EVIDENCE_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "ADMIN_V1_STAGING_READINESS_EVIDENCE",
+      ],
+    ],
+    [
+      V1_STAGING_EVIDENCE_TEST_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_STATIC_POLICY",
+        "RUN_POLICY",
+        ["node", V1_STAGING_EVIDENCE_TEST_PATH],
+        "ADMIN_V1_STAGING_READINESS_EVIDENCE_POLICY",
+      ],
+    ],
+  ]);
+  for (const [repositoryPath, contract] of v1StagingContracts) {
+    const entry = entriesByPath.get(repositoryPath);
+    assert(
+      entry?.role === contract[0] &&
+        entry.safety_class === contract[1] &&
+        entry.ci_disposition === contract[2] &&
+        JSON.stringify(entry.command_argv) === JSON.stringify(contract[3]) &&
+        entry.reason_code === contract[4],
+      "MANIFEST_V1_STAGING_CLASSIFICATIONS",
+    );
+  }
   const core = corePaths.size;
   const policyCount = policyPaths.size;
   const validateOnly = manifest.entries.filter(
@@ -656,7 +783,7 @@ function validateManifest() {
     (entry) => entry.ci_disposition === "DENY",
   ).length;
   assert(
-    core === 5 && policyCount === 13 && validateOnly === 28 && denied === 86,
+    core === 5 && policyCount === 15 && validateOnly === 31 && denied === 87,
     "MANIFEST_CLASSIFICATION_COUNTS",
   );
 
@@ -669,27 +796,21 @@ function validateManifest() {
   };
 }
 
-const v1AdminClassificationPaths = [
-  "testing/admin-v1-launch-scope.schema.json",
-  "testing/admin-v1-launch-scope.json",
-  "testing/admin-v1-launch-scope.test.mjs",
-  "testing/admin-v1-launch-critical-hermetic.test.mjs",
-];
 const currentManifest = readStrictJson(MANIFEST_PATH);
-const missingV1AdminClassifications = v1AdminClassificationPaths.filter(
+const missingV1StagingClassifications = V1_STAGING_CLASSIFICATION_PATHS.filter(
   (repositoryPath) =>
     !currentManifest.entries.some((entry) => entry.path === repositoryPath),
 ).length;
 
-if (missingV1AdminClassifications !== 0) {
+if (missingV1StagingClassifications !== 0) {
   console.log(
-    `EXPECTED_FAIL_STATIC_TEST_SAFETY_MANIFEST_V1_ADMIN missing_classifications=${missingV1AdminClassifications} total_contract=0 tree_digest=0 failures=1 internal_failures=0`,
+    `EXPECTED_FAIL_STATIC_TEST_SAFETY_MANIFEST_ADMIN_V1_STAGING missing_classifications=${missingV1StagingClassifications} total_contract=0 tree_digest=0 failures=1 internal_failures=0`,
   );
   process.exitCode = 1;
 } else try {
   const result = validateManifest();
   console.log(
-    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} v1_admin_classifications=4 failures=0 internal_failures=0`,
+    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} v1_admin_classifications=4 v1_staging_classifications=6 failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (
