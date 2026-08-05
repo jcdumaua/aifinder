@@ -1040,6 +1040,24 @@ const routeExpectations = EXPECTED_ROUTES.map(expectedRoute);
 const positionExpectations = EXPECTED_POSITIONS.map(expectedPosition);
 const expectedPaths = routeExpectations.map((entry) => entry.path);
 const expectedPathSet = new Set(expectedPaths);
+const V1_CRITICAL_PATHS = [
+  "app/api/admin/csrf/route.ts",
+  "app/api/admin/login/route.ts",
+  "app/api/admin/logout/route.ts",
+  "app/api/admin/session/route.ts",
+  "app/api/admin/submissions/route.ts",
+  "app/api/admin/tools/route.ts",
+  "app/api/admin/upload-logo/route.ts",
+];
+const V1_CRITICAL_PATH_SET = new Set(V1_CRITICAL_PATHS);
+const V1_DEFERRED_PATHS = expectedPaths.filter(
+  (entryPath) => !V1_CRITICAL_PATH_SET.has(entryPath),
+);
+const V1_CRITICAL_STATE =
+  "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED";
+const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
+const V1_STAGING_GAP =
+  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
 
 function routeCoreMatches(route, expected) {
   const groups = route?.source_visible_branch_groups;
@@ -1214,12 +1232,14 @@ function matrixLinksValid(matrixDocument, evidenceDocument) {
     const matrixEntry = matrixDocument.entries.find(
       (entry) => entry.path === route.baseline_path,
     );
+    const isCritical = V1_CRITICAL_PATH_SET.has(route.baseline_path);
     return (
       matrixEntry &&
       exactArray(matrixEntry.partial_evidence_paths, [EVIDENCE_PATH]) &&
-      matrixEntry.coverage_state === route.matrix_link.coverage_state &&
-      matrixEntry.launch_blocking === true &&
-      matrixEntry.gap_code_or_null === GAP_CODE &&
+      matrixEntry.coverage_state ===
+        (isCritical ? V1_CRITICAL_STATE : V1_DEFERRED_STATE) &&
+      matrixEntry.launch_blocking === isCritical &&
+      matrixEntry.gap_code_or_null === (isCritical ? V1_STAGING_GAP : null) &&
       route.matrix_link.matrix_path === MATRIX_PATH &&
       route.matrix_link.partial_evidence_path === EVIDENCE_PATH &&
       route.matrix_link.gap_code === GAP_CODE
@@ -1227,9 +1247,30 @@ function matrixLinksValid(matrixDocument, evidenceDocument) {
   });
 }
 
-function registryWorkstream(registryDocument) {
+function registryWorkstream(registryDocument, id) {
   return registryDocument?.workstreams?.find(
-    (entry) => entry.id === "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
+    (entry) => entry.id === id,
+  );
+}
+
+function registryWorkstreamsValid(registryDocument) {
+  const critical = registryWorkstream(
+    registryDocument,
+    "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+  );
+  const deferred = registryWorkstream(
+    registryDocument,
+    "AUTHENTICATED_ADMIN_V1_DEFERRED",
+  );
+  return (
+    critical?.entry_count === 7 &&
+    critical.state === "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+    critical.execution_authorized === false &&
+    same([...critical.source_paths].sort(), [...V1_CRITICAL_PATHS].sort()) &&
+    deferred?.entry_count === 21 &&
+    deferred.state === "SAFELY_DISABLED_FOR_V1_LAUNCH" &&
+    deferred.execution_authorized === false &&
+    same([...deferred.source_paths].sort(), [...V1_DEFERRED_PATHS].sort())
   );
 }
 
@@ -1548,10 +1589,10 @@ const assertions = [
     requireArtifacts();
     assert(matrixLinksValid(matrix, evidence));
     const changedMatrix = clone(matrix);
-    const outsideEntry = changedMatrix.entries.find(
-      (entry) => !expectedPathSet.has(entry.path),
+    const linkedEntry = changedMatrix.entries.find(
+      (entry) => expectedPathSet.has(entry.path),
     );
-    outsideEntry.partial_evidence_paths = [EVIDENCE_PATH];
+    linkedEntry.partial_evidence_paths = [];
     assert(!matrixLinksValid(changedMatrix, evidence));
   }],
   ["matrix_gap_and_coverage_partition_preserved", () => {
@@ -1561,30 +1602,46 @@ const assertions = [
     );
     assert(
       authenticated.length === 28 &&
-      authenticated.filter((entry) => entry.coverage_state === "PARTIAL_STATIC").length === 1 &&
-      authenticated.filter((entry) => entry.coverage_state === "NO_STATIC_EVIDENCE").length === 27 &&
-      authenticated.filter((entry) => entry.gap_code_or_null === GAP_CODE).length === 28 &&
-      authenticated.filter((entry) => entry.launch_blocking === true).length === 28
+      authenticated.filter((entry) => entry.coverage_state === V1_CRITICAL_STATE).length === 7 &&
+      authenticated.filter((entry) => entry.coverage_state === V1_DEFERRED_STATE).length === 21 &&
+      authenticated.filter((entry) => entry.gap_code_or_null === V1_STAGING_GAP).length === 7 &&
+      authenticated.filter((entry) => entry.launch_blocking === true).length === 7 &&
+      authenticated.filter((entry) => entry.launch_blocking === false).length === 21
     );
-    const changed = clone(matrix);
-    changed.entries.find((entry) => expectedPathSet.has(entry.path)).gap_code_or_null = null;
-    assert(!matrixLinksValid(changed, evidence));
+    const blockerReversion = clone(matrix);
+    for (const entry of blockerReversion.entries) {
+      if (expectedPathSet.has(entry.path)) entry.launch_blocking = true;
+    }
+    assert(!matrixLinksValid(blockerReversion, evidence));
+    const deferredPromotion = clone(matrix);
+    const deferredEntry = deferredPromotion.entries.find(
+      (entry) => V1_DEFERRED_PATHS.includes(entry.path),
+    );
+    deferredEntry.coverage_state = V1_CRITICAL_STATE;
+    deferredEntry.launch_blocking = true;
+    deferredEntry.gap_code_or_null = V1_STAGING_GAP;
+    assert(!matrixLinksValid(deferredPromotion, evidence));
   }],
   ["registry_exact_authenticated_route_scope", () => {
     requireArtifacts();
-    const workstream = registryWorkstream(registry);
-    assert(
-      workstream?.entry_count === 28 &&
-      workstream.partial_static_count === 1 &&
-      workstream.partial_evidence_path === EVIDENCE_PATH &&
-      workstream.partial_evidence_state === PARTIAL_LINK_STATE &&
-      same([...workstream.source_paths].sort(), [...expectedPaths].sort())
+    assert(registryWorkstreamsValid(registry));
+    const missingWorkstream = clone(registry);
+    missingWorkstream.workstreams = missingWorkstream.workstreams.filter(
+      (entry) => entry.id !== "AUTHENTICATED_ADMIN_V1_DEFERRED",
     );
+    assert(!registryWorkstreamsValid(missingWorkstream));
   }],
   ["registry_blocked_state_preserved", () => {
     requireArtifacts();
     assert(
-      registryWorkstream(registry)?.state === "BLOCKED_SEPARATE_AUTHORITY_REQUIRED"
+      registryWorkstream(
+        registry,
+        "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+      )?.state === "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+      registryWorkstream(
+        registry,
+        "AUTHENTICATED_ADMIN_V1_DEFERRED",
+      )?.state === "SAFELY_DISABLED_FOR_V1_LAUNCH"
     );
   }],
   ["registry_no_go_preserved", () => {
@@ -1593,12 +1650,27 @@ const assertions = [
   }],
   ["execution_authority_remains_false", () => {
     requireArtifacts();
+    const criticalWorkstream = registryWorkstream(
+      registry,
+      "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+    );
+    const deferredWorkstream = registryWorkstream(
+      registry,
+      "AUTHENTICATED_ADMIN_V1_DEFERRED",
+    );
     assert(
       registry.execution_authorized === false &&
-      registryWorkstream(registry)?.execution_authorized === false &&
+      criticalWorkstream?.execution_authorized === false &&
+      deferredWorkstream?.execution_authorized === false &&
       evidence.governance.execution_authorized === false &&
       evidence.governance.current_authority === "STATIC_ONLY"
     );
+    const executionAuthorization = clone(registry);
+    executionAuthorization.execution_authorized = true;
+    assert(!(
+      executionAuthorization.execution_authorized === false &&
+      registryWorkstreamsValid(executionAuthorization)
+    ));
     assert(
       mutationRejected((value) => {
         value.governance.execution_authorized = true;

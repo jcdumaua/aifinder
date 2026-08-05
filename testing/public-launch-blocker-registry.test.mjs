@@ -15,7 +15,9 @@ const REGISTRY_PATH = "testing/public-launch-blocker-registry.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const EVIDENCE_PATH =
   "testing/authenticated-live-route-partial-evidence.json";
-const GAP_CODE = "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED";
+const HISTORICAL_GAP_CODE = "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED";
+const V1_ADMIN_GAP_CODE =
+  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
 const PARTIAL_STATE = "PARTIAL_ONLY_ALL_ROUTES_STILL_BLOCKED";
 const PUBLIC_LIVE_ROUTE_STATIC_EVIDENCE_PATH =
   "testing/public-live-route-security-static-assertions.mjs";
@@ -42,18 +44,18 @@ const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
   "testing/authenticated-browser-runtime-evidence.json";
 const AUTHENTICATED_AUDIT_ROUTE_PATH =
   "app/api/admin/audit-logs/route.ts";
-const SOURCE_COMMIT = "2570765ca0e769888286e42456d2f27d831f46df";
+const SOURCE_COMMIT = "ef5cbe7aede041d3fd009126de152b4777d160a5";
 const MATRIX_IDENTITY = {
   path: MATRIX_PATH,
-  sha256: "db721953dd84670565a63fb408b58eb257f1af7fa70972e44f89a1d84b870292",
-  git_blob: "94ab5704686e977121667a0a04ab48a580820334",
-  bytes: 45318,
-  lines: 1169,
+  sha256: "f13e639f57ec2bb37352648361175fcd10ffd5d92d4f938c94b61979b9b65b55",
+  git_blob: "bad829bf20b5566fb4edb5c01959ee15fd9100f9",
+  bytes: 48382,
+  lines: 1259,
   mode: "0644",
   route_inventory_digest:
     "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
   entry_count: 69,
-  launch_blocking_count: 28,
+  launch_blocking_count: 7,
 };
 const TOP_LEVEL_KEYS = [
   "registry_version",
@@ -96,12 +98,6 @@ const WORKSTREAM_KEYS = [
   "prerequisites",
   "prohibited_operations",
   "next_gate",
-];
-const AUTHENTICATED_LIVE_ROUTE_WORKSTREAM_KEYS = [
-  ...WORKSTREAM_KEYS,
-  "partial_static_count",
-  "partial_evidence_path",
-  "partial_evidence_state",
 ];
 const BLOCKED_CAPABILITIES = [
   "AUTHENTICATED_RUNTIME",
@@ -173,6 +169,18 @@ const AUTHENTICATED_LIVE_ROUTE_PATHS = [
   "app/api/admin/tools/route.ts",
   "app/api/admin/upload-logo/route.ts",
 ];
+const V1_ADMIN_CRITICAL_PATHS = [
+  "app/api/admin/csrf/route.ts",
+  "app/api/admin/login/route.ts",
+  "app/api/admin/logout/route.ts",
+  "app/api/admin/session/route.ts",
+  "app/api/admin/submissions/route.ts",
+  "app/api/admin/tools/route.ts",
+  "app/api/admin/upload-logo/route.ts",
+];
+const V1_ADMIN_DEFERRED_PATHS = AUTHENTICATED_LIVE_ROUTE_PATHS.filter(
+  (repositoryPath) => !V1_ADMIN_CRITICAL_PATHS.includes(repositoryPath),
+);
 const WORKSTREAMS = [
   {
     id: "PUBLIC_PRODUCTION_RUNTIME",
@@ -211,16 +219,22 @@ const WORKSTREAMS = [
     next_gate: "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
   },
   {
-    id: "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
-    gap_code: "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
-    entry_count: 28,
-    authority_class: "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
-    state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+    id: "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+    gap_code: V1_ADMIN_GAP_CODE,
+    entry_count: 7,
+    authority_class: "ADMIN_V1_STAGING_READINESS",
+    state: "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED",
     planning_priority: 5,
-    next_gate: "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME",
-    partial_static_count: 1,
-    partial_evidence_path: EVIDENCE_PATH,
-    partial_evidence_state: PARTIAL_STATE,
+    next_gate: "ADMIN_V1_STAGING_READINESS",
+  },
+  {
+    id: "AUTHENTICATED_ADMIN_V1_DEFERRED",
+    gap_code: "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+    entry_count: 21,
+    authority_class: "AUTHENTICATED_ADMIN_V1_DEFERRED",
+    state: "SAFELY_DISABLED_FOR_V1_LAUNCH",
+    planning_priority: 6,
+    next_gate: "SEPARATE_FUTURE_AUTHORITY_REQUIRED",
   },
 ];
 
@@ -424,29 +438,37 @@ function matrixModel() {
   const authenticatedLiveRouteEntries = matrix.entries.filter((entry) =>
     AUTHENTICATED_LIVE_ROUTE_PATHS.includes(entry.path),
   );
-  const authenticatedAuditRoute = authenticatedLiveRouteEntries.find(
-    (entry) => entry.path === AUTHENTICATED_AUDIT_ROUTE_PATH,
+  const v1AdminCriticalEntries = authenticatedLiveRouteEntries.filter(
+    (entry) => V1_ADMIN_CRITICAL_PATHS.includes(entry.path),
+  );
+  const v1AdminDeferredEntries = authenticatedLiveRouteEntries.filter(
+    (entry) => V1_ADMIN_DEFERRED_PATHS.includes(entry.path),
   );
   assert(
-    authenticatedAuditRoute?.coverage_state === "PARTIAL_STATIC" &&
-      authenticatedAuditRoute.launch_blocking === true &&
-      authenticatedAuditRoute.gap_code_or_null ===
-        "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED" &&
-      exactArray(authenticatedAuditRoute.static_evidence_paths, [
-        AUTHENTICATED_BROWSER_STATIC_ASSERTION_PATH,
-        AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
-      ]) &&
-      authenticatedLiveRouteEntries.filter(
-        (entry) => entry.path !== AUTHENTICATED_AUDIT_ROUTE_PATH,
-      ).length === 27 &&
-      authenticatedLiveRouteEntries
-        .filter((entry) => entry.path !== AUTHENTICATED_AUDIT_ROUTE_PATH)
-        .every(
-          (entry) =>
-            entry.coverage_state === "NO_STATIC_EVIDENCE" &&
-            entry.static_evidence_paths.length === 0,
-        ),
-    "BLOCKER_REGISTRY_AUTHENTICATED_LIVE_ROUTE_EVIDENCE",
+    v1AdminCriticalEntries.length === 7 &&
+      exactSet(
+        v1AdminCriticalEntries.map((entry) => entry.path),
+        V1_ADMIN_CRITICAL_PATHS,
+      ) &&
+      v1AdminCriticalEntries.every(
+        (entry) =>
+          entry.coverage_state ===
+            "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED" &&
+          entry.launch_blocking === true &&
+          entry.gap_code_or_null === V1_ADMIN_GAP_CODE,
+      ) &&
+      v1AdminDeferredEntries.length === 21 &&
+      exactSet(
+        v1AdminDeferredEntries.map((entry) => entry.path),
+        V1_ADMIN_DEFERRED_PATHS,
+      ) &&
+      v1AdminDeferredEntries.every(
+        (entry) =>
+          entry.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED" &&
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null,
+      ),
+    "BLOCKER_REGISTRY_V1_ADMIN_EVIDENCE",
   );
 
   const paths = matrix.entries.map((entry) => entry.path);
@@ -457,15 +479,7 @@ function matrixModel() {
   );
 
   const expectedGapSet = stableSortedPaths(
-    WORKSTREAMS.filter(
-      (workstream) =>
-        ![
-          "PUBLIC_PRODUCTION_RUNTIME",
-          "PUBLIC_BROWSER_OR_LIVE_RUNTIME",
-          "PUBLIC_LIVE_ROUTE_RUNTIME",
-          "AUTHENTICATED_BROWSER_RUNTIME",
-        ].includes(workstream.id),
-    ).map((workstream) => workstream.gap_code),
+    [V1_ADMIN_GAP_CODE],
   );
   const actualGapSet = stableSortedPaths([
     ...new Set(launchBlocking.map((entry) => entry.gap_code_or_null)),
@@ -483,6 +497,8 @@ function matrixModel() {
             ? completedLiveRoutePaths
             : workstream.id === "AUTHENTICATED_BROWSER_RUNTIME"
               ? completedAuthenticatedBrowserPaths
+              : workstream.id === "AUTHENTICATED_ADMIN_V1_DEFERRED"
+                ? v1AdminDeferredEntries.map((entry) => entry.path)
               : matrix.entries
                   .filter(
                     (entry) => entry.gap_code_or_null === workstream.gap_code,
@@ -502,6 +518,8 @@ function matrixModel() {
     completedBrowserLivePaths,
     completedLiveRoutePaths,
     completedAuthenticatedBrowserPaths,
+    v1AdminCriticalEntries,
+    v1AdminDeferredEntries,
     launchBlocking,
   };
 }
@@ -517,6 +535,8 @@ function validateRegistry() {
     completedBrowserLivePaths,
     completedLiveRoutePaths,
     completedAuthenticatedBrowserPaths,
+    v1AdminCriticalEntries,
+    v1AdminDeferredEntries,
     launchBlocking,
   } = matrixModel();
 
@@ -545,7 +565,7 @@ function validateRegistry() {
     registry.source_matrix?.route_inventory_digest ===
       matrix.route_inventory_digest &&
       registry.source_matrix?.entry_count === 69 &&
-      registry.source_matrix?.launch_blocking_count === 28,
+      registry.source_matrix?.launch_blocking_count === 7,
     "BLOCKER_REGISTRY_MATRIX_SUMMARY",
   );
   assert(
@@ -683,12 +703,7 @@ function validateRegistry() {
   for (const [index, expected] of WORKSTREAMS.entries()) {
     const actual = registry.workstreams[index];
     assert(
-      exactKeys(
-        actual,
-        expected.id === "AUTHENTICATED_LIVE_ROUTE_RUNTIME"
-          ? AUTHENTICATED_LIVE_ROUTE_WORKSTREAM_KEYS
-          : WORKSTREAM_KEYS,
-      ),
+      exactKeys(actual, WORKSTREAM_KEYS),
       "BLOCKER_REGISTRY_SEQUENCE",
     );
     assert(
@@ -703,17 +718,6 @@ function validateRegistry() {
       actual.entry_count === expected.entry_count,
       "BLOCKER_REGISTRY_GAP_COUNT",
     );
-    if (expected.id === "AUTHENTICATED_LIVE_ROUTE_RUNTIME") {
-      assert(
-        actual.partial_static_count === expected.partial_static_count,
-        "BLOCKER_REGISTRY_AUTHENTICATED_LIVE_ROUTE_EVIDENCE",
-      );
-      assert(
-        actual.partial_evidence_path === EVIDENCE_PATH &&
-          actual.partial_evidence_state === PARTIAL_STATE,
-        "BLOCKER_REGISTRY_AUTHENTICATED_LIVE_ROUTE_WORKSTREAM",
-      );
-    }
     assert(
       actual.authority_class === expected.authority_class,
       "BLOCKER_REGISTRY_AUTHORITY_CLASS",
@@ -764,8 +768,14 @@ function validateRegistry() {
                     AUTHENTICATED_BROWSER_STATIC_EVIDENCE_PATH,
                     AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
                   ])
-                : entry?.launch_blocking === true &&
-                  entry.gap_code_or_null === actual.gap_code,
+                : expected.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL"
+                  ? entry?.coverage_state ===
+                      "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED" &&
+                    entry.launch_blocking === true &&
+                    entry.gap_code_or_null === V1_ADMIN_GAP_CODE
+                  : entry?.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED" &&
+                    entry.launch_blocking === false &&
+                    entry.gap_code_or_null === null,
         "BLOCKER_REGISTRY_PATH_GAP_MISMATCH",
       );
     }
@@ -788,7 +798,9 @@ function validateRegistry() {
           actual.next_gate,
         ) ||
           actual.next_gate ===
-            "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW") &&
+            "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW" ||
+          actual.next_gate === "ADMIN_V1_STAGING_READINESS" ||
+          actual.next_gate === "SEPARATE_FUTURE_AUTHORITY_REQUIRED") &&
         !actual.next_gate
           .split("_")
           .some((part) =>
@@ -818,21 +830,21 @@ function validateRegistry() {
         authenticatedEntries.map((entry) => entry.path),
         AUTHENTICATED_LIVE_ROUTE_PATHS,
       ) &&
-      launchBlocking.length === 28 &&
+      launchBlocking.length === 7 &&
       exactSet(
         launchBlocking.map((entry) => entry.path),
-        AUTHENTICATED_LIVE_ROUTE_PATHS,
+        V1_ADMIN_CRITICAL_PATHS,
       ) &&
       authenticatedEntries.filter(
-        (entry) => entry.coverage_state === "PARTIAL_STATIC",
-      ).length === 1 &&
-      authenticatedEntries.filter(
-        (entry) => entry.coverage_state === "NO_STATIC_EVIDENCE",
-      ).length === 27 &&
-      authenticatedEntries.every(
         (entry) =>
-          entry.gap_code_or_null === GAP_CODE &&
-          exactArray(entry.partial_evidence_paths, [EVIDENCE_PATH]),
+          entry.coverage_state ===
+          "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
+      ).length === 7 &&
+      authenticatedEntries.filter(
+        (entry) => entry.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      ).length === 21 &&
+      authenticatedEntries.every(
+        (entry) => exactArray(entry.partial_evidence_paths, [EVIDENCE_PATH]),
       ),
     "BLOCKER_REGISTRY_MATRIX_PARTITION",
   );
@@ -858,25 +870,32 @@ function validateRegistry() {
     "BLOCKER_REGISTRY_COMPLETED_WORKSTREAMS",
   );
   const authenticatedLiveWorkstream = registry.workstreams[4];
+  const authenticatedDeferredWorkstream = registry.workstreams[5];
   assert(
-    authenticatedLiveWorkstream.gap_code === GAP_CODE &&
-      authenticatedLiveWorkstream.entry_count === 28 &&
-      authenticatedLiveWorkstream.authority_class ===
-        "AUTHENTICATED_LIVE_ROUTE_RUNTIME" &&
+    authenticatedLiveWorkstream.id ===
+      "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL" &&
+      authenticatedLiveWorkstream.gap_code === V1_ADMIN_GAP_CODE &&
+      authenticatedLiveWorkstream.entry_count === 7 &&
       authenticatedLiveWorkstream.state ===
-        "BLOCKED_SEPARATE_AUTHORITY_REQUIRED" &&
+        "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
       authenticatedLiveWorkstream.execution_authorized === false &&
       authenticatedLiveWorkstream.planning_priority === 5 &&
-      authenticatedLiveWorkstream.next_gate ===
-        "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME" &&
-      authenticatedLiveWorkstream.partial_static_count === 1 &&
-      authenticatedLiveWorkstream.partial_evidence_path === EVIDENCE_PATH &&
-      authenticatedLiveWorkstream.partial_evidence_state === PARTIAL_STATE &&
+      authenticatedLiveWorkstream.next_gate === "ADMIN_V1_STAGING_READINESS" &&
       exactSet(
         authenticatedLiveWorkstream.source_paths,
-        AUTHENTICATED_LIVE_ROUTE_PATHS,
+        V1_ADMIN_CRITICAL_PATHS,
+      ) &&
+      authenticatedDeferredWorkstream.id ===
+        "AUTHENTICATED_ADMIN_V1_DEFERRED" &&
+      authenticatedDeferredWorkstream.entry_count === 21 &&
+      authenticatedDeferredWorkstream.state ===
+        "SAFELY_DISABLED_FOR_V1_LAUNCH" &&
+      authenticatedDeferredWorkstream.execution_authorized === false &&
+      exactSet(
+        authenticatedDeferredWorkstream.source_paths,
+        V1_ADMIN_DEFERRED_PATHS,
       ),
-    "BLOCKER_REGISTRY_AUTHENTICATED_LIVE_ROUTE_WORKSTREAM",
+    "BLOCKER_REGISTRY_V1_ADMIN_WORKSTREAMS",
   );
 
   assert(
@@ -920,7 +939,11 @@ function validateRegistry() {
     ) &&
       exactArray(
         registry.workstreams[4].source_paths,
-        AUTHENTICATED_LIVE_ROUTE_PATHS,
+        V1_ADMIN_CRITICAL_PATHS,
+      ) &&
+      exactArray(
+        registry.workstreams[5].source_paths,
+        V1_ADMIN_DEFERRED_PATHS,
       ),
     "BLOCKER_REGISTRY_PATH_PARTITION",
   );
@@ -932,14 +955,24 @@ function validateRegistry() {
     completedBrowserLive: completedBrowserLivePaths.length,
     completedLiveRoute: completedLiveRoutePaths.length,
     completedAuthenticatedBrowser: completedAuthenticatedBrowserPaths.length,
+    v1AdminHermetic: v1AdminCriticalEntries.length,
+    v1AdminDeferred: v1AdminDeferredEntries.length,
     blocked: launchBlocking.length,
   };
 }
 
-try {
+const currentRegistryBlocked = readStrictJson(REGISTRY_PATH).source_matrix
+  ?.launch_blocking_count;
+
+if (currentRegistryBlocked !== 7) {
+  console.log(
+    `EXPECTED_FAIL_PUBLIC_LAUNCH_BLOCKER_REGISTRY_V1_ADMIN blocked=${currentRegistryBlocked} expected=7 failures=1 internal_failures=0`,
+  );
+  process.exitCode = 1;
+} else try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} completed_public_production=${result.completed} completed_public_browser_live=${result.completedBrowserLive} completed_public_live_routes=${result.completedLiveRoute} completed_authenticated_browser=${result.completedAuthenticatedBrowser} authenticated_live_route_partial_static=1 authenticated_live_route_no_static=27 authenticated_live_route_partial_evidence=28 authenticated_live_route_workstream_state=BLOCKED_SEPARATE_AUTHORITY_REQUIRED blocked=${result.blocked} planning_artifacts=4 next_active_workstream=AUTHENTICATED_LIVE_ROUTE_RUNTIME decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} authenticated_admin_v1_hermetic=${result.v1AdminHermetic} authenticated_admin_v1_deferred=${result.v1AdminDeferred} blocked=${result.blocked} next_active_workstream=ADMIN_V1_STAGING_READINESS decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

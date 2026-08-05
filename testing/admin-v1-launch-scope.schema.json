@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/testing/admin-v1-launch-scope.schema.json",
+  "title": "AiFinder v1 admin launch scope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "baseline",
+    "allowed_admin_pages",
+    "critical_api_routes",
+    "deferred_c2_routes",
+    "unknown_admin_api_policy",
+    "sources",
+    "conditional_route_baseline_blobs",
+    "controls",
+    "outcomes",
+    "next_authority"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "phase": { "const": "33KA-33KZ" },
+    "baseline": { "$ref": "#/$defs/baseline" },
+    "allowed_admin_pages": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "critical_api_routes": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": { "$ref": "#/$defs/route" }
+    },
+    "deferred_c2_routes": {
+      "type": "array",
+      "minItems": 21,
+      "maxItems": 21,
+      "items": { "$ref": "#/$defs/route" }
+    },
+    "unknown_admin_api_policy": { "const": "DENY_BY_DEFAULT" },
+    "sources": { "$ref": "#/$defs/sources" },
+    "conditional_route_baseline_blobs": { "$ref": "#/$defs/conditionalBlobs" },
+    "controls": { "$ref": "#/$defs/controls" },
+    "outcomes": { "$ref": "#/$defs/outcomes" },
+    "next_authority": { "const": "ADMIN_V1_STAGING_ENV_DATABASE_STORAGE_READINESS" }
+  },
+  "$defs": {
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "parent", "tree", "subject"],
+      "properties": {
+        "commit": { "const": "ef5cbe7aede041d3fd009126de152b4777d160a5" },
+        "parent": { "const": "132f4d16e7b8b6c7b4585bb794ac7732cead0a73" },
+        "tree": { "const": "024846d8228725de5a99f46f643b1da592525317" },
+        "subject": { "const": "Add offline synthetic rejection candidate ledger" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathname", "methods", "source_path", "baseline_git_blob"],
+      "properties": {
+        "pathname": { "type": "string" },
+        "methods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] }
+        },
+        "source_path": { "type": "string" },
+        "baseline_git_blob": { "type": "string" }
+      }
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "baseline_git_blob"],
+      "properties": {
+        "path": { "type": "string" },
+        "baseline_git_blob": { "type": "string" }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proxy", "admin_ui"],
+      "properties": {
+        "proxy": { "$ref": "#/$defs/sourceIdentity" },
+        "admin_ui": { "$ref": "#/$defs/sourceIdentity" }
+      }
+    },
+    "conditionalBlobs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app/api/admin/login/route.ts",
+        "app/api/admin/session/route.ts",
+        "app/api/admin/csrf/route.ts",
+        "app/api/admin/logout/route.ts",
+        "app/api/admin/logout/handler.ts",
+        "app/api/admin/tools/route.ts",
+        "app/api/admin/tools/handler.ts",
+        "app/api/admin/submissions/route.ts",
+        "app/api/admin/submissions/handler.ts",
+        "app/api/admin/upload-logo/route.ts",
+        "app/api/admin/upload-logo/handler.ts"
+      ],
+      "properties": {
+        "app/api/admin/login/route.ts": { "type": "string" },
+        "app/api/admin/session/route.ts": { "type": "string" },
+        "app/api/admin/csrf/route.ts": { "type": "string" },
+        "app/api/admin/logout/route.ts": { "type": "string" },
+        "app/api/admin/logout/handler.ts": { "type": "string" },
+        "app/api/admin/tools/route.ts": { "type": "string" },
+        "app/api/admin/tools/handler.ts": { "type": "string" },
+        "app/api/admin/submissions/route.ts": { "type": "string" },
+        "app/api/admin/submissions/handler.ts": { "type": "string" },
+        "app/api/admin/upload-logo/route.ts": { "type": "string" },
+        "app/api/admin/upload-logo/handler.ts": { "type": "string" }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deferred_routes_modified", "real_route_execution", "real_database", "real_storage", "network", "runtime_qualified_routes"],
+      "properties": {
+        "deferred_routes_modified": { "const": 0 },
+        "real_route_execution": { "const": 0 },
+        "real_database": { "const": 0 },
+        "real_storage": { "const": 0 },
+        "network": { "const": 0 },
+        "runtime_qualified_routes": { "const": 0 }
+      }
+    },
+    "outcomes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["launch_blockers_before", "launch_blockers_after", "routes_removed_from_launch_scope", "public_launch"],
+      "properties": {
+        "launch_blockers_before": { "const": 28 },
+        "launch_blockers_after": { "const": 7 },
+        "routes_removed_from_launch_scope": { "const": 21 },
+        "public_launch": { "const": "NO_GO" }
+      }
+    }
+  }
+}

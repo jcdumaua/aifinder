@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  allowedAdminV1Methods,
+  classifyAdminV1Path,
+} from "./lib/admin-v1-launch-scope";
 
 const ADMIN_SESSION_COOKIE_NAME = "aifinder_admin_session";
 
@@ -98,14 +102,50 @@ async function hasActiveAdminSessionCookie(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const classification = classifyAdminV1Path(pathname, request.method);
 
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin-login")) {
+  if (classification === "DENY_ADMIN_API_PATH") {
+    return addSecurityHeaders(
+      NextResponse.json(
+        { error: "Not found." },
+        {
+          status: 404,
+          headers: { "Cache-Control": "no-store" },
+        }
+      )
+    );
+  }
+
+  if (classification === "DENY_ADMIN_API_METHOD") {
+    return addSecurityHeaders(
+      NextResponse.json(
+        { error: "Method not allowed." },
+        {
+          status: 405,
+          headers: {
+            "Allow": allowedAdminV1Methods(pathname).join(", "),
+            "Cache-Control": "no-store",
+          },
+        }
+      )
+    );
+  }
+
+  if (classification === "ALLOW_ADMIN_PAGE" || classification === "DENY_ADMIN_PAGE") {
     if (!(await hasActiveAdminSessionCookie(request))) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/admin-login";
       loginUrl.searchParams.set("from", pathname);
 
       return addSecurityHeaders(NextResponse.redirect(loginUrl));
+    }
+
+    if (classification === "DENY_ADMIN_PAGE") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin";
+      redirectUrl.search = "";
+
+      return addSecurityHeaders(NextResponse.redirect(redirectUrl));
     }
   }
 

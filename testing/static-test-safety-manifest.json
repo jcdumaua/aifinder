@@ -1,25 +1,25 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "4777daa5256c5a7a7e96c86731120c928fee8771f58d249bc3c18b69bfa3dd77",
-  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33IA_C2_2",
+  "testing_tree_digest": "1a83a711228c02c63d50e8760a01935f54f21fee201afca02c456b19f1762543",
+  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33KA_V1_ADMIN",
   "phase_33fa_c1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "2beb17a2da25043e44485e3850a1f1c291665b463ee7d0c419db6944986c8164"
+    "sha256": "2bb29d11b8472f7a6e80e92650454d52a73d5a692cef39bbadb42d997b416244"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "d32d1afbcc8c6ab0b0afba1cff0e8ceebf75101a1f37ccd3f756f9952f5b052a"
+    "sha256": "d1bb9610cfe7be988a902007e0667ceb1d032d75600877d9d5a67efa92b69d50"
   },
   "phase_c2_2_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "35096b621d84eef3b7fafa7d4891227c5d692aa7878d33d5eb764bdb29f782ce"
+    "sha256": "3e144920e9fc04b7fe084542f12db385b6d515e9cb5c89b328c5126ceda0afdc"
   },
   "entries": [
     {
@@ -152,6 +152,44 @@
       "ci_disposition": "DENY",
       "command_argv": null,
       "reason_code": "DATABASE_OR_SUPABASE_CAPABILITY"
+    },
+    {
+      "path": "testing/admin-v1-launch-critical-hermetic.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_HERMETIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
+      "reason_code": "ADMIN_V1_LAUNCH_CRITICAL_HERMETIC_POLICY"
+    },
+    {
+      "path": "testing/admin-v1-launch-scope.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "ADMIN_V1_LAUNCH_SCOPE_LEDGER"
+    },
+    {
+      "path": "testing/admin-v1-launch-scope.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "ADMIN_V1_LAUNCH_SCOPE_SCHEMA"
+    },
+    {
+      "path": "testing/admin-v1-launch-scope.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
+      "reason_code": "ADMIN_V1_LAUNCH_SCOPE_POLICY"
     },
     {
       "path": "testing/audit-logs-route-security-static-assertions.mjs",
@@ -1094,5 +1132,11 @@
       "command_argv": null,
       "reason_code": "NON_EXECUTED_STATIC_SUPPORT"
     }
-  ]
+  ],
+  "phase_33ka_v1_admin_execution_surface_digest": {
+    "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
+    "path_count": 7,
+    "excluded_self_path": "testing/static-test-safety-manifest.json",
+    "sha256": "cc5e5fa3167a0865e43813493b12fbb27c99a9b655df0b847a7826c7daf421cc"
+  }
 }

@@ -131,22 +131,7 @@ type AdminNavItem = {
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Dashboard", href: "/admin", view: "dashboard" },
   { label: "Tools", href: "/admin/tools", view: "tools" },
-  { label: "Discovery", href: "/admin/discovery", view: "discovery" },
-  {
-    label: "Discovery Queue",
-    href: "/admin/discovery/tools",
-    view: "discovery-tools",
-  },
-  {
-    label: "Homepage Control Room",
-    href: "/admin/homepage-control",
-    view: "homepage-control",
-  },
   { label: "Moderation", href: "/admin/moderation", view: "moderation" },
-  { label: "Analytics", href: "/admin/analytics", view: "analytics" },
-  { label: "Notifications", href: "/admin/notifications", view: "notifications" },
-  { label: "Security", href: "/admin/security", view: "security" },
-  { label: "Settings", href: "/admin/settings", view: "settings" },
 ];
 
 const DEFAULT_HOMEPAGE_CONFIG_ERRORS = validateHomepageControlConfig(
@@ -177,7 +162,7 @@ const ADMIN_PAGE_COPY: Record<
     eyebrow: "Admin Dashboard",
     title: "Mission Control",
     description:
-      "A compact overview for search, core metrics, fast actions, recent activity, and priority alerts.",
+      "A compact overview for search, core metrics, and the tools and moderation actions available at launch.",
   },
   tools: {
     eyebrow: "Tools",
@@ -3490,7 +3475,7 @@ export default function AdminDashboardClient({
           )}
 
           {(view === "dashboard" || view === "analytics") && (
-          <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-cyan-300/30 hover:bg-cyan-50">
               <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">
                 Tools
@@ -3521,20 +3506,14 @@ export default function AdminDashboardClient({
               <p className="mt-1 text-xs text-slate-500">Accepted</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-purple-300/30 hover:bg-violet-50">
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-700">
-                Audit
-              </p>
-              <p className="mt-2 text-lg font-black text-slate-950">
-                {auditLogs.length}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Recent logs shown</p>
-            </div>
           </div>
           )}
 
           {view === "dashboard" && (
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80">
+          <div
+            data-v1-launch-actions="true"
+            className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80"
+          >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
@@ -3546,7 +3525,7 @@ export default function AdminDashboardClient({
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <button
                 onClick={() => {
                   closeSlideOvers();
@@ -3573,30 +3552,6 @@ export default function AdminDashboardClient({
                   Pending Tools
                 </p>
               </button>
-
-              <Link
-                href="/admin/analytics"
-                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50"
-              >
-                <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-                  Reports
-                </p>
-                <p className="mt-2 text-base font-black text-slate-950">
-                  View Reports
-                </p>
-              </Link>
-
-              <Link
-                href="/admin/discovery"
-                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-cyan-300 hover:bg-cyan-50"
-              >
-                <p className="text-xs font-bold uppercase tracking-widest text-cyan-700">
-                  Discovery
-                </p>
-                <p className="mt-2 text-base font-black text-slate-950">
-                  Discovered Tools
-                </p>
-              </Link>
 
               <button
                 onClick={() => {
@@ -4646,7 +4601,7 @@ export default function AdminDashboardClient({
           </div>
           )}
 
-          {(view === "dashboard" || view === "security") && (
+          {view === "security" && (
           <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-200/80">
               <div className="mb-4 flex items-center justify-between gap-3">

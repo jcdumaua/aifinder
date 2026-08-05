@@ -87,12 +87,27 @@ const C2_2_EXECUTION_SURFACE_PATHS = [
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
+const V1_ADMIN_SCHEMA_PATH = "testing/admin-v1-launch-scope.schema.json";
+const V1_ADMIN_LEDGER_PATH = "testing/admin-v1-launch-scope.json";
+const V1_ADMIN_SCOPE_TEST_PATH = "testing/admin-v1-launch-scope.test.mjs";
+const V1_ADMIN_HERMETIC_TEST_PATH =
+  "testing/admin-v1-launch-critical-hermetic.test.mjs";
+const V1_ADMIN_EXECUTION_SURFACE_PATHS = [
+  "lib/admin-v1-launch-scope.ts",
+  V1_ADMIN_HERMETIC_TEST_PATH,
+  V1_ADMIN_LEDGER_PATH,
+  V1_ADMIN_SCHEMA_PATH,
+  V1_ADMIN_SCOPE_TEST_PATH,
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
 const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
 const ROLES = new Set(["EXECUTABLE", "SUPPORT", "FIXTURE", "CONFIG"]);
 const CLASSES = new Set([
   "SAFE_STATIC_CORE",
   "SAFE_STATIC_POLICY",
   "SAFE_STATIC_SUPPORT",
+  "SAFE_HERMETIC_POLICY",
   "STATIC_FIXTURE",
   "BROWSER_OR_PLAYWRIGHT",
   "LIVE_ROUTE_OR_SERVER",
@@ -126,6 +141,8 @@ const REQUIRED_POLICY = new Set([
   C2_LEDGER_TEST_PATH,
   C2_2_ANALYZER_TEST_PATH,
   C2_2_LEDGER_TEST_PATH,
+  V1_ADMIN_SCOPE_TEST_PATH,
+  V1_ADMIN_HERMETIC_TEST_PATH,
 ]);
 const DENIED_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
@@ -197,6 +214,15 @@ function c2_2ExecutionSurfaceDigest() {
   );
 }
 
+function v1AdminExecutionSurfaceDigest() {
+  return sha256(
+    V1_ADMIN_EXECUTION_SURFACE_PATHS.map((repositoryPath) => {
+      const bytes = readFileSync(repositoryPath);
+      return [repositoryPath, sha256(bytes), bytes.length].join("\0");
+    }).join("\n"),
+  );
+}
+
 function validateManifest() {
   let manifest;
   try {
@@ -244,7 +270,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33IA_C2_2",
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33KA_V1_ADMIN",
     "MANIFEST_TREE_DIGEST",
   );
   assert(
@@ -277,11 +303,21 @@ function validateManifest() {
         c2_2ExecutionSurfaceDigest(),
     "MANIFEST_C2_2_EXECUTION_SURFACE_DIGEST",
   );
+  assert(
+    manifest.phase_33ka_v1_admin_execution_surface_digest?.algorithm ===
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" &&
+      manifest.phase_33ka_v1_admin_execution_surface_digest?.path_count === 7 &&
+      manifest.phase_33ka_v1_admin_execution_surface_digest
+        ?.excluded_self_path === MANIFEST_PATH &&
+      manifest.phase_33ka_v1_admin_execution_surface_digest?.sha256 ===
+        v1AdminExecutionSurfaceDigest(),
+    "MANIFEST_V1_ADMIN_EXECUTION_SURFACE_DIGEST",
+  );
 
   const inventory = listRegularFiles("testing");
   const entryPaths = manifest.entries.map((entry) => entry.path);
   assert(
-    manifest.entries.length === 128 &&
+    manifest.entries.length === 132 &&
       entryPaths.length === new Set(entryPaths).size,
     "MANIFEST_ENTRY_SET",
   );
@@ -354,7 +390,9 @@ function validateManifest() {
     } else if (entry.ci_disposition === "RUN_POLICY") {
       policyPaths.add(entry.path);
       assert(
-        entry.safety_class === "SAFE_STATIC_POLICY",
+        ["SAFE_STATIC_POLICY", "SAFE_HERMETIC_POLICY"].includes(
+          entry.safety_class,
+        ),
         "MANIFEST_POLICY_CLASS",
       );
       assert(entry.role === "EXECUTABLE", "MANIFEST_POLICY_ROLE");
@@ -556,6 +594,59 @@ function validateManifest() {
       "MANIFEST_C2_2_CLASSIFICATIONS",
     );
   }
+  const v1AdminContracts = new Map([
+    [
+      V1_ADMIN_SCHEMA_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "ADMIN_V1_LAUNCH_SCOPE_SCHEMA",
+      ],
+    ],
+    [
+      V1_ADMIN_LEDGER_PATH,
+      [
+        "CONFIG",
+        "SAFE_STATIC_SUPPORT",
+        "VALIDATE_ONLY",
+        null,
+        "ADMIN_V1_LAUNCH_SCOPE_LEDGER",
+      ],
+    ],
+    [
+      V1_ADMIN_SCOPE_TEST_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_STATIC_POLICY",
+        "RUN_POLICY",
+        ["node", V1_ADMIN_SCOPE_TEST_PATH],
+        "ADMIN_V1_LAUNCH_SCOPE_POLICY",
+      ],
+    ],
+    [
+      V1_ADMIN_HERMETIC_TEST_PATH,
+      [
+        "EXECUTABLE",
+        "SAFE_HERMETIC_POLICY",
+        "RUN_POLICY",
+        ["node", V1_ADMIN_HERMETIC_TEST_PATH],
+        "ADMIN_V1_LAUNCH_CRITICAL_HERMETIC_POLICY",
+      ],
+    ],
+  ]);
+  for (const [repositoryPath, contract] of v1AdminContracts) {
+    const entry = entriesByPath.get(repositoryPath);
+    assert(
+      entry?.role === contract[0] &&
+        entry.safety_class === contract[1] &&
+        entry.ci_disposition === contract[2] &&
+        JSON.stringify(entry.command_argv) === JSON.stringify(contract[3]) &&
+        entry.reason_code === contract[4],
+      "MANIFEST_V1_ADMIN_CLASSIFICATIONS",
+    );
+  }
   const core = corePaths.size;
   const policyCount = policyPaths.size;
   const validateOnly = manifest.entries.filter(
@@ -565,7 +656,7 @@ function validateManifest() {
     (entry) => entry.ci_disposition === "DENY",
   ).length;
   assert(
-    core === 5 && policyCount === 11 && validateOnly === 26 && denied === 86,
+    core === 5 && policyCount === 13 && validateOnly === 28 && denied === 86,
     "MANIFEST_CLASSIFICATION_COUNTS",
   );
 
@@ -578,10 +669,27 @@ function validateManifest() {
   };
 }
 
-try {
+const v1AdminClassificationPaths = [
+  "testing/admin-v1-launch-scope.schema.json",
+  "testing/admin-v1-launch-scope.json",
+  "testing/admin-v1-launch-scope.test.mjs",
+  "testing/admin-v1-launch-critical-hermetic.test.mjs",
+];
+const currentManifest = readStrictJson(MANIFEST_PATH);
+const missingV1AdminClassifications = v1AdminClassificationPaths.filter(
+  (repositoryPath) =>
+    !currentManifest.entries.some((entry) => entry.path === repositoryPath),
+).length;
+
+if (missingV1AdminClassifications !== 0) {
+  console.log(
+    `EXPECTED_FAIL_STATIC_TEST_SAFETY_MANIFEST_V1_ADMIN missing_classifications=${missingV1AdminClassifications} total_contract=0 tree_digest=0 failures=1 internal_failures=0`,
+  );
+  process.exitCode = 1;
+} else try {
   const result = validateManifest();
   console.log(
-    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} authenticated_live_route_partial_evidence_classifications=3 c2_1_semantic_classifications=5 c2_2_candidate_classifications=5 failures=0 internal_failures=0`,
+    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} v1_admin_classifications=4 failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (

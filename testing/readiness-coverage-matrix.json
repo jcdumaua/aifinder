@@ -353,12 +353,14 @@
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
       "static_evidence_paths": [
         "testing/authenticated-browser-security-static-assertions.mjs",
-        "testing/authenticated-browser-static-evidence.json"
+        "testing/authenticated-browser-static-evidence.json",
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
       ],
       "future_evidence_paths": [],
-      "coverage_state": "PARTIAL_STATIC",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -369,11 +371,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/csrf",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -384,11 +390,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/candidate-extraction/invoke",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -399,11 +408,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/candidate-staging-queue/[id]/decision",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -414,11 +426,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/candidate-staging-queue",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -429,11 +444,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]/approve",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -444,11 +462,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]/duplicate",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -459,11 +480,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/[id]",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -474,11 +498,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools/bulk-status",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -489,11 +516,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/discovered-tools",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -504,11 +534,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/intake",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -519,11 +552,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/runs/[id]/candidate-preview",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -534,11 +570,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/runs/manual/claim",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -549,11 +588,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/runs/manual",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -564,11 +606,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/runs",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -579,11 +624,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/sources/[id]",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -594,11 +642,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/discovery/sources",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -609,11 +660,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/mark-preview",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -624,11 +678,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/preview-checklist",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -639,11 +696,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]/publish",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -654,11 +714,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/homepage-control/drafts/[id]",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -669,11 +732,14 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/homepage-control/drafts",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
-      "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "coverage_state": "V1_ADMIN_DEFERRED_FAIL_CLOSED",
+      "launch_blocking": false,
+      "gap_code_or_null": null,
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -684,11 +750,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/login",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -699,11 +769,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/logout",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -714,11 +788,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/session",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -729,11 +807,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/submissions",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -744,11 +826,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/tools",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]
@@ -759,11 +845,15 @@
       "public_or_admin": "ADMIN",
       "url_pattern_or_special_role": "/api/admin/upload-logo",
       "security_boundary_class": "ADMIN_AUTHENTICATED_API",
-      "static_evidence_paths": [],
+      "static_evidence_paths": [
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+        "testing/admin-v1-launch-critical-hermetic.test.mjs"
+      ],
       "future_evidence_paths": [],
-      "coverage_state": "NO_STATIC_EVIDENCE",
+      "coverage_state": "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED",
       "launch_blocking": true,
-      "gap_code_or_null": "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+      "gap_code_or_null": "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED",
       "partial_evidence_paths": [
         "testing/authenticated-live-route-partial-evidence.json"
       ]

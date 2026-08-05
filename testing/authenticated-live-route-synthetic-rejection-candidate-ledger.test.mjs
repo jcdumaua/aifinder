@@ -88,6 +88,24 @@ function readExactC2_2(relativePath) {
 }
 
 const ROUTE_PATHS = Object.freeze(READ_ALLOWLIST.slice(0, 28));
+const V1_CRITICAL_ROUTE_PATHS = Object.freeze([
+  "app/api/admin/csrf/route.ts",
+  "app/api/admin/login/route.ts",
+  "app/api/admin/logout/route.ts",
+  "app/api/admin/session/route.ts",
+  "app/api/admin/submissions/route.ts",
+  "app/api/admin/tools/route.ts",
+  "app/api/admin/upload-logo/route.ts",
+]);
+const V1_CRITICAL_ROUTE_PATH_SET = new Set(V1_CRITICAL_ROUTE_PATHS);
+const V1_DEFERRED_ROUTE_PATHS = Object.freeze(
+  ROUTE_PATHS.filter((routePath) => !V1_CRITICAL_ROUTE_PATH_SET.has(routePath)),
+);
+const V1_CRITICAL_STATE =
+  "V1_ADMIN_HERMETIC_EVIDENCE_INTEGRATED_STAGING_REQUIRED";
+const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
+const V1_STAGING_GAP =
+  "ADMIN_V1_STAGING_ENV_DATABASE_OR_STORAGE_EVIDENCE_REQUIRED";
 const C2_1_LEDGER_PATH =
   "testing/authenticated-live-route-semantic-branch-ledger.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
@@ -978,6 +996,57 @@ function mutationError(code) {
   throw error;
 }
 
+function currentGovernanceValid(matrix, registry, historicalLedger) {
+  const currentRows = matrix?.entries?.filter((entry) =>
+    ROUTE_PATHS.includes(entry.path),
+  );
+  const criticalRows = currentRows?.filter((entry) =>
+    V1_CRITICAL_ROUTE_PATH_SET.has(entry.path),
+  );
+  const deferredRows = currentRows?.filter(
+    (entry) => !V1_CRITICAL_ROUTE_PATH_SET.has(entry.path),
+  );
+  const criticalWorkstream = registry?.workstreams?.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+  );
+  const deferredWorkstream = registry?.workstreams?.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED",
+  );
+  return (
+    historicalLedger?.summary?.launch_blockers === 28 &&
+    historicalLedger?.summary?.routes_unblocked === 0 &&
+    currentRows?.length === 28 &&
+    criticalRows?.length === 7 &&
+    criticalRows.every(
+      (entry) =>
+        entry.coverage_state === V1_CRITICAL_STATE &&
+        entry.launch_blocking === true &&
+        entry.gap_code_or_null === V1_STAGING_GAP,
+    ) &&
+    deferredRows?.length === 21 &&
+    deferredRows.every(
+      (entry) =>
+        entry.coverage_state === V1_DEFERRED_STATE &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null,
+    ) &&
+    matrix.entries.filter((entry) => entry.launch_blocking === true).length === 7 &&
+    criticalWorkstream?.entry_count === 7 &&
+    criticalWorkstream.state ===
+      "HERMETIC_COMPLETE_STAGING_AUTHORITY_REQUIRED" &&
+    criticalWorkstream.execution_authorized === false &&
+    JSON.stringify(criticalWorkstream.source_paths) ===
+      JSON.stringify(V1_CRITICAL_ROUTE_PATHS) &&
+    deferredWorkstream?.entry_count === 21 &&
+    deferredWorkstream.state === "SAFELY_DISABLED_FOR_V1_LAUNCH" &&
+    deferredWorkstream.execution_authorized === false &&
+    JSON.stringify(deferredWorkstream.source_paths) ===
+      JSON.stringify(V1_DEFERRED_ROUTE_PATHS) &&
+    registry.execution_authorized === false &&
+    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES"
+  );
+}
+
 function runLedgerMutations(ledger, oracle, c2_1) {
   const cases = [];
   cases.push(() => expectCode(
@@ -1150,11 +1219,58 @@ function runLedgerMutations(ledger, oracle, c2_1) {
     }, "C2_2_RUNTIME_STATE");
   });
   cases.push(() => {
-    const copy = cloneJson(ledger);
-    copy.summary.launch_blockers = 27;
+    const historicalRewrite = cloneJson(ledger);
+    historicalRewrite.summary.launch_blockers = 7;
     expectCode(() => {
-      if (copy.summary.launch_blockers !== 28) mutationError("C2_2_BLOCKER_GOVERNANCE");
-    }, "C2_2_BLOCKER_GOVERNANCE");
+      if (!currentGovernanceValid(
+        strictJson(FILE_BYTES.get(MATRIX_PATH)),
+        strictJson(FILE_BYTES.get(BLOCKER_PATH)),
+        historicalRewrite,
+      )) {
+        mutationError("C2_2_HISTORICAL_BLOCKER_REWRITE");
+      }
+    }, "C2_2_HISTORICAL_BLOCKER_REWRITE");
+
+    const currentMatrixReversion = strictJson(FILE_BYTES.get(MATRIX_PATH));
+    for (const entry of currentMatrixReversion.entries) {
+      if (!ROUTE_PATHS.includes(entry.path)) continue;
+      entry.launch_blocking = true;
+    }
+    expectCode(() => {
+      if (!currentGovernanceValid(
+        currentMatrixReversion,
+        strictJson(FILE_BYTES.get(BLOCKER_PATH)),
+        ledger,
+      )) {
+        mutationError("C2_2_CURRENT_BLOCKER_REVERSION");
+      }
+    }, "C2_2_CURRENT_BLOCKER_REVERSION");
+
+    const splitLoss = strictJson(FILE_BYTES.get(BLOCKER_PATH));
+    splitLoss.workstreams = splitLoss.workstreams.filter(
+      (entry) => entry.id !== "AUTHENTICATED_ADMIN_V1_DEFERRED",
+    );
+    expectCode(() => {
+      if (!currentGovernanceValid(
+        strictJson(FILE_BYTES.get(MATRIX_PATH)),
+        splitLoss,
+        ledger,
+      )) {
+        mutationError("C2_2_V1_WORKSTREAM_SPLIT");
+      }
+    }, "C2_2_V1_WORKSTREAM_SPLIT");
+
+    const executionAuthorization = strictJson(FILE_BYTES.get(BLOCKER_PATH));
+    executionAuthorization.execution_authorized = true;
+    expectCode(() => {
+      if (!currentGovernanceValid(
+        strictJson(FILE_BYTES.get(MATRIX_PATH)),
+        executionAuthorization,
+        ledger,
+      )) {
+        mutationError("C2_2_EXECUTION_AUTHORIZATION");
+      }
+    }, "C2_2_EXECUTION_AUTHORIZATION");
   });
   cases.push(() => {
     const copy = cloneJson(ledger);
@@ -1381,11 +1497,7 @@ function runFinalLedgerTest() {
       );
     }],
     ["L18_BLOCKERS_ROUTES_AND_NO_GO", () => {
-      assert.equal(matrix.entries.filter((entry) => entry.launch_blocking === true).length, 28);
-      assert.equal(blockers.execution_authorized, false);
-      assert.equal(blockers.overall_decision, "NO_GO_PENDING_SEPARATE_AUTHORITIES");
-      assert.equal(ledger.summary.launch_blockers, 28);
-      assert.equal(ledger.summary.routes_unblocked, 0);
+      assert(currentGovernanceValid(matrix, blockers, ledger));
       assert.equal(ledger.summary.public_launch, "NO_GO");
     }],
     ["L19_PRIVACY_RAW_VALUES_ZERO", () => {
