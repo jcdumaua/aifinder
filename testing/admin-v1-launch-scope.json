@@ -185,6 +185,18 @@
     }
   ],
   "unknown_admin_api_policy": "DENY_BY_DEFAULT",
+  "proxy_matcher_contract": {
+    "exact_admin_api_matcher": "/api/admin/:path*",
+    "general_matcher_preserved": true,
+    "coverage": "ALL_CURRENT_AND_FUTURE_API_ADMIN_PATHS_BEFORE_DISPATCH",
+    "extension_suffix_bypass_closed": true,
+    "representative_extension_paths": [
+      "/api/admin/discovery/sources/00000000-0000-0000-0000-000000000000.xml",
+      "/api/admin/discovery/discovered-tools/1.js",
+      "/api/admin/homepage-control/drafts/example.txt",
+      "/api/admin/unknown.map"
+    ]
+  },
   "sources": {
     "proxy": {
       "path": "proxy.ts",

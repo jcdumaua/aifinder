@@ -12,6 +12,7 @@
     "critical_api_routes",
     "deferred_c2_routes",
     "unknown_admin_api_policy",
+    "proxy_matcher_contract",
     "sources",
     "conditional_route_baseline_blobs",
     "controls",
@@ -42,6 +43,31 @@
       "items": { "$ref": "#/$defs/route" }
     },
     "unknown_admin_api_policy": { "const": "DENY_BY_DEFAULT" },
+    "proxy_matcher_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_admin_api_matcher",
+        "general_matcher_preserved",
+        "coverage",
+        "extension_suffix_bypass_closed",
+        "representative_extension_paths"
+      ],
+      "properties": {
+        "exact_admin_api_matcher": { "const": "/api/admin/:path*" },
+        "general_matcher_preserved": { "const": true },
+        "coverage": { "const": "ALL_CURRENT_AND_FUTURE_API_ADMIN_PATHS_BEFORE_DISPATCH" },
+        "extension_suffix_bypass_closed": { "const": true },
+        "representative_extension_paths": {
+          "const": [
+            "/api/admin/discovery/sources/00000000-0000-0000-0000-000000000000.xml",
+            "/api/admin/discovery/discovered-tools/1.js",
+            "/api/admin/homepage-control/drafts/example.txt",
+            "/api/admin/unknown.map"
+          ]
+        }
+      }
+    },
     "sources": { "$ref": "#/$defs/sources" },
     "conditional_route_baseline_blobs": { "$ref": "#/$defs/conditionalBlobs" },
     "controls": { "$ref": "#/$defs/controls" },

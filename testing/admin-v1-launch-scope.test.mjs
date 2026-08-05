@@ -10,6 +10,21 @@ const SCHEMA_PATH = "testing/admin-v1-launch-scope.schema.json";
 const LEDGER_PATH = "testing/admin-v1-launch-scope.json";
 const PROXY_PATH = "proxy.ts";
 const UI_PATH = "components/admin/admin-dashboard-client.tsx";
+const EXACT_ADMIN_API_MATCHER = "/api/admin/:path*";
+const GENERAL_MATCHER = "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$).*)";
+const REPRESENTATIVE_EXTENSION_PATHS = Object.freeze([
+  "/api/admin/discovery/sources/00000000-0000-0000-0000-000000000000.xml",
+  "/api/admin/discovery/discovered-tools/1.js",
+  "/api/admin/homepage-control/drafts/example.txt",
+  "/api/admin/unknown.map",
+]);
+const EXPECTED_PROXY_MATCHER_CONTRACT = Object.freeze({
+  exact_admin_api_matcher: EXACT_ADMIN_API_MATCHER,
+  general_matcher_preserved: true,
+  coverage: "ALL_CURRENT_AND_FUTURE_API_ADMIN_PATHS_BEFORE_DISPATCH",
+  extension_suffix_bypass_closed: true,
+  representative_extension_paths: REPRESENTATIVE_EXTENSION_PATHS,
+});
 const EXPECTED_CRITICAL_ROUTES = Object.freeze([
   ["/api/admin/login", ["POST"], "app/api/admin/login/route.ts"],
   ["/api/admin/logout", ["POST"], "app/api/admin/logout/route.ts"],
@@ -204,6 +219,76 @@ function expectFailure(callback) {
   assert(failed);
 }
 
+function proxyMatcherLiterals(contents) {
+  const ast = ts.createSourceFile(PROXY_PATH, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let matcher = null;
+  const visit = (node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "config" &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      const property = node.initializer.properties.find((candidate) =>
+        ts.isPropertyAssignment(candidate) &&
+        ((ts.isIdentifier(candidate.name) && candidate.name.text === "matcher") ||
+          (ts.isStringLiteralLike(candidate.name) && candidate.name.text === "matcher"))
+      );
+      if (!property || !ts.isPropertyAssignment(property)) return;
+      if (ts.isStringLiteralLike(property.initializer)) {
+        matcher = [property.initializer.text];
+        return;
+      }
+      if (!ts.isArrayLiteralExpression(property.initializer)) return;
+      const literals = property.initializer.elements.map((element) =>
+        ts.isStringLiteralLike(element) ? element.text : null
+      );
+      matcher = literals.every((value) => value !== null) ? literals : null;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(ast);
+  return matcher;
+}
+
+function assertProxyMatcherContract(ledgerValue, schemaValue) {
+  assert.deepEqual(ledgerValue.proxy_matcher_contract, EXPECTED_PROXY_MATCHER_CONTRACT);
+  assert.deepEqual(schemaValue.required, [
+    "schema_version",
+    "phase",
+    "baseline",
+    "allowed_admin_pages",
+    "critical_api_routes",
+    "deferred_c2_routes",
+    "unknown_admin_api_policy",
+    "proxy_matcher_contract",
+    "sources",
+    "conditional_route_baseline_blobs",
+    "controls",
+    "outcomes",
+    "next_authority",
+  ]);
+  assert.deepEqual(schemaValue.properties.proxy_matcher_contract, {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "exact_admin_api_matcher",
+      "general_matcher_preserved",
+      "coverage",
+      "extension_suffix_bypass_closed",
+      "representative_extension_paths",
+    ],
+    properties: {
+      exact_admin_api_matcher: { const: EXACT_ADMIN_API_MATCHER },
+      general_matcher_preserved: { const: true },
+      coverage: { const: "ALL_CURRENT_AND_FUTURE_API_ADMIN_PATHS_BEFORE_DISPATCH" },
+      extension_suffix_bypass_closed: { const: true },
+      representative_extension_paths: { const: [...REPRESENTATIVE_EXTENSION_PATHS] },
+    },
+  });
+}
+
 function stopRed(line) {
   process.stdout.write(`${line}\n`);
   process.exit(1);
@@ -240,6 +325,26 @@ const launchNavReady =
   !uiSource.includes('data-v1-launch-visible="deferred"');
 if (!launchNavReady) {
   stopRed("EXPECTED_FAIL_ADMIN_V1_LAUNCH_SCOPE stage=ADMIN_UI assertions=32 pass=28 fail=4 internal_failures=0");
+}
+
+const matcherLiterals = proxyMatcherLiterals(proxySource);
+const preflightLedger = strictJson(bytes(LEDGER_PATH));
+const preflightSchema = strictJson(bytes(SCHEMA_PATH));
+const proxyCoverageRedChecks = [
+  () => assert.deepEqual(matcherLiterals, [EXACT_ADMIN_API_MATCHER, GENERAL_MATCHER]),
+  () => assert.equal(matcherLiterals?.[0], EXACT_ADMIN_API_MATCHER),
+  () => {
+    assert.equal(matcherLiterals?.[0], EXACT_ADMIN_API_MATCHER);
+    assert(REPRESENTATIVE_EXTENSION_PATHS.every((pathname) => pathname.startsWith("/api/admin/")));
+  },
+  () => assertProxyMatcherContract(preflightLedger, preflightSchema),
+];
+let proxyCoverageRedPasses = 0;
+for (const check of proxyCoverageRedChecks) {
+  try { check(); proxyCoverageRedPasses += 1; } catch {}
+}
+if (proxyCoverageRedPasses !== proxyCoverageRedChecks.length) {
+  stopRed(`EXPECTED_FAIL_ADMIN_V1_PROXY_MATCHER_COVERAGE assertions=4 pass=${proxyCoverageRedPasses} fail=${proxyCoverageRedChecks.length - proxyCoverageRedPasses} failures=1 internal_failures=0`);
 }
 
 const ledger = strictJson(bytes(LEDGER_PATH));
@@ -448,6 +553,14 @@ const checks = [
       assert.equal(bypass, false);
     }
   },
+  () => assert.deepEqual(matcherLiterals, [EXACT_ADMIN_API_MATCHER, GENERAL_MATCHER]),
+  () => assert.equal(matcherLiterals?.[0], EXACT_ADMIN_API_MATCHER),
+  () => {
+    for (const pathname of REPRESENTATIVE_EXTENSION_PATHS) {
+      assert.equal(scopeModule.classifyAdminV1Path(pathname, "GET"), "DENY_ADMIN_API_PATH");
+    }
+  },
+  () => assertProxyMatcherContract(ledger, schema),
 ];
 
 const mutations = [
@@ -467,6 +580,23 @@ const mutations = [
   () => assert.equal(ledger.controls.network, 0),
   () => assert.equal(ledger.outcomes.launch_blockers_before, 28),
   () => assert.equal(ledger.outcomes.launch_blockers_after, 7),
+  () => expectFailure(() => assert.deepEqual(
+    proxyMatcherLiterals(proxySource.replace(`    "${EXACT_ADMIN_API_MATCHER}",\n`, "")),
+    [EXACT_ADMIN_API_MATCHER, GENERAL_MATCHER]
+  )),
+  () => expectFailure(() => assert.deepEqual(
+    proxyMatcherLiterals(proxySource.replace(EXACT_ADMIN_API_MATCHER, "/api/admin/:path")),
+    [EXACT_ADMIN_API_MATCHER, GENERAL_MATCHER]
+  )),
+  () => expectFailure(() => assert.deepEqual(
+    proxyMatcherLiterals(proxySource.replace(`"${EXACT_ADMIN_API_MATCHER}"`, "ADMIN_API_MATCHER")),
+    [EXACT_ADMIN_API_MATCHER, GENERAL_MATCHER]
+  )),
+  () => {
+    const mutatedLedger = structuredClone(ledger);
+    mutatedLedger.proxy_matcher_contract.extension_suffix_bypass_closed = false;
+    expectFailure(() => assertProxyMatcherContract(mutatedLedger, schema));
+  },
 ];
 
 let failures = 0;
@@ -478,8 +608,8 @@ for (const mutation of mutations) {
 }
 
 if (failures > 0) {
-  process.stdout.write(`FAIL_ADMIN_V1_LAUNCH_SCOPE assertions=32 mutations=16 failures=${failures} internal_failures=0\n`);
+  process.stdout.write(`FAIL_ADMIN_V1_LAUNCH_SCOPE assertions=36 mutations=20 failures=${failures} internal_failures=0\n`);
   process.exit(1);
 }
 
-process.stdout.write("PASS_ADMIN_V1_LAUNCH_SCOPE assertions=32 mutations=16 launch_pages=3 launch_api_routes=7 launch_api_methods=13 deferred_c2_routes=21 deferred_c2_methods=24 unknown_admin_api=DENY_BY_DEFAULT blockers_before=28 blockers_after=7 failures=0 internal_failures=0\n");
+process.stdout.write("PASS_ADMIN_V1_LAUNCH_SCOPE assertions=36 mutations=20 launch_pages=3 launch_api_routes=7 launch_api_methods=13 deferred_c2_routes=21 deferred_c2_methods=24 unknown_admin_api=DENY_BY_DEFAULT proxy_admin_matcher=/api/admin/:path* extension_suffix_bypass_closed=true blockers_before=28 blockers_after=7 failures=0 internal_failures=0\n");

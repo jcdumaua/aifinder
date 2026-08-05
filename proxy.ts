@@ -154,6 +154,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/api/admin/:path*",
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml)$).*)",
   ],
 };

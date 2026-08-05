@@ -72,8 +72,8 @@ const LEGACY_CORE_BASELINE_PROJECTIONS = Object.freeze([
   Object.freeze({
     absolutePath: "/Users/jamescarlodumaua/aifinder/proxy.ts",
     currentSha256:
-      "15a6d8ffaf068825c716b38538a285e9157be439af6d137a239d1c0444b328f1",
-    currentBytes: 4406,
+      "5f6266ec740197a0b299ef1c7b09b74c35a301bc238d0ca49f777e0ee0b7029b",
+    currentBytes: 4431,
     baselineSha256:
       "d032aaff869000464d7b320191e1ed9f5c9d7c519e8a058c4673750a6a8117bb",
     baselineBytes: 3378,
@@ -164,7 +164,7 @@ const C2_2_CHILDREN = [
 const V1_ADMIN_CHILDREN = [
   {
     path: "testing/admin-v1-launch-scope.test.mjs",
-    sha256: "77993805722733f720aab3065da8d8854392c240285c5dc7f2ce3dda4db7f8a9",
+    sha256: "cb19f9a82d27355a4934cc7e4fe71e9ef11c3ee93d67f2b4aed8da7828315e5a",
     safetyClass: "SAFE_STATIC_POLICY",
   },
   {
