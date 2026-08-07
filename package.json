@@ -19,6 +19,7 @@
     "test:public-launch-blockers": "node testing/public-launch-blocker-registry.test.mjs",
     "test:public-production-runtime-planning": "node testing/public-production-runtime-planning-manifest.test.mjs",
     "test:static-readiness-workflow": "node testing/static-readiness-workflow-static-assertions.mjs",
+    "test:phase-compiler": "node testing/phase-compiler/phase-compiler.test.mjs && node testing/phase-compiler/phase-compiler-security.test.mjs && node testing/phase-compiler/phase-compiler-determinism.test.mjs",
     "test:accessibility-responsive-static": "node testing/accessibility-responsive-static-assertions.mjs",
     "test:static-readiness-core": "node testing/run-static-readiness.mjs",
     "test:static-readiness": "npm run test:static-safety-manifest && npm run test:readiness-coverage && npm run test:public-launch-blockers && npm run test:public-production-runtime-planning && npm run test:static-readiness-workflow && npm run test:accessibility-responsive-static && npm run test:static-readiness-core",

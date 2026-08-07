@@ -87,6 +87,8 @@ const C2_1_TOTAL_TIMEOUT_MS = 60_000;
 const C2_2_TOTAL_TIMEOUT_MS = 60_000;
 const V1_ADMIN_TOTAL_TIMEOUT_MS = 60_000;
 const V1_STAGING_TOTAL_TIMEOUT_MS = 60_000;
+const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 45_000;
+const PHASE_COMPILER_TOTAL_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
 const CORE_CHILD_PATHS = [
   "testing/authenticated-browser-security-static-assertions.mjs",
@@ -118,7 +120,7 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "ed2dac5b76b1d7ab3d2a79464125c0bf731b021e023eeb075deaf1e9839a7acf",
+    sha256: "b4fbb1fe9c37594b86f6f36f2684a950a9e76fe06e3e84e0218a2b4e11936f7e",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -206,6 +208,121 @@ const EXPECTED_V1_STAGING_CHILD_PATHS = [
   "testing/admin-v1-staging-readiness-source-policy.test.mjs",
   "testing/admin-v1-staging-readiness-evidence.test.mjs",
 ];
+const PHASE_COMPILER_CHILDREN = [
+  {
+    path: "testing/phase-compiler/phase-compiler.test.mjs",
+    sha256: "5e2e3e5b5a9a5ed5d267cbf86af707646804cba8b333a0bb07d2f6cb0c9128b6",
+    imports: [
+      "node:assert/strict",
+      "node:child_process",
+      "node:crypto",
+      "node:fs/promises",
+      "node:path",
+      "node:util",
+      "node:url",
+      "./repository-snapshot.schema.json",
+      "./canonical.mjs",
+      "./command-dependency-validator.mjs",
+      "./error-catalog.mjs",
+      "./fixtures/failure-catalog.mjs",
+      "./governance-validator.mjs",
+      "./operation-contract-validator.mjs",
+      "./phase-spec.mjs",
+      "./repository-snapshot-adapter.mjs",
+      "./schema-validator.mjs",
+      "./semantic-validator.mjs",
+    ],
+  },
+  {
+    path: "testing/phase-compiler/phase-compiler-security.test.mjs",
+    sha256: "9b29f3bae914e750ef6fb46201eacf4456f0008f209208a5c6a4377064048955",
+    imports: [
+      "node:assert/strict",
+      "node:child_process",
+      "node:fs",
+      "node:fs/promises",
+      "node:path",
+      "node:url",
+      "node:util",
+      "./canonical.mjs",
+      "./cli.mjs",
+      "./compiled-bundle-verifier.mjs",
+      "./deterministic-renderer.mjs",
+      "./command-dependency-validator.mjs",
+      "./error-catalog.mjs",
+      "./external-bundle-writer.mjs",
+    ],
+  },
+  {
+    path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+    sha256: "f3dc951fb8c967372d24590c9b4ca6970a7697f25bddeefc4dd3355bfd3a7b11",
+    imports: [
+      "node:assert/strict",
+      "node:crypto",
+      "node:fs/promises",
+      "node:path",
+      "node:url",
+      "./canonical.mjs",
+      "./deterministic-renderer.mjs",
+      "./command-dependency-validator.mjs",
+      "./external-bundle-writer.mjs",
+      "./fixtures/failure-catalog.mjs",
+      "./error-catalog.mjs",
+      "./operation-contract-validator.mjs",
+    ],
+  },
+];
+const EXPECTED_PHASE_COMPILER_CHILD_PATHS = [
+  "testing/phase-compiler/phase-compiler.test.mjs",
+  "testing/phase-compiler/phase-compiler-security.test.mjs",
+  "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+];
+const PHASE_COMPILER_MANIFEST_CONTRACTS = Object.freeze([
+  ["testing/phase-compiler/canonical.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_CANONICAL_SUPPORT" }],
+  ["testing/phase-compiler/cli.mjs", { role: "EXECUTABLE", safety_class: "UNPROVEN_DENY", ci_disposition: "DENY", command_argv: null, reason_code: "PHASE_COMPILER_CLI_DEDICATED_LANE_ONLY" }],
+  ["testing/phase-compiler/command-dependency-validator.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_COMMAND_DEPENDENCY_SUPPORT" }],
+  ["testing/phase-compiler/compiled-bundle-verifier.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_BUNDLE_VERIFIER_SUPPORT" }],
+  ["testing/phase-compiler/deterministic-renderer.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_DETERMINISTIC_RENDERER_SUPPORT" }],
+  ["testing/phase-compiler/error-catalog.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_ERROR_CATALOG_SUPPORT" }],
+  ["testing/phase-compiler/external-bundle-writer.mjs", { role: "SUPPORT", safety_class: "UNPROVEN_DENY", ci_disposition: "DENY", command_argv: null, reason_code: "PHASE_COMPILER_EXTERNAL_WRITER_DEDICATED_LANE_ONLY" }],
+  ["testing/phase-compiler/fixtures/failure-catalog.mjs", { role: "CONFIG", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_FAILURE_CATALOG_FIXTURE" }],
+  ["testing/phase-compiler/fixtures/reference-phase-spec.json", { role: "CONFIG", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_REFERENCE_SPEC_FIXTURE" }],
+  ["testing/phase-compiler/fixtures/reference-repository-snapshot.json", { role: "CONFIG", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_REFERENCE_SNAPSHOT_FIXTURE" }],
+  ["testing/phase-compiler/governance-validator.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_GOVERNANCE_SUPPORT" }],
+  ["testing/phase-compiler/operation-contract-validator.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_OPERATION_CONTRACT_SUPPORT" }],
+  ["testing/phase-compiler/phase-compiler-determinism.test.mjs", { role: "EXECUTABLE", safety_class: "SAFE_STATIC_POLICY", ci_disposition: "RUN_POLICY", command_argv: ["node", "testing/phase-compiler/phase-compiler-determinism.test.mjs"], reason_code: "PHASE_COMPILER_DETERMINISM_POLICY" }],
+  ["testing/phase-compiler/phase-compiler-security.test.mjs", { role: "EXECUTABLE", safety_class: "SAFE_STATIC_POLICY", ci_disposition: "RUN_POLICY", command_argv: ["node", "testing/phase-compiler/phase-compiler-security.test.mjs"], reason_code: "PHASE_COMPILER_SECURITY_POLICY" }],
+  ["testing/phase-compiler/phase-compiler.test.mjs", { role: "EXECUTABLE", safety_class: "SAFE_STATIC_POLICY", ci_disposition: "RUN_POLICY", command_argv: ["node", "testing/phase-compiler/phase-compiler.test.mjs"], reason_code: "PHASE_COMPILER_CORE_POLICY" }],
+  ["testing/phase-compiler/phase-spec.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_PHASE_SPEC_SUPPORT" }],
+  ["testing/phase-compiler/phase-spec.schema.json", { role: "CONFIG", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_PHASE_SPEC_SCHEMA" }],
+  ["testing/phase-compiler/repository-snapshot-adapter.mjs", { role: "EXECUTABLE", safety_class: "UNPROVEN_DENY", ci_disposition: "DENY", command_argv: null, reason_code: "PHASE_COMPILER_SNAPSHOT_ADAPTER_DEDICATED_LANE_ONLY" }],
+  ["testing/phase-compiler/repository-snapshot.schema.json", { role: "CONFIG", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_REPOSITORY_SNAPSHOT_SCHEMA" }],
+  ["testing/phase-compiler/schema-validator.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_SCHEMA_VALIDATOR_SUPPORT" }],
+  ["testing/phase-compiler/semantic-validator.mjs", { role: "SUPPORT", safety_class: "SAFE_STATIC_SUPPORT", ci_disposition: "VALIDATE_ONLY", command_argv: null, reason_code: "PHASE_COMPILER_SEMANTIC_SUPPORT" }],
+]);
+const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
+  {path: "testing/phase-compiler/canonical.mjs",sha256: "aa29758297cfcf1bddc0162ed7a5b155faf3bb52c572e0d86b9e307b3a7ed61b",imports: ["node:crypto","./error-catalog.mjs"],profile_sha256: "3a545a2ec20057a25c99e9a02bfa5235f3ea63e1f304bfaf71f4b6eb78184452",flags: []},
+  {path: "testing/phase-compiler/cli.mjs",sha256: "8c8792bb682597b5222b2410959c8e1ed0f69b7c10293840fa05d1f7f9a3a6aa",imports: ["node:fs","node:fs/promises","node:path","node:url","./canonical.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./phase-spec.mjs","./semantic-validator.mjs"],profile_sha256: "29c4d9d9b7f42281fc63fdde1f06b2c0f5e485dbfc21cc74bf6eb01a1ef8e260",flags: ["FS_ACCESS","PROCESS_CONTROL"]},
+  {path: "testing/phase-compiler/command-dependency-validator.mjs",sha256: "f33fa6ca9e8fdf089d803042ce2048586483416f07e3133f0eb7f95f094472be",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "238aa203dc683ca266176dc4f9d190b63d0bb757e054d9f2ad949ff8bf5058ce",flags: ["FIXED_GIT"]},
+  {path: "testing/phase-compiler/compiled-bundle-verifier.mjs",sha256: "60dc69e103f73d07f2837ed7f5f2007dbc7ac27b0bd68eace98c33435fe55b8d",imports: ["node:crypto","node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./deterministic-renderer.mjs"],profile_sha256: "9f18abb8783fc4ae1377e7a40856bfb6802c12abd6f0f427a84517167362a512",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/deterministic-renderer.mjs",sha256: "a2d04dcd517540fd74964ab15f5b499f0b736a8b7b9ca24e5edf2e496bb70ee2",imports: ["node:crypto","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./semantic-validator.mjs","./command-dependency-validator.mjs"],profile_sha256: "9d5abfb0ffc89a8920402ac99632b3eea9162bb8342e3759c9bafbe75add5fe3",flags: []},
+  {path: "testing/phase-compiler/error-catalog.mjs",sha256: "cd9f42d6a15da21f1c5df4d79e09fde07c723399c785950068094d7adb79cada",imports: [],profile_sha256: "59d8a8b6e583785f32058e757af71b4eea608f0d007b3779715448573f5f6cab",flags: []},
+  {path: "testing/phase-compiler/external-bundle-writer.mjs",sha256: "c1667e329745ac425e0bf919672dc78c5a88793d56a894a7270fe8e3fc38f9e0",imports: ["node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs"],profile_sha256: "6af2890397c50913c55961c6322162fdc75f9667fd06b17203d011c8a62fdae2",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/fixtures/failure-catalog.mjs",sha256: "3a20f3fd68a384bb31be1d58359bc28c3622426af09280338a070daa872dc281",imports: ["../canonical.mjs","../command-dependency-validator.mjs"],profile_sha256: "987249772e89b509aa5e3e9d69274fd6791a0a6e4fe6cf25feb2c2c4a5779b35",flags: []},
+  {path: "testing/phase-compiler/fixtures/reference-phase-spec.json",sha256: "b81b6e90288daa27417e5058f4247b1107f197b9840a833febd99b898664d2e9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
+  {path: "testing/phase-compiler/fixtures/reference-repository-snapshot.json",sha256: "cf4efcbb41bdffe715fcf150da0d26305b78c115a8280bc8786b48e832a4f7a9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
+  {path: "testing/phase-compiler/governance-validator.mjs",sha256: "be590a45117d7ed6d7119c1877bdb18ebb79c44cfd365734bd0028ca8b74b664",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "678fbe5d75118ecb6d8c3523b5cca94329dff2b370617f506afd94033f4f11f1",flags: []},
+  {path: "testing/phase-compiler/operation-contract-validator.mjs",sha256: "04987d3f7b8f3f066fcfd4366b21e3badf13df412ca73f4e786f9914e97b9988",imports: ["./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs"],profile_sha256: "b3a01795343b01176a4a189acfe325cf294dcd2c89efd4622703d0e67134c6ee",flags: []},
+  {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "f3dc951fb8c967372d24590c9b4ca6970a7697f25bddeefc4dd3355bfd3a7b11",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "18448817e12b4b3b466cded935b8a79220787a130c5228f23373a467aa4fbf34",flags: ["FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL"]},
+  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "9b29f3bae914e750ef6fb46201eacf4456f0008f209208a5c6a4377064048955",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs"],profile_sha256: "f832a702b0cec00033ffd12379631901854fc32f69fc0521bd36837eb35e63db",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "5e2e3e5b5a9a5ed5d267cbf86af707646804cba8b333a0bb07d2f6cb0c9128b6",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "c3b9132c6534c0c011fa3e824e9c7307025b5cf669426309cafec0b772fbcfb2",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-spec.mjs",sha256: "085a5431f1d3882631f06df132223cdcf8f45e83204fbc4378356a1f167f8aae",imports: ["./phase-spec.schema.json","./canonical.mjs","./error-catalog.mjs","./schema-validator.mjs"],profile_sha256: "7b3b0641df12be3a8716f3d0c06cce36dae58d377bbefecd9178d81fa6a1224a",flags: []},
+  {path: "testing/phase-compiler/phase-spec.schema.json",sha256: "d6c28f935751210fc5c661baff9b7cbc611f3a4420198e00bf7946ab90af5f4f",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
+  {path: "testing/phase-compiler/repository-snapshot-adapter.mjs",sha256: "fcc627114e417a3a916027ba4ce73ba3fa4a4a3f7b07fe84db79f2552df9732c",imports: ["node:child_process","node:fs","node:fs/promises","node:path","node:url","./repository-snapshot.schema.json","./command-dependency-validator.mjs","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "08f777f9eb7734059780049d74476cebfd2e9be9abb9718d5350fda8a8179d8a",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/repository-snapshot.schema.json",sha256: "eea888ad3a60e1caf745c7621ce0b6e3a07c9d0b8ae308df4d24f4dd08b9dc98",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
+  {path: "testing/phase-compiler/schema-validator.mjs",sha256: "72f28acea6db9e0a0a72ee482ee5160d9821a4448b5935fd08d05a0e7d7c2e12",imports: ["./canonical.mjs","./error-catalog.mjs"],profile_sha256: "0330bab05eb134c1635266a2065ef88fba0efda8202c089d4575569ef2d8ff0e",flags: []},
+  {path: "testing/phase-compiler/semantic-validator.mjs",sha256: "66b30d56b1d34b8cee8442f7e6180d75abb51c72eee82caba00cfac3f9c0e475",imports: ["./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "874f177b7d4839bd65202d813935e6cd56d4ea7889d4ea2bf69a12d1669cc4b2",flags: []},
+]);
 const C2_1_CHILDREN = [
   {
     path: "testing/authenticated-live-route-semantic-analyzer.test.mjs",
@@ -441,6 +558,17 @@ const V1_STAGING_SAFE_ENVIRONMENT = Object.freeze({
   NEXT_TELEMETRY_DISABLED: "1",
   NODE_ENV: "test",
 });
+const PHASE_COMPILER_SAFE_ENVIRONMENT = Object.freeze({
+  PATH: CORE_SAFE_RUNTIME_PATH,
+  HOME: "/tmp/aifinder-phase-compiler-no-home",
+  TMPDIR: "/tmp",
+  LANG: "C.UTF-8",
+  LC_ALL: "C.UTF-8",
+  CI: "1",
+  NO_COLOR: "1",
+  NEXT_TELEMETRY_DISABLED: "1",
+  NODE_ENV: "test",
+});
 const DENIED_SOURCE_PATTERNS = [
   ["DYNAMIC_IMPORT", /\bimport\s*\(/],
   ["COMMONJS_REQUIRE", /\brequire\s*\(/],
@@ -517,6 +645,12 @@ function authorizedV1AdminSnapshot() {
 
 function authorizedV1StagingSnapshot() {
   return pathSetDigest(AUTHORIZED_V1_STAGING_PATHS);
+}
+
+function authorizedPhaseCompilerSnapshot() {
+  return pathSetDigest(
+    PHASE_COMPILER_MANIFEST_CONTRACTS.map(([repositoryPath]) => repositoryPath),
+  );
 }
 
 function validateV1AdminChildSource(child) {
@@ -625,8 +759,28 @@ function validateV1StagingChildSource(child) {
   }
 }
 
+function validatePhaseCompilerChildSource(child) {
+  const bytes = readFileSync(child.path);
+  if (digest(bytes) !== child.sha256) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_SOURCE_IDENTITY");
+  }
+  let imports;
+  try {
+    imports = directStaticModuleEdges(child.path);
+  } catch {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_IMPORT_ALLOWLIST");
+  }
+  if (!exactSet(imports, child.imports)) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_IMPORT_ALLOWLIST");
+  }
+}
+
 function directStaticModuleEdges(repositoryPath) {
   const { sourceFile } = parseTypeScriptFile(repositoryPath);
+  return directStaticModuleEdgesFromSource(sourceFile);
+}
+
+function directStaticModuleEdgesFromSource(sourceFile) {
   const edges = [];
   for (const statement of sourceFile.statements) {
     if (
@@ -639,6 +793,544 @@ function directStaticModuleEdges(repositoryPath) {
     }
   }
   return edges;
+}
+
+const PHASE_COMPILER_CAPABILITY_MODULES = new Set([
+  "node:child_process", "child_process", "node:fs", "fs",
+  "node:fs/promises", "fs/promises", "node:http", "http",
+  "node:https", "https", "node:net", "net", "node:tls", "tls",
+  "node:dns", "dns", "node:dns/promises", "dns/promises",
+  "node:dgram", "dgram", "node:worker_threads", "worker_threads",
+  "node:vm", "vm", "node:module", "module", "node:process", "process",
+]);
+const PHASE_COMPILER_NETWORK_MODULES = new Set([
+  "node:http", "http", "node:https", "https", "node:net", "net",
+  "node:tls", "tls", "node:dns", "dns", "node:dns/promises",
+  "dns/promises", "node:dgram", "dgram",
+]);
+const PHASE_COMPILER_FS_MUTATIONS = new Set([
+  "appendFile", "appendFileSync", "chmod", "chmodSync", "chown", "chownSync",
+  "copyFile", "copyFileSync", "cp", "cpSync", "createWriteStream", "link",
+  "linkSync", "mkdir", "mkdirSync", "mkdtemp", "mkdtempSync", "rename",
+  "renameSync", "rm", "rmSync", "rmdir", "rmdirSync", "symlink", "symlinkSync",
+  "truncate", "truncateSync", "unlink", "unlinkSync", "write", "writeFile",
+  "writeFileSync", "writeSync", "writev", "writevSync",
+]);
+const PHASE_COMPILER_CHILD_PROCESS_PATHS = new Set([
+  "testing/phase-compiler/compiled-bundle-verifier.mjs",
+  "testing/phase-compiler/external-bundle-writer.mjs",
+  "testing/phase-compiler/repository-snapshot-adapter.mjs",
+  "testing/phase-compiler/phase-compiler.test.mjs",
+  "testing/phase-compiler/phase-compiler-security.test.mjs",
+]);
+const PHASE_COMPILER_FS_MUTATION_PATHS = new Set([
+  "testing/phase-compiler/external-bundle-writer.mjs",
+  "testing/phase-compiler/phase-compiler.test.mjs",
+  "testing/phase-compiler/phase-compiler-security.test.mjs",
+  "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+]);
+const PHASE_COMPILER_LOCAL_TMP_PATHS = new Set([
+  "testing/phase-compiler/phase-compiler.test.mjs",
+  "testing/phase-compiler/phase-compiler-security.test.mjs",
+  "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+]);
+const PHASE_COMPILER_NETWORK_GLOBALS = new Set([
+  "fetch", "WebSocket", "EventSource", "XMLHttpRequest",
+]);
+const PHASE_COMPILER_DYNAMIC_CODE_GLOBALS = new Set(["eval", "Function"]);
+
+function phaseCompilerPropertyChain(node) {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node)) {
+    const prefix = phaseCompilerPropertyChain(node.expression);
+    return prefix ? prefix + "." + node.name.text : null;
+  }
+  if (
+    ts.isElementAccessExpression(node) &&
+    node.argumentExpression &&
+    ts.isStringLiteralLike(node.argumentExpression)
+  ) {
+    const prefix = phaseCompilerPropertyChain(node.expression);
+    return prefix ? prefix + "." + node.argumentExpression.text : null;
+  }
+  return null;
+}
+
+function phaseCompilerCallName(expression) {
+  if (expression.kind === ts.SyntaxKind.ImportKeyword) return "import()";
+  return phaseCompilerPropertyChain(expression) ?? "syntax:" + expression.kind;
+}
+
+function phaseCompilerImportBindings(statement) {
+  const bindings = [];
+  const clause = statement.importClause;
+  if (!clause) return bindings;
+  if (clause.name) bindings.push("default:" + clause.name.text);
+  if (clause.namedBindings) {
+    if (ts.isNamespaceImport(clause.namedBindings)) {
+      bindings.push("namespace:" + clause.namedBindings.name.text);
+    } else {
+      for (const element of clause.namedBindings.elements) {
+        bindings.push(
+          (element.propertyName?.text ?? element.name.text) + ":" + element.name.text,
+        );
+      }
+    }
+  }
+  return bindings.sort();
+}
+
+function phaseCompilerCapabilityProfile(repositoryPath, bytes) {
+  if (!repositoryPath.endsWith(".mjs")) {
+    const facts = { kind: "DATA", flags: [] };
+    return { facts, sha256: digest(JSON.stringify(facts)), flags: facts.flags };
+  }
+  const sourceFile = ts.createSourceFile(
+    repositoryPath,
+    bytes.toString("utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const capabilityImports = [];
+  const capabilityBindings = new Map();
+  const networkBindings = new Set();
+  const childBindings = new Set();
+  const fsBindings = new Map();
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteralLike(statement.moduleSpecifier)
+    ) continue;
+    const moduleName = statement.moduleSpecifier.text;
+    if (!PHASE_COMPILER_CAPABILITY_MODULES.has(moduleName)) continue;
+    const bindings = phaseCompilerImportBindings(statement);
+    capabilityImports.push(moduleName + ":" + bindings.join(","));
+    const clause = statement.importClause;
+    if (!clause) continue;
+    const record = (local, imported) => {
+      capabilityBindings.set(local, { moduleName, imported });
+      if (PHASE_COMPILER_NETWORK_MODULES.has(moduleName)) networkBindings.add(local);
+      if (["node:child_process", "child_process"].includes(moduleName)) childBindings.add(local);
+      if (["node:fs", "fs", "node:fs/promises", "fs/promises"].includes(moduleName)) {
+        fsBindings.set(local, imported);
+      }
+    };
+    if (clause.name) record(clause.name.text, "default");
+    if (clause.namedBindings) {
+      if (ts.isNamespaceImport(clause.namedBindings)) {
+        record(clause.namedBindings.name.text, "*");
+      } else {
+        for (const element of clause.namedBindings.elements) {
+          record(element.name.text, element.propertyName?.text ?? element.name.text);
+        }
+      }
+    }
+  }
+
+  const sensitiveCalls = [];
+  const processChains = [];
+  const shellOptions = [];
+  const absoluteLiterals = [];
+  const topLevelCalls = [];
+  const allCalls = [];
+  const privilegedAccesses = [];
+  const allPropertyChains = [];
+  const allIdentifiers = [];
+  const syntaxKindCounts = new Map();
+  const flags = new Set();
+  if (
+    capabilityImports.some(
+      (entry) =>
+        entry.startsWith("node:child_process:") ||
+        entry.startsWith("child_process:"),
+    )
+  ) flags.add("CHILD_PROCESS");
+  if (
+    capabilityImports.some((entry) =>
+      [...PHASE_COMPILER_NETWORK_MODULES].some((moduleName) =>
+        entry.startsWith(moduleName + ":"),
+      ),
+    )
+  ) flags.add("NETWORK");
+  let functionDepth = 0;
+  const visit = (node) => {
+    syntaxKindCounts.set(node.kind, (syntaxKindCounts.get(node.kind) ?? 0) + 1);
+    if (ts.isIdentifier(node)) allIdentifiers.push(node.text);
+    const entersFunction = ts.isFunctionLike(node);
+    if (entersFunction) functionDepth += 1;
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const name = phaseCompilerCallName(node.expression);
+      const root = name.split(".")[0];
+      const imported = capabilityBindings.get(root);
+      const leaf = name.split(".").at(-1);
+      allCalls.push(name);
+      if (functionDepth === 0) topLevelCalls.push(name);
+      if (
+        imported ||
+        PHASE_COMPILER_NETWORK_GLOBALS.has(root) ||
+        PHASE_COMPILER_DYNAMIC_CODE_GLOBALS.has(root) ||
+        name === "import()"
+      ) sensitiveCalls.push(name);
+      if (networkBindings.has(root) || PHASE_COMPILER_NETWORK_GLOBALS.has(root)) flags.add("NETWORK");
+      if (childBindings.has(root)) flags.add("CHILD_PROCESS");
+      if (fsBindings.has(root)) {
+        const importedName = fsBindings.get(root) === "*" ? leaf : fsBindings.get(root);
+        flags.add(PHASE_COMPILER_FS_MUTATIONS.has(importedName) ? "FS_MUTATION" : "FS_ACCESS");
+      }
+      if (PHASE_COMPILER_DYNAMIC_CODE_GLOBALS.has(root)) flags.add("DYNAMIC_CODE");
+      if (name === "import()") flags.add("DYNAMIC_IMPORT");
+      const moduleArgument =
+        node.arguments?.[0] && ts.isStringLiteralLike(node.arguments[0])
+          ? node.arguments[0].text
+          : null;
+      if (
+        moduleArgument &&
+        ["import()", "require", "process.getBuiltinModule", "module.getBuiltinModule"].includes(name)
+      ) {
+        if (["node:child_process", "child_process"].includes(moduleArgument)) flags.add("CHILD_PROCESS");
+        if (PHASE_COMPILER_NETWORK_MODULES.has(moduleArgument)) flags.add("NETWORK");
+      }
+    }
+    const chain = phaseCompilerPropertyChain(node);
+    if (chain?.includes(".")) allPropertyChains.push(chain);
+    if (
+      chain &&
+      (chain.startsWith("process.") ||
+        chain.startsWith("globalThis.") ||
+        chain.startsWith("Deno.") ||
+        chain.startsWith("Bun.") ||
+        capabilityBindings.has(chain.split(".")[0]))
+    ) privilegedAccesses.push(chain);
+    if (chain?.startsWith("process.")) {
+      processChains.push(chain);
+      if (chain === "process.env" || chain.startsWith("process.env.")) flags.add("ENV_VALUE");
+      else flags.add("PROCESS_CONTROL");
+    }
+    if (chain) {
+      const [root, member] = chain.split(".");
+      const binding = capabilityBindings.get(root);
+      if (
+        binding &&
+        ["node:process", "process"].includes(binding.moduleName) &&
+        member === "env"
+      ) flags.add("ENV_VALUE");
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      ts.isIdentifier(node.initializer) &&
+      node.initializer.text === "process" &&
+      node.name.elements.some(
+        (element) =>
+          element.propertyName?.text === "env" ||
+          element.name.getText(sourceFile) === "env",
+      )
+    ) flags.add("ENV_VALUE");
+    if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        const name =
+          property.name &&
+          (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name))
+            ? property.name.text
+            : null;
+        if (name !== "shell") continue;
+        if (
+          ts.isPropertyAssignment(property) &&
+          property.initializer.kind === ts.SyntaxKind.TrueKeyword
+        ) {
+          shellOptions.push("true");
+          flags.add("SHELL_TRUE");
+        } else if (
+          ts.isPropertyAssignment(property) &&
+          property.initializer.kind === ts.SyntaxKind.FalseKeyword
+        ) {
+          shellOptions.push("false");
+          flags.add("SHELL_FALSE");
+        } else {
+          shellOptions.push("unresolved");
+          flags.add("SHELL_UNRESOLVED");
+        }
+      }
+    }
+    if (ts.isBinaryExpression(node)) {
+      const assignmentChain = phaseCompilerPropertyChain(node.left);
+      if (assignmentChain?.endsWith(".shell")) {
+        if (node.right.kind === ts.SyntaxKind.TrueKeyword) {
+          shellOptions.push("true");
+          flags.add("SHELL_TRUE");
+        } else if (node.right.kind === ts.SyntaxKind.FalseKeyword) {
+          shellOptions.push("false");
+          flags.add("SHELL_FALSE");
+        } else {
+          shellOptions.push("unresolved");
+          flags.add("SHELL_UNRESOLVED");
+        }
+      }
+    }
+    if (ts.isStringLiteralLike(node)) {
+      const value = node.text;
+      if (
+        value === "/usr/bin/git" ||
+        value === "/usr/bin/python3" ||
+        value === ".git" ||
+        value.startsWith("/private/tmp") ||
+        value.startsWith("/tmp/")
+      ) {
+        absoluteLiterals.push(value);
+        if (value.startsWith("/private/tmp") || value.startsWith("/tmp/")) flags.add("LOCAL_TMP");
+        if (value === "/usr/bin/git") flags.add("FIXED_GIT");
+        if (value === "/usr/bin/python3") flags.add("FIXED_PYTHON");
+      }
+    }
+    ts.forEachChild(node, visit);
+    if (entersFunction) functionDepth -= 1;
+  };
+  visit(sourceFile);
+  const facts = {
+    kind: "MJS",
+    capability_imports: capabilityImports.sort(),
+    sensitive_calls: sensitiveCalls.sort(),
+    process_chains: processChains.sort(),
+    shell_options: shellOptions.sort(),
+    absolute_literals: absoluteLiterals.sort(),
+    top_level_calls: topLevelCalls.sort(),
+    all_calls: allCalls.sort(),
+    privileged_accesses: privilegedAccesses.sort(),
+    all_property_chains: allPropertyChains.sort(),
+    all_identifiers: allIdentifiers.sort(),
+    syntax_kind_counts: [...syntaxKindCounts].sort((left, right) => left[0] - right[0]),
+    flags: [...flags].sort(),
+  };
+  return { facts, sha256: digest(JSON.stringify(facts)), flags: facts.flags };
+}
+
+function validatePhaseCompilerCapabilityPolicy(contract, profile) {
+  const flags = new Set(profile.flags);
+  if (["NETWORK", "ENV_VALUE", "DYNAMIC_CODE", "SHELL_TRUE", "SHELL_UNRESOLVED"].some((flag) => flags.has(flag))) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_CAPABILITY_FORBIDDEN");
+  }
+  if (
+    flags.has("CHILD_PROCESS") &&
+    !PHASE_COMPILER_CHILD_PROCESS_PATHS.has(contract.path)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_CHILD_PROCESS_CAPABILITY");
+  if (
+    flags.has("FS_MUTATION") &&
+    !PHASE_COMPILER_FS_MUTATION_PATHS.has(contract.path)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_FS_MUTATION_CAPABILITY");
+  if (
+    flags.has("LOCAL_TMP") &&
+    !PHASE_COMPILER_LOCAL_TMP_PATHS.has(contract.path)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_TMP_CAPABILITY");
+  if (
+    flags.has("DYNAMIC_IMPORT") &&
+    contract.path !== "testing/phase-compiler/phase-compiler.test.mjs"
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_DYNAMIC_IMPORT_CAPABILITY");
+  if (
+    flags.has("FIXED_PYTHON") !==
+    new Set([
+      "testing/phase-compiler/compiled-bundle-verifier.mjs",
+      "testing/phase-compiler/external-bundle-writer.mjs",
+      "testing/phase-compiler/repository-snapshot-adapter.mjs",
+    ]).has(contract.path)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_PYTHON_CAPABILITY");
+  if (
+    flags.has("FIXED_GIT") !==
+    new Set([
+      "testing/phase-compiler/command-dependency-validator.mjs",
+      "testing/phase-compiler/phase-compiler.test.mjs",
+      "testing/phase-compiler/phase-compiler-security.test.mjs",
+    ]).has(contract.path)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_GIT_CAPABILITY");
+  if (
+    JSON.stringify(profile.flags) !== JSON.stringify(contract.flags) ||
+    profile.sha256 !== contract.profile_sha256
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_CAPABILITY_PROFILE");
+}
+
+function validatePhaseCompilerClosure({
+  contracts = PHASE_COMPILER_CLOSURE_CONTRACTS,
+  overrides = new Map(),
+} = {}) {
+  const expectedPaths = PHASE_COMPILER_MANIFEST_CONTRACTS.map(
+    ([repositoryPath]) => repositoryPath,
+  );
+  if (
+    contracts.length !== 21 ||
+    !exactSet(contracts.map((contract) => contract.path), expectedPaths)
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_CLOSURE_SET");
+  let importAllowlistCount = 0;
+  const contractPaths = new Set(expectedPaths);
+  for (const contract of contracts) {
+    const bytes = overrides.has(contract.path)
+      ? Buffer.from(overrides.get(contract.path))
+      : readFileSync(contract.path);
+    if (digest(bytes) !== contract.sha256) {
+      throw new GovernanceError("RUNNER_PHASE_COMPILER_TRANSITIVE_SOURCE_IDENTITY");
+    }
+    if (contract.path.endsWith(".mjs")) {
+      const sourceFile = ts.createSourceFile(
+        contract.path,
+        bytes.toString("utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.JS,
+      );
+      const imports = directStaticModuleEdgesFromSource(sourceFile);
+      if (JSON.stringify(imports) !== JSON.stringify(contract.imports)) {
+        throw new GovernanceError("RUNNER_PHASE_COMPILER_TRANSITIVE_IMPORT_ALLOWLIST");
+      }
+      for (const specifier of imports.filter((entry) => entry.startsWith("."))) {
+        const target = path.posix.normalize(
+          path.posix.join(path.posix.dirname(contract.path), specifier),
+        );
+        if (!contractPaths.has(target)) {
+          throw new GovernanceError("RUNNER_PHASE_COMPILER_TRANSITIVE_IMPORT_CLOSURE");
+        }
+      }
+      importAllowlistCount += 1;
+    } else if (contract.imports !== null) {
+      throw new GovernanceError("RUNNER_PHASE_COMPILER_TRANSITIVE_IMPORT_ALLOWLIST");
+    }
+    const profile = phaseCompilerCapabilityProfile(contract.path, bytes);
+    validatePhaseCompilerCapabilityPolicy(contract, profile);
+  }
+  if (importAllowlistCount !== 17) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_IMPORT_PROFILE_COUNT");
+  }
+  return {
+    sourceIdentities: contracts.length,
+    importAllowlists: importAllowlistCount,
+    capabilityProfiles: contracts.length,
+  };
+}
+
+function expectPhaseCompilerClosureMutation(expectedStage, contracts, overrides) {
+  let caught;
+  let spawnAttempts = 0;
+  try {
+    validatePhaseCompilerClosure({ contracts, overrides });
+    spawnAttempts += 1;
+  } catch (error) {
+    caught = error;
+  }
+  if (
+    !(caught instanceof GovernanceError) ||
+    caught.stage !== expectedStage ||
+    spawnAttempts !== 0
+  ) throw new GovernanceError("RUNNER_PHASE_COMPILER_MUTATION_NOT_REJECTED_PRESPAWN");
+}
+
+function validatePhaseCompilerClosureMutations() {
+  const supportPath = "testing/phase-compiler/canonical.mjs";
+  const original = readFileSync(supportPath);
+  const contractIndex = PHASE_COMPILER_CLOSURE_CONTRACTS.findIndex(
+    (contract) => contract.path === supportPath,
+  );
+  if (contractIndex < 0) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_MUTATION_CONTRACT");
+  }
+  const byteMutation = Buffer.concat([original, Buffer.from("// byte mutation\n")]);
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_TRANSITIVE_SOURCE_IDENTITY",
+    PHASE_COMPILER_CLOSURE_CONTRACTS,
+    new Map([[supportPath, byteMutation]]),
+  );
+
+  const importMutation = Buffer.concat([original, Buffer.from("import 'node:os';\n")]);
+  const importContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map((contract, index) =>
+    index === contractIndex ? { ...contract, sha256: digest(importMutation) } : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_TRANSITIVE_IMPORT_ALLOWLIST",
+    importContracts,
+    new Map([[supportPath, importMutation]]),
+  );
+
+  const capabilityMutation = Buffer.concat([
+    original,
+    Buffer.from("fetch('https://example.invalid/forbidden');\n"),
+  ]);
+  const capabilityContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map(
+    (contract, index) =>
+      index === contractIndex
+        ? { ...contract, sha256: digest(capabilityMutation) }
+        : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_CAPABILITY_FORBIDDEN",
+    capabilityContracts,
+    new Map([[supportPath, capabilityMutation]]),
+  );
+
+  const environmentMutation = Buffer.concat([
+    original,
+    Buffer.from("const forbiddenEnvironmentValue = process.env.SECRET;\n"),
+  ]);
+  const environmentContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map(
+    (contract, index) =>
+      index === contractIndex
+        ? { ...contract, sha256: digest(environmentMutation) }
+        : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_CAPABILITY_FORBIDDEN",
+    environmentContracts,
+    new Map([[supportPath, environmentMutation]]),
+  );
+
+  const childMutation = Buffer.concat([
+    original,
+    Buffer.from("import { spawn } from 'node:child_process';\nspawn('/usr/bin/true');\n"),
+  ]);
+  const childContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map(
+    (contract, index) =>
+      index === contractIndex
+        ? {
+            ...contract,
+            sha256: digest(childMutation),
+            imports: [...contract.imports, "node:child_process"],
+          }
+        : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_CHILD_PROCESS_CAPABILITY",
+    childContracts,
+    new Map([[supportPath, childMutation]]),
+  );
+
+  const shellMutation = Buffer.concat([
+    original,
+    Buffer.from("const forbiddenOptions = {}; forbiddenOptions.shell = true;\n"),
+  ]);
+  const shellContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map(
+    (contract, index) =>
+      index === contractIndex
+        ? { ...contract, sha256: digest(shellMutation) }
+        : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_CAPABILITY_FORBIDDEN",
+    shellContracts,
+    new Map([[supportPath, shellMutation]]),
+  );
+
+  const topLevelMutation = Buffer.concat([
+    original,
+    Buffer.from("console.log('forbidden top-level change');\n"),
+  ]);
+  const topLevelContracts = PHASE_COMPILER_CLOSURE_CONTRACTS.map(
+    (contract, index) =>
+      index === contractIndex
+        ? { ...contract, sha256: digest(topLevelMutation) }
+        : contract,
+  );
+  expectPhaseCompilerClosureMutation(
+    "RUNNER_PHASE_COMPILER_CAPABILITY_PROFILE",
+    topLevelContracts,
+    new Map([[supportPath, topLevelMutation]]),
+  );
 }
 
 function validateC1ChildSource(child) {
@@ -1334,7 +2026,7 @@ function validateManifestForExecution() {
     ) ||
     !compareExactPathSets(paths, inventory).equal ||
     manifest.testing_tree_digest_state !==
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33NA_V1_STAGING" ||
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34BA_PHASE_COMPILER" ||
     manifest.testing_tree_digest !== testingTreeDigest(MANIFEST_PATH)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_INVENTORY");
@@ -1589,6 +2281,37 @@ function validateManifestForExecution() {
   ) {
     throw new GovernanceError("RUNNER_V1_STAGING_POLICY_SET");
   }
+  const phaseCompilerContracts = new Map(PHASE_COMPILER_MANIFEST_CONTRACTS);
+  for (const [repositoryPath, contract] of phaseCompilerContracts) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.path === repositoryPath,
+    );
+    if (
+      !entry ||
+      !Object.entries(contract).every(
+        ([key, expected]) =>
+          JSON.stringify(entry[key]) === JSON.stringify(expected),
+      )
+    ) {
+      throw new GovernanceError("RUNNER_PHASE_COMPILER_MANIFEST_ENTRY");
+    }
+  }
+  const phaseCompilerClosure = validatePhaseCompilerClosure();
+  const phaseCompilerPolicy = [];
+  for (const child of PHASE_COMPILER_CHILDREN) {
+    validatePhaseCompilerChildSource(child);
+    phaseCompilerPolicy.push(child);
+  }
+  if (
+    phaseCompilerContracts.size !== 21 ||
+    phaseCompilerPolicy.length !== 3 ||
+    !exactSet(
+      phaseCompilerPolicy.map((entry) => entry.path),
+      EXPECTED_PHASE_COMPILER_CHILD_PATHS,
+    )
+  ) {
+    throw new GovernanceError("RUNNER_PHASE_COMPILER_POLICY_SET");
+  }
   return {
     core,
     c1Policy,
@@ -1596,6 +2319,8 @@ function validateManifestForExecution() {
     c2_2Policy,
     v1AdminPolicy,
     v1StagingPolicy,
+    phaseCompilerPolicy,
+    phaseCompilerClosure,
   };
 }
 
@@ -1605,6 +2330,7 @@ function installLegacyCoreManifestProjection(
   gunzipSync,
   createHash,
   baselineProjections,
+  phaseCompilerContracts,
 ) {
   const manifestSuffix = "/testing/static-test-safety-manifest.json";
   const additiveContracts = new Map([
@@ -1872,6 +2598,7 @@ function installLegacyCoreManifestProjection(
         reason_code: "ADMIN_V1_STAGING_READINESS_SOURCE_POLICY",
       },
     ],
+    ...phaseCompilerContracts,
   ]);
   const originalReadFileSync = fs.readFileSync.bind(fs);
   const classificationCounts = (entries) => ({
@@ -2001,13 +2728,13 @@ function installLegacyCoreManifestProjection(
     const manifest = JSON.parse(source);
     const currentCounts = classificationCounts(manifest.entries ?? []);
     if (
-      additiveContracts.size !== 23 ||
-      manifest.entries?.length !== 138 ||
+      additiveContracts.size !== 44 ||
+      manifest.entries?.length !== 159 ||
       !exactValue(currentCounts, {
         core: 5,
-        policy: 15,
-        validateOnly: 31,
-        denied: 87,
+        policy: 18,
+        validateOnly: 46,
+        denied: 90,
       })
     ) {
       throw new Error("LEGACY_CORE_MANIFEST_PROJECTION_PRECONDITION");
@@ -2061,6 +2788,8 @@ function legacyCorePreloadUrl() {
       installLegacyCoreManifestProjection.toString() +
       ")(fs, syncBuiltinESMExports, gunzipSync, createHash, " +
       JSON.stringify(LEGACY_CORE_BASELINE_PROJECTIONS) +
+      ", " +
+      JSON.stringify(PHASE_COMPILER_MANIFEST_CONTRACTS) +
       ");",
     "",
   ].join("\n");
@@ -2071,6 +2800,99 @@ function legacyCorePreloadUrl() {
 }
 
 const LEGACY_CORE_PRELOAD_URL = legacyCorePreloadUrl();
+
+function installPhaseCompilerManifestProjection(
+  fs,
+  syncBuiltinESMExports,
+  phaseCompilerContracts,
+) {
+  const manifestSuffix = "/testing/static-test-safety-manifest.json";
+  const originalReadFileSync = fs.readFileSync.bind(fs);
+  const exactValue = (actual, expected) =>
+    JSON.stringify(actual) === JSON.stringify(expected);
+  const renderReadResult = (bytes, options) => {
+    if (typeof options === "string") return bytes.toString(options);
+    if (options?.encoding) return bytes.toString(options.encoding);
+    return Buffer.from(bytes);
+  };
+  fs.readFileSync = function projectedReadFileSync(target, options) {
+    const value = originalReadFileSync(target, options);
+    if (!String(target).endsWith(manifestSuffix)) return value;
+    const source = Buffer.isBuffer(value) ? value.toString("utf8") : value;
+    const manifest = JSON.parse(source);
+    const contracts = new Map(phaseCompilerContracts);
+    const counts = (entries) => ({
+      core: entries.filter((entry) => entry.ci_disposition === "RUN_CORE").length,
+      policy: entries.filter((entry) => entry.ci_disposition === "RUN_POLICY").length,
+      validate: entries.filter((entry) => entry.ci_disposition === "VALIDATE_ONLY").length,
+      deny: entries.filter((entry) => entry.ci_disposition === "DENY").length,
+    });
+    if (
+      contracts.size !== 21 ||
+      manifest.entries?.length !== 159 ||
+      !exactValue(counts(manifest.entries), {
+        core: 5,
+        policy: 18,
+        validate: 46,
+        deny: 90,
+      })
+    ) {
+      throw new Error("PHASE_COMPILER_MANIFEST_PROJECTION_PRECONDITION");
+    }
+    for (const [repositoryPath, contract] of contracts) {
+      const entry = manifest.entries.find(
+        (candidate) => candidate.path === repositoryPath,
+      );
+      if (
+        !entry ||
+        !Object.entries(contract).every(([key, expected]) =>
+          exactValue(entry[key], expected),
+        )
+      ) {
+        throw new Error("PHASE_COMPILER_MANIFEST_PROJECTION_PRECONDITION");
+      }
+    }
+    manifest.entries = manifest.entries.filter(
+      (entry) => !contracts.has(entry.path),
+    );
+    if (
+      manifest.entries.length !== 138 ||
+      !exactValue(counts(manifest.entries), {
+        core: 5,
+        policy: 15,
+        validate: 31,
+        deny: 87,
+      })
+    ) {
+      throw new Error("PHASE_COMPILER_MANIFEST_PROJECTION_PRECONDITION");
+    }
+    return renderReadResult(
+      Buffer.from(JSON.stringify(manifest, null, 2) + "\n", "utf8"),
+      options,
+    );
+  };
+  syncBuiltinESMExports();
+}
+
+function phaseCompilerCompatibilityPreloadUrl() {
+  const source = [
+    'import fs from "node:fs";',
+    'import { syncBuiltinESMExports } from "node:module";',
+    "(" +
+      installPhaseCompilerManifestProjection.toString() +
+      ")(fs, syncBuiltinESMExports, " +
+      JSON.stringify(PHASE_COMPILER_MANIFEST_CONTRACTS) +
+      ");",
+    "",
+  ].join("\n");
+  return (
+    "data:text/javascript;base64," +
+    Buffer.from(source, "utf8").toString("base64")
+  );
+}
+
+const PHASE_COMPILER_COMPATIBILITY_PRELOAD_URL =
+  phaseCompilerCompatibilityPreloadUrl();
 
 function runScript(
   scriptPath,
@@ -2519,7 +3341,7 @@ async function runV1StagingPolicy(v1StagingPolicy) {
       child.path,
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
-        preloads: [SANDBOX_PATH],
+        preloads: [SANDBOX_PATH, PHASE_COMPILER_COMPATIBILITY_PRELOAD_URL],
         environment: V1_STAGING_SAFE_ENVIRONMENT,
       },
     );
@@ -2571,6 +3393,84 @@ async function runV1StagingPolicy(v1StagingPolicy) {
   }
   console.log(
     "PASS_STATIC_READINESS_V1_STAGING_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2",
+  );
+}
+
+async function runPhaseCompilerPolicy(phaseCompilerPolicy) {
+  const initialClosure = validatePhaseCompilerClosure();
+  const totalStarted = performance.now();
+  const results = [];
+  for (const child of phaseCompilerPolicy) {
+    validatePhaseCompilerClosure();
+    const remaining =
+      PHASE_COMPILER_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
+    if (remaining <= 0) {
+      throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+    }
+    const authorizedBefore = authorizedPhaseCompilerSnapshot();
+    const repositoryBefore = repositoryStateDigest();
+    const result = await runScript(
+      child.path,
+      Math.min(PHASE_COMPILER_PER_CHILD_TIMEOUT_MS, remaining),
+      {
+        preloads: [],
+        environment: PHASE_COMPILER_SAFE_ENVIRONMENT,
+      },
+    );
+    const repositoryAfter = repositoryStateDigest();
+    const authorizedAfter = authorizedPhaseCompilerSnapshot();
+    const authorizedUnchanged = authorizedBefore === authorizedAfter;
+    const repositoryUnchanged = repositoryBefore === repositoryAfter;
+    const stdout = outputIdentity(result.stdout);
+    const stderr = outputIdentity(result.stderr);
+    const passed =
+      result.exitCode === 0 &&
+      result.signal === null &&
+      result.stderr === "" &&
+      !result.overflow &&
+      !result.timedOut &&
+      !result.spawnError &&
+      authorizedUnchanged &&
+      repositoryUnchanged;
+    results.push({ path: child.path, passed });
+    console.log(
+      "STATIC_PHASE_COMPILER_POLICY path=" +
+        child.path +
+        " exit=" +
+        (result.exitCode ?? "null") +
+        " duration_ms=" +
+        result.durationMs +
+        " stdout_sha256=" +
+        stdout.sha256 +
+        " stdout_bytes=" +
+        stdout.bytes +
+        " stdout_lines=" +
+        stdout.lines +
+        " stderr_sha256=" +
+        stderr.sha256 +
+        " stderr_bytes=" +
+        stderr.bytes +
+        " stderr_lines=" +
+        stderr.lines +
+        " authorized_scope_unchanged=" +
+        authorizedUnchanged +
+        " repository_state_unchanged=" +
+        repositoryUnchanged +
+        " source_identity_verified=true import_allowlist_verified=true transitive_closure_verified=true source_identities=21 import_allowlists=17 capability_profiles=21 result=" +
+        (passed ? "PASS" : "FAIL"),
+    );
+    if (!passed) {
+      throw new GovernanceError("RUNNER_PHASE_COMPILER_POLICY_COMMAND_FAILED");
+    }
+  }
+  console.log(
+    "PASS_STATIC_READINESS_PHASE_COMPILER_POLICY children=3 pass=3 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=" +
+      initialClosure.sourceIdentities +
+      " import_allowlists=" +
+      initialClosure.importAllowlists +
+      " capability_profiles=" +
+      initialClosure.capabilityProfiles +
+      " compiled_phase_commands_executed=0",
   );
 }
 
@@ -2682,6 +3582,42 @@ function validateC2_2SourcePolicyMutations() {
 }
 
 async function runSelfTest() {
+  if (PHASE_COMPILER_CLOSURE_CONTRACTS.length !== 21) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=PHASE_COMPILER_CLOSURE_MISSING failures=1 internal_failures=0",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const phaseCompilerClosureStarted = performance.now();
+  const phaseCompilerClosure = validatePhaseCompilerClosure();
+  validatePhaseCompilerClosureMutations();
+  console.log(
+    "SANDBOX_SELF_TEST family=PHASE_COMPILER_CLOSURE_POLICY duration_ms=" +
+      Math.round(performance.now() - phaseCompilerClosureStarted) +
+      " source_identities=" +
+      phaseCompilerClosure.sourceIdentities +
+      " import_allowlists=" +
+      phaseCompilerClosure.importAllowlists +
+      " capability_profiles=" +
+      phaseCompilerClosure.capabilityProfiles +
+      " result=PASS",
+  );
+  if (
+    !exactSet(
+      PHASE_COMPILER_CHILDREN.map((child) => child.path),
+      EXPECTED_PHASE_COMPILER_CHILD_PATHS,
+    )
+  ) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=PHASE_COMPILER_POLICY_SET failures=1 internal_failures=0",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  for (const child of PHASE_COMPILER_CHILDREN) {
+    validatePhaseCompilerChildSource(child);
+  }
   if (
     !exactSet(
       V1_STAGING_CHILDREN.map((child) => child.path),
@@ -2758,7 +3694,10 @@ async function runSelfTest() {
     ],
   ];
   try {
-    const results = [{ category: "C2_2_SOURCE_POLICY", passed: true }];
+    const results = [
+      { category: "PHASE_COMPILER_CLOSURE_POLICY", passed: true },
+      { category: "C2_2_SOURCE_POLICY", passed: true },
+    ];
     console.log(
       "SANDBOX_SELF_TEST family=C2_2_SOURCE_POLICY duration_ms=" +
         Math.round(performance.now() - c2_2SourcePolicyStarted) +
@@ -2815,6 +3754,7 @@ function listChildren(
   c2_2Policy,
   v1AdminPolicy,
   v1StagingPolicy,
+  phaseCompilerPolicy,
 ) {
   for (const entry of core) {
     console.log(
@@ -2885,6 +3825,17 @@ function listChildren(
   console.log(
     "PASS_STATIC_READINESS_LIST_COMPLETE_V1_STAGING core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 total=17",
   );
+  for (const child of phaseCompilerPolicy) {
+    console.log(
+      "STATIC_PHASE_COMPILER_POLICY_LIST path=" +
+        child.path +
+        " argv=node," +
+        child.path,
+    );
+  }
+  console.log(
+    "PASS_STATIC_READINESS_LIST_COMPLETE_PHASE_COMPILER core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 total=20",
+  );
 }
 
 try {
@@ -2903,6 +3854,7 @@ try {
       c2_2Policy,
       v1AdminPolicy,
       v1StagingPolicy,
+      phaseCompilerPolicy,
     } = validateManifestForExecution();
     listChildren(
       core,
@@ -2911,6 +3863,7 @@ try {
       c2_2Policy,
       v1AdminPolicy,
       v1StagingPolicy,
+      phaseCompilerPolicy,
     );
   } else if (option === "--c1-policy") {
     const { c1Policy } = validateManifestForExecution();
@@ -2927,6 +3880,9 @@ try {
   } else if (option === "--v1-staging-policy") {
     const { v1StagingPolicy } = validateManifestForExecution();
     await runV1StagingPolicy(v1StagingPolicy);
+  } else if (option === "--phase-compiler-policy") {
+    const { phaseCompilerPolicy } = validateManifestForExecution();
+    await runPhaseCompilerPolicy(phaseCompilerPolicy);
   } else if (option === "") {
     const {
       core,
@@ -2935,6 +3891,7 @@ try {
       c2_2Policy,
       v1AdminPolicy,
       v1StagingPolicy,
+      phaseCompilerPolicy,
     } = validateManifestForExecution();
     await runCore(core);
     await runC1Policy(c1Policy);
@@ -2953,6 +3910,10 @@ try {
     await runV1StagingPolicy(v1StagingPolicy);
     console.log(
       "PASS_STATIC_READINESS_V1_STAGING_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 fail=0 repository_mutations=0",
+    );
+    await runPhaseCompilerPolicy(phaseCompilerPolicy);
+    console.log(
+      "PASS_STATIC_READINESS_PHASE_COMPILER_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 total=20 fail=0 repository_mutations=0 source_identities=21 import_allowlists=17 capability_profiles=21 compiled_phase_commands_executed=0",
     );
     console.log(
       "PASS_STATIC_READINESS_COMPLETE core=5 c1=4 fail=0 repository_mutations=0",

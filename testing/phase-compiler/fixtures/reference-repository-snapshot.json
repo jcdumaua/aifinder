@@ -1,0 +1,49 @@
+{
+  "adapter_version": 1,
+  "ahead": 0,
+  "behind": 0,
+  "branch": "main",
+  "derived_dependency_facts": [],
+  "final_marker": "AIFINDER_REPOSITORY_SNAPSHOT_END",
+  "head": "1111111111111111111111111111111111111111",
+  "parent": "2222222222222222222222222222222222222222",
+  "paths": [
+    {
+      "blob": "4444444444444444444444444444444444444444",
+      "bytes": 16,
+      "content_utf8": "# Synthetic P01\n",
+      "cr": 0,
+      "lf": 1,
+      "mode": "100644",
+      "path": "README.md",
+      "role": "PRESERVE",
+      "sha256": "df0f5159a9138dc9b12c9fdc35f55dd7bcfa92496061e7b30693457e22a57a4f",
+      "state": "TRACKED"
+    },
+    {
+      "blob": "",
+      "bytes": 0,
+      "cr": 0,
+      "lf": 0,
+      "mode": "",
+      "path": "generated/p01.txt",
+      "role": "CREATE",
+      "sha256": "",
+      "state": "ABSENT"
+    }
+  ],
+  "remote_head": "",
+  "remote_ref": "",
+  "repository_id": "synthetic.invalid/aifinder-p01",
+  "snapshot_digest": "2c34f1e3b0dd32729f11de146aed0eead082744b1474fefde62c7941decf50da",
+  "snapshot_version": 1,
+  "status": {
+    "conflicted": 0,
+    "staged": 0,
+    "tracked_deleted": 0,
+    "tracked_modified": 0,
+    "untracked": 0
+  },
+  "subject": "Synthetic P01 baseline",
+  "tree": "3333333333333333333333333333333333333333"
+}

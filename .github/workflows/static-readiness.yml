@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: "24.15.0"
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run test:phase-compiler
       - run: npm run test:static-safety-manifest
       - run: npm run test:readiness-coverage
       - run: npm run test:public-launch-blockers

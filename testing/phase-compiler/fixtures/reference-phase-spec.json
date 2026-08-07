@@ -1,0 +1,72 @@
+{
+  "artifact_policy": {
+    "allow_zip": false
+  },
+  "authority_class": "STATIC_INSPECTION_ONLY",
+  "compatibility_adapters": [],
+  "commands": [],
+  "conditional_scopes": [],
+  "external_resources": [],
+  "git": {
+    "commit_count": 0,
+    "commit_subject": "",
+    "push_count": 0,
+    "staged_paths": []
+  },
+  "governance": {
+    "manifest_path": "",
+    "manifest_transitions": [],
+    "runner_additions": [],
+    "runner_path": "",
+    "runner_removals": []
+  },
+  "operation_budgets": {
+    "compiled_commands": 0,
+    "database": 0,
+    "deployments": 0,
+    "git_commits": 0,
+    "git_pushes": 0,
+    "network": 0
+  },
+  "phase_id": "P01",
+  "repository": {
+    "ahead": 0,
+    "baseline": {
+      "head": "1111111111111111111111111111111111111111",
+      "parent": "2222222222222222222222222222222222222222",
+      "subject": "Synthetic P01 baseline",
+      "tree": "3333333333333333333333333333333333333333"
+    },
+    "behind": 0,
+    "branch": "main",
+    "remote_head": "",
+    "remote_ref": "",
+    "repository_id": "synthetic.invalid/aifinder-p01"
+  },
+  "rollbacks": [],
+  "scope": {
+    "create_paths": [
+      "generated/p01.txt"
+    ],
+    "exclude_paths": [],
+    "modify_paths": [],
+    "preserve_paths": [
+      "README.md"
+    ],
+    "read_content_paths": [
+      "README.md"
+    ]
+  },
+  "state_model": {
+    "initial_states": [],
+    "invalidations": []
+  },
+  "target_confirmation": {
+    "confirmation_command_id": "",
+    "first_effect_command_id": "",
+    "one_use": false,
+    "required": false
+  },
+  "spec_version": 1,
+  "workstream": "SYNTHETIC_P01_INSPECTION"
+}

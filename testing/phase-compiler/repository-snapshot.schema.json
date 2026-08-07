@@ -1,0 +1,223 @@
+{
+  "$id": "https://aifinder.invalid/schemas/repository-snapshot-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "ahead": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "behind": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "branch": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "derived_dependency_facts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "enum": [
+              "DECLARED_AND_MATCHED",
+              "DECLARED_BUT_UNPROVEN",
+              "UNDECLARED",
+              "UNRESOLVED_INDIRECTION"
+            ],
+            "type": "string"
+          },
+          "command_id": {
+            "maxLength": 96,
+            "minLength": 1,
+            "type": "string"
+          },
+          "reference": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "reference",
+          "classification"
+        ],
+        "type": "object"
+      },
+      "maxItems": 2048,
+      "type": "array"
+    },
+    "final_marker": {
+      "const": "AIFINDER_REPOSITORY_SNAPSHOT_END",
+      "type": "string"
+    },
+    "head": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "parent": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "paths": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blob": {
+            "pattern": "^(|[0-9a-f]{40})$",
+            "type": "string"
+          },
+          "bytes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "content_utf8": {
+            "maxLength": 65536,
+            "type": "string"
+          },
+          "cr": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "lf": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "mode": {
+            "pattern": "^(|100644|100755|120000|160000)$",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "CREATE",
+              "MODIFY",
+              "PRESERVE"
+            ],
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^(|[0-9a-f]{64})$",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ABSENT",
+              "TRACKED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "role",
+          "state",
+          "mode",
+          "blob",
+          "sha256",
+          "bytes",
+          "lf",
+          "cr"
+        ],
+        "type": "object"
+      },
+      "maxItems": 1536,
+      "type": "array"
+    },
+    "remote_head": {
+      "maxLength": 64,
+      "type": "string"
+    },
+    "remote_ref": {
+      "maxLength": 240,
+      "type": "string"
+    },
+    "repository_id": {
+      "maxLength": 240,
+      "minLength": 1,
+      "type": "string"
+    },
+    "snapshot_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "snapshot_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conflicted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "staged": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tracked_deleted": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tracked_modified": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "untracked": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "staged",
+        "tracked_modified",
+        "tracked_deleted",
+        "untracked",
+        "conflicted"
+      ],
+      "type": "object"
+    },
+    "subject": {
+      "maxLength": 200,
+      "minLength": 1,
+      "type": "string"
+    },
+    "tree": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "snapshot_version",
+    "adapter_version",
+    "repository_id",
+    "branch",
+    "head",
+    "parent",
+    "tree",
+    "subject",
+    "remote_ref",
+    "remote_head",
+    "ahead",
+    "behind",
+    "status",
+    "paths",
+    "derived_dependency_facts",
+    "snapshot_digest",
+    "final_marker"
+  ],
+  "title": "AiFinder repository snapshot",
+  "type": "object"
+}

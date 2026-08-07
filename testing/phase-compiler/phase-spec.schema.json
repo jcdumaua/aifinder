@@ -1,0 +1,650 @@
+{
+  "$id": "https://aifinder.invalid/schemas/phase-spec-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_zip": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "allow_zip"
+      ],
+      "type": "object"
+    },
+    "authority_class": {
+      "maxLength": 160,
+      "minLength": 1,
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "type": "string"
+    },
+    "compatibility_adapters": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "from": { "enum": ["CURRENT", "HISTORICAL", "INVARIANT", "POST_RUNTIME", "PRE_RUNTIME"], "type": "string" },
+          "id": { "maxLength": 96, "minLength": 1, "pattern": "^[A-Z][A-Z0-9_-]*$", "type": "string" },
+          "paths": { "items": { "maxLength": 240, "minLength": 1, "type": "string" }, "maxItems": 256, "type": "array", "uniqueItems": true },
+          "to": { "enum": ["CURRENT", "HISTORICAL", "INVARIANT", "POST_RUNTIME", "PRE_RUNTIME"], "type": "string" },
+          "version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["id", "version", "from", "to", "paths"],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "type": "array"
+    },
+    "conditional_scopes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "false_operation_charges": {
+            "additionalProperties": false,
+            "properties": {
+              "compiled_commands": { "minimum": 0, "type": "integer" }, "database": { "minimum": 0, "type": "integer" }, "deployments": { "minimum": 0, "type": "integer" }, "git_commits": { "minimum": 0, "type": "integer" }, "git_pushes": { "minimum": 0, "type": "integer" }, "network": { "minimum": 0, "type": "integer" }
+            },
+            "required": ["network", "database", "deployments", "git_commits", "git_pushes", "compiled_commands"],
+            "type": "object"
+          },
+          "false_paths": { "items": { "maxLength": 240, "minLength": 1, "type": "string" }, "maxItems": 512, "type": "array", "uniqueItems": true },
+          "false_rollback_ids": { "items": { "maxLength": 96, "minLength": 1, "type": "string" }, "maxItems": 128, "type": "array", "uniqueItems": true },
+          "id": { "maxLength": 96, "minLength": 1, "pattern": "^[A-Z][A-Z0-9_-]*$", "type": "string" },
+          "predicate": { "enum": ["PATH_IDENTITY_MATCH", "STATIC_DIAGNOSTIC_ABSENT", "STATIC_DIAGNOSTIC_PRESENT"], "type": "string" },
+          "predicate_expected": { "maxLength": 240, "minLength": 1, "type": "string" },
+          "predicate_input_path": { "maxLength": 240, "minLength": 1, "type": "string" },
+          "true_operation_charges": {
+            "additionalProperties": false,
+            "properties": {
+              "compiled_commands": { "minimum": 0, "type": "integer" }, "database": { "minimum": 0, "type": "integer" }, "deployments": { "minimum": 0, "type": "integer" }, "git_commits": { "minimum": 0, "type": "integer" }, "git_pushes": { "minimum": 0, "type": "integer" }, "network": { "minimum": 0, "type": "integer" }
+            },
+            "required": ["network", "database", "deployments", "git_commits", "git_pushes", "compiled_commands"],
+            "type": "object"
+          },
+          "true_paths": { "items": { "maxLength": 240, "minLength": 1, "type": "string" }, "maxItems": 512, "type": "array", "uniqueItems": true },
+          "true_rollback_ids": { "items": { "maxLength": 96, "minLength": 1, "type": "string" }, "maxItems": 128, "type": "array", "uniqueItems": true }
+        },
+        "required": ["id", "predicate", "predicate_input_path", "predicate_expected", "true_paths", "false_paths", "true_operation_charges", "false_operation_charges", "true_rollback_ids", "false_rollback_ids"],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "type": "array"
+    },
+    "commands": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "argv": {
+            "items": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "type": "array"
+          },
+          "compatibility_timepoint": {
+            "enum": [
+              "CURRENT",
+              "HISTORICAL",
+              "INVARIANT",
+              "POST_RUNTIME",
+              "PRE_RUNTIME"
+            ],
+            "type": "string"
+          },
+          "context": {
+            "enum": [
+              "DIRECT",
+              "RUNNER_CHILD"
+            ],
+            "type": "string"
+          },
+          "cwd": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "environment_names": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Z_][A-Z0-9_]*$",
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "expected": {
+            "additionalProperties": false,
+            "properties": {
+              "exit": {
+                "maximum": 255,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "stderr": {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              "stdout": {
+                "maxLength": 4096,
+                "type": "string"
+              }
+            },
+            "required": [
+              "exit",
+              "stdout",
+              "stderr"
+            ],
+            "type": "object"
+          },
+          "id": {
+            "maxLength": 96,
+            "minLength": 1,
+            "pattern": "^[A-Z][A-Z0-9_-]*$",
+            "type": "string"
+          },
+          "operation_charges": {
+            "additionalProperties": false,
+            "properties": {
+              "compiled_commands": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "database": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "deployments": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "git_commits": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "git_pushes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "network": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "network",
+              "database",
+              "deployments",
+              "git_commits",
+              "git_pushes",
+              "compiled_commands"
+            ],
+            "type": "object"
+          },
+          "prerequisite_state": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "produced_state": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "reads": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 256,
+            "type": "array"
+          },
+          "required_manifest_state": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "required_runner_state": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "rollback_id": {
+            "maxLength": 96,
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "source_references": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "writes": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 256,
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "sequence",
+          "context",
+          "argv",
+          "cwd",
+          "reads",
+          "writes",
+          "environment_names",
+          "prerequisite_state",
+          "produced_state",
+          "expected",
+          "required_manifest_state",
+          "required_runner_state",
+          "compatibility_timepoint",
+          "source_references",
+          "operation_charges",
+          "rollback_id"
+        ],
+        "type": "object"
+      },
+      "maxItems": 128,
+      "type": "array"
+    },
+    "external_resources": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cleanup_command_id": { "maxLength": 96, "type": "string" },
+          "cleanup_identity": { "maxLength": 240, "type": "string" },
+          "create_command_id": { "maxLength": 96, "type": "string" },
+          "id": { "maxLength": 96, "minLength": 1, "pattern": "^[A-Z][A-Z0-9_-]*$", "type": "string" },
+          "mutation_kind": { "enum": ["DATABASE", "DEPLOYMENT"], "type": "string" },
+          "verify_command_id": { "maxLength": 96, "type": "string" }
+        },
+        "required": ["id", "mutation_kind", "create_command_id", "verify_command_id", "cleanup_command_id", "cleanup_identity"],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "type": "array"
+    },
+    "governance": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest_path": { "maxLength": 240, "type": "string" },
+        "manifest_transitions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "after_disposition": { "enum": ["DENY", "RUN_POLICY", "VALIDATE_ONLY"], "type": "string" },
+              "before_disposition": { "enum": ["ABSENT", "DENY", "RUN_POLICY", "VALIDATE_ONLY"], "type": "string" },
+              "path": { "maxLength": 240, "minLength": 1, "type": "string" }
+            },
+            "required": ["path", "before_disposition", "after_disposition"],
+            "type": "object"
+          },
+          "maxItems": 256,
+          "type": "array"
+        },
+        "runner_additions": { "items": { "maxLength": 96, "minLength": 1, "type": "string" }, "maxItems": 128, "type": "array", "uniqueItems": true },
+        "runner_path": { "maxLength": 240, "type": "string" },
+        "runner_removals": { "items": { "maxLength": 96, "minLength": 1, "type": "string" }, "maxItems": 128, "type": "array", "uniqueItems": true }
+      },
+      "required": ["manifest_path", "manifest_transitions", "runner_path", "runner_additions", "runner_removals"],
+      "type": "object"
+    },
+    "git": {
+      "additionalProperties": false,
+      "properties": {
+        "commit_count": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "commit_subject": {
+          "maxLength": 200,
+          "type": "string"
+        },
+        "push_count": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "staged_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "commit_count",
+        "push_count",
+        "commit_subject",
+        "staged_paths"
+      ],
+      "type": "object"
+    },
+    "operation_budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "compiled_commands": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "database": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "deployments": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "git_commits": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "git_pushes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "network": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "network",
+        "database",
+        "deployments",
+        "git_commits",
+        "git_pushes",
+        "compiled_commands"
+      ],
+      "type": "object"
+    },
+    "phase_id": {
+      "maxLength": 64,
+      "minLength": 2,
+      "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+      "type": "string"
+    },
+    "repository": {
+      "additionalProperties": false,
+      "properties": {
+        "ahead": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "baseline": {
+          "additionalProperties": false,
+          "properties": {
+            "head": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "parent": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "subject": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "tree": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "head",
+            "parent",
+            "tree",
+            "subject"
+          ],
+          "type": "object"
+        },
+        "behind": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "branch": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "remote_head": {
+          "maxLength": 64,
+          "type": "string"
+        },
+        "remote_ref": {
+          "maxLength": 240,
+          "type": "string"
+        },
+        "repository_id": {
+          "maxLength": 240,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "branch",
+        "baseline",
+        "remote_ref",
+        "remote_head",
+        "ahead",
+        "behind"
+      ],
+      "type": "object"
+    },
+    "rollbacks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cleanup_paths": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 512,
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 96,
+            "minLength": 1,
+            "pattern": "^[A-Z][A-Z0-9_-]*$",
+            "type": "string"
+          },
+          "mutation_ids": {
+            "items": {
+              "maxLength": 96,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 128,
+            "type": "array"
+          },
+          "terminal_state": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mutation_ids",
+          "cleanup_paths"
+          ,"terminal_state"
+        ],
+        "type": "object"
+      },
+      "maxItems": 128,
+      "type": "array"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "create_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "exclude_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "modify_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "preserve_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "read_content_paths": {
+          "items": {
+            "maxLength": 240,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "create_paths",
+        "modify_paths",
+        "preserve_paths",
+        "exclude_paths",
+        "read_content_paths"
+      ],
+      "type": "object"
+    },
+    "state_model": {
+      "additionalProperties": false,
+      "properties": {
+        "initial_states": { "items": { "maxLength": 240, "minLength": 1, "type": "string" }, "maxItems": 256, "type": "array", "uniqueItems": true },
+        "invalidations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "command_id": { "maxLength": 96, "minLength": 1, "type": "string" },
+              "states": { "items": { "maxLength": 240, "minLength": 1, "type": "string" }, "maxItems": 64, "type": "array", "uniqueItems": true }
+            },
+            "required": ["command_id", "states"],
+            "type": "object"
+          },
+          "maxItems": 128,
+          "type": "array"
+        }
+      },
+      "required": ["initial_states", "invalidations"],
+      "type": "object"
+    },
+    "target_confirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_command_id": { "maxLength": 96, "type": "string" },
+        "first_effect_command_id": { "maxLength": 96, "type": "string" },
+        "one_use": { "type": "boolean" },
+        "required": { "type": "boolean" }
+      },
+      "required": ["required", "confirmation_command_id", "first_effect_command_id", "one_use"],
+      "type": "object"
+    },
+    "spec_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "workstream": {
+      "maxLength": 160,
+      "minLength": 1,
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "spec_version",
+    "phase_id",
+    "workstream",
+    "authority_class",
+    "compatibility_adapters",
+    "conditional_scopes",
+    "repository",
+    "scope",
+    "operation_budgets",
+    "commands",
+    "external_resources",
+    "governance",
+    "rollbacks",
+    "state_model",
+    "target_confirmation",
+    "git",
+    "artifact_policy"
+  ],
+  "title": "AiFinder authored phase specification",
+  "type": "object"
+}

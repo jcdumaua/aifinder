@@ -1,25 +1,25 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "a2783e4dadca484221e98e2f49006e6c9c6a8caadbc47c33f708f301d3576ba4",
-  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33NA_V1_STAGING",
+  "testing_tree_digest": "74c462151edf0c9a08db073bdfa45c6dbdf03e1a43666004ed37c90696551e90",
+  "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34BA_PHASE_COMPILER",
   "phase_33fa_c1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "43f84a8e398168638163b009c9071d39c802652bdc7f9c1ca6588e399b8cc35b"
+    "sha256": "712acd0d38ff7adb3ecf51a121ee763c08b7f13bcd5fd70c9e40d8eabc4dc592"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "085b562d3e7865920bef10d72bdef95858f4b5e657a08df7240cf1050947c6ae"
+    "sha256": "8df1fadf65ac06df81862f135c4896872f4bddc339f81324d5037713eb835d60"
   },
   "phase_c2_2_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "d42718a9534c9338196d9dca0b9916c15ca70b61a09ab53c0f06867707652e00"
+    "sha256": "27dee9728dc972af2bfbdf05e76536eae59ed163f63e2d21c3962cd9ecf699f0"
   },
   "entries": [
     {
@@ -896,6 +896,183 @@
       "reason_code": "NOT_PROVEN_SAFE_FOR_STATIC_CORE"
     },
     {
+      "path": "testing/phase-compiler/canonical.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_CANONICAL_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/cli.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_CLI_DEDICATED_LANE_ONLY"
+    },
+    {
+      "path": "testing/phase-compiler/command-dependency-validator.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_COMMAND_DEPENDENCY_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/compiled-bundle-verifier.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_BUNDLE_VERIFIER_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/deterministic-renderer.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_DETERMINISTIC_RENDERER_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/error-catalog.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_ERROR_CATALOG_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/external-bundle-writer.mjs",
+      "role": "SUPPORT",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_EXTERNAL_WRITER_DEDICATED_LANE_ONLY"
+    },
+    {
+      "path": "testing/phase-compiler/fixtures/failure-catalog.mjs",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_FAILURE_CATALOG_FIXTURE"
+    },
+    {
+      "path": "testing/phase-compiler/fixtures/reference-phase-spec.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_REFERENCE_SPEC_FIXTURE"
+    },
+    {
+      "path": "testing/phase-compiler/fixtures/reference-repository-snapshot.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_REFERENCE_SNAPSHOT_FIXTURE"
+    },
+    {
+      "path": "testing/phase-compiler/governance-validator.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_GOVERNANCE_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/operation-contract-validator.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_OPERATION_CONTRACT_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/phase-compiler/phase-compiler-determinism.test.mjs"
+      ],
+      "reason_code": "PHASE_COMPILER_DETERMINISM_POLICY"
+    },
+    {
+      "path": "testing/phase-compiler/phase-compiler-security.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/phase-compiler/phase-compiler-security.test.mjs"
+      ],
+      "reason_code": "PHASE_COMPILER_SECURITY_POLICY"
+    },
+    {
+      "path": "testing/phase-compiler/phase-compiler.test.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "SAFE_STATIC_POLICY",
+      "ci_disposition": "RUN_POLICY",
+      "command_argv": [
+        "node",
+        "testing/phase-compiler/phase-compiler.test.mjs"
+      ],
+      "reason_code": "PHASE_COMPILER_CORE_POLICY"
+    },
+    {
+      "path": "testing/phase-compiler/phase-spec.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_PHASE_SPEC_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/phase-spec.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_PHASE_SPEC_SCHEMA"
+    },
+    {
+      "path": "testing/phase-compiler/repository-snapshot-adapter.mjs",
+      "role": "EXECUTABLE",
+      "safety_class": "UNPROVEN_DENY",
+      "ci_disposition": "DENY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_SNAPSHOT_ADAPTER_DEDICATED_LANE_ONLY"
+    },
+    {
+      "path": "testing/phase-compiler/repository-snapshot.schema.json",
+      "role": "CONFIG",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_REPOSITORY_SNAPSHOT_SCHEMA"
+    },
+    {
+      "path": "testing/phase-compiler/schema-validator.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_SCHEMA_VALIDATOR_SUPPORT"
+    },
+    {
+      "path": "testing/phase-compiler/semantic-validator.mjs",
+      "role": "SUPPORT",
+      "safety_class": "SAFE_STATIC_SUPPORT",
+      "ci_disposition": "VALIDATE_ONLY",
+      "command_argv": null,
+      "reason_code": "PHASE_COMPILER_SEMANTIC_SUPPORT"
+    },
+    {
       "path": "testing/phase14k-a-controlled-preview-artifact-preparation.mjs",
       "role": "EXECUTABLE",
       "safety_class": "OPERATIONAL_MUTATION",
@@ -1191,12 +1368,12 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "2978c201b8b71a38e485628088df1bb7212a8dc87cd644fb9a320eee221b4fa4"
+    "sha256": "d9d2d6b06d2f29a5a59c0f23f7ea84ba44ccd0f9bcceba7568d0c41be604916f"
   },
   "phase_33na_v1_staging_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 15,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "3349a529462fe8e27ef4e80c7350f3ae977d3af5103bb7d431ca4617532d6a25"
+    "sha256": "315b6aaadaba23fe39cec5680c6a4de90be0722f89a8537742d018f942dd4e27"
   }
 }

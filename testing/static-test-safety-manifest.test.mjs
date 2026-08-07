@@ -133,6 +133,34 @@ const V1_STAGING_EXECUTION_SURFACE_PATHS = [
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ];
+const PHASE_COMPILER_CONTRACTS = new Map([
+  ["testing/phase-compiler/canonical.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_CANONICAL_SUPPORT"]],
+  ["testing/phase-compiler/cli.mjs", ["EXECUTABLE", "UNPROVEN_DENY", "DENY", null, "PHASE_COMPILER_CLI_DEDICATED_LANE_ONLY"]],
+  ["testing/phase-compiler/command-dependency-validator.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_COMMAND_DEPENDENCY_SUPPORT"]],
+  ["testing/phase-compiler/compiled-bundle-verifier.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_BUNDLE_VERIFIER_SUPPORT"]],
+  ["testing/phase-compiler/deterministic-renderer.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_DETERMINISTIC_RENDERER_SUPPORT"]],
+  ["testing/phase-compiler/error-catalog.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_ERROR_CATALOG_SUPPORT"]],
+  ["testing/phase-compiler/external-bundle-writer.mjs", ["SUPPORT", "UNPROVEN_DENY", "DENY", null, "PHASE_COMPILER_EXTERNAL_WRITER_DEDICATED_LANE_ONLY"]],
+  ["testing/phase-compiler/fixtures/failure-catalog.mjs", ["CONFIG", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_FAILURE_CATALOG_FIXTURE"]],
+  ["testing/phase-compiler/fixtures/reference-phase-spec.json", ["CONFIG", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_REFERENCE_SPEC_FIXTURE"]],
+  ["testing/phase-compiler/fixtures/reference-repository-snapshot.json", ["CONFIG", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_REFERENCE_SNAPSHOT_FIXTURE"]],
+  ["testing/phase-compiler/governance-validator.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_GOVERNANCE_SUPPORT"]],
+  ["testing/phase-compiler/operation-contract-validator.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_OPERATION_CONTRACT_SUPPORT"]],
+  ["testing/phase-compiler/phase-compiler-determinism.test.mjs", ["EXECUTABLE", "SAFE_STATIC_POLICY", "RUN_POLICY", ["node", "testing/phase-compiler/phase-compiler-determinism.test.mjs"], "PHASE_COMPILER_DETERMINISM_POLICY"]],
+  ["testing/phase-compiler/phase-compiler-security.test.mjs", ["EXECUTABLE", "SAFE_STATIC_POLICY", "RUN_POLICY", ["node", "testing/phase-compiler/phase-compiler-security.test.mjs"], "PHASE_COMPILER_SECURITY_POLICY"]],
+  ["testing/phase-compiler/phase-compiler.test.mjs", ["EXECUTABLE", "SAFE_STATIC_POLICY", "RUN_POLICY", ["node", "testing/phase-compiler/phase-compiler.test.mjs"], "PHASE_COMPILER_CORE_POLICY"]],
+  ["testing/phase-compiler/phase-spec.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_PHASE_SPEC_SUPPORT"]],
+  ["testing/phase-compiler/phase-spec.schema.json", ["CONFIG", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_PHASE_SPEC_SCHEMA"]],
+  ["testing/phase-compiler/repository-snapshot-adapter.mjs", ["EXECUTABLE", "UNPROVEN_DENY", "DENY", null, "PHASE_COMPILER_SNAPSHOT_ADAPTER_DEDICATED_LANE_ONLY"]],
+  ["testing/phase-compiler/repository-snapshot.schema.json", ["CONFIG", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_REPOSITORY_SNAPSHOT_SCHEMA"]],
+  ["testing/phase-compiler/schema-validator.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_SCHEMA_VALIDATOR_SUPPORT"]],
+  ["testing/phase-compiler/semantic-validator.mjs", ["SUPPORT", "SAFE_STATIC_SUPPORT", "VALIDATE_ONLY", null, "PHASE_COMPILER_SEMANTIC_SUPPORT"]],
+]);
+const PHASE_COMPILER_POLICY_PATHS = [
+  "testing/phase-compiler/phase-compiler.test.mjs",
+  "testing/phase-compiler/phase-compiler-security.test.mjs",
+  "testing/phase-compiler/phase-compiler-determinism.test.mjs",
+];
 const BASELINE = "01a5c779f3f47f9619a2cd4a913622e010145afc";
 const ROLES = new Set(["EXECUTABLE", "SUPPORT", "FIXTURE", "CONFIG"]);
 const CLASSES = new Set([
@@ -177,6 +205,7 @@ const REQUIRED_POLICY = new Set([
   V1_ADMIN_HERMETIC_TEST_PATH,
   V1_STAGING_SOURCE_POLICY_PATH,
   V1_STAGING_EVIDENCE_TEST_PATH,
+  ...PHASE_COMPILER_POLICY_PATHS,
 ]);
 const DENIED_CLASSES = new Set([
   "BROWSER_OR_PLAYWRIGHT",
@@ -313,7 +342,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_33NA_V1_STAGING",
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34BA_PHASE_COMPILER",
     "MANIFEST_TREE_DIGEST",
   );
   assert(
@@ -371,7 +400,7 @@ function validateManifest() {
   const inventory = listRegularFiles("testing");
   const entryPaths = manifest.entries.map((entry) => entry.path);
   assert(
-    manifest.entries.length === 138 &&
+    manifest.entries.length === 159 &&
       entryPaths.length === new Set(entryPaths).size,
     "MANIFEST_ENTRY_SET",
   );
@@ -774,6 +803,17 @@ function validateManifest() {
       "MANIFEST_V1_STAGING_CLASSIFICATIONS",
     );
   }
+  for (const [repositoryPath, contract] of PHASE_COMPILER_CONTRACTS) {
+    const entry = entriesByPath.get(repositoryPath);
+    assert(
+      entry?.role === contract[0] &&
+        entry.safety_class === contract[1] &&
+        entry.ci_disposition === contract[2] &&
+        JSON.stringify(entry.command_argv) === JSON.stringify(contract[3]) &&
+        entry.reason_code === contract[4],
+      "MANIFEST_PHASE_COMPILER_CLASSIFICATIONS",
+    );
+  }
   const core = corePaths.size;
   const policyCount = policyPaths.size;
   const validateOnly = manifest.entries.filter(
@@ -783,7 +823,7 @@ function validateManifest() {
     (entry) => entry.ci_disposition === "DENY",
   ).length;
   assert(
-    core === 5 && policyCount === 15 && validateOnly === 31 && denied === 87,
+    core === 5 && policyCount === 18 && validateOnly === 46 && denied === 90,
     "MANIFEST_CLASSIFICATION_COUNTS",
   );
 
@@ -810,7 +850,7 @@ if (missingV1StagingClassifications !== 0) {
 } else try {
   const result = validateManifest();
   console.log(
-    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} v1_admin_classifications=4 v1_staging_classifications=6 failures=0 internal_failures=0`,
+    `PASS_STATIC_TEST_SAFETY_MANIFEST entries=${result.entries} core=${result.core} policy=${result.policy} validate_only=${result.validateOnly} denied=${result.denied} v1_admin_classifications=4 v1_staging_classifications=6 phase_compiler_classifications=21 failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (
