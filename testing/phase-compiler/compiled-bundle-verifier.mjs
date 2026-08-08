@@ -10,6 +10,17 @@ import { artifactNamesForPhase, validateArtifactBuffers, zipNameForPhase } from 
 const MAX_ARTIFACT_BYTES = 1024 * 1024;
 const MAX_ZIP_BYTES = 16 * 1024 * 1024;
 const TOKEN_PATTERN = /APPROVE_AIFINDER_[A-Z0-9]+(?:-[A-Z0-9]+)*_[0-9a-f]{64}/u;
+const INSPECTION_BUDGET_KEYS = Object.freeze(['compiled_commands', 'database', 'deployments', 'git_commits', 'git_pushes', 'network']);
+const INSPECTION_CLAIM_BOUNDARIES = Object.freeze([
+  'NO_IMPLEMENTATION_AUTHORITY',
+  'NO_RUNTIME_VALIDATION',
+  'NO_ENVIRONMENT_PARITY_CLAIM',
+  'NO_DATABASE_STATE_CLAIM',
+  'NO_STORAGE_STATE_CLAIM',
+  'NO_EXTERNAL_CLEANUP_CLAIM',
+  'NO_ROUTE_SUCCESS_CLAIM',
+  'NO_LAUNCH_READINESS_CLAIM',
+]);
 const BOUND_DIRECTORY_READ_PROGRAM = String.raw`import json
 import os
 import stat
@@ -185,6 +196,198 @@ function inferPhaseId(entries) {
   return candidates[0][1];
 }
 
+function artifactBytesMap(artifacts) {
+  if (artifacts instanceof Map) return new Map([...artifacts].map(([name, bytes]) => [name, Buffer.from(bytes)]));
+  if (artifacts?.artifact_names && typeof artifacts.readArtifact === 'function') {
+    return new Map(artifacts.artifact_names.map((name) => [name, artifacts.readArtifact(name)]));
+  }
+  fail('OUTPUT_HASH_MISMATCH', 'inspection artifact input shape');
+}
+
+function exactOccurrenceCount(text, fragment) {
+  if (fragment.length === 0) return 0;
+  let count = 0;
+  let offset = 0;
+  while (true) {
+    const next = text.indexOf(fragment, offset);
+    if (next === -1) return count;
+    count += 1;
+    offset = next + fragment.length;
+  }
+}
+
+function plainRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+function independentlyVerifyInspectionAuthority(spec, contract) {
+  if (
+    !plainRecord(spec) ||
+    !plainRecord(spec.scope) ||
+    !plainRecord(spec.operation_budgets) ||
+    !plainRecord(spec.target_confirmation) ||
+    !plainRecord(spec.git) ||
+    !plainRecord(spec.governance) ||
+    !plainRecord(spec.state_model) ||
+    !Array.isArray(spec.commands) ||
+    !Array.isArray(spec.external_resources) ||
+    !Array.isArray(spec.compatibility_adapters) ||
+    !Array.isArray(spec.conditional_scopes) ||
+    !Array.isArray(spec.rollbacks) ||
+    !Array.isArray(spec.scope.create_paths) ||
+    !Array.isArray(spec.scope.modify_paths) ||
+    !Array.isArray(spec.git.staged_paths) ||
+    !Array.isArray(spec.governance.manifest_transitions) ||
+    !Array.isArray(spec.governance.runner_additions) ||
+    !Array.isArray(spec.governance.runner_removals) ||
+    !Array.isArray(spec.state_model.initial_states) ||
+    !Array.isArray(spec.state_model.invalidations) ||
+    JSON.stringify(Object.keys(spec.operation_budgets).sort(compareUtf8)) !== JSON.stringify(INSPECTION_BUDGET_KEYS)
+  ) fail('OUTPUT_HASH_MISMATCH', 'inspection authority shape reconstruction');
+
+  const completeBoundarySet =
+    contract.claim_boundaries.length === INSPECTION_CLAIM_BOUNDARIES.length &&
+    new Set(contract.claim_boundaries).size === INSPECTION_CLAIM_BOUNDARIES.length &&
+    INSPECTION_CLAIM_BOUNDARIES.every((boundary) => contract.claim_boundaries.includes(boundary));
+  const zeroEffect =
+    spec.authority_class === 'STATIC_INSPECTION_ONLY' &&
+    spec.commands.length === 0 &&
+    spec.external_resources.length === 0 &&
+    spec.compatibility_adapters.length === 0 &&
+    spec.conditional_scopes.length === 0 &&
+    spec.rollbacks.length === 0 &&
+    spec.scope.create_paths.length === 0 &&
+    spec.scope.modify_paths.length === 0 &&
+    spec.target_confirmation.required === false &&
+    spec.target_confirmation.confirmation_command_id === '' &&
+    spec.target_confirmation.first_effect_command_id === '' &&
+    spec.target_confirmation.one_use === false &&
+    spec.git.commit_count === 0 &&
+    spec.git.push_count === 0 &&
+    spec.git.commit_subject === '' &&
+    spec.git.staged_paths.length === 0 &&
+    spec.governance.manifest_path === '' &&
+    spec.governance.manifest_transitions.length === 0 &&
+    spec.governance.runner_path === '' &&
+    spec.governance.runner_additions.length === 0 &&
+    spec.governance.runner_removals.length === 0 &&
+    spec.state_model.initial_states.length === 0 &&
+    spec.state_model.invalidations.length === 0 &&
+    INSPECTION_BUDGET_KEYS.every((key) => spec.operation_budgets[key] === 0);
+  if (!completeBoundarySet || !zeroEffect) fail('INSPECTION_AUTHORITY_MISMATCH', 'inspection authority or claim-boundary reconstruction');
+}
+
+function independentlyRenderedInspectionLines(contract) {
+  return [
+    '## Bounded inspection contract',
+    `Title: ${contract.title}`,
+    '',
+    '### Questions',
+    ...contract.questions.map((question) => `${question.id} [${question.answer_kind}]: ${question.text}`),
+    '',
+    '### Required CCR output sections',
+    ...contract.output_sections.map((section) => `${section.id} ${section.title}: ${section.question_ids.join(', ')}`),
+    '',
+    '### Claim boundaries',
+    ...contract.claim_boundaries.map((boundary) => `- ${boundary}`),
+  ];
+}
+
+export function verifyInspectionContractArtifacts(input) {
+  if (!plainRecord(input) || typeof input.phaseId !== 'string' || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/u.test(input.phaseId)) {
+    fail('OUTPUT_HASH_MISMATCH', 'inspection verifier input shape');
+  }
+  const { phaseId, artifacts } = input;
+  const names = artifactNamesForPhase(phaseId);
+  let map;
+  try {
+    map = artifactBytesMap(artifacts);
+  } catch (error) {
+    if (error instanceof DiagnosticError) throw error;
+    fail('OUTPUT_HASH_MISMATCH', 'inspection artifact input shape');
+  }
+  let document;
+  try {
+    document = parseStrictJson(map.get(names[4]));
+  } catch {
+    fail('OUTPUT_HASH_MISMATCH', 'inspection phase specification parse');
+  }
+  const spec = document?.phase_spec;
+  if (!plainRecord(spec)) fail('OUTPUT_HASH_MISMATCH', 'inspection phase specification shape');
+  const contract = spec.inspection_contract;
+  if (contract === undefined) {
+    for (const [index, fragments] of [
+      [0, ['Bounded inspection title: ', 'Inspection coverage: questions=', '## Bounded inspection contract\n']],
+      [2, ['## Bounded inspection contract\n']],
+      [6, ['## Required inspection output sections\n', '## Inspection question coverage ledger\n', '## Inspection claim boundaries\n']],
+    ]) {
+      const bytes = map.get(names[index]);
+      if (fragments.some((fragment) => bytes?.includes(Buffer.from(fragment)))) fail('OUTPUT_HASH_MISMATCH', 'undeclared inspection contract rendering');
+    }
+    return deepFreeze({ valid: true, phase_id: phaseId, inspection_contract_present: false });
+  }
+  if (
+    !plainRecord(contract) ||
+    contract.version !== 1 ||
+    contract.mode !== 'READ_ONLY_QUESTION_SET' ||
+    typeof contract.title !== 'string' ||
+    !Array.isArray(contract.questions) ||
+    !Array.isArray(contract.output_sections) ||
+    !Array.isArray(contract.claim_boundaries) ||
+    contract.questions.some((question) => !plainRecord(question) || typeof question.id !== 'string' || typeof question.text !== 'string' || typeof question.answer_kind !== 'string') ||
+    contract.output_sections.some((section) => !plainRecord(section) || typeof section.id !== 'string' || typeof section.title !== 'string' || !Array.isArray(section.question_ids) || section.question_ids.some((questionId) => typeof questionId !== 'string')) ||
+    contract.claim_boundaries.some((boundary) => typeof boundary !== 'string')
+  ) fail('OUTPUT_HASH_MISMATCH', 'inspection contract shape reconstruction');
+  independentlyVerifyInspectionAuthority(spec, contract);
+  const questionIds = new Set(contract.questions.map((question) => question.id));
+  const sectionIds = new Set(contract.output_sections.map((section) => section.id));
+  const references = contract.output_sections.flatMap((section) => section.question_ids);
+  const referenceCounts = new Map(references.map((questionId) => [questionId, references.filter((candidate) => candidate === questionId).length]));
+  if (
+    questionIds.size !== contract.questions.length ||
+    sectionIds.size !== contract.output_sections.length ||
+    references.length !== contract.questions.length ||
+    contract.questions.some((question) => referenceCounts.get(question.id) !== 1) ||
+    references.some((questionId) => !questionIds.has(questionId))
+  ) fail('OUTPUT_HASH_MISMATCH', 'inspection contract reference reconstruction');
+  const inspectionBlock = `\n${independentlyRenderedInspectionLines(contract).join('\n')}\n`;
+  const codex = map.get(names[2])?.toString('utf8') ?? '';
+  const readme = map.get(names[0])?.toString('utf8') ?? '';
+  const ccr = map.get(names[6])?.toString('utf8') ?? '';
+  if (exactOccurrenceCount(codex, inspectionBlock) !== 1 || exactOccurrenceCount(readme, inspectionBlock) !== 1) {
+    fail('OUTPUT_HASH_MISMATCH', 'inspection contract rendering or authored order');
+  }
+  const readmeSummary = `\n${[
+    `Bounded inspection title: ${contract.title}`,
+    `Inspection coverage: questions=${contract.questions.length} output_sections=${contract.output_sections.length} claim_boundaries=${contract.claim_boundaries.length}`,
+  ].join('\n')}\n\n`;
+  if (exactOccurrenceCount(readme, readmeSummary) !== 1) fail('OUTPUT_HASH_MISMATCH', 'inspection README summary reconstruction');
+  const ccrBlock = `\n${[
+    '## Required inspection output sections',
+    ...contract.output_sections.flatMap((section) => [
+      `### ${section.id} ${section.title}`,
+      `Questions: ${section.question_ids.join(', ')}`,
+      '<bounded answer>',
+      '',
+    ]),
+    '## Inspection question coverage ledger',
+    ...contract.questions.map((question) => `${question.id} [${question.answer_kind}]: <answer>`),
+    '',
+    '## Inspection claim boundaries',
+    ...contract.claim_boundaries.map((boundary) => `- ${boundary}`),
+    'Coverage status: EXACT',
+  ].join('\n')}\n\n`;
+  if (exactOccurrenceCount(ccr, ccrBlock) !== 1) fail('OUTPUT_HASH_MISMATCH', 'inspection CCR rendering or coverage ledger');
+  return deepFreeze({
+    valid: true,
+    phase_id: phaseId,
+    inspection_contract_present: true,
+    question_count: contract.questions.length,
+    output_section_count: contract.output_sections.length,
+    claim_boundary_count: contract.claim_boundaries.length,
+  });
+}
+
 async function readAndVerifyCompiledDirectory(directory, { expectedPhaseId = null, afterBoundReadStage = undefined } = {}) {
   const absolute = resolve(directory);
   let directoryHandle;
@@ -219,6 +422,7 @@ async function readAndVerifyCompiledDirectory(directory, { expectedPhaseId = nul
     await assertBoundDirectory(binding);
     const validation = validateArtifactBuffers({ phaseId, artifacts });
     if (!validation.valid) fail(validation.diagnostics[0].code, 'compiled artifact verification');
+    verifyInspectionContractArtifacts({ phaseId, artifacts });
     const canonicalIdentity = semanticDigest('canonical-bundle', canonicalJsonBuffer(
       artifactNamesForPhase(phaseId).map((name) => ({ name, ...bufferIdentity(artifacts.get(name)) })),
     ));

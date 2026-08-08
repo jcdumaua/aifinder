@@ -120,7 +120,7 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "b4fbb1fe9c37594b86f6f36f2684a950a9e76fe06e3e84e0218a2b4e11936f7e",
+    sha256: "bafba8eb868483252c6076e718133258b0479dff157cdaa49b17652078ff403b",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -211,7 +211,7 @@ const EXPECTED_V1_STAGING_CHILD_PATHS = [
 const PHASE_COMPILER_CHILDREN = [
   {
     path: "testing/phase-compiler/phase-compiler.test.mjs",
-    sha256: "5e2e3e5b5a9a5ed5d267cbf86af707646804cba8b333a0bb07d2f6cb0c9128b6",
+    sha256: "fb695a31c8219e979f19f4f20fc4fed970c4c68903e8b9989e04c456cd63e7d5",
     imports: [
       "node:assert/strict",
       "node:child_process",
@@ -235,7 +235,7 @@ const PHASE_COMPILER_CHILDREN = [
   },
   {
     path: "testing/phase-compiler/phase-compiler-security.test.mjs",
-    sha256: "9b29f3bae914e750ef6fb46201eacf4456f0008f209208a5c6a4377064048955",
+    sha256: "eb1132837d3c3e8eaf00c7440d864b8c15b49249ad8c462d3a1416a2ee375ce4",
     imports: [
       "node:assert/strict",
       "node:child_process",
@@ -251,11 +251,13 @@ const PHASE_COMPILER_CHILDREN = [
       "./command-dependency-validator.mjs",
       "./error-catalog.mjs",
       "./external-bundle-writer.mjs",
+      "./fixtures/failure-catalog.mjs",
+      "./semantic-validator.mjs",
     ],
   },
   {
     path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",
-    sha256: "f3dc951fb8c967372d24590c9b4ca6970a7697f25bddeefc4dd3355bfd3a7b11",
+    sha256: "49266797bdf0d0ba6842fcc25d07ce71476b443f8345e603c6247dea65797482",
     imports: [
       "node:assert/strict",
       "node:crypto",
@@ -264,6 +266,7 @@ const PHASE_COMPILER_CHILDREN = [
       "node:url",
       "./canonical.mjs",
       "./deterministic-renderer.mjs",
+      "./compiled-bundle-verifier.mjs",
       "./command-dependency-validator.mjs",
       "./external-bundle-writer.mjs",
       "./fixtures/failure-catalog.mjs",
@@ -304,24 +307,24 @@ const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
   {path: "testing/phase-compiler/canonical.mjs",sha256: "aa29758297cfcf1bddc0162ed7a5b155faf3bb52c572e0d86b9e307b3a7ed61b",imports: ["node:crypto","./error-catalog.mjs"],profile_sha256: "3a545a2ec20057a25c99e9a02bfa5235f3ea63e1f304bfaf71f4b6eb78184452",flags: []},
   {path: "testing/phase-compiler/cli.mjs",sha256: "8c8792bb682597b5222b2410959c8e1ed0f69b7c10293840fa05d1f7f9a3a6aa",imports: ["node:fs","node:fs/promises","node:path","node:url","./canonical.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./phase-spec.mjs","./semantic-validator.mjs"],profile_sha256: "29c4d9d9b7f42281fc63fdde1f06b2c0f5e485dbfc21cc74bf6eb01a1ef8e260",flags: ["FS_ACCESS","PROCESS_CONTROL"]},
   {path: "testing/phase-compiler/command-dependency-validator.mjs",sha256: "f33fa6ca9e8fdf089d803042ce2048586483416f07e3133f0eb7f95f094472be",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "238aa203dc683ca266176dc4f9d190b63d0bb757e054d9f2ad949ff8bf5058ce",flags: ["FIXED_GIT"]},
-  {path: "testing/phase-compiler/compiled-bundle-verifier.mjs",sha256: "60dc69e103f73d07f2837ed7f5f2007dbc7ac27b0bd68eace98c33435fe55b8d",imports: ["node:crypto","node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./deterministic-renderer.mjs"],profile_sha256: "9f18abb8783fc4ae1377e7a40856bfb6802c12abd6f0f427a84517167362a512",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/deterministic-renderer.mjs",sha256: "a2d04dcd517540fd74964ab15f5b499f0b736a8b7b9ca24e5edf2e496bb70ee2",imports: ["node:crypto","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./semantic-validator.mjs","./command-dependency-validator.mjs"],profile_sha256: "9d5abfb0ffc89a8920402ac99632b3eea9162bb8342e3759c9bafbe75add5fe3",flags: []},
-  {path: "testing/phase-compiler/error-catalog.mjs",sha256: "cd9f42d6a15da21f1c5df4d79e09fde07c723399c785950068094d7adb79cada",imports: [],profile_sha256: "59d8a8b6e583785f32058e757af71b4eea608f0d007b3779715448573f5f6cab",flags: []},
+  {path: "testing/phase-compiler/compiled-bundle-verifier.mjs",sha256: "d05e541df96152a57c5c711bd6e8485ae7e0841172c229c050c1ad2618820326",imports: ["node:crypto","node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./deterministic-renderer.mjs"],profile_sha256: "52458e4774e34b854700131c9b23a87e1248f89e1f82c6841c000cc03117fd5c",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/deterministic-renderer.mjs",sha256: "1851950670672f8f4a4123fd6ca0c818b34975a620d2374a51438c89211ce92e",imports: ["node:crypto","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./semantic-validator.mjs","./command-dependency-validator.mjs"],profile_sha256: "25c9ac99ccdf300e221d84a5e234c54ed4e2bc60f4b82ddb6ea0f99268149b28",flags: []},
+  {path: "testing/phase-compiler/error-catalog.mjs",sha256: "f87435be017082c3a1b0edcacec0f6df6f114a062c5bb3fcc00c9f5161f8af7d",imports: [],profile_sha256: "f6e4e7745d7708c238a85b872d9a6707c9d32e505fc1786d657eab5d435b37fa",flags: []},
   {path: "testing/phase-compiler/external-bundle-writer.mjs",sha256: "c1667e329745ac425e0bf919672dc78c5a88793d56a894a7270fe8e3fc38f9e0",imports: ["node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs"],profile_sha256: "6af2890397c50913c55961c6322162fdc75f9667fd06b17203d011c8a62fdae2",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/fixtures/failure-catalog.mjs",sha256: "3a20f3fd68a384bb31be1d58359bc28c3622426af09280338a070daa872dc281",imports: ["../canonical.mjs","../command-dependency-validator.mjs"],profile_sha256: "987249772e89b509aa5e3e9d69274fd6791a0a6e4fe6cf25feb2c2c4a5779b35",flags: []},
+  {path: "testing/phase-compiler/fixtures/failure-catalog.mjs",sha256: "000ae88e852cdf547782c53e9ec0f8b9d2f108fd6a8876e89bcb2c55e1ea4bc5",imports: ["../canonical.mjs","../command-dependency-validator.mjs"],profile_sha256: "70e83271d140ab323040420b447782c94b349f6d26b0843b9ca1d25d05f8ccbd",flags: []},
   {path: "testing/phase-compiler/fixtures/reference-phase-spec.json",sha256: "b81b6e90288daa27417e5058f4247b1107f197b9840a833febd99b898664d2e9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/fixtures/reference-repository-snapshot.json",sha256: "cf4efcbb41bdffe715fcf150da0d26305b78c115a8280bc8786b48e832a4f7a9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/governance-validator.mjs",sha256: "be590a45117d7ed6d7119c1877bdb18ebb79c44cfd365734bd0028ca8b74b664",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "678fbe5d75118ecb6d8c3523b5cca94329dff2b370617f506afd94033f4f11f1",flags: []},
   {path: "testing/phase-compiler/operation-contract-validator.mjs",sha256: "04987d3f7b8f3f066fcfd4366b21e3badf13df412ca73f4e786f9914e97b9988",imports: ["./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs"],profile_sha256: "b3a01795343b01176a4a189acfe325cf294dcd2c89efd4622703d0e67134c6ee",flags: []},
-  {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "f3dc951fb8c967372d24590c9b4ca6970a7697f25bddeefc4dd3355bfd3a7b11",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "18448817e12b4b3b466cded935b8a79220787a130c5228f23373a467aa4fbf34",flags: ["FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL"]},
-  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "9b29f3bae914e750ef6fb46201eacf4456f0008f209208a5c6a4377064048955",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs"],profile_sha256: "f832a702b0cec00033ffd12379631901854fc32f69fc0521bd36837eb35e63db",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "5e2e3e5b5a9a5ed5d267cbf86af707646804cba8b333a0bb07d2f6cb0c9128b6",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "c3b9132c6534c0c011fa3e824e9c7307025b5cf669426309cafec0b772fbcfb2",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/phase-spec.mjs",sha256: "085a5431f1d3882631f06df132223cdcf8f45e83204fbc4378356a1f167f8aae",imports: ["./phase-spec.schema.json","./canonical.mjs","./error-catalog.mjs","./schema-validator.mjs"],profile_sha256: "7b3b0641df12be3a8716f3d0c06cce36dae58d377bbefecd9178d81fa6a1224a",flags: []},
-  {path: "testing/phase-compiler/phase-spec.schema.json",sha256: "d6c28f935751210fc5c661baff9b7cbc611f3a4420198e00bf7946ab90af5f4f",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
+  {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "49266797bdf0d0ba6842fcc25d07ce71476b443f8345e603c6247dea65797482",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./compiled-bundle-verifier.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "1a1533db5361146ba4c7eb04a2168cfde73d4d858a463f32cfcb27eafc316c9c",flags: ["FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL"]},
+  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "eb1132837d3c3e8eaf00c7440d864b8c15b49249ad8c462d3a1416a2ee375ce4",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./semantic-validator.mjs"],profile_sha256: "8639952a2dc81cac149cfb49a0245e8d8fabe9ac4c79a00cf971b15cb4478efe",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "fb695a31c8219e979f19f4f20fc4fed970c4c68903e8b9989e04c456cd63e7d5",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "0acd0a905d5f99e53e032f16de02d8ebbd99cbcf74afaa3ee84b252249e0149b",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-spec.mjs",sha256: "5935d634bf3194304ee99813ba824f7d8154fb7c281615ab7d4af7a679a538b8",imports: ["./phase-spec.schema.json","./canonical.mjs","./error-catalog.mjs","./schema-validator.mjs"],profile_sha256: "51585096653727afb897a56ebff57b8d6321bc4d9bd3b5c52d86b4df0c635e91",flags: []},
+  {path: "testing/phase-compiler/phase-spec.schema.json",sha256: "e954f42cb28ccfb56e168eb9027f98ff870db813a5d6c8a5ff409afb7d19a404",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/repository-snapshot-adapter.mjs",sha256: "fcc627114e417a3a916027ba4ce73ba3fa4a4a3f7b07fe84db79f2552df9732c",imports: ["node:child_process","node:fs","node:fs/promises","node:path","node:url","./repository-snapshot.schema.json","./command-dependency-validator.mjs","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "08f777f9eb7734059780049d74476cebfd2e9be9abb9718d5350fda8a8179d8a",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/repository-snapshot.schema.json",sha256: "eea888ad3a60e1caf745c7621ce0b6e3a07c9d0b8ae308df4d24f4dd08b9dc98",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/schema-validator.mjs",sha256: "72f28acea6db9e0a0a72ee482ee5160d9821a4448b5935fd08d05a0e7d7c2e12",imports: ["./canonical.mjs","./error-catalog.mjs"],profile_sha256: "0330bab05eb134c1635266a2065ef88fba0efda8202c089d4575569ef2d8ff0e",flags: []},
-  {path: "testing/phase-compiler/semantic-validator.mjs",sha256: "66b30d56b1d34b8cee8442f7e6180d75abb51c72eee82caba00cfac3f9c0e475",imports: ["./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "874f177b7d4839bd65202d813935e6cd56d4ea7889d4ea2bf69a12d1669cc4b2",flags: []},
+  {path: "testing/phase-compiler/semantic-validator.mjs",sha256: "ecb35fe037720dfd13d090690d94166fe1994fd1166371e9adee762a03f09b94",imports: ["./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "c7bccae838ee32b53698650b31fd135b518bce123ff3f65e1dd6f24de46c7f9f",flags: []},
 ]);
 const C2_1_CHILDREN = [
   {
@@ -2026,7 +2029,7 @@ function validateManifestForExecution() {
     ) ||
     !compareExactPathSets(paths, inventory).equal ||
     manifest.testing_tree_digest_state !==
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34BA_PHASE_COMPILER" ||
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34EA_INSPECTION_CONTRACT" ||
     manifest.testing_tree_digest !== testingTreeDigest(MANIFEST_PATH)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_INVENTORY");

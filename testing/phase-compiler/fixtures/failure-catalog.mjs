@@ -73,6 +73,65 @@ function baseCommand(overrides = {}) {
   };
 }
 
+const inspectionClaimBoundaries = Object.freeze([
+  'NO_IMPLEMENTATION_AUTHORITY',
+  'NO_RUNTIME_VALIDATION',
+  'NO_ENVIRONMENT_PARITY_CLAIM',
+  'NO_DATABASE_STATE_CLAIM',
+  'NO_STORAGE_STATE_CLAIM',
+  'NO_EXTERNAL_CLEANUP_CLAIM',
+  'NO_ROUTE_SUCCESS_CLAIM',
+  'NO_LAUNCH_READINESS_CLAIM',
+]);
+
+function p04InspectionContract() {
+  return {
+    version: 1,
+    mode: 'READ_ONLY_QUESTION_SET',
+    title: 'Bounded static inspection for the next AiFinder compiler phase',
+    questions: [
+      { id: 'Q01', text: 'What repository identity and baseline are in scope?', answer_kind: 'FACTUAL' },
+      { id: 'Q02', text: 'Which governed paths are available for static inspection?', answer_kind: 'INVENTORY' },
+      { id: 'Q03', text: 'How do the inspected compiler modules depend on each other?', answer_kind: 'DEPENDENCY_GRAPH' },
+      { id: 'Q04', text: 'What bounded follow-up scope is supported by the inspected evidence?', answer_kind: 'SCOPE_PROPOSAL' },
+      { id: 'Q05', text: 'Which commands would a later authorized phase need to declare explicitly?', answer_kind: 'COMMAND_CONTRACT' },
+      { id: 'Q06', text: 'Which compatibility constraints must a later phase preserve?', answer_kind: 'COMPATIBILITY_ANALYSIS' },
+      { id: 'Q07', text: 'What zero-effect operation budgets apply to this inspection?', answer_kind: 'BUDGET_LEDGER' },
+      { id: 'Q08', text: 'Why is no rollback authority present for this read-only inspection?', answer_kind: 'ROLLBACK_LEDGER' },
+      { id: 'Q09', text: 'Which evidence gaps block a later implementation phase?', answer_kind: 'BLOCKER_DECISION' },
+      { id: 'Q10', text: 'What bounded next phase is supported without granting execution authority?', answer_kind: 'NEXT_PHASE_RECOMMENDATION' },
+      { id: 'Q11', text: 'Which compiler format and schema versions are present?', answer_kind: 'FACTUAL' },
+      { id: 'Q12', text: 'Which diagnostics protect the inspection contract?', answer_kind: 'INVENTORY' },
+      { id: 'Q13', text: 'Which canonical artifacts bind the inspection questions and answers?', answer_kind: 'DEPENDENCY_GRAPH' },
+      { id: 'Q14', text: 'Which prior phase specifications remain byte-compatible when the contract is absent?', answer_kind: 'COMPATIBILITY_ANALYSIS' },
+      { id: 'Q15', text: 'Which claims remain forbidden after static inspection?', answer_kind: 'BLOCKER_DECISION' },
+    ],
+    output_sections: [
+      { id: 'S01', title: 'Repository and scope facts', question_ids: ['Q01', 'Q02', 'Q11'] },
+      { id: 'S02', title: 'Dependency and artifact analysis', question_ids: ['Q03', 'Q12', 'Q13'] },
+      { id: 'S03', title: 'Bounded follow-up scope', question_ids: ['Q04', 'Q05'] },
+      { id: 'S04', title: 'Compatibility and budgets', question_ids: ['Q06', 'Q07', 'Q14'] },
+      { id: 'S05', title: 'Rollback and blocker decision', question_ids: ['Q08', 'Q09', 'Q15'] },
+      { id: 'S06', title: 'Next phase recommendation', question_ids: ['Q10'] },
+    ],
+    claim_boundaries: [...inspectionClaimBoundaries],
+  };
+}
+
+function p04Fixture(referenceSpec, referenceSnapshot) {
+  const spec = clone(referenceSpec);
+  spec.phase_id = 'P04';
+  spec.workstream = 'SYNTHETIC_P04_BOUNDED_INSPECTION';
+  spec.scope.create_paths = [];
+  spec.scope.modify_paths = [];
+  spec.inspection_contract = p04InspectionContract();
+  const snapshot = clone(referenceSnapshot);
+  snapshot.paths = snapshot.paths.filter((record) => record.role !== 'CREATE');
+  bindDependencyFacts(spec, snapshot);
+  refreshSnapshotDigest(snapshot);
+  return { id: 'P04', spec, snapshot };
+}
+
 export function positiveFixtures(referenceSpec, referenceSnapshot) {
   const p01 = { id: 'P01', spec: clone(referenceSpec), snapshot: clone(referenceSnapshot) };
   const p02Spec = clone(referenceSpec);
@@ -139,6 +198,7 @@ export function positiveFixtures(referenceSpec, referenceSnapshot) {
     p01,
     { id: 'P02', spec: p02Spec, snapshot: p02Snapshot },
     { id: 'P03', spec: p03Spec, snapshot: p03Snapshot },
+    p04Fixture(referenceSpec, referenceSnapshot),
   ]);
 }
 
@@ -166,6 +226,11 @@ export const FAILURE_CATALOG = deepFreeze({
   N21: { title: 'raw credential value is authored', expected_codes: ['SECRET_BEARING_FIELD_FORBIDDEN'], historical_class: 'secret-leakage', mutation: 'raw-credential-value' },
   N22: { title: 'generic canonical artifact name', expected_codes: ['AMBIGUOUS_ARTIFACT_FILENAME'], historical_class: 'artifact-collision', mutation: 'generic-artifact-filename' },
   N23: { title: 'snapshot evidence emits source content', expected_codes: ['SNAPSHOT_SOURCE_CONTENT_EMISSION'], historical_class: 'source-content-leakage', mutation: 'snapshot-source-emission' },
+  N24: { title: 'inspection contract has a malformed question set', expected_codes: ['SCHEMA_CONTRACT_VIOLATION'], historical_class: 'inspection-schema', mutation: 'malformed-question-set' },
+  N25: { title: 'inspection question references are duplicate, dangling, or multiply used', expected_codes: ['INSPECTION_CONTRACT_REFERENCE_INVALID'], historical_class: 'inspection-reference-closure', mutation: 'invalid-question-reference-coverage' },
+  N26: { title: 'inspection contract carries nonzero or noninspection authority', expected_codes: ['INSPECTION_AUTHORITY_MISMATCH'], historical_class: 'inspection-authority', mutation: 'inspection-effect-authority' },
+  N27: { title: 'inspection text contains forbidden interpolation or token syntax', expected_codes: ['INSPECTION_TEXT_FORBIDDEN'], historical_class: 'inspection-text-injection', mutation: 'inspection-text-interpolation' },
+  N28: { title: 'rendered inspection contract is altered, omitted, or reordered', expected_codes: ['OUTPUT_EMBEDDING_MISMATCH', 'OUTPUT_HASH_MISMATCH'], historical_class: 'inspection-output-tamper', mutation: 'inspection-rendered-content' },
 });
 
 export function negativeFixture(id, referenceSpec, referenceSnapshot) {
@@ -259,6 +324,36 @@ export function negativeFixture(id, referenceSpec, referenceSnapshot) {
     extra.rendererMutation = { artifact_name: '02-Codex-Package-and-Prompt.md' };
   } else if (id === 'N23') {
     extra.rendererMutation = { snapshot_source_emission: true };
+  } else if (id === 'N24') {
+    const fixture = p04Fixture(referenceSpec, referenceSnapshot);
+    Object.assign(spec, fixture.spec);
+    Object.assign(snapshot, fixture.snapshot);
+    spec.inspection_contract.questions = [];
+  } else if (id === 'N25') {
+    const fixture = p04Fixture(referenceSpec, referenceSnapshot);
+    Object.assign(spec, fixture.spec);
+    Object.assign(snapshot, fixture.snapshot);
+    spec.inspection_contract.questions[1].id = 'Q01';
+    spec.inspection_contract.output_sections[0].question_ids = ['Q01', 'Q99'];
+    spec.inspection_contract.output_sections[1].question_ids.push('Q01');
+  } else if (id === 'N26') {
+    const fixture = p04Fixture(referenceSpec, referenceSnapshot);
+    Object.assign(spec, fixture.spec);
+    Object.assign(snapshot, fixture.snapshot);
+    spec.authority_class = 'IMPLEMENTATION';
+    spec.operation_budgets.network = 1;
+  } else if (id === 'N27') {
+    const fixture = p04Fixture(referenceSpec, referenceSnapshot);
+    Object.assign(spec, fixture.spec);
+    Object.assign(snapshot, fixture.snapshot);
+    spec.inspection_contract.questions[0].text = 'Inspect ${UNRESOLVED_APPROVAL_TOKEN} before reporting.';
+  } else if (id === 'N28') {
+    const fixture = p04Fixture(referenceSpec, referenceSnapshot);
+    Object.assign(spec, fixture.spec);
+    Object.assign(snapshot, fixture.snapshot);
+    extra.rendererMutation = {
+      variants: ['altered-question', 'omitted-section', 'reordered-boundaries'],
+    };
   }
   bindDependencyFacts(spec, snapshot);
   refreshSnapshotDigest(snapshot);

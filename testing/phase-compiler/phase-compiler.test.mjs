@@ -57,6 +57,16 @@ import { validatePhaseCompilation, validateSemantic } from './semantic-validator
 const execFile = promisify(execFileCallback);
 const directory = fileURLToPath(new URL('.', import.meta.url));
 const controlledRedIndex = process.argv.indexOf('--controlled-red');
+const INSPECTION_RED_STAGES = new Set([
+  'inspection-schema',
+  'inspection-authority',
+  'inspection-references',
+  'inspection-rendering',
+  'inspection-sensitivity',
+  'inspection-verifier',
+  'inspection-security',
+  'inspection-governance-pins',
+]);
 
 if (controlledRedIndex !== -1) {
   const stage = process.argv[controlledRedIndex + 1];
@@ -66,10 +76,13 @@ if (controlledRedIndex !== -1) {
     'snapshot',
     'semantic-governance-operation',
     'command-closure',
+    ...INSPECTION_RED_STAGES,
   ]);
   if (!knownStages.has(stage)) {
     process.stderr.write('controlled RED stage is not recognized\n');
     process.exitCode = 2;
+  } else if (INSPECTION_RED_STAGES.has(stage)) {
+    await runInspectionControlledRed(stage);
   } else if (stage === 'semantic-governance-operation' || stage === 'command-closure') {
     process.stdout.write(
       `EXPECTED_FAIL_PHASE_COMPILER stage=${stage} failures=1 internal_failures=0\n`,
@@ -82,6 +95,97 @@ if (controlledRedIndex !== -1) {
   }
 } else {
   await runGreenSuite();
+}
+
+async function inspectionFixtureInputs() {
+  const [referenceSpecBytes, referenceSnapshotBytes] = await Promise.all([
+    readFile(join(directory, 'fixtures/reference-phase-spec.json')),
+    readFile(join(directory, 'fixtures/reference-repository-snapshot.json')),
+  ]);
+  const referenceSpec = parseStrictJson(referenceSpecBytes);
+  const referenceSnapshot = parseStrictJson(referenceSnapshotBytes);
+  return { referenceSpec, referenceSnapshot };
+}
+
+async function commandExit(argv) {
+  try {
+    await execFile(process.execPath, argv, {
+      cwd: resolve(directory, '..', '..'),
+      encoding: 'utf8',
+      env: { LANG: 'C', LC_ALL: 'C' },
+      shell: false,
+    });
+    return 0;
+  } catch (error) {
+    return Number.isSafeInteger(error?.code) ? error.code : 255;
+  }
+}
+
+async function assertInspectionRedStage(stage) {
+  const { referenceSpec, referenceSnapshot } = await inspectionFixtureInputs();
+  const p04 = positiveFixtures(referenceSpec, referenceSnapshot).find((fixture) => fixture.id === 'P04');
+  assert(p04, 'P04 fixture must exist');
+  if (stage === 'inspection-schema') {
+    assert.doesNotThrow(() => normalizePhaseSpec(p04.spec));
+    return;
+  }
+  if (stage === 'inspection-authority') {
+    const fixture = negativeFixture('N26', referenceSpec, referenceSnapshot);
+    assert.equal(validatePhaseCompilation({ authoredSpec: fixture.spec, snapshot: fixture.snapshot }).primary_code, 'INSPECTION_AUTHORITY_MISMATCH');
+    return;
+  }
+  if (stage === 'inspection-references') {
+    const fixture = negativeFixture('N25', referenceSpec, referenceSnapshot);
+    assert.equal(validatePhaseCompilation({ authoredSpec: fixture.spec, snapshot: fixture.snapshot }).primary_code, 'INSPECTION_CONTRACT_REFERENCE_INVALID');
+    return;
+  }
+  if (stage === 'inspection-rendering' || stage === 'inspection-sensitivity') {
+    const { compilePhaseBundle } = await import('./deterministic-renderer.mjs');
+    let compiled;
+    assert.doesNotThrow(() => { compiled = compilePhaseBundle({ authoredSpec: p04.spec, snapshot: p04.snapshot }); });
+    const codex = compiled.readArtifact(compiled.artifact_names[2]).toString('utf8');
+    assert(codex.includes('## Bounded inspection contract\n'));
+    assert(codex.includes('Q01 [FACTUAL]: What repository identity and baseline are in scope?\n'));
+    if (stage === 'inspection-sensitivity') {
+      const altered = structuredClone(p04);
+      altered.spec.inspection_contract.questions[0].text = 'What exact repository identity and baseline are in scope?';
+      let alteredBundle;
+      assert.doesNotThrow(() => { alteredBundle = compilePhaseBundle({ authoredSpec: altered.spec, snapshot: altered.snapshot }); });
+      assert.notEqual(alteredBundle.canonical_identity, compiled.canonical_identity);
+      assert(alteredBundle.readArtifact(alteredBundle.artifact_names[2]).includes(Buffer.from('Q01 [FACTUAL]: What exact repository identity and baseline are in scope?\n')));
+    }
+    return;
+  }
+  if (stage === 'inspection-verifier') {
+    const verifier = await import('./compiled-bundle-verifier.mjs');
+    assert.equal(typeof verifier.verifyInspectionContractArtifacts, 'function');
+    return;
+  }
+  if (stage === 'inspection-security') {
+    const fixture = negativeFixture('N27', referenceSpec, referenceSnapshot);
+    assert.equal(validatePhaseCompilation({ authoredSpec: fixture.spec, snapshot: fixture.snapshot }).primary_code, 'INSPECTION_TEXT_FORBIDDEN');
+    return;
+  }
+  if (stage === 'inspection-governance-pins') {
+    const repositoryRoot = resolve(directory, '..', '..');
+    assert.equal(await commandExit([join(repositoryRoot, 'testing/static-test-safety-manifest.test.mjs')]), 0);
+    assert.equal(await commandExit([join(repositoryRoot, 'testing/run-static-readiness.mjs'), '--self-test']), 0);
+  }
+}
+
+async function runInspectionControlledRed(stage) {
+  try {
+    await assertInspectionRedStage(stage);
+    process.stdout.write(`UNEXPECTED_PASS_PHASE_COMPILER stage=${stage} failures=0 internal_failures=0\n`);
+  } catch (error) {
+    if (error?.code !== 'ERR_ASSERTION') {
+      process.stdout.write(`FAIL_PHASE_COMPILER stage=${stage} failures=0 internal_failures=1\n`);
+      process.exitCode = 2;
+      return;
+    }
+    process.stdout.write(`EXPECTED_FAIL_PHASE_COMPILER stage=${stage} failures=1 internal_failures=0\n`);
+    process.exitCode = 1;
+  }
 }
 
 async function expectDiagnostic(code, operation) {
@@ -163,7 +267,7 @@ async function testSchemaAndPhaseSpec(referenceSpecBytes, referenceSnapshotBytes
   const referenceSnapshot = parseStrictJson(referenceSnapshotBytes);
   const snapshotSchema = assertSupportedSchema(repositorySnapshotSchema);
   const positives = positiveFixtures(referenceSpec, referenceSnapshot);
-  assert.deepEqual(positives.map((fixture) => fixture.id), ['P01', 'P02', 'P03']);
+  assert.deepEqual(positives.map((fixture) => fixture.id), ['P01', 'P02', 'P03', 'P04']);
   for (const fixture of positives) {
     const normalized = normalizePhaseSpec(fixture.spec);
     assert.equal(normalized.phase_id, fixture.id);
@@ -172,6 +276,18 @@ async function testSchemaAndPhaseSpec(referenceSpecBytes, referenceSnapshotBytes
     assert(Object.isFrozen(normalizedSnapshot));
     assert(Object.isFrozen(normalizedSnapshot.paths));
   }
+  for (const fixture of positives.filter((candidate) => candidate.id !== 'P04')) {
+    assert.equal(Object.hasOwn(fixture.spec, 'inspection_contract'), false);
+  }
+  const p04 = normalizePhaseSpec(positives.find((fixture) => fixture.id === 'P04').spec);
+  assert.equal(p04.inspection_contract.questions.length, 15);
+  assert.equal(p04.inspection_contract.output_sections.length, 6);
+  assert.equal(p04.inspection_contract.claim_boundaries.length, 8);
+  assert.deepEqual(p04.inspection_contract.questions.map((question) => question.id), Array.from({ length: 15 }, (_, index) => `Q${String(index + 1).padStart(2, '0')}`));
+  assert.deepEqual(p04.inspection_contract.output_sections.map((section) => section.id), Array.from({ length: 6 }, (_, index) => `S${String(index + 1).padStart(2, '0')}`));
+  assert(Object.isFrozen(p04.inspection_contract));
+  assert(Object.isFrozen(p04.inspection_contract.questions));
+  assert(Object.isFrozen(p04.inspection_contract.output_sections[0].question_ids));
 
   const parsed = parsePhaseSpec(referenceSpecBytes);
   assert.equal(parsed.phase_id, 'P01');
@@ -289,7 +405,8 @@ async function testSchemaAndPhaseSpec(referenceSpecBytes, referenceSnapshotBytes
   const traversing = structuredClone(referenceSpec);
   traversing.scope.create_paths = ['../escape.txt'];
   await expectDiagnostic('PATH_TRAVERSAL_FORBIDDEN', () => normalizePhaseSpec(traversing));
-  assert.deepEqual(Object.keys(FAILURE_CATALOG), Array.from({ length: 23 }, (_, index) => `N${String(index + 1).padStart(2, '0')}`));
+  await expectDiagnostic('SCHEMA_CONTRACT_VIOLATION', () => normalizePhaseSpec(negativeFixture('N24', referenceSpec, referenceSnapshot).spec));
+  assert.deepEqual(Object.keys(FAILURE_CATALOG), Array.from({ length: 28 }, (_, index) => `N${String(index + 1).padStart(2, '0')}`));
 }
 
 async function testCanonical() {
@@ -344,6 +461,9 @@ async function testDiagnostics() {
     'TEMPLATE_INTERPOLATION_UNRESOLVED',
     'TOKEN_OCCURRENCE_MISMATCH',
     'BUDGET_CONTRACT_INCONSISTENT',
+    'INSPECTION_AUTHORITY_MISMATCH',
+    'INSPECTION_CONTRACT_REFERENCE_INVALID',
+    'INSPECTION_TEXT_FORBIDDEN',
     'PROHIBITED_GIT_MUTATION',
   ]) {
     assert(ERROR_CODES.includes(code), `missing error catalog code ${code}`);
@@ -835,7 +955,7 @@ function testSemanticGovernanceOperation(referenceSpec, referenceSnapshot) {
     assert(Object.isFrozen(operation.aggregate));
   }
 
-  for (const id of ['N01', 'N09', 'N13', 'N14', 'N18', 'N19', 'N20', 'N21']) {
+  for (const id of ['N01', 'N09', 'N13', 'N14', 'N18', 'N19', 'N20', 'N21', 'N25', 'N26']) {
     const fixture = task2Fixture(id, referenceSpec, referenceSnapshot);
     const results = [
       validateSemantic({ spec: fixture.spec, snapshot: fixture.snapshot }),
@@ -1135,7 +1255,7 @@ async function testPublicValidationPipeline(referenceSpec, referenceSnapshot) {
     assert.equal(JSON.stringify(compileFailure.diagnostic).includes(secret), false);
     assert.equal(emittedBytes.includes(Buffer.from(secret)), false);
   }
-  for (const id of Object.keys(FAILURE_CATALOG).filter((candidate) => !['N05', 'N16', 'N17', 'N22', 'N23'].includes(candidate))) {
+  for (const id of Object.keys(FAILURE_CATALOG).filter((candidate) => !['N05', 'N16', 'N17', 'N22', 'N23', 'N28'].includes(candidate))) {
     const fixture = task2Fixture(id, referenceSpec, referenceSnapshot);
     const result = validatePhaseCompilation({ authoredSpec: fixture.spec, snapshot: fixture.snapshot });
     assert.equal(result.valid, false, `${id} unexpectedly valid`);
@@ -1961,6 +2081,6 @@ async function runGreenSuite() {
     return;
   }
   process.stdout.write(
-    'PASS_PHASE_COMPILER_CORE gates=1-5 positive=P01,P02,P03 negative_core=N01-N04,N06-N15,N18-N21 failure_catalog=N01-N23 rendering_negatives=N05,N16,N17,N22,N23:DETERMINISM_SUITE public_pipeline=PASS secret_values=REJECTED_NO_EMISSION ast_fail_closed=PASS command_closure=PASS runtime_analyzer_binding=FAIL_CLOSED authority_identity_graph=FAIL_CLOSED lexical_floats=REJECTED snapshot_inventory=EXACT source_authority=EXACT snapshot_output_parent=DESCRIPTOR_BOUND git_pre_exec_binding=PASS git_spawn_cwd=DESCRIPTOR_BOUND_FAIL_CLOSED semantic_governance_operation=PASS historical_33na_33ra_33ua_33va_33wa=MODELED duplicate_keys=PASS closed_schema=PASS canonical_byte_order_lf=PASS authored_derived=PASS path_symlink_confinement=PASS repository_root_descriptor_bound=PASS tracked_fifo_swap_nonblocking=PASS deep_freeze=PASS\n',
+    'PASS_PHASE_COMPILER_CORE gates=1-5 positive=P01,P02,P03,P04 negative_core=N01-N04,N06-N15,N18-N21,N24-N27 failure_catalog=N01-N28 rendering_negatives=N05,N16,N17,N22,N23,N28:DETERMINISM_SUITE inspection_contract=SCHEMA,AUTHORITY,REFERENCES,TEXT,DEEP_FREEZE public_pipeline=PASS secret_values=REJECTED_NO_EMISSION ast_fail_closed=PASS command_closure=PASS runtime_analyzer_binding=FAIL_CLOSED authority_identity_graph=FAIL_CLOSED lexical_floats=REJECTED snapshot_inventory=EXACT source_authority=EXACT snapshot_output_parent=DESCRIPTOR_BOUND git_pre_exec_binding=PASS git_spawn_cwd=DESCRIPTOR_BOUND_FAIL_CLOSED semantic_governance_operation=PASS historical_33na_33ra_33ua_33va_33wa=MODELED duplicate_keys=PASS closed_schema=PASS canonical_byte_order_lf=PASS authored_derived=PASS path_symlink_confinement=PASS repository_root_descriptor_bound=PASS tracked_fifo_swap_nonblocking=PASS deep_freeze=PASS\n',
   );
 }

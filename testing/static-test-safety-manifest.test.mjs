@@ -342,7 +342,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34BA_PHASE_COMPILER",
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34EA_INSPECTION_CONTRACT",
     "MANIFEST_TREE_DIGEST",
   );
   assert(

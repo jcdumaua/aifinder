@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, lstat, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bufferIdentity, canonicalJsonBuffer, compareUtf8, parseStrictJson, repositorySnapshotDigest, semanticDigest } from './canonical.mjs';
@@ -10,6 +10,7 @@ import {
   reconstructAuthorityIr,
   validateArtifactBuffers,
 } from './deterministic-renderer.mjs';
+import { verifyCompiledDirectory, verifyInspectionContractArtifacts } from './compiled-bundle-verifier.mjs';
 import {
   EXECUTABLE_PROFILE_IDENTITY,
   EXECUTABLE_PROFILE_VERSION,
@@ -38,6 +39,22 @@ function rawIdentity(bytes) {
   return { algorithm: 'SHA-256', ...bufferIdentity(bytes) };
 }
 
+function replaceSingleBuffer(source, needle, replacement, label) {
+  const offset = source.indexOf(needle);
+  assert(offset >= 0, `missing ${label}`);
+  assert.equal(source.indexOf(needle, offset + needle.length), -1, `duplicate ${label}`);
+  return Buffer.concat([
+    source.subarray(0, offset),
+    replacement,
+    source.subarray(offset + needle.length),
+  ]);
+}
+
+async function materializeArtifactMap(map, names, destination) {
+  await mkdir(destination, { mode: 0o700 });
+  for (const name of names) await writeFile(join(destination, name), map.get(name), { mode: 0o600 });
+}
+
 function extractSingleEmbeddedBuffer(bytes, beginText, endText) {
   const begin = Buffer.from(beginText);
   const end = Buffer.from(endText);
@@ -56,6 +73,36 @@ function refreshSelfDescribingIntegrity(map, names) {
   for (const entry of manifest.leaf_artifacts) entry.identity = rawIdentity(map.get(entry.name));
   map.set(names[7], canonicalJsonBuffer(manifest));
   map.set(names[8], Buffer.from(names.slice(0, 8).sort(compareUtf8).map((name) => `${bufferIdentity(map.get(name)).sha256}  ${name}\n`).join('')));
+}
+
+function mutateInspectionRenderedContent(bundle, variant) {
+  const map = artifactMap(bundle);
+  const names = bundle.artifact_names;
+  const codex = map.get(names[2]).toString('utf8');
+  let tampered;
+  if (variant === 'altered-question') {
+    tampered = codex.replace(
+      'Q01 [FACTUAL]: What repository identity and baseline are in scope?',
+      'Q01 [FACTUAL]: What altered repository identity and baseline are in scope?',
+    );
+  } else if (variant === 'omitted-section') {
+    tampered = codex.replace('S06 Next phase recommendation: Q10\n', '');
+  } else if (variant === 'reordered-boundaries') {
+    tampered = codex.replace(
+      '- NO_IMPLEMENTATION_AUTHORITY\n- NO_RUNTIME_VALIDATION\n',
+      '- NO_RUNTIME_VALIDATION\n- NO_IMPLEMENTATION_AUTHORITY\n',
+    );
+  } else {
+    throw new TypeError('unknown inspection mutation');
+  }
+  assert.notEqual(tampered, codex, variant);
+  const tamperedCodex = Buffer.from(tampered);
+  map.set(names[2], tamperedCodex);
+  const manifest = parseStrictJson(map.get(names[7]));
+  manifest.codex_embedding_identity = rawIdentity(tamperedCodex);
+  map.set(names[7], canonicalJsonBuffer(manifest));
+  refreshSelfDescribingIntegrity(map, names);
+  return map;
 }
 
 function replaceAuthorityCommitment(map, names, spec, currentDigest, replacementDigest) {
@@ -144,6 +191,143 @@ async function main() {
   mutableCopy[0] ^= 0xff;
   assert(first.readArtifact(first.artifact_names[0]).equals(second.readArtifact(first.artifact_names[0])));
   assert.equal(validateArtifactBuffers({ phaseId: 'P01', artifacts: first }).valid, true);
+
+  const positives = positiveFixtures(referenceSpec, referenceSnapshot);
+  for (const fixture of positives.filter((candidate) => candidate.id !== 'P04')) {
+    const bundle = fixture.id === 'P01' ? first : compilePhaseBundle({ authoredSpec: fixture.spec, snapshot: fixture.snapshot });
+    const document = parseStrictJson(bundle.readArtifact(bundle.artifact_names[4]));
+    assert.equal(Object.hasOwn(document.phase_spec, 'inspection_contract'), false);
+    assert.equal(bundle.readArtifact(bundle.artifact_names[2]).includes(Buffer.from('## Bounded inspection contract\n')), false);
+  }
+  const p04 = positives.find((fixture) => fixture.id === 'P04');
+  const p04Bundle = compilePhaseBundle({ authoredSpec: p04.spec, snapshot: p04.snapshot });
+  assert.equal(p04Bundle.artifact_names.length, 9);
+  assert.equal(verifyInspectionContractArtifacts({ phaseId: 'P04', artifacts: p04Bundle }).valid, true);
+  const p04Document = parseStrictJson(p04Bundle.readArtifact(p04Bundle.artifact_names[4]));
+  assert.deepEqual(p04Document.phase_spec.inspection_contract, p04.spec.inspection_contract);
+  const p04Codex = p04Bundle.readArtifact(p04Bundle.artifact_names[2]).toString('utf8');
+  const p04Readme = p04Bundle.readArtifact(p04Bundle.artifact_names[0]).toString('utf8');
+  const p04Ccr = p04Bundle.readArtifact(p04Bundle.artifact_names[6]).toString('utf8');
+  assert(p04Codex.includes('## Bounded inspection contract\n'));
+  assert(p04Codex.includes('### Questions\nQ01 [FACTUAL]: What repository identity and baseline are in scope?\n'));
+  assert(p04Codex.includes('### Required CCR output sections\nS01 Repository and scope facts: Q01, Q02, Q11\n'));
+  assert(p04Codex.includes('### Claim boundaries\n- NO_IMPLEMENTATION_AUTHORITY\n- NO_RUNTIME_VALIDATION\n'));
+  assert(p04Readme.includes('Bounded inspection title: Bounded static inspection for the next AiFinder compiler phase\n'));
+  assert(p04Readme.includes('Inspection coverage: questions=15 output_sections=6 claim_boundaries=8\n'));
+  assert(p04Ccr.includes('## Required inspection output sections\n'));
+  assert(p04Ccr.includes('## Inspection question coverage ledger\n'));
+  for (const question of p04.spec.inspection_contract.questions) {
+    assert.equal((p04Codex.match(new RegExp(`^${question.id} \\[${question.answer_kind}\\]:`, 'gmu')) ?? []).length, 1);
+    assert(p04Ccr.includes(`${question.id} [${question.answer_kind}]: <answer>\n`));
+  }
+  const p04Token = p04Bundle.readArtifact(p04Bundle.artifact_names[1]).toString('utf8').match(/APPROVE_AIFINDER_P04_[0-9a-f]{64}/u)?.[0];
+  assert(p04Token);
+  const illegalInspectionAuthorityArtifacts = artifactMap(p04Bundle);
+  const illegalInspectionSpecDocument = parseStrictJson(illegalInspectionAuthorityArtifacts.get(p04Bundle.artifact_names[4]));
+  const priorInspectionSpecBytes = canonicalJsonBuffer(illegalInspectionSpecDocument.phase_spec);
+  illegalInspectionSpecDocument.phase_spec.operation_budgets.network = 1;
+  const illegalInspectionSpecBytes = canonicalJsonBuffer(illegalInspectionSpecDocument.phase_spec);
+  const inspectionSnapshotEvidence = parseStrictJson(illegalInspectionAuthorityArtifacts.get(p04Bundle.artifact_names[5]));
+  const priorInspectionIrDigest = p04Codex.match(/Authority IR commitment: ([0-9a-f]{64})\n/u)?.[1];
+  assert(priorInspectionIrDigest);
+  const illegalInspectionIrDigest = semanticDigest(
+    'authority-ir',
+    canonicalJsonBuffer(reconstructAuthorityIr(illegalInspectionSpecDocument.phase_spec, inspectionSnapshotEvidence)),
+  );
+  const inspectionCodexWithIllegalSpec = replaceSingleBuffer(
+    p04Bundle.readArtifact(p04Bundle.artifact_names[2]),
+    priorInspectionSpecBytes,
+    illegalInspectionSpecBytes,
+    'embedded P04 phase specification',
+  );
+  const illegalInspectionCodex = Buffer.from(
+    inspectionCodexWithIllegalSpec.toString('utf8').replace(priorInspectionIrDigest, illegalInspectionIrDigest),
+  );
+  const illegalInspectionCodexIdentity = rawIdentity(illegalInspectionCodex);
+  const illegalInspectionApprovalBasis = semanticDigest('approval-basis', canonicalJsonBuffer({
+    compiler_format_version: 1,
+    phase_id: illegalInspectionSpecDocument.phase_spec.phase_id,
+    authority_class: illegalInspectionSpecDocument.phase_spec.authority_class,
+    repository_baseline: illegalInspectionSpecDocument.phase_spec.repository.baseline,
+    scope: illegalInspectionSpecDocument.phase_spec.scope,
+    authority_ir_digest: illegalInspectionIrDigest,
+    codex_package_raw_identity: illegalInspectionCodexIdentity,
+  }));
+  const illegalInspectionToken = `APPROVE_AIFINDER_P04_${illegalInspectionApprovalBasis}`;
+  const inspectionGeminiWithIllegalCodex = replaceSingleBuffer(
+    p04Bundle.readArtifact(p04Bundle.artifact_names[1]),
+    p04Bundle.readArtifact(p04Bundle.artifact_names[2]),
+    illegalInspectionCodex,
+    'embedded P04 Codex package',
+  );
+  const illegalInspectionGemini = replaceSingleBuffer(
+    inspectionGeminiWithIllegalCodex,
+    Buffer.from(p04Token),
+    Buffer.from(illegalInspectionToken),
+    'P04 approval token',
+  );
+  illegalInspectionAuthorityArtifacts.set(p04Bundle.artifact_names[1], illegalInspectionGemini);
+  illegalInspectionAuthorityArtifacts.set(p04Bundle.artifact_names[2], illegalInspectionCodex);
+  illegalInspectionAuthorityArtifacts.set(p04Bundle.artifact_names[4], canonicalJsonBuffer(illegalInspectionSpecDocument));
+  const illegalInspectionManifest = parseStrictJson(illegalInspectionAuthorityArtifacts.get(p04Bundle.artifact_names[7]));
+  illegalInspectionManifest.codex_embedding_identity = illegalInspectionCodexIdentity;
+  illegalInspectionManifest.approval.token_sha256_commitment = createHash('sha256').update(Buffer.from(illegalInspectionToken)).digest('hex');
+  illegalInspectionAuthorityArtifacts.set(p04Bundle.artifact_names[7], canonicalJsonBuffer(illegalInspectionManifest));
+  refreshSelfDescribingIntegrity(illegalInspectionAuthorityArtifacts, p04Bundle.artifact_names);
+  assert.equal(validateArtifactBuffers({ phaseId: 'P04', artifacts: illegalInspectionAuthorityArtifacts }).valid, true);
+  await expectDiagnostic('INSPECTION_AUTHORITY_MISMATCH', () => verifyInspectionContractArtifacts({
+    phaseId: 'P04',
+    artifacts: illegalInspectionAuthorityArtifacts,
+  }));
+
+  for (const malformedInspectionInput of [null, undefined, {}, [], { phaseId: 'P04', artifacts: null }]) {
+    await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts(malformedInspectionInput));
+  }
+  const alteredReadmeSummary = artifactMap(p04Bundle);
+  alteredReadmeSummary.set(
+    p04Bundle.artifact_names[0],
+    Buffer.from(p04Readme.replace('Inspection coverage: questions=15', 'Inspection coverage: questions=14')),
+  );
+  refreshSelfDescribingIntegrity(alteredReadmeSummary, p04Bundle.artifact_names);
+  await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts({ phaseId: 'P04', artifacts: alteredReadmeSummary }));
+  const suffixedReadmeSummary = artifactMap(p04Bundle);
+  suffixedReadmeSummary.set(
+    p04Bundle.artifact_names[0],
+    Buffer.from(p04Readme.replace('claim_boundaries=8\n', 'claim_boundaries=8 forged\n')),
+  );
+  refreshSelfDescribingIntegrity(suffixedReadmeSummary, p04Bundle.artifact_names);
+  await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts({ phaseId: 'P04', artifacts: suffixedReadmeSummary }));
+
+  const suffixedCcrStatus = artifactMap(p04Bundle);
+  suffixedCcrStatus.set(
+    p04Bundle.artifact_names[6],
+    Buffer.from(p04Ccr.replace('Coverage status: EXACT\n', 'Coverage status: EXACT forged\n')),
+  );
+  refreshSelfDescribingIntegrity(suffixedCcrStatus, p04Bundle.artifact_names);
+  await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts({ phaseId: 'P04', artifacts: suffixedCcrStatus }));
+
+  const undeclaredInspectionCcr = artifactMap(first);
+  const p01Ccr = undeclaredInspectionCcr.get(first.artifact_names[6]).toString('utf8');
+  undeclaredInspectionCcr.set(
+    first.artifact_names[6],
+    Buffer.from(p01Ccr.replace('# CCR REPORT\n', '# CCR REPORT\n\n## Required inspection output sections\n')),
+  );
+  refreshSelfDescribingIntegrity(undeclaredInspectionCcr, first.artifact_names);
+  await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts({ phaseId: 'P01', artifacts: undeclaredInspectionCcr }));
+
+  for (const mutate of [
+    (contract) => { contract.questions[0].text = 'What exact repository identity and baseline are in scope?'; },
+    (contract) => { [contract.questions[0], contract.questions[1]] = [contract.questions[1], contract.questions[0]]; },
+    (contract) => { [contract.output_sections[0], contract.output_sections[1]] = [contract.output_sections[1], contract.output_sections[0]]; },
+    (contract) => { contract.claim_boundaries.push(contract.claim_boundaries.shift()); },
+  ]) {
+    const altered = structuredClone(p04);
+    mutate(altered.spec.inspection_contract);
+    const alteredBundle = compilePhaseBundle({ authoredSpec: altered.spec, snapshot: altered.snapshot });
+    const alteredToken = alteredBundle.readArtifact(alteredBundle.artifact_names[1]).toString('utf8').match(/APPROVE_AIFINDER_P04_[0-9a-f]{64}/u)?.[0];
+    assert.notEqual(alteredBundle.canonical_identity, p04Bundle.canonical_identity);
+    assert.notEqual(alteredToken, p04Token);
+  }
 
   const callerFactSnapshot = structuredClone(referenceSnapshot);
   callerFactSnapshot.derived_dependency_facts = [{
@@ -344,6 +528,11 @@ async function main() {
   nondeterministicArtifacts.set(readmeName, Buffer.from(nondeterministicArtifacts.get(readmeName).toString('utf8').replace('compiled bundle\n', 'compiled output\n')));
   assert(codes(validateArtifactBuffers({ phaseId: 'P01', artifacts: nondeterministicArtifacts })).includes('OUTPUT_NONDETERMINISTIC'));
 
+  const n28 = negativeFixture('N28', referenceSpec, referenceSnapshot);
+  const n28TamperedArtifacts = n28.rendererMutation.variants.map((variant) => ({
+    variant,
+    artifacts: mutateInspectionRenderedContent(p04Bundle, variant),
+  }));
   const tempRoot = await mkdtemp('/private/tmp/aifinder-phase-34ba-determinism-');
   try {
     const firstDestination = join(tempRoot, 'first');
@@ -355,6 +544,15 @@ async function main() {
     for (const name of first.artifact_names) assert((await readFile(join(firstDestination, name))).equals(await readFile(join(secondDestination, name))), name);
     const zipForbidden = compilePhaseBundle({ authoredSpec: referenceSpec, snapshot: referenceSnapshot });
     await expectDiagnostic('ZIP_NOT_AUTHORIZED', () => writeCompiledBundle({ compiled: zipForbidden, destination: join(tempRoot, 'zip-forbidden'), repositoryRoot: resolve(directory, '..', '..'), includeZip: true }));
+    const illegalInspectionDestination = join(tempRoot, 'illegal-inspection-authority');
+    await materializeArtifactMap(illegalInspectionAuthorityArtifacts, p04Bundle.artifact_names, illegalInspectionDestination);
+    await expectDiagnostic('INSPECTION_AUTHORITY_MISMATCH', () => verifyCompiledDirectory(illegalInspectionDestination, { expectedPhaseId: 'P04' }));
+    for (const { variant, artifacts } of n28TamperedArtifacts) {
+      const validation = validateArtifactBuffers({ phaseId: 'P04', artifacts });
+      const destination = join(tempRoot, `n28-${variant}`);
+      await materializeArtifactMap(artifacts, p04Bundle.artifact_names, destination);
+      await expectDiagnostic(validation.diagnostics[0].code, () => verifyCompiledDirectory(destination, { expectedPhaseId: 'P04' }));
+    }
   } finally {
     await chmod(tempRoot, 0o700).catch(() => {});
     await rm(tempRoot, { recursive: true, force: true });
@@ -367,6 +565,12 @@ async function main() {
     assert.equal(result.valid, false, `${id} unexpectedly valid`);
     for (const expected of FAILURE_CATALOG[id].expected_codes) assert(codes(result).includes(expected), `${id} missing ${expected}: ${JSON.stringify(result)}`);
   }
+  for (const { variant, artifacts: tampered } of n28TamperedArtifacts) {
+    const result = validateArtifactBuffers({ phaseId: 'P04', artifacts: tampered });
+    assert.equal(result.valid, false, `${variant} unexpectedly valid`);
+    assert(['OUTPUT_EMBEDDING_MISMATCH', 'OUTPUT_HASH_MISMATCH'].includes(result.diagnostics[0].code), `${variant}: ${JSON.stringify(result)}`);
+    await expectDiagnostic('OUTPUT_HASH_MISMATCH', () => verifyInspectionContractArtifacts({ phaseId: 'P04', artifacts: tampered }));
+  }
   for (const mutate of [
     (snapshot) => { snapshot.repository_id = '/Users/synthetic/private-repository'; },
     (snapshot) => { snapshot.paths[0].path = '../private-source.txt'; },
@@ -378,7 +582,7 @@ async function main() {
     const result = validateArtifactBuffers({ phaseId: 'P01', artifacts: map });
     assert(codes(result).includes('SNAPSHOT_SOURCE_CONTENT_EMISSION'), JSON.stringify(result));
   }
-  process.stdout.write('PASS_PHASE_COMPILER_DETERMINISM gates=6-7 canonical_files=9 phase_prefixed=true byte_identical=true separate_tmp_dirs=true atomic_sibling_temp_publish=true zip_canonical_identity_unchanged=true zip_policy=bound authority_ir=recomputed-from-canonical-evidence executable_profile=derived-identity-version-bound retained_old_profile=rejected conditional_operation_aggregate=global-max-branch-bound retained_old_aggregate=rejected authority_tamper=commands,budgets,rollback,target,git-rejected artifact_validation=total-fail-closed snapshot_paths=confined-and-authorized dependency_facts=derived-only token_occurrences=gemini:1,others:0 embedding=exact sanitized_snapshot=true output_nondeterminism=detected negatives=N05,N16,N17,N22,N23 temp_cleanup=true compiled_commands_executed=0\n');
+  process.stdout.write('PASS_PHASE_COMPILER_DETERMINISM gates=6-7 canonical_files=9 phase_prefixed=true byte_identical=true separate_tmp_dirs=true atomic_sibling_temp_publish=true zip_canonical_identity_unchanged=true zip_policy=bound authority_ir=recomputed-from-canonical-evidence executable_profile=derived-identity-version-bound retained_old_profile=rejected conditional_operation_aggregate=global-max-branch-bound retained_old_aggregate=rejected authority_tamper=commands,budgets,rollback,target,git,inspection-contract-rejected inspection_contract=P04-fixed-order-token-checksum-bound inspection_verifier=shape,authority,boundaries,readme,ccr,line-anchored-suffix,directory-tamper-fail-closed artifact_validation=total-fail-closed snapshot_paths=confined-and-authorized dependency_facts=derived-only token_occurrences=gemini:1,others:0 embedding=exact sanitized_snapshot=true output_nondeterminism=detected negatives=N05,N16,N17,N22,N23,N28 temp_cleanup=true compiled_commands_executed=0\n');
 }
 
 try {

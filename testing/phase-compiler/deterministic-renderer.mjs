@@ -180,7 +180,25 @@ export function reconstructAuthorityIr(spec, snapshotEvidence) {
   });
 }
 
+export function renderInspectionContractLines(contract) {
+  if (contract === undefined) return Object.freeze([]);
+  return Object.freeze([
+    '## Bounded inspection contract',
+    `Title: ${contract.title}`,
+    '',
+    '### Questions',
+    ...contract.questions.map((question) => `${question.id} [${question.answer_kind}]: ${question.text}`),
+    '',
+    '### Required CCR output sections',
+    ...contract.output_sections.map((section) => `${section.id} ${section.title}: ${section.question_ids.join(', ')}`),
+    '',
+    '### Claim boundaries',
+    ...contract.claim_boundaries.map((boundary) => `- ${boundary}`),
+  ]);
+}
+
 function renderCodex(spec, snapshotEvidence, irDigest) {
+  const inspectionLines = renderInspectionContractLines(spec.inspection_contract);
   const header = Buffer.from([
     `# AiFinder Phase ${spec.phase_id} — Codex Package and Prompt`,
     '',
@@ -197,6 +215,7 @@ function renderCodex(spec, snapshotEvidence, irDigest) {
     'This compiler output is static data. Its presence does not authorize execution.',
     'No sibling artifact is required to reconstruct or review the declared authority.',
     '',
+    ...(inspectionLines.length === 0 ? [] : [...inspectionLines, '']),
     NORMALIZED_SPEC_BEGIN.slice(0, -1),
     '',
   ].join('\n'), 'utf8');
@@ -239,10 +258,18 @@ function renderGemini(spec, token, codexBytes) {
 }
 
 function renderReadme(spec, names) {
+  const inspectionLines = renderInspectionContractLines(spec.inspection_contract);
   return textBuffer([
     `# AiFinder Phase ${spec.phase_id} compiled bundle`,
     '',
     'This directory is deterministic static compiler output. It does not execute or authorize phase commands.',
+    ...(inspectionLines.length === 0 ? [] : [
+      '',
+      `Bounded inspection title: ${spec.inspection_contract.title}`,
+      `Inspection coverage: questions=${spec.inspection_contract.questions.length} output_sections=${spec.inspection_contract.output_sections.length} claim_boundaries=${spec.inspection_contract.claim_boundaries.length}`,
+      '',
+      ...inspectionLines,
+    ]),
     '',
     'Canonical files:',
     ...names.map((name) => `- ${name}`),
@@ -258,6 +285,8 @@ function renderConcise(spec) {
 }
 
 function renderCcrTemplate(spec) {
+  const inspection = spec.inspection_contract;
+  const questionById = new Map(inspection?.questions.map((question) => [question.id, question]) ?? []);
   return textBuffer([
     '# CCR REPORT',
     `Phase: ${spec.phase_id}`,
@@ -269,6 +298,22 @@ function renderCcrTemplate(spec) {
     'Tests and reviews: <exact evidence>',
     'Git delivery: <exact evidence>',
     'Risks and next action: <bounded statement>',
+    ...(inspection === undefined ? [] : [
+      '',
+      '## Required inspection output sections',
+      ...inspection.output_sections.flatMap((section) => [
+        `### ${section.id} ${section.title}`,
+        `Questions: ${section.question_ids.join(', ')}`,
+        '<bounded answer>',
+        '',
+      ]),
+      '## Inspection question coverage ledger',
+      ...inspection.questions.map((question) => `${question.id} [${question.answer_kind}]: <answer>`),
+      '',
+      '## Inspection claim boundaries',
+      ...inspection.claim_boundaries.map((boundary) => `- ${boundary}`),
+      `Coverage status: ${inspection.output_sections.flatMap((section) => section.question_ids).every((questionId) => questionById.has(questionId)) ? 'EXACT' : 'INVALID'}`,
+    ]),
   ], marker(spec.phase_id, 'CCR_REPORT_TEMPLATE'));
 }
 

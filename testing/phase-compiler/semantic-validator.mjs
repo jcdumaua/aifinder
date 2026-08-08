@@ -45,6 +45,77 @@ function verifyScopeSets(spec, diagnostics) {
   }
 }
 
+function verifyInspectionAuthority(spec, diagnostics) {
+  if (spec.inspection_contract === undefined) return;
+  const zeroBudget = Object.values(spec.operation_budgets).every((value) => value === 0);
+  const zeroEffect =
+    spec.authority_class === 'STATIC_INSPECTION_ONLY' &&
+    spec.commands.length === 0 &&
+    spec.external_resources.length === 0 &&
+    spec.compatibility_adapters.length === 0 &&
+    spec.conditional_scopes.length === 0 &&
+    spec.rollbacks.length === 0 &&
+    spec.scope.create_paths.length === 0 &&
+    spec.scope.modify_paths.length === 0 &&
+    spec.target_confirmation.required === false &&
+    spec.target_confirmation.confirmation_command_id === '' &&
+    spec.target_confirmation.first_effect_command_id === '' &&
+    spec.target_confirmation.one_use === false &&
+    spec.git.commit_count === 0 &&
+    spec.git.push_count === 0 &&
+    spec.git.commit_subject === '' &&
+    spec.git.staged_paths.length === 0 &&
+    spec.governance.manifest_path === '' &&
+    spec.governance.manifest_transitions.length === 0 &&
+    spec.governance.runner_path === '' &&
+    spec.governance.runner_additions.length === 0 &&
+    spec.governance.runner_removals.length === 0 &&
+    spec.state_model.initial_states.length === 0 &&
+    spec.state_model.invalidations.length === 0 &&
+    zeroBudget;
+  if (!zeroEffect) {
+    add(diagnostics, 'INSPECTION_AUTHORITY_MISMATCH', '/inspection_contract', {
+      authority_class_matches: spec.authority_class === 'STATIC_INSPECTION_ONLY',
+      zero_effect_authority: false,
+    });
+  }
+}
+
+function verifyInspectionReferences(spec, diagnostics) {
+  const contract = spec.inspection_contract;
+  if (contract === undefined) return;
+  const questionCounts = new Map();
+  for (const question of contract.questions) {
+    questionCounts.set(question.id, (questionCounts.get(question.id) ?? 0) + 1);
+  }
+  const sectionIds = new Set();
+  const referenceCounts = new Map();
+  let valid = questionCounts.size === contract.questions.length;
+  for (const section of contract.output_sections) {
+    if (sectionIds.has(section.id)) valid = false;
+    sectionIds.add(section.id);
+    for (const questionId of section.question_ids) {
+      if (questionCounts.get(questionId) !== 1) valid = false;
+      referenceCounts.set(questionId, (referenceCounts.get(questionId) ?? 0) + 1);
+    }
+  }
+  if (sectionIds.size !== contract.output_sections.length) valid = false;
+  for (const questionId of questionCounts.keys()) {
+    if (questionCounts.get(questionId) !== 1 || referenceCounts.get(questionId) !== 1) valid = false;
+  }
+  for (const [questionId, count] of referenceCounts) {
+    if (!questionCounts.has(questionId) || count !== 1) valid = false;
+  }
+  if (!valid) {
+    add(diagnostics, 'INSPECTION_CONTRACT_REFERENCE_INVALID', '/inspection_contract/output_sections', {
+      question_count: contract.questions.length,
+      unique_question_id_count: questionCounts.size,
+      output_section_count: contract.output_sections.length,
+      unique_output_section_id_count: sectionIds.size,
+    });
+  }
+}
+
 function verifyRepositoryIdentity(spec, snapshot, diagnostics) {
   for (const [field, expected] of [
     ['repository_id', spec.repository.repository_id],
@@ -151,6 +222,8 @@ export function validateSemantic({ spec, snapshot, compatibilityAdapters = spec.
   const diagnostics = [];
   const schema = validateSchema(snapshot, repositorySnapshotSchema);
   if (!schema.valid) return deepFreeze({ valid: false, diagnostics: [...schema.diagnostics] });
+  verifyInspectionReferences(spec, diagnostics);
+  verifyInspectionAuthority(spec, diagnostics);
   verifyScopeSets(spec, diagnostics);
   verifyRepositoryIdentity(spec, snapshot, diagnostics);
   verifySnapshotScope(spec, snapshot, diagnostics);
@@ -160,6 +233,9 @@ export function validateSemantic({ spec, snapshot, compatibilityAdapters = spec.
 }
 
 const PRIMARY_PRIORITY = Object.freeze([
+  'INSPECTION_CONTRACT_REFERENCE_INVALID',
+  'INSPECTION_AUTHORITY_MISMATCH',
+  'INSPECTION_TEXT_FORBIDDEN',
   'BUDGET_AGGREGATE_OVERFLOW',
   'BUDGET_CONTRACT_INCONSISTENT',
   'AMBIGUOUS_EXECUTABLE_FILENAME',

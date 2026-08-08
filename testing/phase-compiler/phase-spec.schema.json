@@ -21,6 +21,112 @@
       "pattern": "^[A-Z][A-Z0-9_]*$",
       "type": "string"
     },
+    "inspection_contract": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_boundaries": {
+          "items": {
+            "enum": [
+              "NO_IMPLEMENTATION_AUTHORITY",
+              "NO_RUNTIME_VALIDATION",
+              "NO_ENVIRONMENT_PARITY_CLAIM",
+              "NO_DATABASE_STATE_CLAIM",
+              "NO_STORAGE_STATE_CLAIM",
+              "NO_EXTERNAL_CLEANUP_CLAIM",
+              "NO_ROUTE_SUCCESS_CLAIM",
+              "NO_LAUNCH_READINESS_CLAIM"
+            ],
+            "type": "string"
+          },
+          "maxItems": 8,
+          "minItems": 8,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "mode": {
+          "const": "READ_ONLY_QUESTION_SET",
+          "type": "string"
+        },
+        "output_sections": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "pattern": "^S[0-9]{2}$",
+                "type": "string"
+              },
+              "question_ids": {
+                "items": {
+                  "pattern": "^Q[0-9]{2}$",
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "title": {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": ["id", "title", "question_ids"],
+            "type": "object"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array"
+        },
+        "questions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "answer_kind": {
+                "enum": [
+                  "FACTUAL",
+                  "INVENTORY",
+                  "DEPENDENCY_GRAPH",
+                  "SCOPE_PROPOSAL",
+                  "COMMAND_CONTRACT",
+                  "COMPATIBILITY_ANALYSIS",
+                  "BUDGET_LEDGER",
+                  "ROLLBACK_LEDGER",
+                  "BLOCKER_DECISION",
+                  "NEXT_PHASE_RECOMMENDATION"
+                ],
+                "type": "string"
+              },
+              "id": {
+                "pattern": "^Q[0-9]{2}$",
+                "type": "string"
+              },
+              "text": {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": ["id", "text", "answer_kind"],
+            "type": "object"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "type": "array"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": ["version", "mode", "title", "questions", "output_sections", "claim_boundaries"],
+      "type": "object"
+    },
     "compatibility_adapters": {
       "items": {
         "additionalProperties": false,

@@ -155,6 +155,111 @@ function normalizedCommand(command, index) {
   return output;
 }
 
+const INSPECTION_TEMPLATE_PATTERN = /(?:\$\{|\{\{|\}\}|\{%|%\}|<%|%>)/u;
+const INSPECTION_MARKER_PATTERN = /(?:<!--|-->|AIFINDER_(?:PHASE|CODEX|NORMALIZED|SANITIZED|COMPILER|MARKER|.*_END))/iu;
+const INSPECTION_TOKEN_PATTERN = /(?:\b(?:APPROVE|AUTHORIZE)_AIFINDER_[A-Z0-9_-]{2,}\b|\b(?:approval|authorization|bearer|token)\s*[:=]\s*\S+|\bbearer\s+\S+)/iu;
+const INSPECTION_STRUCTURAL_PATTERN = /[\\/{}\[\]*_#~"=&%!]/u;
+const INSPECTION_MARKDOWN_PATTERN = /(?:^\s{0,3}(?:#{1,6}|[-*+>]|\d{1,9}[.)])\s|^\s*-{3,}\s*$|```|~~~|!\[[^\]]*\]\(|\[[^\]]+\]\([^)]*\)|<\/?[A-Z][^>\n]*>)/iu;
+const INSPECTION_SHELL_PATTERN = /(?:\$\(|`|\$[A-Z_][A-Z0-9_]*|(?:^|\s)(?:bash|sh|zsh)\s+-c(?:\s|$)|(?:^|\s)(?:rm|curl|wget|sudo|chmod|chown|mv|cp|cat|sed|awk|env|export|printf)\s+\S|&&|\|\||[;&|]|>>?|<<?)/iu;
+const INSPECTION_JSON_PATTERN = /(?:\{\s*(?:\}|"[^"\n]+"\s*:)|\[\s*(?:\]|"(?:[^"\\]|\\.)*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[Ee][+-]?\d+)?|true|false|null|\{|\[)|^\s*(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[Ee][+-]?\d+)?)\s*$)/iu;
+const INSPECTION_PROSE_PATTERN = /^[\p{L}\p{N} ,.?()'’\-]+$/u;
+const INSPECTION_FIXED_CONTRACT_TITLE = 'Bounded static inspection for the next AiFinder compiler phase';
+const INSPECTION_ALLOWED_DOTTED_QUESTION_PATTERN = /^What version of Next\.js is described by the inspected evidence\?$/u;
+const INSPECTION_SLOT_PATTERN = '[\\p{L}\\p{N} ,()\'’\\-]+';
+const INSPECTION_QUESTION_TEMPLATES = Object.freeze([
+  { pattern: new RegExp(`^What (${INSPECTION_SLOT_PATTERN}) are in scope\\?$`, 'u'), subject_choices: [['repository identity and baseline', 'exact repository identity and baseline']] },
+  { pattern: new RegExp(`^What (${INSPECTION_SLOT_PATTERN}) is supported by the inspected evidence\\?$`, 'u'), subject_choices: [['bounded follow-up scope']] },
+  { pattern: new RegExp(`^What (${INSPECTION_SLOT_PATTERN}) is supported without granting execution authority\\?$`, 'u'), subject_choices: [['bounded next phase']] },
+  { pattern: new RegExp(`^What (${INSPECTION_SLOT_PATTERN}) apply to this inspection\\?$`, 'u'), subject_choices: [['zero-effect operation budgets']] },
+  { pattern: /^What facts make this inspection deterministic\?$/u, subject_choices: [] },
+  { pattern: INSPECTION_ALLOWED_DOTTED_QUESTION_PATTERN, subject_choices: [] },
+  { pattern: new RegExp(`^What (${INSPECTION_SLOT_PATTERN}) does (?:the )?(${INSPECTION_SLOT_PATTERN}) (?:bind|describe|produce|protect|read|write)\\?$`, 'u'), subject_choices: [['output'], ['compiler']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) are available for static inspection\\?$`, 'u'), subject_choices: [['governed paths']] },
+  { pattern: /^Which commands would a later authorized phase need to declare explicitly\?$/u, subject_choices: [] },
+  { pattern: /^Which compatibility constraints must a later phase preserve\?$/u, subject_choices: [] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) block a later implementation phase\\?$`, 'u'), subject_choices: [['evidence gaps']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) are present\\?$`, 'u'), subject_choices: [['compiler format and schema versions']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) protect the inspection contract\\?$`, 'u'), subject_choices: [['diagnostics']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) bind the inspection questions and answers\\?$`, 'u'), subject_choices: [['canonical artifacts']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) remain byte-compatible when the contract is absent\\?$`, 'u'), subject_choices: [['prior phase specifications']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) remain forbidden after static inspection\\?$`, 'u'), subject_choices: [['claims']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) remain after static inspection\\?$`, 'u'), subject_choices: [['open questions']] },
+  { pattern: new RegExp(`^Which (${INSPECTION_SLOT_PATTERN}) are read by static inspection\\?$`, 'u'), subject_choices: [['files']] },
+  { pattern: new RegExp(`^How do (${INSPECTION_SLOT_PATTERN}) depend on each other\\?$`, 'u'), subject_choices: [['the inspected compiler modules']] },
+  { pattern: new RegExp(`^How can we find (${INSPECTION_SLOT_PATTERN}) in inspected evidence\\?$`, 'u'), subject_choices: [['missing dependencies']] },
+  { pattern: new RegExp(`^How is (${INSPECTION_SLOT_PATTERN}) written\\?$`, 'u'), subject_choices: [['the report']] },
+  { pattern: new RegExp(`^Why is no (${INSPECTION_SLOT_PATTERN}) present for this read-only inspection\\?$`, 'u'), subject_choices: [['rollback authority']] },
+]);
+const INSPECTION_TITLE_SUBJECTS = new Set([
+  'Repository and scope',
+  'Dependency and artifact',
+  'Bounded follow-up',
+  'Compatibility and',
+  'Rollback and blocker',
+  'Next phase',
+  'Go compatibility',
+]);
+const INSPECTION_TITLE_PATTERN = new RegExp(`^(${INSPECTION_SLOT_PATTERN}) (analysis|budgets|decision|facts|recommendation|scope)$`, 'u');
+
+function inspectionQuestionAllowed(value) {
+  if (value.includes('.') && !INSPECTION_ALLOWED_DOTTED_QUESTION_PATTERN.test(value)) return false;
+  for (const template of INSPECTION_QUESTION_TEMPLATES) {
+    const match = template.pattern.exec(value);
+    if (match && template.subject_choices.every((choices, index) => choices.includes(match[index + 1]))) return true;
+  }
+  return false;
+}
+
+function inspectionTitleAllowed(value) {
+  if (value === INSPECTION_FIXED_CONTRACT_TITLE) return true;
+  if (value.includes('.')) return false;
+  const match = INSPECTION_TITLE_PATTERN.exec(value);
+  return Boolean(match && INSPECTION_TITLE_SUBJECTS.has(match[1]));
+}
+
+function boundedInspectionText(value, pointer, maximumBytes, { question = false } = {}) {
+  const bytes = Buffer.byteLength(value);
+  let reason = '';
+  if (bytes < 1 || bytes > maximumBytes) reason = 'UTF-8 byte bound';
+  else if (value !== value.normalize('NFC')) reason = 'non-NFC text';
+  else if (/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(value)) reason = 'control, format, or multiline text';
+  else if (INSPECTION_TEMPLATE_PATTERN.test(value)) reason = 'template syntax';
+  else if (INSPECTION_MARKER_PATTERN.test(value)) reason = 'compiler marker or sentinel syntax';
+  else if (INSPECTION_TOKEN_PATTERN.test(value)) reason = 'approval or authorization token syntax';
+  else if (INSPECTION_STRUCTURAL_PATTERN.test(value)) reason = 'structural prompt syntax';
+  else if (INSPECTION_MARKDOWN_PATTERN.test(value)) reason = 'Markdown or HTML fragment';
+  else if (INSPECTION_SHELL_PATTERN.test(value)) reason = 'shell fragment';
+  else if (INSPECTION_JSON_PATTERN.test(value)) reason = 'JSON fragment';
+  else if (!INSPECTION_PROSE_PATTERN.test(value)) reason = 'bounded prose character grammar';
+  else if (question ? !inspectionQuestionAllowed(value) : !inspectionTitleAllowed(value)) reason = question ? 'closed inspection question grammar' : 'closed inspection title grammar';
+  if (reason !== '') {
+    throw new DiagnosticError('INSPECTION_TEXT_FORBIDDEN', {
+      location_json_pointer: pointer,
+      sanitized_evidence: { field_kind: question ? 'question_text' : 'title', reason, utf8_bytes: bytes },
+    });
+  }
+  return value;
+}
+
+function normalizeInspectionContract(contract) {
+  return {
+    version: contract.version,
+    mode: contract.mode,
+    title: boundedInspectionText(contract.title, '/inspection_contract/title', 160),
+    questions: contract.questions.map((question, index) => ({
+      id: question.id,
+      text: boundedInspectionText(question.text, `/inspection_contract/questions/${index}/text`, 512, { question: true }),
+      answer_kind: question.answer_kind,
+    })),
+    output_sections: contract.output_sections.map((section, index) => ({
+      id: section.id,
+      title: boundedInspectionText(section.title, `/inspection_contract/output_sections/${index}/title`, 160),
+      question_ids: [...section.question_ids],
+    })),
+    claim_boundaries: [...contract.claim_boundaries],
+  };
+}
+
 function authorityFailure(code, pointer, kind) {
   throw new DiagnosticError(code, {
     location_json_pointer: pointer,
@@ -295,6 +400,9 @@ export function normalizePhaseSpec(authored) {
       ...adapter,
       paths: normalizePathArray(adapter.paths, `/compatibility_adapters/${adapter.id}/paths`),
     })),
+    ...(authored.inspection_contract === undefined ? {} : {
+      inspection_contract: normalizeInspectionContract(authored.inspection_contract),
+    }),
     conditional_scopes: authored.conditional_scopes.map((conditional) => ({
       ...conditional,
       predicate_input_path: normalizeRepositoryPath(conditional.predicate_input_path, `/conditional_scopes/${conditional.id}/predicate_input_path`),
