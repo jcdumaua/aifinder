@@ -1,0 +1,740 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/schemas/admin-v1-staging-runtime-evidence.schema.json",
+  "title": "AiFinder Admin V1 staging authenticated runtime evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "lifecycle",
+    "result",
+    "authorization",
+    "predecessor",
+    "target",
+    "preview",
+    "protected_access",
+    "environment",
+    "runtime",
+    "publication",
+    "fixture",
+    "cleanup",
+    "governance",
+    "repository",
+    "safety",
+    "storage_cleanup",
+    "next"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "phase": { "const": "34IA-34IZ" },
+    "lifecycle": {
+      "enum": [
+        "PRE_RUNTIME",
+        "QUALIFICATION_COMPLETE_CLEANUP_PENDING",
+        "QUALIFICATION_COMPLETE_CLEANUP_COMPLETE",
+        "RUNTIME_EXECUTION_COMPLETE_CLEANUP_PENDING",
+        "RUNTIME_COMPLETE"
+      ]
+    },
+    "result": {
+      "enum": [
+        "PRE_RUNTIME_PENDING_AUTHENTICATED_RUNTIME",
+        "PASSED_ADMIN_V1_STAGING_AUTHENTICATED_RUNTIME_CLOSURE"
+      ]
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gemini_exact_approval_confirmed",
+        "dynamic_target_confirmation",
+        "confirmation_count",
+        "approval_token_persisted"
+      ],
+      "properties": {
+        "gemini_exact_approval_confirmed": { "const": true },
+        "dynamic_target_confirmation": { "type": "boolean" },
+        "confirmation_count": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "approval_token_persisted": { "const": false }
+      }
+    },
+    "predecessor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_33na_passed",
+        "phase_33na_final_dependency_evidence_ratified",
+        "phase_33qa_unique_preview_trigger_validated",
+        "phase_33ra_residual_preview_cleanup_passed",
+        "phase_33sa_rolled_back_schema_incompatibility",
+        "phase_33ta_failed_cleanup_resolver_exhaustion",
+        "phase_33ua_residual_cleanup_passed",
+        "phase_33va_marker_mismatch_rolled_back",
+        "phase_34ba_phase_compiler_implemented",
+        "phase_p01_compiler_proof_passed",
+        "phase_34ea_bounded_inspection_contract_implemented",
+        "phase_compiler_generation_exception_reviewed",
+        "phase_compiler_policy_lane"
+      ],
+      "properties": {
+        "phase_33na_passed": { "const": false },
+        "phase_33na_final_dependency_evidence_ratified": { "const": true },
+        "phase_33qa_unique_preview_trigger_validated": { "const": true },
+        "phase_33ra_residual_preview_cleanup_passed": { "const": true },
+        "phase_33sa_rolled_back_schema_incompatibility": { "const": true },
+        "phase_33ta_failed_cleanup_resolver_exhaustion": { "const": true },
+        "phase_33ua_residual_cleanup_passed": { "const": true },
+        "phase_33va_marker_mismatch_rolled_back": { "const": true },
+        "phase_34ba_phase_compiler_implemented": { "const": true },
+        "phase_p01_compiler_proof_passed": { "const": true },
+        "phase_34ea_bounded_inspection_contract_implemented": { "const": true },
+        "phase_compiler_generation_exception_reviewed": { "const": true },
+        "phase_compiler_policy_lane": { "const": "PASS_3_OF_3" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deployment_target_sha256",
+        "team_id_sha256",
+        "project_id_sha256",
+        "project",
+        "environment",
+        "branch",
+        "baseline_commit",
+        "marker_path",
+        "marker_sha256",
+        "marker_bytes",
+        "marker_lf",
+        "marker_cr",
+        "marker_trailing_lf",
+        "marker_mode",
+        "supabase_project_ref_sha256",
+        "supabase_origin_sha256"
+      ],
+      "properties": {
+        "deployment_target_sha256": { "$ref": "#/$defs/hex64" },
+        "team_id_sha256": { "$ref": "#/$defs/hex64" },
+        "project_id_sha256": { "$ref": "#/$defs/hex64" },
+        "project": { "const": "aifinder" },
+        "environment": { "const": "preview" },
+        "branch": { "const": "aifinder-phase-34ia-evidence-publication-runtime-validation-v3" },
+        "baseline_commit": { "$ref": "#/$defs/git40" },
+        "marker_path": { "const": "testing/aifinder-phase-34fa-staging-runtime-preview-marker.txt" },
+        "marker_sha256": { "$ref": "#/$defs/hex64" },
+        "marker_bytes": { "const": 475 },
+        "marker_lf": { "const": 10 },
+        "marker_cr": { "const": 0 },
+        "marker_trailing_lf": { "const": true },
+        "marker_mode": { "const": "100644" },
+        "supabase_project_ref_sha256": { "$ref": "#/$defs/hex64" },
+        "supabase_origin_sha256": { "$ref": "#/$defs/hex64" }
+      }
+    },
+    "preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "branch_absence_checks",
+        "branch_transaction_journal",
+        "branch_transaction_mode",
+        "marker_preworktree_proof",
+        "temporary_worktrees_created",
+        "temporary_worktrees_removed",
+        "temporary_commits_created",
+        "temporary_marker_files_created",
+        "temporary_branch_create_pushes",
+        "temporary_branch_delete_pushes",
+        "deployments_created",
+        "deployments_remaining",
+        "rest_v13_identity",
+        "deployment_id",
+        "deployment_state_file_mode_0600",
+        "delete_contract",
+        "absence_checks",
+        "owner_cleanup_fallbacks",
+        "resume_state"
+      ],
+      "properties": {
+        "state": { "enum": ["PENDING", "COMPLETE"] },
+        "branch_absence_checks": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "branch_transaction_journal": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "attempt",
+              "client_exit_class",
+              "exact_ref_state",
+              "external_mutation_possible",
+              "live_may_continue",
+              "operation",
+              "retry_permitted",
+              "sequence",
+              "state"
+            ],
+            "properties": {
+              "attempt": { "type": "integer", "minimum": 0, "maximum": 2 },
+              "client_exit_class": {
+                "enum": [
+                  "NOT_SENT",
+                  "NOT_OBSERVED",
+                  "ZERO_EXACT",
+                  "ZERO_UNCERTAIN",
+                  "NONZERO_UNCERTAIN",
+                  "SPAWN_ERROR"
+                ]
+              },
+              "exact_ref_state": {
+                "enum": ["NOT_READ", "ABSENT", "OURS", "OTHER", "MALFORMED"]
+              },
+              "external_mutation_possible": { "type": "boolean" },
+              "live_may_continue": { "type": "boolean" },
+              "operation": { "enum": ["CREATE", "DELETE"] },
+              "retry_permitted": { "type": "boolean" },
+              "sequence": { "type": "integer", "minimum": 1, "maximum": 32 },
+              "state": {
+                "enum": [
+                  "INITIAL_REF_ABSENT",
+                  "CREATE_REQUESTED",
+                  "CREATE_RESULT_OBSERVED",
+                  "CREATE_REF_ABSENT",
+                  "CREATE_REF_OURS",
+                  "CREATE_REF_OTHER",
+                  "CREATE_CONFIRMED",
+                  "DELETE_REQUESTED",
+                  "DELETE_RESULT_OBSERVED",
+                  "DELETE_REF_ABSENT",
+                  "DELETE_REF_OURS",
+                  "DELETE_REF_OTHER",
+                  "DELETE_RETRY_REQUESTED",
+                  "DELETE_CONFIRMED",
+                  "CONFLICT_STOP",
+                  "CLEANUP_FAILED"
+                ]
+              }
+            }
+          }
+        },
+        "branch_transaction_mode": {
+          "enum": ["PENDING", "LIVE_TRANSACTION", "EXISTING_PREVIEW_RESUME"]
+        },
+        "marker_preworktree_proof": { "type": "boolean" },
+        "temporary_worktrees_created": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "temporary_worktrees_removed": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "temporary_commits_created": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "temporary_marker_files_created": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "temporary_branch_create_pushes": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "temporary_branch_delete_pushes": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "deployments_created": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "deployments_remaining": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "rest_v13_identity": { "enum": ["PENDING", "PASS"] },
+        "deployment_id": { "type": ["string", "null"], "pattern": "^dpl_[A-Za-z0-9]+$" },
+        "deployment_state_file_mode_0600": { "type": "boolean" },
+        "delete_contract": { "enum": ["PENDING", "REST_V13_DELETE_BY_ID_POSTSTATE_PASS", "VERCEL_CLI_REMOVE_EXACT_POSTSTATE_PASS"] },
+        "absence_checks": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "owner_cleanup_fallbacks": { "const": 0 },
+        "resume_state": {
+          "enum": [null, "PREVIEW_BOUND_READY_BRANCH_CLEANED_PRE_RUNTIME"]
+        }
+      }
+    },
+    "protected_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "access_mode",
+        "credential_lifecycle_contract",
+        "credential_active_after_cleanup",
+        "credential_cleanup_complete",
+        "project_bypass_prestate",
+        "project_bypass_restored",
+        "project_oidc_token_generations",
+        "protection_access_handshake_gets",
+        "temporary_bypass_cycles",
+        "header_qualification_application_requests",
+        "official_application_requests",
+        "raw_credential_material_persisted"
+      ],
+      "properties": {
+        "state": { "enum": ["PENDING", "PASS"] },
+        "access_mode": {
+          "enum": ["PENDING", "SELF_PROJECT_OIDC", "TEMPORARY_AUTOMATION_BYPASS"]
+        },
+        "credential_lifecycle_contract": {
+          "enum": ["PENDING", "DELTA12_OIDC_EPHEMERAL_V1", "DELTA12_TEMPORARY_AUTOMATION_BYPASS_V1"]
+        },
+        "credential_active_after_cleanup": { "type": "boolean" },
+        "credential_cleanup_complete": { "type": "boolean" },
+        "project_bypass_prestate": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "existing_bypass_record_count",
+                "environment_designated_record_present",
+                "trusted_sources_self_entry_present"
+              ],
+              "properties": {
+                "existing_bypass_record_count": { "enum": ["ZERO", "ONE", "MULTIPLE"] },
+                "environment_designated_record_present": { "type": "boolean" },
+                "trusted_sources_self_entry_present": {
+                  "enum": [true, false, "unknown"]
+                }
+              }
+            }
+          ]
+        },
+        "project_bypass_restored": { "type": "boolean" },
+        "project_oidc_token_generations": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "protection_access_handshake_gets": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "temporary_bypass_cycles": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "header_qualification_application_requests": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "official_application_requests": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "raw_credential_material_persisted": { "const": 0 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "names",
+        "metadata_names_present",
+        "local_names_present",
+        "sensitive_nonreadable_names",
+        "optional_supabase_url_state",
+        "metadata_requests",
+        "pulls",
+        "environment_value_reads",
+        "global_preview_metadata_restored",
+        "admin_password_runtime_proof",
+        "admin_session_secret_runtime_proof",
+        "raw_values_persisted",
+        "secret_hashes_persisted",
+        "temporary_branch_override_absence_checks",
+        "temporary_branch_overrides_created",
+        "temporary_branch_overrides_remaining"
+      ],
+      "properties": {
+        "state": { "enum": ["PENDING", "PASS"] },
+        "names": { "$ref": "#/$defs/environmentNames" },
+        "metadata_names_present": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "local_names_present": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "sensitive_nonreadable_names": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "optional_supabase_url_state": { "enum": ["PENDING", "ABSENT", "EFFECTIVE"] },
+        "metadata_requests": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "pulls": { "const": 0 },
+        "environment_value_reads": { "const": 0 },
+        "global_preview_metadata_restored": { "type": "boolean" },
+        "admin_password_runtime_proof": { "enum": ["PENDING", "PASS"] },
+        "admin_session_secret_runtime_proof": { "enum": ["PENDING", "PASS"] },
+        "raw_values_persisted": { "const": 0 },
+        "secret_hashes_persisted": { "const": 0 },
+        "temporary_branch_override_absence_checks": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "temporary_branch_overrides_created": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "temporary_branch_overrides_remaining": { "type": "integer", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "runtime_sessions",
+        "application_requests",
+        "runtime_retries",
+        "runtime_routes",
+        "runtime_methods",
+        "request_ledger",
+        "security_headers_passed",
+        "session_cookie_contract",
+        "csrf_contract",
+        "fixture_binding",
+        "logout_contract",
+        "request8_input_sha256",
+        "request8_has_terminal_slash",
+        "request8_is_invalid_tld",
+        "request9_expected_stored_sha256",
+        "request9_expected_has_terminal_slash",
+        "request9_unique_match_count",
+        "request9_positive_tool_id",
+        "canonical_relationship",
+        "durable_projection_complete",
+        "durable_projection_journal_sha256",
+        "durable_projection_validated_requests",
+        "input_and_stored_hashes_differ",
+        "persisted_state_oracle_sha256",
+        "poststate_projection_sha256",
+        "projection_sufficiency",
+        "projection_sufficiency_matrix_sha256",
+        "sanitized_projection_revalidation_events"
+      ],
+      "properties": {
+        "state": { "enum": ["PENDING", "PASS"] },
+        "runtime_sessions": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "application_requests": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "runtime_retries": { "const": 0 },
+        "runtime_routes": { "const": 7 },
+        "runtime_methods": { "const": 13 },
+        "request_ledger": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/requestRecord" }
+        },
+        "security_headers_passed": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "session_cookie_contract": { "enum": ["PENDING", "PASS"] },
+        "csrf_contract": { "enum": ["PENDING", "PASS"] },
+        "fixture_binding": { "enum": ["PENDING", "3_OF_3"] },
+        "logout_contract": { "enum": ["PENDING", "PASS"] },
+        "request8_input_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "request8_has_terminal_slash": { "type": ["boolean", "null"] },
+        "request8_is_invalid_tld": { "type": ["boolean", "null"] },
+        "request9_expected_stored_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "request9_expected_has_terminal_slash": { "type": ["boolean", "null"] },
+        "request9_unique_match_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "request9_positive_tool_id": { "type": ["boolean", "null"] },
+        "canonical_relationship": { "enum": ["PENDING", "APPLICATION_URL_TOSTRING_ROOT"] },
+        "durable_projection_complete": { "type": "boolean" },
+        "durable_projection_journal_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "durable_projection_validated_requests": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "input_and_stored_hashes_differ": { "type": ["boolean", "null"] },
+        "persisted_state_oracle_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "poststate_projection_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "projection_sufficiency": { "enum": ["PENDING", "COMPLETE"] },
+        "projection_sufficiency_matrix_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "sanitized_projection_revalidation_events": {
+          "type": "array",
+          "maxItems": 1,
+          "items": { "$ref": "#/$defs/projectionRevalidationEvent" }
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle", "qualification", "runtime"],
+      "properties": {
+        "lifecycle": {
+          "enum": [
+            "PRE_RUNTIME",
+            "QUALIFICATION_COMPLETE_CLEANUP_PENDING",
+            "QUALIFICATION_COMPLETE_CLEANUP_COMPLETE",
+            "RUNTIME_EXECUTION_COMPLETE_CLEANUP_PENDING",
+            "RUNTIME_COMPLETE"
+          ]
+        },
+        "qualification": { "$ref": "#/$defs/publicationLane" },
+        "runtime": { "$ref": "#/$defs/publicationLane" }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "run_marker_sha256",
+        "submitted_tool_fixtures",
+        "route_created_tools",
+        "approved_submission_tools",
+        "audit_actions",
+        "logo_objects",
+        "logo_payload_sha256",
+        "logo_payload_bytes",
+        "direct_rpc_executions",
+        "route_rpc_executions",
+        "direct_data_success_requests",
+        "direct_data_total_requests",
+        "direct_data_maximum",
+        "fixture_setup_retries",
+        "cleanup_retry_requests"
+      ],
+      "properties": {
+        "state": { "enum": ["PENDING", "PASS"] },
+        "run_marker_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "submitted_tool_fixtures": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "route_created_tools": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "approved_submission_tools": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "audit_actions": { "$ref": "#/$defs/auditActions" },
+        "logo_objects": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "logo_payload_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "logo_payload_bytes": { "type": "integer", "minimum": 0, "maximum": 5242880 },
+        "direct_rpc_executions": { "const": 0 },
+        "route_rpc_executions": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "direct_data_success_requests": { "type": "integer", "minimum": 0, "maximum": 14 },
+        "direct_data_total_requests": { "type": "integer", "minimum": 0, "maximum": 26 },
+        "direct_data_maximum": { "const": 26 },
+        "fixture_setup_retries": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "cleanup_retry_requests": { "type": "integer", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "synthetic_tools_remaining",
+        "synthetic_submissions_remaining",
+        "synthetic_audit_rows_remaining",
+        "synthetic_storage_objects_remaining",
+        "preview_deployments_remaining",
+        "temporary_branches_remaining",
+        "temporary_worktrees_remaining",
+        "temporary_secret_files_remaining",
+        "evidence_generated_after_cleanup"
+      ],
+      "properties": {
+        "state": { "enum": ["NOT_EXECUTED", "COMPLETE"] },
+        "synthetic_tools_remaining": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "synthetic_submissions_remaining": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "synthetic_audit_rows_remaining": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "synthetic_storage_objects_remaining": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "preview_deployments_remaining": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "temporary_branches_remaining": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "temporary_worktrees_remaining": { "const": 0 },
+        "temporary_secret_files_remaining": { "const": 0 },
+        "evidence_generated_after_cleanup": { "type": "boolean" }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "blockers_before",
+        "blockers_after",
+        "runtime_validated_rows",
+        "matrix_entries",
+        "deferred_rows",
+        "manifest",
+        "runner_children",
+        "compiler_children"
+      ],
+      "properties": {
+        "state": { "enum": ["PRE_RUNTIME", "RUNTIME_COMPLETE"] },
+        "blockers_before": { "const": 7 },
+        "blockers_after": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "runtime_validated_rows": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "matrix_entries": { "const": 69 },
+        "deferred_rows": { "const": 21 },
+        "manifest": { "const": "165/5/20/49/91" },
+        "runner_children": { "const": 22 },
+        "compiler_children": { "const": 3 }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "create_paths",
+        "modify_paths",
+        "application_source_changed",
+        "phase_compiler_modified",
+        "workflow_modified",
+        "dependency_modified",
+        "schema_or_rls_modified"
+      ],
+      "properties": {
+        "create_paths": { "const": 6 },
+        "modify_paths": { "type": "integer", "minimum": 12, "maximum": 18 },
+        "application_source_changed": { "type": "boolean" },
+        "phase_compiler_modified": { "const": false },
+        "workflow_modified": { "const": false },
+        "dependency_modified": { "const": false },
+        "schema_or_rls_modified": { "const": false }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metadata_reprobes",
+        "raw_child_output_persisted",
+        "raw_urls_persisted",
+        "raw_headers_persisted",
+        "raw_bodies_persisted",
+        "cookies_persisted",
+        "csrf_tokens_persisted",
+        "secret_values_persisted",
+        "secret_hashes_persisted",
+        "production_domains_used",
+        "direct_rpc_executions",
+        "runtime_retries"
+      ],
+      "properties": {
+        "metadata_reprobes": { "const": 0 },
+        "raw_child_output_persisted": { "const": 0 },
+        "raw_urls_persisted": { "const": 0 },
+        "raw_headers_persisted": { "const": 0 },
+        "raw_bodies_persisted": { "const": 0 },
+        "cookies_persisted": { "const": 0 },
+        "csrf_tokens_persisted": { "const": 0 },
+        "secret_values_persisted": { "const": 0 },
+        "secret_hashes_persisted": { "const": 0 },
+        "production_domains_used": { "const": 0 },
+        "direct_rpc_executions": { "const": 0 },
+        "runtime_retries": { "const": 0 }
+      }
+    },
+    "storage_cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "storage_cleanup_mode",
+        "grant_id_present",
+        "expected_version_present",
+        "token_hash_present",
+        "raw_token_persisted",
+        "delete_client_role",
+        "service_role_delete_used",
+        "request_method",
+        "storage_operation",
+        "CAS_outcome",
+        "replacement_preserved",
+        "grant_revoked",
+        "post_delete_absence"
+      ],
+      "properties": {
+        "storage_cleanup_mode": {
+          "const": "RLS_EXPECTED_VERSION_CAPABILITY"
+        },
+        "grant_id_present": { "type": "boolean" },
+        "expected_version_present": { "type": "boolean" },
+        "token_hash_present": { "type": "boolean" },
+        "raw_token_persisted": { "const": false },
+        "delete_client_role": { "const": "anon" },
+        "service_role_delete_used": { "const": false },
+        "request_method": { "const": "DELETE" },
+        "storage_operation": { "const": "storage.object.delete_many" },
+        "CAS_outcome": {
+          "enum": [
+            "AUTHORIZED",
+            "VERSION_MISMATCH",
+            "EXPIRED",
+            "DENIED",
+            "AMBIGUOUS"
+          ]
+        },
+        "replacement_preserved": {
+          "enum": [true, false, "not_applicable"]
+        },
+        "grant_revoked": { "type": "boolean" },
+        "post_delete_absence": { "type": "boolean" }
+      }
+    },
+    "next": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["public_launch", "next_authority"],
+      "properties": {
+        "public_launch": { "const": "NO_GO" },
+        "next_authority": {
+          "const": "LEGAL_COMPLIANCE_POLICY_DESIGN_AND_FINAL_LAUNCH_READINESS_CONSOLIDATION"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hex64": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "git40": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "environmentNames": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "prefixItems": [
+        { "const": "ADMIN_PASSWORD" },
+        { "const": "ADMIN_SESSION_SECRET" },
+        { "const": "NEXT_PUBLIC_SUPABASE_ANON_KEY" },
+        { "const": "NEXT_PUBLIC_SUPABASE_URL" },
+        { "const": "SUPABASE_SERVICE_ROLE_KEY" }
+      ],
+      "items": false
+    },
+    "auditActions": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 8,
+      "items": {
+        "enum": [
+          "tool_added",
+          "tool_updated",
+          "tool_deleted",
+          "submission_updated",
+          "submission_rejected",
+          "submission_approved",
+          "logo_uploaded",
+          "admin_logout"
+        ]
+      }
+    },
+    "publicationLane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_count",
+        "projection_complete",
+        "cleanup_complete",
+        "journal_retained",
+        "cleanup_locators_retained"
+      ],
+      "properties": {
+        "request_count": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "projection_complete": { "type": "boolean" },
+        "cleanup_complete": { "type": "boolean" },
+        "journal_retained": { "type": "boolean" },
+        "cleanup_locators_retained": { "type": "boolean" }
+      }
+    },
+    "requestRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinal",
+        "method",
+        "path",
+        "status",
+        "contract",
+        "security_headers",
+        "raw_body_persisted",
+        "raw_headers_persisted",
+        "raw_url_persisted"
+      ],
+      "properties": {
+        "ordinal": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        "path": { "type": "string", "pattern": "^/api/admin/[a-z0-9/.-]+$" },
+        "status": { "enum": [200, 401, 403, 404, 405] },
+        "contract": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "security_headers": { "const": "PASS" },
+        "raw_body_persisted": { "const": false },
+        "raw_headers_persisted": { "const": false },
+        "raw_url_persisted": { "const": false }
+      }
+    },
+    "projectionRevalidationEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "application_request_replay",
+        "event",
+        "original_error_code",
+        "request_ordinal"
+      ],
+      "properties": {
+        "application_request_replay": { "const": 0 },
+        "event": { "const": "SANITIZED_PROJECTION_REVALIDATION" },
+        "original_error_code": { "type": "string", "pattern": "^DELTA16A_[A-Z0-9_]{1,96}$" },
+        "request_ordinal": { "type": "integer", "minimum": 1, "maximum": 20 }
+      }
+    }
+  }
+}
