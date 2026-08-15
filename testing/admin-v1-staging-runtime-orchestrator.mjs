@@ -130,7 +130,7 @@ const MODES = Object.freeze([
 ]);
 const MARKER_LINES = Object.freeze([
   "AIFINDER_PHASE_34IA_VERIFIED_EVIDENCE_PUBLICATION_FINAL_RUNTIME_PREVIEW_V18",
-  "baseline=e2c7025a3985d71a7e354e9644bbd9069db0ab80",
+  "baseline=f7143b756b062287ab89e525a53010a379b51098",
   "branch=aifinder-phase-34ia-evidence-publication-runtime-validation-v3",
   "purpose=admin-v1-verified-evidence-publication-runtime-closure",
   "auth_overrides=ADMIN_PASSWORD,ADMIN_SESSION_SECRET",
@@ -856,6 +856,22 @@ const PRELIVE_MODIFIED_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ]);
+const RETAINED_WORKTREE_MODIFIED_PATHS = Object.freeze([
+  "testing/admin-v1-staging-runtime-core.mjs",
+  "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-evidence.json",
+  "testing/admin-v1-launch-scope.test.mjs",
+  "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+  "testing/admin-v1-staging-readiness-evidence.test.mjs",
+  "testing/authenticated-live-route-partial-evidence.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/readiness-coverage-matrix.test.mjs",
+  "testing/public-launch-blocker-registry.test.mjs",
+  "testing/static-test-safety-manifest.json",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+]);
 const PRELIVE_BASELINE_PATHS = Object.freeze(
   AUTHORIZED_REPOSITORY_PATHS.filter(
     (repositoryPath) =>
@@ -870,9 +886,9 @@ const POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
 ]);
 const REVIEWED_PRELIVE_AGGREGATE_SHA256 =
-  "e453d7eece4271f44c0053f86a35d20757a641628c4649d5b8a5601fbc865292";
+  "d4b8b2b4cb669f5fdd4bb552eb718dfbb6d582d122559bfc036ae529d458cdc7";
 const REVIEWED_STABLE_SURFACE_SHA256 =
-  "3cc375f5aed15ef2772c87cc5318e903bccd797a8b2069b4b9ccf172f68dc719";
+  "037dc44ec0de794233d1603d513a38764f8486aac6d9c4ef98b4f2930ea92556";
 const PROTECTED_DRAFT_PATHS = Object.freeze([
   "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh",
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-generator-candidate.py",
@@ -886,6 +902,7 @@ const PROTECTED_DRAFT_IDENTITIES = Object.freeze({
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-schema.json":
     Object.freeze({ size: 3777, inode: 167180412, mtime: 1784656551, ctime: 1784656551, birthtime: 1784654319 }),
 });
+let launchKernelSelfTestUntrackedPaths = Object.freeze([]);
 const PREDECESSOR_RATIFICATION = Object.freeze({
   phase_33na_passed: false,
   phase_33na_final_dependency_evidence_ratified: true,
@@ -1496,7 +1513,7 @@ function verifyActualMarkerBytes() {
     identity.trailing_lf !== true ||
     identity.strict_utf8_round_trip !== true ||
     identity.sha256 !==
-      "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e"
+      "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f"
   ) {
     fail("ACTUAL_MARKER_BYTES");
   }
@@ -3880,10 +3897,14 @@ function verifyDelta20PublicationStatusOnly(
       ),
   );
   const expected = [
-    ...PRELIVE_MODIFIED_PATHS.map((repositoryPath) => ` M\0${repositoryPath}`),
-    ...PRELIVE_UNTRACKED_CREATE_PATHS.map((repositoryPath) => `??\0${repositoryPath}`),
+    ...RETAINED_WORKTREE_MODIFIED_PATHS.map(
+      (repositoryPath) => ` M\0${repositoryPath}`,
+    ),
     ...baselineModified.map((repositoryPath) => ` M\0${repositoryPath}`),
     ...PROTECTED_DRAFT_PATHS.map((repositoryPath) => `??\0${repositoryPath}`),
+    ...launchKernelSelfTestUntrackedPaths.map(
+      (repositoryPath) => `??\0${repositoryPath}`,
+    ),
   ].sort();
   const actual = parsedStatusEntries(runGit(
     repositoryRoot,
@@ -6932,7 +6953,36 @@ function validateDelta20ExecutionLockValue(value) {
   return Object.freeze({ ...value });
 }
 
-function delta20ValidateStaleExecutionLockRoot(lockRoot, value) {
+function validateDelta20StaleExecutionLockAuthorization({
+  expectedActiveState,
+  lockRoot,
+  value,
+}) {
+  if (
+    !new Set(["ACTIVE", "QUALIFICATION_ATTEMPT_STARTED"]).has(
+      expectedActiveState,
+    ) ||
+    !/^aifinder-34ia-delta20-[A-Za-z0-9]{6}$/u.test(
+      value?.recovery_root_basename ?? "",
+    )
+  ) {
+    fail("DELTA20_EXECUTION_LOCK_EXPECTED_ACTIVE_STATE");
+  }
+  return validateDelta20RetainedAuthorizationArtifacts({
+    expectedActiveState,
+    expectedQualificationTempRootBasename:
+      expectedActiveState === "QUALIFICATION_ATTEMPT_STARTED"
+        ? value.recovery_root_basename
+        : null,
+    lockRoot,
+  });
+}
+
+function delta20ValidateStaleExecutionLockRoot(
+  lockRoot,
+  value,
+  expectedActiveState = "QUALIFICATION_ATTEMPT_STARTED",
+) {
   const recoveryRoot = path.join(lockRoot, value.recovery_root_basename);
   const activePath = delta20RetainedArtifactPaths(lockRoot).active_lock_path;
   if (pathIsAbsent(recoveryRoot)) {
@@ -6946,11 +6996,10 @@ function delta20ValidateStaleExecutionLockRoot(lockRoot, value) {
     fail("DELTA20_EXECUTION_LOCK_RECOVERY_ROOT");
   }
   if (existsSync(activePath)) {
-    validateDelta20RetainedAuthorizationArtifacts({
-      expectedActiveState: "QUALIFICATION_ATTEMPT_STARTED",
-      expectedQualificationTempRootBasename:
-        value.recovery_root_basename,
+    validateDelta20StaleExecutionLockAuthorization({
+      expectedActiveState,
       lockRoot,
+      value,
     });
   } else {
     const entries = new Set(readdirSync(identity.canonical_temp_root));
@@ -7043,7 +7092,15 @@ function reclaimDelta20AbsentRootExecutionLock(
 function acquireDelta20ExecutionLock(
   recoveryRoot,
   lockRoot = realpathSync.native(tmpdir()),
+  expectedActiveState = "QUALIFICATION_ATTEMPT_STARTED",
 ) {
+  if (
+    !new Set(["ACTIVE", "QUALIFICATION_ATTEMPT_STARTED"]).has(
+      expectedActiveState,
+    )
+  ) {
+    fail("DELTA20_EXECUTION_LOCK_EXPECTED_ACTIVE_STATE");
+  }
   if (realpathSync.native(lockRoot) !== lockRoot) {
     fail("DELTA20_EXECUTION_LOCK_ROOT");
   }
@@ -7166,7 +7223,11 @@ function acquireDelta20ExecutionLock(
       }
       if (ownerAlive) fail("DELTA20_EXECUTION_LOCKED");
       const staleRecoveryRoot =
-        delta20ValidateStaleExecutionLockRoot(lockRoot, existing);
+        delta20ValidateStaleExecutionLockRoot(
+          lockRoot,
+          existing,
+          expectedActiveState,
+        );
       if (
         staleRecoveryRoot !== null &&
         existing.recovery_root_basename !==
@@ -7188,7 +7249,11 @@ function acquireDelta20ExecutionLock(
       }
       unlinkSync(lockPath);
       fsyncExactDirectory(lockRoot);
-      return acquireDelta20ExecutionLock(canonicalRecoveryRoot, lockRoot);
+      return acquireDelta20ExecutionLock(
+        canonicalRecoveryRoot,
+        lockRoot,
+        expectedActiveState,
+      );
     }
     fail("DELTA20_EXECUTION_LOCKED");
   }
@@ -8216,10 +8281,7 @@ function validateDelta20RetainedAuthorizationArtifacts({
         strictUtf8(
           replacementBytes,
           "DELTA20_RETAINED_REPLACEMENT_MARKER_UTF8",
-        ) ||
-      (expectedCandidateManifestSha256 !== null &&
-        replacement.candidate_manifest_sha256 !==
-          expectedCandidateManifestSha256)
+        )
     ) {
       fail("DELTA20_RETAINED_REPLACEMENT_MARKER_CANONICAL");
     }
@@ -8536,7 +8598,7 @@ function delta17AQualificationAttemptBinding(plan, retained) {
   if (
     plan?.branch !== DELTA13_BRANCH ||
     plan?.marker?.sha256 !==
-      "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e" ||
+      "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f" ||
     retained?.state?.deployment_id !== DELTA17A_RETAINED_PREVIEW_ID ||
     retained?.state?.commit_sha !== DELTA17A_RETAINED_COMMIT_SHA ||
     retained?.root === undefined ||
@@ -8980,6 +9042,31 @@ function canonicalReviewedBytes(repositoryPath, bytes) {
       {
         code: "TESTING_TREE",
         pattern: /("testing_tree_digest": ")[a-f0-9]{64}(")/gu,
+      },
+      {
+        code: "C1",
+        pattern:
+          /("phase_33fa_c1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      },
+      {
+        code: "C2_1",
+        pattern:
+          /("phase_c2_1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      },
+      {
+        code: "C2_2",
+        pattern:
+          /("phase_c2_2_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      },
+      {
+        code: "V1_ADMIN",
+        pattern:
+          /("phase_33ka_v1_admin_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      },
+      {
+        code: "V1_STAGING",
+        pattern:
+          /("phase_33na_v1_staging_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
       },
       {
         code: "V1_RUNTIME",
@@ -9522,13 +9609,35 @@ function assertDelta09ReboundAuthorization() {
   });
 }
 
-function verifyReviewedCandidate(repositoryRoot, statusText, plan) {
+function verifyReviewedCandidate(
+  repositoryRoot,
+  statusText,
+  plan,
+  selfTestUntrackedPaths = launchKernelSelfTestUntrackedPaths,
+) {
   if (
     PRELIVE_UNTRACKED_CREATE_PATHS.length !== 6 ||
     PRELIVE_MODIFIED_PATHS.length !== 10 ||
-    PRELIVE_BASELINE_PATHS.length !== 2
+    PRELIVE_BASELINE_PATHS.length !== 2 ||
+    RETAINED_WORKTREE_MODIFIED_PATHS.length !== 14 ||
+    new Set(RETAINED_WORKTREE_MODIFIED_PATHS).size !== 14
   ) {
     fail("LIVE_REVIEWED_SCOPE_PARTITION");
+  }
+  if (
+    !Array.isArray(selfTestUntrackedPaths) ||
+    selfTestUntrackedPaths.length !== new Set(selfTestUntrackedPaths).size ||
+    selfTestUntrackedPaths.some(
+      (repositoryPath) =>
+        (repositoryPath !== "docs/launch-operations-kernel.md" &&
+          repositoryPath !==
+            "scripts/launch-operations-kernel/candidate-manifest.json" &&
+          !repositoryPath.startsWith("scripts/launch-operations-kernel/")) ||
+        AUTHORIZED_REPOSITORY_PATHS.includes(repositoryPath) ||
+        PROTECTED_DRAFT_PATHS.includes(repositoryPath),
+    )
+  ) {
+    fail("LIVE_REVIEWED_SELF_TEST_SCOPE");
   }
   const conditionalModified = completeAuthorizedPathManifest(
     repositoryRoot,
@@ -9542,11 +9651,8 @@ function verifyReviewedCandidate(repositoryRoot, statusText, plan) {
       ? PRELIVE_BASELINE_PATHS
       : [];
   const expected = [
-    ...PRELIVE_MODIFIED_PATHS.map(
+    ...RETAINED_WORKTREE_MODIFIED_PATHS.map(
       (repositoryPath) => ` M\0${repositoryPath}`,
-    ),
-    ...PRELIVE_UNTRACKED_CREATE_PATHS.map(
-      (repositoryPath) => `??\0${repositoryPath}`,
     ),
     ...conditionalModified.map(
       (repositoryPath) => ` M\0${repositoryPath}`,
@@ -9555,6 +9661,9 @@ function verifyReviewedCandidate(repositoryRoot, statusText, plan) {
       (repositoryPath) => ` M\0${repositoryPath}`,
     ),
     ...PROTECTED_DRAFT_PATHS.map(
+      (repositoryPath) => `??\0${repositoryPath}`,
+    ),
+    ...selfTestUntrackedPaths.map(
       (repositoryPath) => `??\0${repositoryPath}`,
     ),
   ].sort();
@@ -9670,11 +9779,11 @@ function verifyRepositoryLivePreconditions(repositoryRoot, plan) {
   }
   if (
     runGit(repositoryRoot, ["rev-parse", "HEAD^"], "LIVE_PARENT").trim() !==
-      "142f905cee89aa5ab1587e5bb2623a4f5d24b377" ||
+      "e2c7025a3985d71a7e354e9644bbd9069db0ab80" ||
     runGit(repositoryRoot, ["show", "-s", "--format=%T", "HEAD"], "LIVE_TREE").trim() !==
-      "dc641603295e5a48830a2288fc866e7093fff260" ||
+      "f0a31d8257bdb3f33201bd6174cd5965cc8343e6" ||
     runGit(repositoryRoot, ["show", "-s", "--format=%s", "HEAD"], "LIVE_SUBJECT").trim() !==
-      "Extend phase compiler for bounded inspections"
+      "Complete Phase 34IA-34IZ Storage CAS proof"
   ) {
     fail("LIVE_BASELINE_IDENTITY");
   }
@@ -9785,7 +9894,7 @@ function verifyStaticManifestSemantics(repositoryRoot) {
   const output = requireChildSuccess(result, "LIVE_STATIC_MANIFEST_POLICY");
   if (
     output !==
-    "PASS_STATIC_TEST_SAFETY_MANIFEST entries=165 core=5 policy=20 validate_only=49 denied=91 v1_admin_classifications=4 v1_staging_classifications=6 phase_compiler_classifications=21 v1_runtime_classifications=6 failures=0 internal_failures=0\n"
+    "PASS_STATIC_TEST_SAFETY_MANIFEST entries=166 core=5 policy=20 validate_only=49 denied=92 v1_admin_classifications=4 v1_staging_classifications=6 phase_compiler_classifications=21 v1_runtime_classifications=7 failures=0 internal_failures=0\n"
   ) {
     fail("LIVE_STATIC_MANIFEST_POLICY_OUTPUT");
   }
@@ -28784,7 +28893,10 @@ function delta18QualificationFailureEvidence({
   }
   return Object.freeze({
     data_requests: totalRequests,
-    data_writes: cleanupComplete ? "0" : "possible_or_occurred",
+    data_writes:
+      cleanupComplete || totalRequests === 0
+        ? "0"
+        : "possible_or_occurred",
   });
 }
 
@@ -28829,6 +28941,12 @@ function delta18QualificationFailureTerminalCode({
 }
 
 function runDelta18QualificationFailureCleanupGateSelfTest() {
+  const zeroRequestFailureEvidence =
+    delta18QualificationFailureEvidence({
+      cleanupComplete: false,
+      direct: null,
+      retainedDirectRequests: 0,
+    });
   const cleanBeforeRoot = deriveDelta18QualificationFailureCleanupGate({
     branch_removed: true,
     data_cleaned: true,
@@ -28947,6 +29065,8 @@ function runDelta18QualificationFailureCleanupGateSelfTest() {
     fail("SELF_TEST_DELTA18_QUALIFICATION_FAILURE_DIRTY_TELEMETRY");
   }
   if (
+    zeroRequestFailureEvidence.data_requests !== 0 ||
+    zeroRequestFailureEvidence.data_writes !== "0" ||
     cleanBeforeRoot.remove_root !== true ||
     cleanBeforeRoot.cleanup_complete !== false ||
     cleanAfterRoot.cleanup_complete !== true ||
@@ -34541,6 +34661,7 @@ function runDelta20VerifiedPublicationSelfTest() {
   let publicationOrderPassed = false;
   let activeAuthorizationTransitionPassed = false;
   let activeAuthorizationPartialRecoveryPassed = false;
+  let activeInitializationLockRecoveryPassed = false;
   let atomicRecoveryPassed = false;
   let atomicPartialRecoveryPassed = false;
   let atomicInitialPartialRecoveryPassed = false;
@@ -34557,6 +34678,7 @@ function runDelta20VerifiedPublicationSelfTest() {
   let qualificationRepositoryShapePassed = false;
   let retirementInterruptionPassed = false;
   let runtimeRootTeardownPassed = false;
+  let historicalCandidateRebindingPassed = false;
   let qualificationAttemptRoot = null;
   let runtimeRootTeardownSelfTestRoot = null;
   try {
@@ -34608,6 +34730,7 @@ function runDelta20VerifiedPublicationSelfTest() {
       registration_commit_sha: "d".repeat(40),
       replacement_authority_sha256: DELTA19_AUTHORITY_SHA256,
     };
+    const currentQualificationCandidateSha256 = "f".repeat(64);
     const predecessorTombstone =
       delta19QualificationConsumptionTombstoneBinding(
         DELTA18_SPENT_QUALIFICATION_MARKER_SHA256,
@@ -34707,6 +34830,23 @@ function runDelta20VerifiedPublicationSelfTest() {
       retained.lineage_receipt_sha256 === lineageArtifact.sha256 &&
       retained.predecessor_registration_commit_sha ===
         predecessorMarker.registration_commit_sha;
+    const activeInitializationAuthorization =
+      validateDelta20StaleExecutionLockAuthorization({
+        expectedActiveState: "ACTIVE",
+        lockRoot: tempRoot,
+        value: validateDelta20ExecutionLockValue({
+          delta20_authority_sha256: DELTA20_AUTHORITY_SHA256,
+          owner_pid: process.pid,
+          phase: "34IA-34IZ-DELTA20",
+          recovery_root_basename: "aifinder-34ia-delta20-AcT1vE",
+          schema_version: 1,
+          started_at_epoch_ms: Date.now(),
+        }),
+      });
+    activeInitializationLockRecoveryPassed =
+      activeInitializationAuthorization.active_state === "ACTIVE" &&
+      activeInitializationAuthorization
+        .qualification_temp_root_basename === null;
     qualificationAttemptRoot = createCanonicalTempRoot(
       "aifinder-34ia-delta20-",
     ).canonical_temp_root;
@@ -34715,8 +34855,7 @@ function runDelta20VerifiedPublicationSelfTest() {
         budgetSnapshot: delta13BudgetSnapshot(
           new GlobalBudgets(createRuntimePlan()),
         ),
-        candidateManifestSha256:
-          predecessorMarker.candidate_manifest_sha256,
+        candidateManifestSha256: currentQualificationCandidateSha256,
         tempRoot: qualificationAttemptRoot,
       });
     const qualificationExecutionBeforeConsumption =
@@ -34724,12 +34863,14 @@ function runDelta20VerifiedPublicationSelfTest() {
         qualificationAttemptRoot,
       );
     const startedAuthorization = startDelta20QualificationAttempt({
-      candidateManifestSha256:
-        predecessorMarker.candidate_manifest_sha256,
+      candidateManifestSha256: currentQualificationCandidateSha256,
       lockRoot: tempRoot,
       repositoryRoot: process.cwd(),
       tempRoot: qualificationAttemptRoot,
     });
+    historicalCandidateRebindingPassed =
+      predecessorMarker.candidate_manifest_sha256 !==
+        currentQualificationCandidateSha256;
     activeAuthorizationTransitionPassed =
       startedAuthorization.active_state ===
         "QUALIFICATION_ATTEMPT_STARTED" &&
@@ -34755,6 +34896,8 @@ function runDelta20VerifiedPublicationSelfTest() {
       qualificationExecutionBeforeConsumption.stage === "INITIALIZED" &&
       qualificationExecutionBeforeConsumption.state ===
         "EXECUTION_IN_PROGRESS" &&
+      qualificationExecutionBeforeConsumption.candidate_manifest_sha256 ===
+        currentQualificationCandidateSha256 &&
       Number.isSafeInteger(
         qualificationExecutionBeforeConsumption
           .execution_started_at_epoch_ms,
@@ -34809,8 +34952,7 @@ function runDelta20VerifiedPublicationSelfTest() {
     const finalizationBudgets = new GlobalBudgets(finalizationPlan);
     const finalizationStateSeed = {
       budget_snapshot: delta13BudgetSnapshot(finalizationBudgets),
-      candidate_manifest_sha256:
-        predecessorMarker.candidate_manifest_sha256,
+      candidate_manifest_sha256: currentQualificationCandidateSha256,
       synthetic_binding: "DELTA20_FINALIZATION_SELF_TEST",
     };
     const finalizationController =
@@ -35360,6 +35502,7 @@ function runDelta20VerifiedPublicationSelfTest() {
       !publicationOrderPassed ||
       !activeAuthorizationTransitionPassed ||
       !activeAuthorizationPartialRecoveryPassed ||
+      !activeInitializationLockRecoveryPassed ||
       !atomicRecoveryPassed ||
       !atomicPartialRecoveryPassed ||
       !atomicInitialPartialRecoveryPassed ||
@@ -35375,6 +35518,7 @@ function runDelta20VerifiedPublicationSelfTest() {
       !governanceTransitionPassed ||
       !retirementInterruptionPassed ||
       !runtimeRootTeardownPassed ||
+      !historicalCandidateRebindingPassed ||
       !teardownOrderPassed
     ) {
       fail("SELF_TEST_DELTA20_PUBLICATION_CONTRACT");
@@ -35424,15 +35568,62 @@ function runDelta20VerifiedPublicationSelfTest() {
       `marker_sha256=${sha256(MARKER_BYTES)} marker_bytes=${MARKER_BYTES.byteLength} ` +
       `registration_sha256=${sha256(DELTA14_REGISTRATION_VERCEL_JSON_BYTES)} ` +
       `registration_bytes=${DELTA14_REGISTRATION_VERCEL_JSON_BYTES.byteLength} ` +
-      "lineage_validation=PASS active_authorization_transition=PASS active_authorization_partial_recovery=PASS atomic_recovery=PASS atomic_partial_recovery=PASS atomic_initial_partial_recovery=PASS execution_recovery=PASS false_drift=PASS publication_order=PASS validator_failure_retention=PASS " +
+      "lineage_validation=PASS active_authorization_transition=PASS active_authorization_partial_recovery=PASS active_initialization_lock_recovery=PASS atomic_recovery=PASS atomic_partial_recovery=PASS atomic_initial_partial_recovery=PASS execution_recovery=PASS false_drift=PASS publication_order=PASS validator_failure_retention=PASS " +
       "qualification_execution_recovery=PASS qualification_finalization_recovery=PASS qualification_recovery_branch=PASS publication_reevaluation=PASS qualification_repository_shape=PASS stdin_transport=PASS projection_corpus=20_of_20 retirement_interruption=PASS runtime_root_teardown=PASS teardown_order=PASS " +
       "journal_remaining=0 cleanup_locator_remaining=0 failures=0 internal_failures=0\n",
   );
 }
 
+async function prepareLaunchKernelSelfTestCompatibility() {
+  if (launchKernelSelfTestUntrackedPaths.length !== 0) {
+    return launchKernelSelfTestUntrackedPaths;
+  }
+  const launchKernelManifestPath = path.join(
+    process.cwd(),
+    "scripts/launch-operations-kernel/candidate-manifest.json",
+  );
+  const { verifyRepositoryCandidateManifest } = await import(
+    "../scripts/launch-operations-kernel/manifest.mjs"
+  );
+  const launchKernelVerification = verifyRepositoryCandidateManifest({
+    repositoryRoot: process.cwd(),
+    manifestPath: launchKernelManifestPath,
+  });
+  const launchKernelUntrackedPaths = [
+    "scripts/launch-operations-kernel/candidate-manifest.json",
+    ...launchKernelVerification.member_paths,
+  ].sort();
+  if (
+    launchKernelVerification.verified !== true ||
+    launchKernelVerification.source_policy_verified !== true ||
+    launchKernelVerification.legacy_imports !== 0 ||
+    launchKernelVerification.live_routes !== 0 ||
+    launchKernelUntrackedPaths.length !== 14
+  ) {
+    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
+  }
+  launchKernelSelfTestUntrackedPaths = Object.freeze(
+    launchKernelUntrackedPaths,
+  );
+  return launchKernelSelfTestUntrackedPaths;
+}
+
 async function runSelfTest() {
   verifyActualMarkerBytes();
+  verifyStaticManifestSemantics(process.cwd());
   const plan = createRuntimePlan();
+  const launchKernelUntrackedPaths =
+    await prepareLaunchKernelSelfTestCompatibility();
+  verifyReviewedCandidate(
+    process.cwd(),
+    runGit(
+      process.cwd(),
+      ["status", "--porcelain", "--untracked-files=all"],
+      "SELF_TEST_RETAINED_WORKTREE_STATUS",
+    ),
+    plan,
+    launchKernelUntrackedPaths,
+  );
   runDelta13EnvironmentStdinLifecycleSelfTest();
   runDelta19EnvironmentMetadataBudgetSelfTest(plan);
   runProtectedPreviewTotalDeadlineSelfTest();
@@ -35509,7 +35700,7 @@ async function runSelfTest() {
     plan.marker.bytes !== 475 ||
     plan.marker.lf !== 10 ||
     plan.marker.sha256 !==
-      "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e" ||
+      "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f" ||
     plan.budgets.auth_qualification_cycles !== 1 ||
     plan.budgets.auth_qualification_requests !== 6 ||
     plan.budgets.login_attempts !== 1 ||
@@ -40267,8 +40458,17 @@ async function qualifyDelta14LegacyAuthPreview() {
       !qualificationDurableRetired;
     context.deferTempRootRemoval = true;
     if (durableEvidence === null) {
+      const qualificationFailureDataEvidence =
+        delta18QualificationFailureEvidence({
+          cleanupComplete: false,
+          direct: qualificationDirect,
+          retainedDirectRequests: qualificationDirectRequests,
+        });
       qualificationLogoutCleanupComplete = true;
-      context.dataCleaned = priorReconciliationComplete;
+      context.dataCleaned =
+        priorReconciliationComplete ||
+        (priorReconciliationDirect === null &&
+          qualificationFailureDataEvidence.data_writes === "0");
     }
     if (
       qualificationDirect !== null &&
@@ -42806,7 +43006,11 @@ async function repairDelta20QualificationPublicationFromRetainedJournal() {
     validateDelta20RetainedAuthorizationArtifacts({
       expectedActiveState: "ACTIVE",
     });
-    const bootstrapLock = acquireDelta20ExecutionLock(retained.root);
+    const bootstrapLock = acquireDelta20ExecutionLock(
+      retained.root,
+      realpathSync.native(tmpdir()),
+      "ACTIVE",
+    );
     if (retained.bootstrapNextPath !== null) {
       validateMode0600RegularFile(
         retained.bootstrapNextPath,
@@ -43601,7 +43805,11 @@ async function repairDelta20InterruptedQualificationExecution({
       expectedCandidateManifestSha256:
         recovery.candidate_manifest_sha256,
     });
-    const lock = acquireDelta20ExecutionLock(retained.root);
+    const lock = acquireDelta20ExecutionLock(
+      retained.root,
+      realpathSync.native(tmpdir()),
+      "ACTIVE",
+    );
     removeDelta20QualificationExecutionRecovery(retained.root);
     rmdirSync(retained.root);
     fsyncExactDirectory(realpathSync.native(tmpdir()));
@@ -45836,6 +46044,7 @@ try {
   if (extraArguments.length !== 0) fail("MODE_ARGUMENTS");
   if (mode === "--self-test") await runSelfTest();
   else if (mode === "--self-test-delta20-publication") {
+    await prepareLaunchKernelSelfTestCompatibility();
     runDelta20VerifiedPublicationSelfTest();
   }
   else if (mode === "--repair-delta20-qualification-publication") {

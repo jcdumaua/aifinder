@@ -107,6 +107,48 @@ const EXPECTED_CLASSIFICATIONS = Object.freeze({
     "RUN_POLICY",
   ],
 });
+const EXPECTED_RUNTIME_CLASSIFICATIONS = Object.freeze({
+  "testing/admin-v1-staging-runtime-core.mjs": [
+    "SUPPORT",
+    "SAFE_STATIC_SUPPORT",
+    "VALIDATE_ONLY",
+  ],
+  "testing/admin-v1-staging-runtime-orchestrator.mjs": [
+    "EXECUTABLE",
+    "DEPLOYMENT_DATABASE_STORAGE",
+    "DENY",
+  ],
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs": [
+    "EXECUTABLE",
+    "SAFE_STATIC_POLICY",
+    "RUN_POLICY",
+  ],
+  "testing/admin-v1-staging-runtime-evidence.schema.json": [
+    "CONFIG",
+    "SAFE_STATIC_SUPPORT",
+    "VALIDATE_ONLY",
+  ],
+  "testing/admin-v1-staging-runtime-evidence.json": [
+    "CONFIG",
+    "SAFE_STATIC_SUPPORT",
+    "VALIDATE_ONLY",
+  ],
+  "testing/admin-v1-staging-runtime-evidence.test.mjs": [
+    "EXECUTABLE",
+    "SAFE_STATIC_POLICY",
+    "RUN_POLICY",
+  ],
+  "testing/storage-cleanup-cas-contract.test.mjs": [
+    "EXECUTABLE",
+    "UNPROVEN_DENY",
+    "DENY",
+  ],
+});
+const RUNTIME_EVIDENCE_PATHS = Object.freeze([
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-evidence.json",
+  "testing/admin-v1-staging-runtime-evidence.test.mjs",
+]);
 
 function absolute(relativePath) {
   const resolved = path.resolve(process.cwd(), relativePath);
@@ -419,11 +461,56 @@ function probeAssertions(probeSource) {
   ];
 }
 
-function governanceAssertions() {
-  const matrix = json(MATRIX_PATH);
-  const registry = json(REGISTRY_PATH);
+function governanceMode(matrix, registry) {
+  const rows = matrix.entries ?? matrix.routes ?? [];
+  const criticalRows = rows.filter((row) => CRITICAL_PATHS.includes(row.path));
+  const critical = (registry.workstreams ?? registry.entries ?? []).find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+  );
+  const pre =
+    criticalRows.length === 7 &&
+    criticalRows.every(
+      (row) =>
+        row.coverage_state ===
+          "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
+        row.launch_blocking === true &&
+        row.gap_code_or_null ===
+          "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
+    ) &&
+    critical?.gap_code ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED" &&
+    critical?.authority_class ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+    critical?.state ===
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+    critical?.next_gate ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
+    registry.source_matrix?.launch_blocking_count === 7 &&
+    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES";
+  const post =
+    criticalRows.length === 7 &&
+    criticalRows.every(
+      (row) =>
+        row.coverage_state ===
+          "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED" &&
+        row.launch_blocking === false &&
+        row.gap_code_or_null === null,
+    ) &&
+    critical?.gap_code === null &&
+    critical?.authority_class === "ADMIN_V1_STAGING_RUNTIME_COMPLETE" &&
+    critical?.state === "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE" &&
+    critical?.next_gate === "LEGAL_COMPLIANCE_POLICY_DESIGN" &&
+    registry.source_matrix?.launch_blocking_count === 0 &&
+    registry.overall_decision ===
+      "NO_GO_PENDING_LEGAL_COMPLIANCE_AND_FINAL_LAUNCH_AUTHORITY";
+  if (pre === post) return "INVALID";
+  return pre ? "PRE_RUNTIME" : "POST_RUNTIME";
+}
+
+function governanceAssertions(matrix = json(MATRIX_PATH), registry = json(REGISTRY_PATH)) {
   const manifest = json(MANIFEST_PATH);
   const runner = source(RUNNER_PATH);
+  const mode = governanceMode(matrix, registry);
   const rows = matrix.entries ?? matrix.routes ?? [];
   const criticalRows = rows.filter((row) => CRITICAL_PATHS.includes(row.path));
   const deferredRows = rows.filter(
@@ -442,7 +529,10 @@ function governanceAssertions() {
     (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED",
   );
   const manifestEntries = manifest.entries ?? [];
-  const classificationReady = Object.entries(EXPECTED_CLASSIFICATIONS).every(
+  const classificationReady = Object.entries({
+    ...EXPECTED_CLASSIFICATIONS,
+    ...EXPECTED_RUNTIME_CLASSIFICATIONS,
+  }).every(
     ([entryPath, classification]) => {
       const entry = manifestEntries.find((candidate) => candidate.path === entryPath);
       return (
@@ -466,18 +556,13 @@ function governanceAssertions() {
   };
 
   return [
-    criticalRows.length === 7 &&
-      criticalRows.every(
-        (row) =>
-          row.coverage_state ===
-            "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
-          row.launch_blocking === true &&
-          row.gap_code_or_null ===
-            "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED",
-      ),
+    mode === "PRE_RUNTIME" || mode === "POST_RUNTIME",
     rows.length === 69 &&
       criticalRows.every((row) =>
-        readinessEvidence.every((evidencePath) =>
+        [
+          ...readinessEvidence,
+          ...(mode === "POST_RUNTIME" ? RUNTIME_EVIDENCE_PATHS : []),
+        ].every((evidencePath) =>
           [...(row.static_evidence_paths ?? []), ...(row.partial_evidence_paths ?? [])].includes(
             evidencePath,
           ),
@@ -488,27 +573,32 @@ function governanceAssertions() {
         (row) => row.launch_blocking === false && row.gap_code_or_null === null,
       ),
     critical?.entry_count === 7 &&
-      critical?.gap_code ===
-        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED" &&
-      critical?.authority_class ===
-        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
-      critical?.state ===
-        "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
       critical?.execution_authorized === false &&
-      critical?.next_gate ===
-        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
       deferred?.entry_count === 21 &&
       deferred?.state === "SAFELY_DISABLED_FOR_V1_LAUNCH",
     classificationReady &&
-      manifestEntries.length === 138 &&
+      manifestEntries.length === 166 &&
       counts.core === 5 &&
-      counts.policy === 15 &&
-      counts.validate === 31 &&
-      counts.deny === 87,
+      counts.policy === 20 &&
+      counts.validate === 49 &&
+      counts.deny === 92,
     runner.includes('option === "--v1-staging-policy"') &&
+      runner.includes('option === "--v1-runtime-policy"') &&
       runner.includes("const V1_STAGING_CHILDREN = [") &&
+      runner.includes("const V1_RUNTIME_CHILDREN = [") &&
+      runner.includes(
+        'path: "testing/admin-v1-staging-runtime-source-policy.test.mjs",\n    argv: [],',
+      ) &&
+      runner.includes(
+        'path: "testing/admin-v1-staging-runtime-evidence.test.mjs",\n    argv: ["--schema-only"],',
+      ) &&
+      runner.includes("scriptArguments: child.argv,") &&
+      runner.includes('child.argv.join(",")') &&
       runner.includes(
         "PASS_STATIC_READINESS_LIST_COMPLETE_V1_STAGING core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 total=17",
+      ) &&
+      runner.includes(
+        "PASS_STATIC_READINESS_LIST_COMPLETE_V1_RUNTIME core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 v1_runtime=2 total=22",
       ) &&
       runner.includes(
         "PASS_STATIC_READINESS_V1_STAGING_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2",
@@ -517,7 +607,50 @@ function governanceAssertions() {
         "PASS_STATIC_READINESS_V1_STAGING_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 fail=0 repository_mutations=0",
       ) &&
       runner.includes(PROBE_PATH) &&
-      !runner.includes(`path: "${PROBE_PATH}"`),
+      !runner.includes(`path: "${PROBE_PATH}"`) &&
+      !runner.includes(
+        'path: "testing/admin-v1-staging-runtime-orchestrator.mjs"',
+      ),
+  ];
+}
+
+function governanceMutationResults() {
+  const matrix = json(MATRIX_PATH);
+  const registry = json(REGISTRY_PATH);
+  const criticalIndexes = matrix.entries
+    .map((entry, index) => (CRITICAL_PATHS.includes(entry.path) ? index : -1))
+    .filter((index) => index >= 0);
+  const mutate = (operation) => {
+    const matrixCandidate = structuredClone(matrix);
+    const registryCandidate = structuredClone(registry);
+    operation(matrixCandidate, registryCandidate, criticalIndexes);
+    return governanceMode(matrixCandidate, registryCandidate) === "INVALID";
+  };
+  return [
+    mutate((candidate, _registry, indexes) => {
+      candidate.entries[indexes[0]].launch_blocking =
+        !candidate.entries[indexes[0]].launch_blocking;
+    }),
+    mutate((candidate, _registry, indexes) => {
+      candidate.entries[indexes[0]].gap_code_or_null = "MIXED_GAP";
+    }),
+    mutate((candidate, _registry, indexes) => {
+      candidate.entries[indexes[0]].coverage_state =
+        "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
+    }),
+    mutate((_candidate, candidateRegistry) => {
+      candidateRegistry.workstreams.find(
+        (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+      ).state = "MIXED_STATE";
+    }),
+    mutate((_candidate, candidateRegistry) => {
+      candidateRegistry.workstreams.find(
+        (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+      ).next_gate = "PUBLIC_LAUNCH";
+    }),
+    mutate((_candidate, candidateRegistry) => {
+      candidateRegistry.overall_decision = "GO";
+    }),
   ];
 }
 
@@ -587,6 +720,7 @@ function mutationResults() {
       public: true,
       allowed_mime_types: ["image/png", "image/jpeg"],
     }).ready,
+    ...governanceMutationResults(),
   ];
 }
 
@@ -619,10 +753,11 @@ try {
     process.exit(1);
   }
   const mutations = mutationResults();
-  assert.equal(mutations.length, 20);
+  assert.equal(mutations.length, 26);
   assert(mutations.every(Boolean));
+  const currentGovernance = governanceMode(json(MATRIX_PATH), json(REGISTRY_PATH));
   process.stdout.write(
-    "PASS_ADMIN_V1_STAGING_READINESS_SOURCE_POLICY assertions=34 mutations=20 environment_variables=5 network_origins=1 methods=GET requests_per_attempt=5 maximum_attempts=2 maximum_requests=10 repository_write_paths=1 database_writes=0 storage_writes=0 rpc_calls=0 raw_values=0 failures=0 internal_failures=0\n",
+    `PASS_ADMIN_V1_STAGING_READINESS_SOURCE_POLICY assertions=34 mutations=26 current_governance=${currentGovernance} manifest=166/5/20/49/92 runner_children=22 phase_compiler_children=3 environment_variables=5 network_origins=1 methods=GET requests_per_attempt=5 maximum_attempts=2 maximum_requests=10 repository_write_paths=1 database_writes=0 storage_writes=0 rpc_calls=0 raw_values=0 failures=0 internal_failures=0\n`,
   );
 } catch {
   process.stdout.write(

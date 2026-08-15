@@ -18,6 +18,12 @@ const EVIDENCE_PATH =
 const HISTORICAL_GAP_CODE = "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED";
 const V1_ADMIN_GAP_CODE =
   "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
+const V1_PRE_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
+const V1_POST_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
+const V1_RUNTIME_EVIDENCE_PATH =
+  "testing/admin-v1-staging-runtime-evidence.json";
 const PARTIAL_STATE = "PARTIAL_ONLY_ALL_ROUTES_STILL_BLOCKED";
 const PUBLIC_LIVE_ROUTE_STATIC_EVIDENCE_PATH =
   "testing/public-live-route-security-static-assertions.mjs";
@@ -45,7 +51,7 @@ const AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH =
 const AUTHENTICATED_AUDIT_ROUTE_PATH =
   "app/api/admin/audit-logs/route.ts";
 const SOURCE_COMMIT = "ef5cbe7aede041d3fd009126de152b4777d160a5";
-const MATRIX_IDENTITY = {
+const PRE_RUNTIME_MATRIX_IDENTITY = {
   path: MATRIX_PATH,
   sha256: "ff21da9dff79d950534263286b019c4639bf0f895be32b34b6ee2f02b58e2bcf",
   git_blob: "2bbd4cfcf058a30ba779e355e4b7dbd372c297a9",
@@ -324,37 +330,20 @@ function actualMatrixIdentity() {
 }
 
 function matrixModel() {
-  const identity = actualMatrixIdentity();
-  for (const key of [
-    "path",
-    "sha256",
-    "git_blob",
-    "bytes",
-    "lines",
-    "mode",
-  ]) {
-    assert(
-      identity[key] === MATRIX_IDENTITY[key],
-      "BLOCKER_REGISTRY_MATRIX_IDENTITY",
-    );
-  }
-
   const matrix = readStrictJson(MATRIX_PATH);
+  const identity = actualMatrixIdentity();
   assert(
-    matrix.route_inventory_digest === MATRIX_IDENTITY.route_inventory_digest,
+    matrix.route_inventory_digest ===
+      PRE_RUNTIME_MATRIX_IDENTITY.route_inventory_digest,
     "BLOCKER_REGISTRY_MATRIX_IDENTITY",
   );
   assert(
     Array.isArray(matrix.entries) &&
-      matrix.entries.length === MATRIX_IDENTITY.entry_count,
+      matrix.entries.length === PRE_RUNTIME_MATRIX_IDENTITY.entry_count,
     "BLOCKER_REGISTRY_ENTRY_COUNT",
   );
   const launchBlocking = matrix.entries.filter(
     (entry) => entry.launch_blocking === true,
-  );
-  assert(
-    launchBlocking.length === MATRIX_IDENTITY.launch_blocking_count,
-    "BLOCKER_REGISTRY_ENTRY_COUNT",
   );
   const completedPaths = matrix.entries
     .filter(
@@ -447,19 +436,27 @@ function matrixModel() {
   const v1AdminDeferredEntries = authenticatedLiveRouteEntries.filter(
     (entry) => V1_ADMIN_DEFERRED_PATHS.includes(entry.path),
   );
+  const preRuntime = v1AdminCriticalEntries.every(
+    (entry) =>
+      entry.coverage_state === V1_PRE_RUNTIME_STATE &&
+      entry.launch_blocking === true &&
+      entry.gap_code_or_null === V1_ADMIN_GAP_CODE &&
+      !entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+  );
+  const postRuntime = v1AdminCriticalEntries.every(
+    (entry) =>
+      entry.coverage_state === V1_POST_RUNTIME_STATE &&
+      entry.launch_blocking === false &&
+      entry.gap_code_or_null === null &&
+      entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+  );
   assert(
     v1AdminCriticalEntries.length === 7 &&
       exactSet(
         v1AdminCriticalEntries.map((entry) => entry.path),
         V1_ADMIN_CRITICAL_PATHS,
       ) &&
-      v1AdminCriticalEntries.every(
-        (entry) =>
-          entry.coverage_state ===
-            "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
-          entry.launch_blocking === true &&
-          entry.gap_code_or_null === V1_ADMIN_GAP_CODE,
-      ) &&
+      preRuntime !== postRuntime &&
       v1AdminDeferredEntries.length === 21 &&
       exactSet(
         v1AdminDeferredEntries.map((entry) => entry.path),
@@ -473,6 +470,25 @@ function matrixModel() {
       ),
     "BLOCKER_REGISTRY_V1_ADMIN_EVIDENCE",
   );
+  if (preRuntime) {
+    for (const key of [
+      "path",
+      "sha256",
+      "git_blob",
+      "bytes",
+      "lines",
+      "mode",
+    ]) {
+      assert(
+        identity[key] === PRE_RUNTIME_MATRIX_IDENTITY[key],
+        "BLOCKER_REGISTRY_MATRIX_IDENTITY",
+      );
+    }
+  }
+  assert(
+    launchBlocking.length === (postRuntime ? 0 : 7),
+    "BLOCKER_REGISTRY_ENTRY_COUNT",
+  );
 
   const paths = matrix.entries.map((entry) => entry.path);
   assert(
@@ -481,15 +497,15 @@ function matrixModel() {
     "BLOCKER_REGISTRY_PATH_PARTITION",
   );
 
-  const expectedGapSet = stableSortedPaths(
-    [V1_ADMIN_GAP_CODE],
-  );
+  const expectedGapSet = postRuntime
+    ? []
+    : stableSortedPaths([V1_ADMIN_GAP_CODE]);
   const actualGapSet = stableSortedPaths([
     ...new Set(launchBlocking.map((entry) => entry.gap_code_or_null)),
   ]);
   assert(exactArray(actualGapSet, expectedGapSet), "BLOCKER_REGISTRY_GAP_SET");
 
-  const pathsByGap = new Map();
+  const pathsByWorkstream = new Map();
   for (const workstream of WORKSTREAMS) {
     const sourcePaths =
       workstream.id === "PUBLIC_PRODUCTION_RUNTIME"
@@ -500,6 +516,8 @@ function matrixModel() {
             ? completedLiveRoutePaths
             : workstream.id === "AUTHENTICATED_BROWSER_RUNTIME"
               ? completedAuthenticatedBrowserPaths
+              : workstream.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL"
+                ? v1AdminCriticalEntries.map((entry) => entry.path)
               : workstream.id === "AUTHENTICATED_ADMIN_V1_DEFERRED"
                 ? v1AdminDeferredEntries.map((entry) => entry.path)
               : matrix.entries
@@ -511,12 +529,13 @@ function matrixModel() {
       sourcePaths.length === workstream.entry_count,
       "BLOCKER_REGISTRY_GAP_COUNT",
     );
-    pathsByGap.set(workstream.gap_code, sourcePaths);
+    pathsByWorkstream.set(workstream.id, sourcePaths);
   }
   return {
     matrix,
     paths,
-    pathsByGap,
+    identity,
+    pathsByWorkstream,
     completedPaths,
     completedBrowserLivePaths,
     completedLiveRoutePaths,
@@ -524,6 +543,8 @@ function matrixModel() {
     v1AdminCriticalEntries,
     v1AdminDeferredEntries,
     launchBlocking,
+    currentGovernance: postRuntime ? "POST_RUNTIME" : "PRE_RUNTIME",
+    postRuntime,
   };
 }
 
@@ -532,8 +553,9 @@ function validateRegistry() {
   const evidence = readStrictJson(EVIDENCE_PATH);
   const {
     matrix,
+    identity,
     paths,
-    pathsByGap,
+    pathsByWorkstream,
     completedPaths,
     completedBrowserLivePaths,
     completedLiveRoutePaths,
@@ -541,6 +563,8 @@ function validateRegistry() {
     v1AdminCriticalEntries,
     v1AdminDeferredEntries,
     launchBlocking,
+    currentGovernance,
+    postRuntime,
   } = matrixModel();
 
   assert(
@@ -556,9 +580,15 @@ function validateRegistry() {
     exactKeys(registry.source_matrix, SOURCE_MATRIX_KEYS),
     "BLOCKER_REGISTRY_MATRIX_IDENTITY",
   );
+  const expectedSourceMatrix = {
+    ...identity,
+    route_inventory_digest: matrix.route_inventory_digest,
+    entry_count: 69,
+    launch_blocking_count: postRuntime ? 0 : 7,
+  };
   for (const key of SOURCE_MATRIX_KEYS) {
     assert(
-      registry.source_matrix[key] === MATRIX_IDENTITY[key],
+      registry.source_matrix[key] === expectedSourceMatrix[key],
       key === "entry_count" || key === "launch_blocking_count"
         ? "BLOCKER_REGISTRY_ENTRY_COUNT"
         : "BLOCKER_REGISTRY_MATRIX_IDENTITY",
@@ -568,20 +598,20 @@ function validateRegistry() {
     registry.source_matrix?.route_inventory_digest ===
       matrix.route_inventory_digest &&
       registry.source_matrix?.entry_count === 69 &&
-      registry.source_matrix?.launch_blocking_count === 7,
+      registry.source_matrix?.launch_blocking_count === (postRuntime ? 0 : 7),
     "BLOCKER_REGISTRY_MATRIX_SUMMARY",
   );
-  assert(
-    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES",
-    "BLOCKER_REGISTRY_DECISION",
-  );
+  const expectedDecision = postRuntime
+    ? "NO_GO_PENDING_LEGAL_COMPLIANCE_AND_FINAL_LAUNCH_AUTHORITY"
+    : "NO_GO_PENDING_SEPARATE_AUTHORITIES";
+  assert(registry.overall_decision === expectedDecision, "BLOCKER_REGISTRY_DECISION");
   assert(registry.current_authority === "STATIC_ONLY", "BLOCKER_REGISTRY_STATE");
   assert(
     registry.execution_authorized === false,
     "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
   );
   assert(
-    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES" &&
+    registry.overall_decision === expectedDecision &&
       registry.current_authority === "STATIC_ONLY" &&
       registry.execution_authorized === false,
     "BLOCKER_REGISTRY_AUTHORITY",
@@ -694,16 +724,28 @@ function validateRegistry() {
       registry.workstreams.length === WORKSTREAMS.length,
     "BLOCKER_REGISTRY_GAP_SET",
   );
+  const expectedWorkstreams = WORKSTREAMS.map((workstream) =>
+    postRuntime &&
+    workstream.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL"
+      ? {
+          ...workstream,
+          gap_code: null,
+          authority_class: "ADMIN_V1_STAGING_RUNTIME_COMPLETE",
+          state: "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE",
+          next_gate: "LEGAL_COMPLIANCE_POLICY_DESIGN",
+        }
+      : workstream,
+  );
   assert(
     exactArray(
       registry.workstreams.map((entry) => entry.id),
-      WORKSTREAMS.map((entry) => entry.id),
+      expectedWorkstreams.map((entry) => entry.id),
     ),
     "BLOCKER_REGISTRY_WORKSTREAM_SEQUENCE",
   );
 
   const registryPaths = [];
-  for (const [index, expected] of WORKSTREAMS.entries()) {
+  for (const [index, expected] of expectedWorkstreams.entries()) {
     const actual = registry.workstreams[index];
     assert(
       exactKeys(actual, WORKSTREAM_KEYS),
@@ -733,7 +775,7 @@ function validateRegistry() {
       actual.execution_authorized === false,
       "BLOCKER_REGISTRY_EXECUTION_AUTHORITY",
     );
-    const expectedPaths = pathsByGap.get(expected.gap_code);
+    const expectedPaths = pathsByWorkstream.get(expected.id);
     assert(
       Array.isArray(actual.source_paths) &&
         actual.source_paths.length === expected.entry_count &&
@@ -772,10 +814,16 @@ function validateRegistry() {
                     AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
                   ])
                 : expected.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL"
-                  ? entry?.coverage_state ===
-                      "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
-                    entry.launch_blocking === true &&
-                    entry.gap_code_or_null === V1_ADMIN_GAP_CODE
+                  ? postRuntime
+                    ? entry?.coverage_state === V1_POST_RUNTIME_STATE &&
+                      entry.launch_blocking === false &&
+                      entry.gap_code_or_null === null &&
+                      entry.static_evidence_paths.includes(
+                        V1_RUNTIME_EVIDENCE_PATH,
+                      )
+                    : entry?.coverage_state === V1_PRE_RUNTIME_STATE &&
+                      entry.launch_blocking === true &&
+                      entry.gap_code_or_null === V1_ADMIN_GAP_CODE
                   : entry?.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED" &&
                     entry.launch_blocking === false &&
                     entry.gap_code_or_null === null,
@@ -804,6 +852,7 @@ function validateRegistry() {
             "SEPARATE_ONE_USE_PUBLIC_PRODUCTION_RUNTIME_RETEST_REVIEW" ||
           actual.next_gate ===
             "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" ||
+          actual.next_gate === "LEGAL_COMPLIANCE_POLICY_DESIGN" ||
           actual.next_gate === "SEPARATE_FUTURE_AUTHORITY_REQUIRED") &&
         !actual.next_gate
           .split("_")
@@ -834,15 +883,17 @@ function validateRegistry() {
         authenticatedEntries.map((entry) => entry.path),
         AUTHENTICATED_LIVE_ROUTE_PATHS,
       ) &&
-      launchBlocking.length === 7 &&
-      exactSet(
-        launchBlocking.map((entry) => entry.path),
-        V1_ADMIN_CRITICAL_PATHS,
-      ) &&
+      (postRuntime
+        ? launchBlocking.length === 0
+        : launchBlocking.length === 7 &&
+          exactSet(
+            launchBlocking.map((entry) => entry.path),
+            V1_ADMIN_CRITICAL_PATHS,
+          )) &&
       authenticatedEntries.filter(
         (entry) =>
           entry.coverage_state ===
-          "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
+          (postRuntime ? V1_POST_RUNTIME_STATE : V1_PRE_RUNTIME_STATE),
       ).length === 7 &&
       authenticatedEntries.filter(
         (entry) => entry.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED",
@@ -875,19 +926,28 @@ function validateRegistry() {
   );
   const authenticatedLiveWorkstream = registry.workstreams[4];
   const authenticatedDeferredWorkstream = registry.workstreams[5];
-  assert(
-    authenticatedLiveWorkstream.id ===
-      "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL" &&
-      authenticatedLiveWorkstream.gap_code === V1_ADMIN_GAP_CODE &&
-      authenticatedLiveWorkstream.entry_count === 7 &&
+  const criticalWorkstreamExact = postRuntime
+    ? authenticatedLiveWorkstream.gap_code === null &&
+      authenticatedLiveWorkstream.state ===
+        "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE" &&
+      authenticatedLiveWorkstream.authority_class ===
+        "ADMIN_V1_STAGING_RUNTIME_COMPLETE" &&
+      authenticatedLiveWorkstream.next_gate ===
+        "LEGAL_COMPLIANCE_POLICY_DESIGN"
+    : authenticatedLiveWorkstream.gap_code === V1_ADMIN_GAP_CODE &&
       authenticatedLiveWorkstream.state ===
         "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
       authenticatedLiveWorkstream.authority_class ===
         "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+      authenticatedLiveWorkstream.next_gate ===
+        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION";
+  assert(
+    authenticatedLiveWorkstream.id ===
+      "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL" &&
+      authenticatedLiveWorkstream.entry_count === 7 &&
+      criticalWorkstreamExact &&
       authenticatedLiveWorkstream.execution_authorized === false &&
       authenticatedLiveWorkstream.planning_priority === 5 &&
-      authenticatedLiveWorkstream.next_gate ===
-        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
       exactSet(
         authenticatedLiveWorkstream.source_paths,
         V1_ADMIN_CRITICAL_PATHS,
@@ -965,33 +1025,17 @@ function validateRegistry() {
     v1AdminHermetic: v1AdminCriticalEntries.length,
     v1AdminDeferred: v1AdminDeferredEntries.length,
     blocked: launchBlocking.length,
+    currentGovernance,
+    nextActiveWorkstream: postRuntime
+      ? "LEGAL_COMPLIANCE_POLICY_DESIGN"
+      : "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION",
   };
 }
 
-const currentRegistryBlocked = readStrictJson(REGISTRY_PATH).source_matrix
-  ?.launch_blocking_count;
-const currentCriticalState = readStrictJson(REGISTRY_PATH).workstreams?.find(
-  (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
-)?.state;
-
-if (
-  currentRegistryBlocked === 7 &&
-  currentCriticalState !==
-    "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED"
-) {
-  console.log(
-    `EXPECTED_FAIL_PUBLIC_LAUNCH_BLOCKER_REGISTRY_ADMIN_V1_STAGING state=${currentCriticalState} expected=STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED failures=1 internal_failures=0`,
-  );
-  process.exitCode = 1;
-} else if (currentRegistryBlocked !== 7) {
-  console.log(
-    `EXPECTED_FAIL_PUBLIC_LAUNCH_BLOCKER_REGISTRY_V1_ADMIN blocked=${currentRegistryBlocked} expected=7 failures=1 internal_failures=0`,
-  );
-  process.exitCode = 1;
-} else try {
+try {
   const result = validateRegistry();
   console.log(
-    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} authenticated_admin_v1_staging_dependency_ready=${result.v1AdminHermetic} authenticated_admin_v1_deferred=${result.v1AdminDeferred} blocked=${result.blocked} next_active_workstream=ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
+    `PASS_PUBLIC_LAUNCH_BLOCKER_REGISTRY entries=${result.entries} workstreams=${result.workstreams} current_governance=${result.currentGovernance} authenticated_admin_v1_staging_dependency_ready=${result.v1AdminHermetic} authenticated_admin_v1_deferred=${result.v1AdminDeferred} blocked=${result.blocked} next_active_workstream=${result.nextActiveWorkstream} decision=NO_GO execution_authorized=false failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "candidate_version": "phase-34ja-34jz-launch-operations-kernel-v1",
+  "manifest_path": "scripts/launch-operations-kernel/candidate-manifest.json",
+  "candidate_roots": [
+    "docs/launch-operations-kernel.md",
+    "scripts/launch-operations-kernel"
+  ],
+  "manifest_self_exclusion": "EXCLUDED_TO_AVOID_CIRCULAR_BYTE_IDENTITY",
+  "identity_algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_NUL_MODE_ROWS_LF",
+  "legacy_candidate_identity_sha256": "09a4066876033d68aaa43c8a1a9c703eb6e0176f8d32aacdceccc28e0134de71",
+  "member_count": 13,
+  "members": [
+    {
+      "path": "docs/launch-operations-kernel.md",
+      "role": "DOCUMENTATION",
+      "surface": "governance",
+      "sha256": "590108eddc171c5db85fd44110bebc3c3420b7c7e9abc5b5fb2326e34a8b9405",
+      "bytes": 4106,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/canonical.mjs",
+      "role": "SOURCE",
+      "surface": "runtime",
+      "sha256": "8b9aa4eca1330011569b9831a2e216840367a67cb74a99976ea072fcb3d18821",
+      "bytes": 2078,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/cli.mjs",
+      "role": "TOOL",
+      "surface": "verification",
+      "sha256": "607cd904b231564c42f7c8aaa8cf77523f0614aeeeacff014908f03fb3a03487",
+      "bytes": 2603,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/evidence.schema.json",
+      "role": "SCHEMA",
+      "surface": "evidence",
+      "sha256": "79921f52e5cfbab5ded9c4f840c3f488b89e717502bb1cc28fdd067126754e8f",
+      "bytes": 8048,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/kernel.mjs",
+      "role": "SOURCE",
+      "surface": "runtime",
+      "sha256": "916dc5188657bcbd73cef995852ef34dbebb2b2cab721f5553ead06b628ca8df",
+      "bytes": 21033,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/kernel.test.mjs",
+      "role": "TEST",
+      "surface": "verification",
+      "sha256": "e9004c29353d0ae6b00e6de50621087ef8fc518dd5a086c687390bfb3f89a11c",
+      "bytes": 11738,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/legacy-classifier.mjs",
+      "role": "SOURCE",
+      "surface": "legacy_classification",
+      "sha256": "76db69613a1ed41063a4425550dd534a0f02cfcf0886ba1eabd8c3fe30425997",
+      "bytes": 10276,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+      "role": "TEST",
+      "surface": "verification",
+      "sha256": "aa9ffa345ebfbc76b0c75493a8975cd576f950e056c7dd16588f7f7807744775",
+      "bytes": 5499,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/legacy-freeze.json",
+      "role": "GOVERNANCE",
+      "surface": "governance",
+      "sha256": "f68abeeb806159d8afd8161acd7d9749c3a5b2a9a6086ca7c6d1b73855906d68",
+      "bytes": 5065,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/manifest.mjs",
+      "role": "TOOL",
+      "surface": "verification",
+      "sha256": "9f034f183bed8cd38ed14da6698a98693d580c15c645dc0a647bef28efcde638",
+      "bytes": 14811,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/manifest.test.mjs",
+      "role": "TEST",
+      "surface": "verification",
+      "sha256": "4bc0b0a7c2dada4d511c0cfdc60ae2ba40207e0d565018d8816178e84d8c7a45",
+      "bytes": 4577,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/recovery.test.mjs",
+      "role": "TEST",
+      "surface": "verification",
+      "sha256": "1a4f0f763e77ef8d0d9422da0925f3dc998199f4b218529b16118cedde6cb8da",
+      "bytes": 12515,
+      "mode": "0644"
+    },
+    {
+      "path": "scripts/launch-operations-kernel/source-policy.test.mjs",
+      "role": "TEST",
+      "surface": "verification",
+      "sha256": "897c73f11248e1d57c0094a29069c252e6df0404bac11546981aa8d99d7601c4",
+      "bytes": 3250,
+      "mode": "0644"
+    }
+  ],
+  "candidate_identity_sha256": "be2eb02a39a619e40b07bb8599be748a9ba1490d5e6f2761cadcfb93d259cf4c",
+  "derived_surface_sha256": {
+    "evidence": {
+      "path_count": 1,
+      "sha256": "232b38bd7a7fd3b62da9adb515e651a635b3e5d7036d677cd4943a3904c5293c"
+    },
+    "governance": {
+      "path_count": 2,
+      "sha256": "2242b59c6f3708cee3d5053937762a9188898cd5adb4bb81955b0014b3ec6771"
+    },
+    "legacy_classification": {
+      "path_count": 1,
+      "sha256": "05a666cb76b126a7d2d31442caf7be9025cf1eaef258df8696ef16cec5c726cb"
+    },
+    "runtime": {
+      "path_count": 2,
+      "sha256": "fede104c7d847e2958080b2e6f03c74d1df402e83979165cedbb01fc21e98772"
+    },
+    "verification": {
+      "path_count": 7,
+      "sha256": "c4fa0669414ad2194920bd924fbed18292dbc7d32e762a376061c2f8804a11dc"
+    }
+  },
+  "completion_marker": "PHASE_34JA_34JZ_LAUNCH_OPERATIONS_KERNEL_LOCAL_IMPLEMENTATION_COMPLETE_V1"
+}

@@ -18,6 +18,15 @@ const REPRESENTATIVE_EXTENSION_PATHS = Object.freeze([
   "/api/admin/homepage-control/drafts/example.txt",
   "/api/admin/unknown.map",
 ]);
+const V1_PRE_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
+const V1_POST_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
+const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
+const V1_RUNTIME_GAP =
+  "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
+const V1_RUNTIME_EVIDENCE_PATH =
+  "testing/admin-v1-staging-runtime-evidence.json";
 const EXPECTED_PROXY_MATCHER_CONTRACT = Object.freeze({
   exact_admin_api_matcher: EXACT_ADMIN_API_MATCHER,
   general_matcher_preserved: true,
@@ -294,6 +303,80 @@ function stopRed(line) {
   process.exit(1);
 }
 
+function adminGovernanceMode(matrix, registry, criticalPathnames, deferredPathnames) {
+  const currentRows = matrix?.entries?.filter((entry) =>
+    [...criticalPathnames, ...deferredPathnames].includes(
+      entry.url_pattern_or_special_role,
+    ),
+  );
+  const criticalRows = currentRows?.filter((entry) =>
+    criticalPathnames.includes(entry.url_pattern_or_special_role),
+  );
+  const deferredRows = currentRows?.filter((entry) =>
+    deferredPathnames.includes(entry.url_pattern_or_special_role),
+  );
+  const critical = registry?.workstreams?.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+  );
+  const deferred = registry?.workstreams?.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED",
+  );
+  const common =
+    currentRows?.length === 28 &&
+    criticalRows?.length === 7 &&
+    deferredRows?.length === 21 &&
+    deferredRows.every(
+      (entry) =>
+        entry.coverage_state === V1_DEFERRED_STATE &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null,
+    ) &&
+    critical?.entry_count === 7 &&
+    critical?.execution_authorized === false &&
+    deferred?.entry_count === 21 &&
+    deferred?.state === "SAFELY_DISABLED_FOR_V1_LAUNCH" &&
+    deferred?.execution_authorized === false &&
+    registry?.execution_authorized === false;
+  const pre =
+    common &&
+    criticalRows.every(
+      (entry) =>
+        entry.coverage_state === V1_PRE_RUNTIME_STATE &&
+        entry.launch_blocking === true &&
+        entry.gap_code_or_null === V1_RUNTIME_GAP &&
+        !entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+    ) &&
+    matrix.entries.filter((entry) => entry.launch_blocking === true).length === 7 &&
+    registry.source_matrix?.launch_blocking_count === 7 &&
+    critical.gap_code === V1_RUNTIME_GAP &&
+    critical.authority_class ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+    critical.state ===
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+    critical.next_gate ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
+    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES";
+  const post =
+    common &&
+    criticalRows.every(
+      (entry) =>
+        entry.coverage_state === V1_POST_RUNTIME_STATE &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null &&
+        entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+    ) &&
+    matrix.entries.filter((entry) => entry.launch_blocking === true).length === 0 &&
+    registry.source_matrix?.launch_blocking_count === 0 &&
+    critical.gap_code === null &&
+    critical.authority_class === "ADMIN_V1_STAGING_RUNTIME_COMPLETE" &&
+    critical.state === "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE" &&
+    critical.next_gate === "LEGAL_COMPLIANCE_POLICY_DESIGN" &&
+    registry.overall_decision ===
+      "NO_GO_PENDING_LEGAL_COMPLIANCE_AND_FINAL_LAUNCH_AUTHORITY";
+  if (pre === post) return null;
+  return pre ? "PRE_RUNTIME" : "POST_RUNTIME";
+}
+
 if (!existsSync(absolute(MODULE_PATH))) {
   stopRed("EXPECTED_FAIL_ADMIN_V1_LAUNCH_SCOPE_MODULE_ABSENT assertions=1 failures=1 internal_failures=0");
 }
@@ -481,30 +564,60 @@ const checks = [
   },
   () => {
     const matrix = strictJson(bytes("testing/readiness-coverage-matrix.json"));
+    const registry = strictJson(bytes("testing/public-launch-blocker-registry.json"));
     const routeRows = matrix.entries.filter((entry) => [...criticalPaths, ...deferredPaths].includes(entry.url_pattern_or_special_role));
-    assert.equal(routeRows.filter((entry) => entry.launch_blocking).length, 7);
+    const governanceMode = adminGovernanceMode(
+      matrix,
+      registry,
+      criticalPaths,
+      deferredPaths,
+    );
+    assert.notEqual(governanceMode, null);
+    assert.equal(
+      routeRows.filter((entry) => entry.launch_blocking).length,
+      governanceMode === "POST_RUNTIME" ? 0 : 7,
+    );
     for (const entry of routeRows) {
       assert(entry.static_evidence_paths.includes(LEDGER_PATH));
       const critical = criticalPaths.includes(entry.url_pattern_or_special_role);
-      assert.equal(entry.coverage_state, critical ? "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" : "V1_ADMIN_DEFERRED_FAIL_CLOSED");
+      assert.equal(
+        entry.coverage_state,
+        critical
+          ? (governanceMode === "POST_RUNTIME"
+            ? V1_POST_RUNTIME_STATE
+            : V1_PRE_RUNTIME_STATE)
+          : V1_DEFERRED_STATE,
+      );
       if (critical) {
         for (const evidencePath of [
           "testing/admin-v1-staging-readiness-source-policy.test.mjs",
           "testing/admin-v1-staging-readiness-evidence.json",
           "testing/admin-v1-staging-readiness-evidence.test.mjs",
         ]) assert(entry.static_evidence_paths.includes(evidencePath));
+        assert.equal(
+          entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+          governanceMode === "POST_RUNTIME",
+        );
       }
     }
   },
   () => {
+    const matrix = strictJson(bytes("testing/readiness-coverage-matrix.json"));
     const registry = strictJson(bytes("testing/public-launch-blocker-registry.json"));
     const critical = registry.workstreams.find((entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL");
     const deferred = registry.workstreams.find((entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED");
+    const governanceMode = adminGovernanceMode(
+      matrix,
+      registry,
+      criticalPaths,
+      deferredPaths,
+    );
+    assert.notEqual(governanceMode, null);
     assert.equal(critical.entry_count, 7);
-    assert.equal(critical.gap_code, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED");
-    assert.equal(critical.authority_class, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME");
-    assert.equal(critical.state, "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED");
-    assert.equal(critical.next_gate, "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION");
+    assert.equal(critical.gap_code, governanceMode === "POST_RUNTIME" ? null : V1_RUNTIME_GAP);
+    assert.equal(critical.authority_class, governanceMode === "POST_RUNTIME" ? "ADMIN_V1_STAGING_RUNTIME_COMPLETE" : "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME");
+    assert.equal(critical.state, governanceMode === "POST_RUNTIME" ? "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE" : "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED");
+    assert.equal(critical.next_gate, governanceMode === "POST_RUNTIME" ? "LEGAL_COMPLIANCE_POLICY_DESIGN" : "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION");
     assert.equal(deferred.entry_count, 21);
     assert.equal(registry.execution_authorized, false);
   },

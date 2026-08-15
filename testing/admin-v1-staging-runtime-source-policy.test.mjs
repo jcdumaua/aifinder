@@ -18,7 +18,7 @@ const ADMIN_SUBMISSIONS_HANDLER_PATH =
   "app/api/admin/submissions/handler.ts";
 const APPROVAL_RPC_PATH =
   "supabase/migrations/20260616003000_patch_approve_submitted_tool_slug_status.sql";
-const BASELINE = "e2c7025a3985d71a7e354e9644bbd9069db0ab80";
+const BASELINE = "f7143b756b062287ab89e525a53010a379b51098";
 const BRANCH =
   "aifinder-phase-34ia-evidence-publication-runtime-validation-v3";
 const DELTA11_BRANCH =
@@ -26,13 +26,13 @@ const DELTA11_BRANCH =
 const MARKER_PATH =
   "testing/aifinder-phase-34fa-staging-runtime-preview-marker.txt";
 const MARKER_SHA256 =
-  "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e";
+  "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f";
 const TARGET_SHA256 =
   "0000000000000000000000000000000000000000000000000000000000000000";
 const CONFIRMED_DELTA09_REBOUND_TARGET_SHA256 =
   "47ed7f660868ccb3d7e22793917a043cc75b0ee987e568fb26bfa83212b908d4";
 const EXPECTED_CANONICAL_ORCHESTRATOR_SHA256 =
-  "b5cee8d08751bb8841dfea7d064fc072056006c40567245b34a3979d5de87f88";
+  "7ca3653fffd48223d54dd54cf0fac52871d2f30e5385971007c40eefd7a200f9";
 const EXPECTED_SUPABASE_PROJECT_REF_SHA256 =
   "30ea077ffbf9cc9243b35ad3d67348004d32d49078787b5b305b65495ecb2914";
 const MARKER_LINES = Object.freeze([
@@ -187,6 +187,22 @@ const EXPECTED_AUTHORIZED_REPOSITORY_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
 ]);
+const EXPECTED_RETAINED_WORKTREE_MODIFIED_PATHS = Object.freeze([
+  "testing/admin-v1-staging-runtime-core.mjs",
+  "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-evidence.json",
+  "testing/admin-v1-launch-scope.test.mjs",
+  "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+  "testing/admin-v1-staging-readiness-evidence.test.mjs",
+  "testing/authenticated-live-route-partial-evidence.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/readiness-coverage-matrix.test.mjs",
+  "testing/public-launch-blocker-registry.test.mjs",
+  "testing/static-test-safety-manifest.json",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+]);
 const EXPECTED_POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/admin-v1-staging-runtime-evidence.json",
   "testing/readiness-coverage-matrix.json",
@@ -216,6 +232,11 @@ function canonicalReviewedBytes(relativePath, bytes) {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const fields = [
       /("testing_tree_digest": ")[a-f0-9]{64}(")/gu,
+      /("phase_33fa_c1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_c2_1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_c2_2_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_33ka_v1_admin_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_33na_v1_staging_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
       /("phase_34fa_v1_runtime_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
     ];
     for (const pattern of fields) {
@@ -260,6 +281,10 @@ function reviewedCandidateFacts(orchestratorSource) {
     facts.root,
     "POST_TRANSITION_JSON_PATHS",
   );
+  const retainedWorktreeModifiedPaths = literalArrayFromDeclaration(
+    facts.root,
+    "RETAINED_WORKTREE_MODIFIED_PATHS",
+  );
   const pinned = orchestratorSource.match(
     /const REVIEWED_PRELIVE_AGGREGATE_SHA256 =\n  "([a-f0-9]{64})";/u,
   )?.[1];
@@ -297,6 +322,10 @@ function reviewedCandidateFacts(orchestratorSource) {
     postTransitionPathsExact: exactSet(
       actualPostTransitionPaths ?? [],
       EXPECTED_POST_TRANSITION_JSON_PATHS,
+    ),
+    retainedWorktreeModifiedPathsExact: exactSet(
+      retainedWorktreeModifiedPaths ?? [],
+      EXPECTED_RETAINED_WORKTREE_MODIFIED_PATHS,
     ),
     pinned,
     stablePinned,
@@ -4023,6 +4052,9 @@ function validCleanupState() {
 function baseAssertions(coreSource, orchestratorSource) {
   const plan = core.createRuntimePlan();
   const reviewedCandidate = reviewedCandidateFacts(orchestratorSource);
+  const orchestratorFacts = astFacts(ORCHESTRATOR_PATH, orchestratorSource);
+  const selfTestText =
+    namedFunctionText(orchestratorFacts.root, "runSelfTest") ?? "";
   const implementedRequests = plan.requests.filter(
     ({ contract }) =>
       contract !== "METHOD_GATE_ALLOW_HEADER" &&
@@ -4093,6 +4125,14 @@ function baseAssertions(coreSource, orchestratorSource) {
       !orchestratorSource.includes("...process.env") &&
       reviewedCandidate.pathsExact &&
       reviewedCandidate.postTransitionPathsExact &&
+      reviewedCandidate.retainedWorktreeModifiedPathsExact &&
+      selfTestText.indexOf("verifyStaticManifestSemantics(process.cwd())") >=
+        0 &&
+      selfTestText.indexOf("verifyStaticManifestSemantics(process.cwd())") <
+        selfTestText.indexOf("verifyReviewedCandidate(") &&
+      selfTestText.indexOf("verifyReviewedCandidate(") >= 0 &&
+      selfTestText.indexOf("verifyReviewedCandidate(") <
+        selfTestText.indexOf("runDelta13EnvironmentStdinLifecycleSelfTest()") &&
       reviewedCandidate.pinned !== "0".repeat(64) &&
       reviewedCandidate.stablePinned !== "0".repeat(64) &&
       reviewedCandidate.stableActual === reviewedCandidate.stablePinned &&
@@ -4704,6 +4744,7 @@ function cleanupBudgetAssertions(orchestratorSource) {
       "`:${branchRef}`",
     ],
     ["worktree", "remove", "worktreePath"],
+    ["status", "--porcelain", "--untracked-files=all"],
   ];
   const expectedPushVectors = [
     [
@@ -6349,7 +6390,7 @@ function delta13OrchestratorLifecycleContract(coreSource, orchestratorSource) {
     plan.marker.bytes === 475 &&
     plan.marker.lf === 10 &&
     plan.marker.sha256 ===
-      "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e" &&
+      "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f" &&
     plan.budgets.auth_qualification_cycles === 1 &&
     plan.budgets.auth_qualification_requests === 6 &&
     plan.budgets.login_attempts === 1 &&
@@ -9334,14 +9375,14 @@ function delta18DurableProjectionBehaviorAssertions(orchestratorSource) {
     "data_requests: 0",
   );
   const zeroWriteTelemetryMutation = qualificationFailureEvidenceText.replace(
-    'data_writes: cleanupComplete ? "0" : "possible_or_occurred"',
-    'data_writes: "0"',
+    "cleanupComplete || totalRequests === 0",
+    "cleanupComplete",
   );
   const qualificationCountSnapshotMutation = qualificationText.replace(
     "qualificationDirectRequests = qualificationDirectCounts.directTotal",
     "void qualificationDirectCounts.directTotal",
   );
-  const qualificationCatchWiringMutation = qualificationText.replace(
+  const qualificationCatchWiringMutation = qualificationText.replaceAll(
     "retainedDirectRequests: qualificationDirectRequests",
     "retainedDirectRequests: 0",
   );
@@ -9651,8 +9692,12 @@ function delta18DurableProjectionBehaviorAssertions(orchestratorSource) {
           "data_requests: totalRequests",
         ) &&
         qualificationFailureEvidenceText.includes(
-          'data_writes: cleanupComplete ? "0" : "possible_or_occurred"',
+          "cleanupComplete || totalRequests === 0",
         ) &&
+        qualificationFailureEvidenceText.includes(
+          ': "possible_or_occurred"',
+        ) &&
+        cleanupGateSelfTestText.includes("zeroRequestFailureEvidence") &&
         cleanupGateSelfTestText.includes(
           "SELF_TEST_DELTA18_QUALIFICATION_FAILURE_CLEAN_TELEMETRY",
         ) &&
@@ -9663,11 +9708,15 @@ function delta18DurableProjectionBehaviorAssertions(orchestratorSource) {
         !zeroRequestTelemetryMutation.includes("data_requests: totalRequests") &&
         zeroWriteTelemetryMutation !== qualificationFailureEvidenceText &&
         !zeroWriteTelemetryMutation.includes(
-          'data_writes: cleanupComplete ? "0" : "possible_or_occurred"',
+          "cleanupComplete || totalRequests === 0",
         ) &&
         qualificationText.includes(
           "qualificationDirectRequests = qualificationDirectCounts.directTotal",
         ) &&
+        qualificationText.includes(
+          "qualificationFailureDataEvidence.data_writes === \"0\"",
+        ) &&
+        qualificationText.includes("priorReconciliationDirect === null") &&
         qualificationText.indexOf(
           "qualificationDirectRequests = qualificationDirectCounts.directTotal",
         ) < qualificationText.lastIndexOf("qualificationDirect = null") &&
@@ -9959,7 +10008,7 @@ function delta20VerifiedEvidencePublicationBehaviorAssertions() {
       plan.marker.bytes === 475,
       plan.marker.lf === 10,
       plan.marker.sha256 ===
-        "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e",
+        "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f",
       plan.marker.trailing_lf === true,
       plan.marker_path ===
         "testing/aifinder-phase-34fa-staging-runtime-preview-marker.txt",
@@ -10071,6 +10120,91 @@ function delta20VerifiedPublicationIntegrationAssertions(orchestratorSource) {
     ) ?? "";
   const runtimeRootTeardown =
     namedFunctionText(facts.root, "removeDelta20CompletedRuntimeRoot") ?? "";
+  const retainedAuthorization =
+    namedFunctionText(
+      facts.root,
+      "validateDelta20RetainedAuthorizationArtifacts",
+    ) ?? "";
+  const activeInitializationLockRecoveryContract = (candidateSource) => {
+    const candidateFacts = astFacts(ORCHESTRATOR_PATH, candidateSource);
+    const staleAuthorization =
+      namedFunctionText(
+        candidateFacts.root,
+        "validateDelta20StaleExecutionLockAuthorization",
+      ) ?? "";
+    const staleRoot =
+      namedFunctionText(
+        candidateFacts.root,
+        "delta20ValidateStaleExecutionLockRoot",
+      ) ?? "";
+    const acquireLock =
+      namedFunctionText(
+        candidateFacts.root,
+        "acquireDelta20ExecutionLock",
+      ) ?? "";
+    const qualificationRepair =
+      namedFunctionText(
+        candidateFacts.root,
+        "repairDelta20QualificationPublicationFromRetainedJournal",
+      ) ?? "";
+    const interruptedQualificationRepair =
+      namedFunctionText(
+        candidateFacts.root,
+        "repairDelta20InterruptedQualificationExecution",
+      ) ?? "";
+    const candidateSelfTest =
+      namedFunctionText(
+        candidateFacts.root,
+        "runDelta20VerifiedPublicationSelfTest",
+      ) ?? "";
+    return (
+      staleAuthorization.includes(
+        'new Set(["ACTIVE", "QUALIFICATION_ATTEMPT_STARTED"])',
+      ) &&
+      staleAuthorization.includes("expectedActiveState,") &&
+      staleAuthorization.includes(
+        'expectedActiveState === "QUALIFICATION_ATTEMPT_STARTED"',
+      ) &&
+      staleAuthorization.includes("? value.recovery_root_basename") &&
+      staleAuthorization.includes(": null,") &&
+      staleRoot.includes(
+        'expectedActiveState = "QUALIFICATION_ATTEMPT_STARTED"',
+      ) &&
+      staleRoot.includes(
+        "validateDelta20StaleExecutionLockAuthorization({",
+      ) &&
+      acquireLock.includes(
+        'expectedActiveState = "QUALIFICATION_ATTEMPT_STARTED"',
+      ) &&
+      acquireLock.includes(
+        "delta20ValidateStaleExecutionLockRoot(\n          lockRoot,\n          existing,\n          expectedActiveState,",
+      ) &&
+      acquireLock.includes(
+        "return acquireDelta20ExecutionLock(\n        canonicalRecoveryRoot,\n        lockRoot,\n        expectedActiveState,",
+      ) &&
+      qualificationRepair.includes(
+        'const bootstrapLock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "ACTIVE",',
+      ) &&
+      interruptedQualificationRepair.includes(
+        'const lock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "ACTIVE",',
+      ) &&
+      candidateSelfTest.includes(
+        "validateDelta20StaleExecutionLockAuthorization({",
+      ) &&
+      candidateSelfTest.includes('expectedActiveState: "ACTIVE"') &&
+      candidateSelfTest.includes(
+        "activeInitializationLockRecoveryPassed",
+      )
+    );
+  };
+  const bootstrapActiveStateMutation = orchestratorSource.replace(
+    'const bootstrapLock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "ACTIVE",',
+    'const bootstrapLock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "QUALIFICATION_ATTEMPT_STARTED",',
+  );
+  const interruptedActiveStateMutation = orchestratorSource.replace(
+    'const lock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "ACTIVE",',
+    'const lock = acquireDelta20ExecutionLock(\n      retained.root,\n      realpathSync.native(tmpdir()),\n      "QUALIFICATION_ATTEMPT_STARTED",',
+  );
   return [
     selfTest.includes("validateDelta20RuntimePublicationRecovery(") &&
       selfTest.includes("publicationRecoveryPassed") &&
@@ -10114,7 +10248,22 @@ function delta20VerifiedPublicationIntegrationAssertions(orchestratorSource) {
       "PASS_ADMIN_V1_DELTA20_VERIFIED_PUBLICATION_SELF_TEST",
     ) &&
       selfTest.includes("activeAuthorizationTransitionPassed") &&
-      selfTest.includes("atomicRecoveryPassed"),
+      selfTest.includes("historicalCandidateRebindingPassed") &&
+      selfTest.includes("currentQualificationCandidateSha256") &&
+      retainedAuthorization.includes("canonicalJson(replacement)") &&
+      !retainedAuthorization.includes(
+        "replacement.candidate_manifest_sha256 !==",
+      ) &&
+      selfTest.includes("atomicRecoveryPassed") &&
+      activeInitializationLockRecoveryContract(orchestratorSource) &&
+      bootstrapActiveStateMutation !== orchestratorSource &&
+      !activeInitializationLockRecoveryContract(
+        bootstrapActiveStateMutation,
+      ) &&
+      interruptedActiveStateMutation !== orchestratorSource &&
+      !activeInitializationLockRecoveryContract(
+        interruptedActiveStateMutation,
+      ),
   ];
 }
 
@@ -10398,7 +10547,7 @@ function delta17PersistedStateOracleBehaviorAssertions() {
     const target = core.deriveDelta17PoststateOracleQualifiedFinalTarget({
       activation_commit_sha: "b".repeat(40),
       authorized_path_manifest_sha256: "1".repeat(64),
-      baseline: "e2c7025a3985d71a7e354e9644bbd9069db0ab80",
+      baseline: "f7143b756b062287ab89e525a53010a379b51098",
       branch_env_cleanup_evidence_sha256: "2".repeat(64),
       marker_sha256:
         "e3cf39bdf96075f0ecb8b8ffba3d176613dab93b4a1f368c8c09a5b27ee2a957",

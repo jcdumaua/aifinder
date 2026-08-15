@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "phase": "34JA-34JZ",
+  "status": "LEGACY_FORENSIC_ONLY_NON_CURRENT",
+  "legacy_candidate": {
+    "raw_candidate_sha256": "0aa11bebea188c19597c8b4d32a419a6d11595fc96401038c6ec87c5729c93db",
+    "reviewed_prelive_sha256": "30e4380c36541a9c6bb1d9061337b5da8b640479fee58cdeaf8fcd1025f514a5",
+    "reviewed_stable_sha256": "7cdd52392455e0e5b4fe374ad8377ad85ca9a8a1796cd4f3a8bacb105c741082",
+    "canonical_orchestrator_sha256": "b8af4811ce77194b1370153c38718a84e344c693d4b9b146897128e8f80e1d45",
+    "marker_sha256": "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f",
+    "testing_tree_sha256": "a7cb23802530fc7dbdebbca0549fa44cd08a67a2cfbba0adfdcf67377027a3e4",
+    "c1_surface_sha256": "eeca411a465ec17ac0477b0c6762cd16755c545b29bbe15710d4b38e202478e9",
+    "c2_1_surface_sha256": "881ff2f3fc2c156b2b43309f9ccacf6fd8ac9482f4cf0330e002105d3a739773",
+    "c2_2_surface_sha256": "f0e3a4c0ca23806a7a416412427000f45d65898cc1d40906cb943db45ac32479",
+    "v1_admin_surface_sha256": "aab417ed336dc80b900b59d3fe95e3a66dd61cdb8991f1a7025cba2ccda63eb4",
+    "v1_staging_surface_sha256": "a1088226ab43737b717a9c1d733d94ec239a70d184614b223f623acd4b0c9998",
+    "v1_runtime_surface_sha256": "5ecb8c1d7feb5a0dcd570025462a8bcca8c558922269dbd1d22b58ef47ee470f",
+    "complete_22_path_sha256": "cc094e4f140b33e1212289a18dfe015a83cb21040b8ae3a36c5be8845a4053c9",
+    "external_qualification_sha256": "d817ce658cacda54778cf9a59274951ae72889e082e0f5b933ab5e040ae28150",
+    "internal_current_candidate_sha256": "596f93f09eaf6a229b3835a27e07de57c86fd70e05f3ba2a746fe38c4c43f682",
+    "internal_qualification_sha256": "09a4066876033d68aaa43c8a1a9c703eb6e0176f8d32aacdceccc28e0134de71",
+    "latest_ccr_sha256": "1425e99ea9490098d416f7d5d708401d0e04f9050e20bdc4caed9cdc2f6bb13f"
+  },
+  "retained_state": {
+    "recovery_root_basename": "aifinder-34ia-delta20-mY2WVZ",
+    "artifacts": {
+      "tombstone": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-delta18-qualification-consumed.tombstone",
+        "sha256": "d7c396ee7e61d597290b9aaf8b233f2098586a9e129c0f96d42f49995e48bec2",
+        "mode": "0600"
+      },
+      "replacement_marker": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-delta19-replacement-qualification-attempted.marker",
+        "sha256": "bb828109b0e8723a67e92fe3e7073700c50f498f0ecd7e774b26255b5bc2276e",
+        "mode": "0600"
+      },
+      "active_authorization": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-delta20-active-authorization.lock",
+        "sha256": "e1401cfe894d15594e3a76f4ac2dd21a2343d9e35719000bc91bc043ab910836",
+        "mode": "0600"
+      },
+      "execution_lock": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-delta20-execution.lock",
+        "sha256": "9da7c52b3bf54b0222f27368d47c2badc4ba6bbfbe722cb4d57b6b197efa0f91",
+        "mode": "0600"
+      },
+      "lineage_receipt": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-delta20-lineage.receipt",
+        "sha256": "9e608f762762023a1df1fed645699efc613e15dab82e49720ed25836e75f636f",
+        "mode": "0600"
+      },
+      "runtime_authorization_lock": {
+        "location": "TEMP_ROOT",
+        "filename": "aifinder-phase-34ia-runtime-authorization.lock",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mode": "0600"
+      },
+      "recovery_journal": {
+        "location": "RECOVERY_ROOT",
+        "filename": "delta20-qualification-execution-recovery.json",
+        "sha256": "487022cb10ec48b2881861a1417d374a7fa189c37c32e01ec5e5453aba07fff8",
+        "mode": "0600"
+      }
+    },
+    "categorical_facts": {
+      "authorization_state": "QUALIFICATION_ATTEMPT_STARTED",
+      "candidate_identity_sha256": "09a4066876033d68aaa43c8a1a9c703eb6e0176f8d32aacdceccc28e0134de71",
+      "recovery_state": "EXECUTION_IN_PROGRESS",
+      "recovery_stage": "PRIOR_RECONCILIATION",
+      "guard_owner_pid": 12605,
+      "mutation_intents": [
+        { "kind": "PRIOR_RECONCILIATION", "sequence": 1 }
+      ],
+      "data_writes": 0,
+      "branch_commits": 0,
+      "preview_identities": 0,
+      "environment_resources": 0,
+      "branch_cleanup_intents": 0,
+      "environment_cleanup_intents": 0,
+      "preview_cleanup_intents": 0,
+      "terminal_evidence_present": false,
+      "ownership_ambiguity": true,
+      "legacy_reconciliation_required": true
+    }
+  },
+  "legacy_entrypoints": [
+    {
+      "path": "testing/admin-v1-staging-runtime-orchestrator.mjs",
+      "current": false,
+      "preserved_for_forensics": true,
+      "live_modes_authorized_in_this_phase": []
+    }
+  ],
+  "current_route": {
+    "legacy_route_current": false,
+    "kernel_live_routes": 0,
+    "routed_entrypoint": null
+  },
+  "fresh_gemini_review_boundaries": [
+    "MATERIAL_ARCHITECTURE_CHANGE",
+    "LIVE_CANDIDATE_BYTES",
+    "DATABASE_OR_STORAGE_MUTATION",
+    "LEGACY_MIGRATION_OR_RECONCILIATION",
+    "OFFICIAL_RUNTIME",
+    "PRODUCTION_OR_PUBLIC_AUTHORITY"
+  ]
+}

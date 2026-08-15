@@ -53,6 +53,9 @@ const LEGACY_CORE_BASELINE_PROJECTIONS = Object.freeze([
     currentSha256:
       "ff21da9dff79d950534263286b019c4639bf0f895be32b34b6ee2f02b58e2bcf",
     currentBytes: 50034,
+    alternateCurrentSha256:
+      "f7da63e9ba2900fa7e378c4ea2aa1c661ddee9508bbebf994c032ddb4981fd7d",
+    alternateCurrentBytes: 49712,
     baselineSha256:
       "db721953dd84670565a63fb408b58eb257f1af7fa70972e44f89a1d84b870292",
     baselineBytes: 45318,
@@ -64,6 +67,9 @@ const LEGACY_CORE_BASELINE_PROJECTIONS = Object.freeze([
     currentSha256:
       "84644e9c4e66feda1ff930d8ad0cfdd8ec8010f7373e406fedf75ea6d6b8fcac",
     currentBytes: 11635,
+    alternateCurrentSha256:
+      "e592673dfcd8b2463735dea9433a743053528c806d5b18513ab26d1b4d507145",
+    alternateCurrentBytes: 11509,
     baselineSha256:
       "8f53c781a64853acf233cb744d714af3555d983db0ebfae2cf4476e4679a5661",
     baselineBytes: 10724,
@@ -87,8 +93,10 @@ const C2_1_TOTAL_TIMEOUT_MS = 60_000;
 const C2_2_TOTAL_TIMEOUT_MS = 60_000;
 const V1_ADMIN_TOTAL_TIMEOUT_MS = 60_000;
 const V1_STAGING_TOTAL_TIMEOUT_MS = 60_000;
-const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 45_000;
-const PHASE_COMPILER_TOTAL_TIMEOUT_MS = 60_000;
+const V1_RUNTIME_PER_CHILD_TIMEOUT_MS = 55_000;
+const V1_RUNTIME_TOTAL_TIMEOUT_MS = 90_000;
+const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 90_000;
+const PHASE_COMPILER_TOTAL_TIMEOUT_MS = 180_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
 const CORE_CHILD_PATHS = [
   "testing/authenticated-browser-security-static-assertions.mjs",
@@ -100,12 +108,12 @@ const CORE_CHILD_PATHS = [
 const C1_CHILDREN = [
   {
     path: "testing/authenticated-live-route-partial-evidence.test.mjs",
-    sha256: "b1b42aea6c208326257b5e1898c5734660532d0ab640e636ee0a3fcc3c5c68f8",
+    sha256: "e5e11a3642f774fb1d5e8d80e3b5c87aaf9739e7d87ea3244c9f2f1e4c1bd5c3",
     imports: ["node:fs", "node:path", "node:url"],
   },
   {
     path: "testing/public-launch-blocker-registry.test.mjs",
-    sha256: "9f29d1a2b575efba41d6fbf7d875c5cdb4093bc02d00b1cdf417b53db8d81b56",
+    sha256: "cb13a80ca478c812b92594e31ce6ace8b2372c02bc604e076d306db5ec92fb5a",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -115,12 +123,12 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/readiness-coverage-matrix.test.mjs",
-    sha256: "5cb4a335f426c2caf19980205d2f3504f8b7e2f590cc5a14094b24b5b6c35239",
+    sha256: "5c571de84a3abd70fdd6c3c09d2e59346ce5b9055135e76ffea07969ea42decc",
     imports: ["./static-governance-utils.mjs", "node:path"],
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "bafba8eb868483252c6076e718133258b0479dff157cdaa49b17652078ff403b",
+    sha256: "81bd94f14852cca2b23ad4ce0c10a148a56c918fb3580198d0132a194309e160",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -153,7 +161,7 @@ const C2_2_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
-    sha256: "e000cee24c94a9d6708dc426144af5fd40b29c82021464f22421eb0fd9ec54de",
+    sha256: "e7c288c2deb21cfe0dbb29a222b51885cd52118dc7e3fb865c90967c939d1e17",
     imports: [
       "node:assert/strict",
       "node:crypto",
@@ -167,7 +175,7 @@ const C2_2_CHILDREN = [
 const V1_ADMIN_CHILDREN = [
   {
     path: "testing/admin-v1-launch-scope.test.mjs",
-    sha256: "782ea3831323b783087aa3ef6cec3e1541912d8966e31d9aa0c4b95e59217c4c",
+    sha256: "6e381b4367f3d91701bb99684986a1f59f5e926fba97d4de947c615a54371851",
     safetyClass: "SAFE_STATIC_POLICY",
   },
   {
@@ -183,7 +191,7 @@ const EXPECTED_V1_ADMIN_CHILD_PATHS = [
 const V1_STAGING_CHILDREN = [
   {
     path: "testing/admin-v1-staging-readiness-source-policy.test.mjs",
-    sha256: "b8955a142950a8a0b3d054b0db0e51187d6db74518f4903d1ca14824c16298e3",
+    sha256: "b953f7c4d54ae2f71aa2e8db2de04fd741648d56574042b3df46526e43e70702",
     imports: [
       "./admin-v1-staging-readiness-core.mjs",
       "node:assert/strict",
@@ -194,7 +202,7 @@ const V1_STAGING_CHILDREN = [
   },
   {
     path: "testing/admin-v1-staging-readiness-evidence.test.mjs",
-    sha256: "d13f2a8783fd4f19de3c9e3e2c3c5f0acbb4597ef280c62438b5674fe7821a90",
+    sha256: "ab37f3ec11aeec30cd670f8f7393180ce6a1c3d2c109c34bf9e667695e0f2a41",
     imports: [
       "node:assert/strict",
       "node:crypto",
@@ -208,6 +216,40 @@ const EXPECTED_V1_STAGING_CHILD_PATHS = [
   "testing/admin-v1-staging-readiness-source-policy.test.mjs",
   "testing/admin-v1-staging-readiness-evidence.test.mjs",
 ];
+const V1_RUNTIME_CHILDREN = [
+  {
+    path: "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+    argv: [],
+    sha256: "fccb673715b1a41350f092857db3b5392403ab8df5937dac5952a5fd71da7198",
+    imports: [
+      "./admin-v1-staging-runtime-core.mjs",
+      "node:assert/strict",
+      "node:crypto",
+      "node:fs",
+      "node:path",
+      "typescript",
+    ],
+  },
+  {
+    path: "testing/admin-v1-staging-runtime-evidence.test.mjs",
+    argv: ["--schema-only"],
+    sha256: "90223def0018fccb5ad3307cd35581cd713a86bcb50a044f95fc6e5f17068b80",
+    imports: [
+      "./admin-v1-staging-runtime-core.mjs",
+      "node:assert/strict",
+      "node:fs",
+      "node:path",
+    ],
+  },
+];
+const EXPECTED_V1_RUNTIME_CHILD_PATHS = [
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-evidence.test.mjs",
+];
+const EXPECTED_V1_RUNTIME_CHILD_ARGV = new Map([
+  ["testing/admin-v1-staging-runtime-source-policy.test.mjs", []],
+  ["testing/admin-v1-staging-runtime-evidence.test.mjs", ["--schema-only"]],
+]);
 const PHASE_COMPILER_CHILDREN = [
   {
     path: "testing/phase-compiler/phase-compiler.test.mjs",
@@ -490,6 +532,30 @@ const AUTHORIZED_V1_STAGING_PATHS = [
 const V1_STAGING_EXECUTION_SURFACE_PATHS = AUTHORIZED_V1_STAGING_PATHS.filter(
   (repositoryPath) => repositoryPath !== MANIFEST_PATH,
 );
+const AUTHORIZED_V1_RUNTIME_PATHS = [
+  "testing/admin-v1-staging-runtime-core.mjs",
+  "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-evidence.schema.json",
+  "testing/admin-v1-staging-runtime-evidence.json",
+  "testing/admin-v1-staging-runtime-evidence.test.mjs",
+  "testing/storage-cleanup-cas-contract.test.mjs",
+  "testing/admin-v1-launch-scope.test.mjs",
+  "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+  "testing/admin-v1-staging-readiness-evidence.test.mjs",
+  "testing/authenticated-live-route-partial-evidence.test.mjs",
+  "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
+  "testing/readiness-coverage-matrix.json",
+  "testing/readiness-coverage-matrix.test.mjs",
+  "testing/public-launch-blocker-registry.json",
+  "testing/public-launch-blocker-registry.test.mjs",
+  "testing/static-test-safety-manifest.json",
+  "testing/static-test-safety-manifest.test.mjs",
+  "testing/run-static-readiness.mjs",
+];
+const V1_RUNTIME_EXECUTION_SURFACE_PATHS = AUTHORIZED_V1_RUNTIME_PATHS.filter(
+  (repositoryPath) => repositoryPath !== MANIFEST_PATH,
+);
 const CORE_SAFE_RUNTIME_PATH = [
   path.dirname(process.execPath),
   "/usr/local/bin",
@@ -553,6 +619,17 @@ const V1_ADMIN_SAFE_ENVIRONMENT = Object.freeze({
 const V1_STAGING_SAFE_ENVIRONMENT = Object.freeze({
   PATH: CORE_SAFE_RUNTIME_PATH,
   HOME: "/tmp/aifinder-v1-staging-no-home",
+  TMPDIR: "/tmp",
+  LANG: "C.UTF-8",
+  LC_ALL: "C.UTF-8",
+  CI: "1",
+  NO_COLOR: "1",
+  NEXT_TELEMETRY_DISABLED: "1",
+  NODE_ENV: "test",
+});
+const V1_RUNTIME_SAFE_ENVIRONMENT = Object.freeze({
+  PATH: CORE_SAFE_RUNTIME_PATH,
+  HOME: "/tmp/aifinder-v1-runtime-no-home",
   TMPDIR: "/tmp",
   LANG: "C.UTF-8",
   LC_ALL: "C.UTF-8",
@@ -648,6 +725,10 @@ function authorizedV1AdminSnapshot() {
 
 function authorizedV1StagingSnapshot() {
   return pathSetDigest(AUTHORIZED_V1_STAGING_PATHS);
+}
+
+function authorizedV1RuntimeSnapshot() {
+  return pathSetDigest(AUTHORIZED_V1_RUNTIME_PATHS);
 }
 
 function authorizedPhaseCompilerSnapshot() {
@@ -759,6 +840,96 @@ function validateV1StagingChildSource(child) {
   visit(sourceFile);
   if (violation) {
     throw new GovernanceError("RUNNER_V1_STAGING_SOURCE_POLICY");
+  }
+}
+
+function validateV1RuntimeChildSource(child) {
+  const bytes = readFileSync(child.path);
+  if (digest(bytes) !== child.sha256) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_SOURCE_IDENTITY");
+  }
+  let imports;
+  try {
+    imports = directStaticModuleEdges(child.path);
+  } catch {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_IMPORT_SET");
+  }
+  if (!exactSet(imports, child.imports)) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_IMPORT_SET");
+  }
+  const { sourceFile } = parseTypeScriptFile(child.path);
+  const deniedCalls = new Set([
+    "fetch",
+    "WebSocket",
+    "EventSource",
+    "XMLHttpRequest",
+    "require",
+    "eval",
+    "Function",
+    "spawn",
+    "spawnSync",
+    "exec",
+    "execSync",
+    "execFile",
+    "execFileSync",
+    "fork",
+    "writeFile",
+    "writeFileSync",
+    "appendFile",
+    "appendFileSync",
+    "truncate",
+    "truncateSync",
+    "unlink",
+    "unlinkSync",
+    "rm",
+    "rmSync",
+    "rename",
+    "renameSync",
+    "mkdir",
+    "mkdirSync",
+    "rmdir",
+    "rmdirSync",
+    "chmod",
+    "chmodSync",
+    "chown",
+    "chownSync",
+    "symlink",
+    "symlinkSync",
+    "link",
+    "linkSync",
+    "copyFile",
+    "copyFileSync",
+    "createWriteStream",
+  ]);
+  let violation = false;
+  const visit = (node) => {
+    if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        deniedCalls.has(
+          ts.isIdentifier(node.expression)
+            ? node.expression.text
+            : ts.isPropertyAccessExpression(node.expression)
+              ? node.expression.name.text
+              : "",
+        ))
+    ) violation = true;
+    if (
+      ts.isNewExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      deniedCalls.has(node.expression.text)
+    ) violation = true;
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "process" &&
+      node.name.text === "env"
+    ) violation = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (violation) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_SOURCE_POLICY");
   }
 }
 
@@ -2029,7 +2200,7 @@ function validateManifestForExecution() {
     ) ||
     !compareExactPathSets(paths, inventory).equal ||
     manifest.testing_tree_digest_state !==
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34EA_INSPECTION_CONTRACT" ||
+      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34FA_STAGING_RUNTIME" ||
     manifest.testing_tree_digest !== testingTreeDigest(MANIFEST_PATH)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_INVENTORY");
@@ -2103,6 +2274,19 @@ function validateManifestForExecution() {
       pathSetDigest(V1_STAGING_EXECUTION_SURFACE_PATHS)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_V1_STAGING_DIGEST");
+  }
+
+  if (
+    manifest.phase_34fa_v1_runtime_execution_surface_digest?.algorithm !==
+      "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF" ||
+    manifest.phase_34fa_v1_runtime_execution_surface_digest?.path_count !==
+      18 ||
+    manifest.phase_34fa_v1_runtime_execution_surface_digest
+      ?.excluded_self_path !== MANIFEST_PATH ||
+    manifest.phase_34fa_v1_runtime_execution_surface_digest?.sha256 !==
+      pathSetDigest(V1_RUNTIME_EXECUTION_SURFACE_PATHS)
+  ) {
+    throw new GovernanceError("RUNNER_MANIFEST_V1_RUNTIME_DIGEST");
   }
 
   const manifestCorePaths = manifest.entries
@@ -2284,6 +2468,40 @@ function validateManifestForExecution() {
   ) {
     throw new GovernanceError("RUNNER_V1_STAGING_POLICY_SET");
   }
+  const v1RuntimePolicy = [];
+  for (const child of V1_RUNTIME_CHILDREN) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.path === child.path,
+    );
+    if (
+      entry?.role !== "EXECUTABLE" ||
+      entry.safety_class !== "SAFE_STATIC_POLICY" ||
+      entry.ci_disposition !== "RUN_POLICY" ||
+      JSON.stringify(entry.command_argv) !==
+        JSON.stringify(["node", child.path])
+    ) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_MANIFEST_ENTRY");
+    }
+    validateV1RuntimeChildSource(child);
+    v1RuntimePolicy.push(child);
+  }
+  const liveOrchestrator = manifest.entries.find(
+    (entry) =>
+      entry.path === "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  );
+  if (
+    v1RuntimePolicy.length !== 2 ||
+    !exactSet(
+      v1RuntimePolicy.map((entry) => entry.path),
+      EXPECTED_V1_RUNTIME_CHILD_PATHS,
+    ) ||
+    liveOrchestrator?.role !== "EXECUTABLE" ||
+    liveOrchestrator.safety_class !== "DEPLOYMENT_DATABASE_STORAGE" ||
+    liveOrchestrator.ci_disposition !== "DENY" ||
+    liveOrchestrator.command_argv !== null
+  ) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_POLICY_SET");
+  }
   const phaseCompilerContracts = new Map(PHASE_COMPILER_MANIFEST_CONTRACTS);
   for (const [repositoryPath, contract] of phaseCompilerContracts) {
     const entry = manifest.entries.find(
@@ -2323,6 +2541,7 @@ function validateManifestForExecution() {
     v1AdminPolicy,
     v1StagingPolicy,
     phaseCompilerPolicy,
+    v1RuntimePolicy,
     phaseCompilerClosure,
   };
 }
@@ -2601,6 +2820,82 @@ function installLegacyCoreManifestProjection(
         reason_code: "ADMIN_V1_STAGING_READINESS_SOURCE_POLICY",
       },
     ],
+    [
+      "testing/admin-v1-staging-runtime-core.mjs",
+      {
+        role: "SUPPORT",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_CORE",
+      },
+    ],
+    [
+      "testing/admin-v1-staging-runtime-evidence.json",
+      {
+        role: "CONFIG",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_EVIDENCE",
+      },
+    ],
+    [
+      "testing/admin-v1-staging-runtime-evidence.schema.json",
+      {
+        role: "CONFIG",
+        safety_class: "SAFE_STATIC_SUPPORT",
+        ci_disposition: "VALIDATE_ONLY",
+        command_argv: null,
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_EVIDENCE_SCHEMA",
+      },
+    ],
+    [
+      "testing/admin-v1-staging-runtime-evidence.test.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "SAFE_STATIC_POLICY",
+        ci_disposition: "RUN_POLICY",
+        command_argv: [
+          "node",
+          "testing/admin-v1-staging-runtime-evidence.test.mjs",
+        ],
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_EVIDENCE_POLICY",
+      },
+    ],
+    [
+      "testing/admin-v1-staging-runtime-orchestrator.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "DEPLOYMENT_DATABASE_STORAGE",
+        ci_disposition: "DENY",
+        command_argv: null,
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_LIVE_ORCHESTRATOR_DENIED",
+      },
+    ],
+    [
+      "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "SAFE_STATIC_POLICY",
+        ci_disposition: "RUN_POLICY",
+        command_argv: [
+          "node",
+          "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+        ],
+        reason_code: "ADMIN_V1_STAGING_RUNTIME_SOURCE_POLICY",
+      },
+    ],
+    [
+      "testing/storage-cleanup-cas-contract.test.mjs",
+      {
+        role: "EXECUTABLE",
+        safety_class: "UNPROVEN_DENY",
+        ci_disposition: "DENY",
+        command_argv: null,
+        reason_code: "STORAGE_CLEANUP_CAS_DEDICATED_LANE_ONLY",
+      },
+    ],
     ...phaseCompilerContracts,
   ]);
   const originalReadFileSync = fs.readFileSync.bind(fs);
@@ -2635,6 +2930,12 @@ function installLegacyCoreManifestProjection(
         /^[0-9a-f]{64}$/u.test(projection.currentSha256) &&
         Number.isSafeInteger(projection.currentBytes) &&
         projection.currentBytes > 0 &&
+        ((projection.alternateCurrentSha256 === undefined &&
+          projection.alternateCurrentBytes === undefined) ||
+          (typeof projection.alternateCurrentSha256 === "string" &&
+            /^[0-9a-f]{64}$/u.test(projection.alternateCurrentSha256) &&
+            Number.isSafeInteger(projection.alternateCurrentBytes) &&
+            projection.alternateCurrentBytes > 0)) &&
         typeof projection.baselineSha256 === "string" &&
         /^[0-9a-f]{64}$/u.test(projection.baselineSha256) &&
         Number.isSafeInteger(projection.baselineBytes) &&
@@ -2648,10 +2949,27 @@ function installLegacyCoreManifestProjection(
   const projectedBaselineByAbsolutePath = new Map();
   for (const projection of baselineProjections) {
     const currentBytes = originalReadFileSync(projection.absolutePath);
+    const currentIdentity = {
+      bytes: currentBytes.length,
+      sha256: sha256(currentBytes),
+    };
+    const acceptedCurrentIdentities = [
+      {
+        bytes: projection.currentBytes,
+        sha256: projection.currentSha256,
+      },
+      ...(projection.alternateCurrentSha256 === undefined
+        ? []
+        : [{
+            bytes: projection.alternateCurrentBytes,
+            sha256: projection.alternateCurrentSha256,
+          }]),
+    ];
     if (
       !Buffer.isBuffer(currentBytes) ||
-      currentBytes.length !== projection.currentBytes ||
-      sha256(currentBytes) !== projection.currentSha256
+      !acceptedCurrentIdentities.some(
+        (accepted) => exactValue(accepted, currentIdentity),
+      )
     ) {
       throw new Error("LEGACY_CORE_CURRENT_SOURCE_IDENTITY");
     }
@@ -2731,13 +3049,13 @@ function installLegacyCoreManifestProjection(
     const manifest = JSON.parse(source);
     const currentCounts = classificationCounts(manifest.entries ?? []);
     if (
-      additiveContracts.size !== 44 ||
-      manifest.entries?.length !== 159 ||
+      additiveContracts.size !== 51 ||
+      manifest.entries?.length !== 166 ||
       !exactValue(currentCounts, {
         core: 5,
-        policy: 18,
-        validateOnly: 46,
-        denied: 90,
+        policy: 20,
+        validateOnly: 49,
+        denied: 92,
       })
     ) {
       throw new Error("LEGACY_CORE_MANIFEST_PROJECTION_PRECONDITION");
@@ -2832,12 +3150,12 @@ function installPhaseCompilerManifestProjection(
     });
     if (
       contracts.size !== 21 ||
-      manifest.entries?.length !== 159 ||
+      manifest.entries?.length !== 166 ||
       !exactValue(counts(manifest.entries), {
         core: 5,
-        policy: 18,
-        validate: 46,
-        deny: 90,
+        policy: 20,
+        validate: 49,
+        deny: 92,
       })
     ) {
       throw new Error("PHASE_COMPILER_MANIFEST_PROJECTION_PRECONDITION");
@@ -2859,12 +3177,12 @@ function installPhaseCompilerManifestProjection(
       (entry) => !contracts.has(entry.path),
     );
     if (
-      manifest.entries.length !== 138 ||
+      manifest.entries.length !== 145 ||
       !exactValue(counts(manifest.entries), {
         core: 5,
-        policy: 15,
-        validate: 31,
-        deny: 87,
+        policy: 17,
+        validate: 34,
+        deny: 89,
       })
     ) {
       throw new Error("PHASE_COMPILER_MANIFEST_PROJECTION_PRECONDITION");
@@ -2900,7 +3218,12 @@ const PHASE_COMPILER_COMPATIBILITY_PRELOAD_URL =
 function runScript(
   scriptPath,
   timeoutMs,
-  { preloads = [], environment, cwd = repositoryRoot },
+  {
+    preloads = [],
+    scriptArguments = [],
+    environment,
+    cwd = repositoryRoot,
+  },
 ) {
   return new Promise((resolve) => {
     const started = performance.now();
@@ -2910,6 +3233,7 @@ function runScript(
     const argv = [
       ...preloads.flatMap((preload) => ["--import", preload]),
       absoluteScript,
+      ...scriptArguments,
     ];
     const child = spawn(process.execPath, argv, {
       cwd,
@@ -3344,7 +3668,7 @@ async function runV1StagingPolicy(v1StagingPolicy) {
       child.path,
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
-        preloads: [SANDBOX_PATH, PHASE_COMPILER_COMPATIBILITY_PRELOAD_URL],
+        preloads: [SANDBOX_PATH],
         environment: V1_STAGING_SAFE_ENVIRONMENT,
       },
     );
@@ -3396,6 +3720,77 @@ async function runV1StagingPolicy(v1StagingPolicy) {
   }
   console.log(
     "PASS_STATIC_READINESS_V1_STAGING_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2",
+  );
+}
+
+async function runV1RuntimePolicy(v1RuntimePolicy) {
+  const totalStarted = performance.now();
+  const results = [];
+  for (const child of v1RuntimePolicy) {
+    const remaining =
+      V1_RUNTIME_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
+    if (remaining <= 0) {
+      throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+    }
+    const authorizedBefore = authorizedV1RuntimeSnapshot();
+    const repositoryBefore = repositoryStateDigest();
+    const result = await runScript(
+      child.path,
+      Math.min(V1_RUNTIME_PER_CHILD_TIMEOUT_MS, remaining),
+      {
+        preloads: [SANDBOX_PATH],
+        scriptArguments: child.argv,
+        environment: V1_RUNTIME_SAFE_ENVIRONMENT,
+      },
+    );
+    const repositoryAfter = repositoryStateDigest();
+    const authorizedAfter = authorizedV1RuntimeSnapshot();
+    const authorizedUnchanged = authorizedBefore === authorizedAfter;
+    const repositoryUnchanged = repositoryBefore === repositoryAfter;
+    const stdout = outputIdentity(result.stdout);
+    const stderr = outputIdentity(result.stderr);
+    const passed =
+      result.exitCode === 0 &&
+      result.signal === null &&
+      result.stderr === "" &&
+      !result.overflow &&
+      !result.timedOut &&
+      !result.spawnError &&
+      authorizedUnchanged &&
+      repositoryUnchanged;
+    results.push({ path: child.path, passed });
+    console.log(
+      "STATIC_V1_RUNTIME_POLICY path=" +
+        child.path +
+        " exit=" +
+        (result.exitCode ?? "null") +
+        " duration_ms=" +
+        result.durationMs +
+        " stdout_sha256=" +
+        stdout.sha256 +
+        " stdout_bytes=" +
+        stdout.bytes +
+        " stdout_lines=" +
+        stdout.lines +
+        " stderr_sha256=" +
+        stderr.sha256 +
+        " stderr_bytes=" +
+        stderr.bytes +
+        " stderr_lines=" +
+        stderr.lines +
+        " authorized_scope_unchanged=" +
+        authorizedUnchanged +
+        " repository_state_unchanged=" +
+        repositoryUnchanged +
+        " source_identity_verified=true source_policy_verified=true result=" +
+        (passed ? "PASS" : "FAIL"),
+    );
+    if (!passed) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_POLICY_COMMAND_FAILED");
+    }
+  }
+  console.log(
+    "PASS_STATIC_READINESS_V1_RUNTIME_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2 live_orchestrator_executed=0",
   );
 }
 
@@ -3585,6 +3980,34 @@ function validateC2_2SourcePolicyMutations() {
 }
 
 async function runSelfTest() {
+  if (
+    !exactSet(
+      V1_RUNTIME_CHILDREN.map((child) => child.path),
+      EXPECTED_V1_RUNTIME_CHILD_PATHS,
+    )
+  ) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=V1_RUNTIME_POLICY_SET failures=1 internal_failures=0",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (
+    !V1_RUNTIME_CHILDREN.every(
+      (child) =>
+        JSON.stringify(child.argv) ===
+        JSON.stringify(EXPECTED_V1_RUNTIME_CHILD_ARGV.get(child.path)),
+    )
+  ) {
+    console.log(
+      "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=V1_RUNTIME_POLICY_ARGV failures=1 internal_failures=0",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  for (const child of V1_RUNTIME_CHILDREN) {
+    validateV1RuntimeChildSource(child);
+  }
   if (PHASE_COMPILER_CLOSURE_CONTRACTS.length !== 21) {
     console.log(
       "EXPECTED_FAIL_STATIC_READINESS_RUNNER_SELF_TEST stage=PHASE_COMPILER_CLOSURE_MISSING failures=1 internal_failures=0",
@@ -3758,6 +4181,7 @@ function listChildren(
   v1AdminPolicy,
   v1StagingPolicy,
   phaseCompilerPolicy,
+  v1RuntimePolicy,
 ) {
   for (const entry of core) {
     console.log(
@@ -3839,6 +4263,18 @@ function listChildren(
   console.log(
     "PASS_STATIC_READINESS_LIST_COMPLETE_PHASE_COMPILER core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 total=20",
   );
+  for (const child of v1RuntimePolicy) {
+    console.log(
+      "STATIC_V1_RUNTIME_POLICY_LIST path=" +
+        child.path +
+        " argv=node," +
+        child.path +
+        (child.argv.length === 0 ? "" : "," + child.argv.join(",")),
+    );
+  }
+  console.log(
+    "PASS_STATIC_READINESS_LIST_COMPLETE_V1_RUNTIME core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 v1_runtime=2 total=22",
+  );
 }
 
 try {
@@ -3858,6 +4294,7 @@ try {
       v1AdminPolicy,
       v1StagingPolicy,
       phaseCompilerPolicy,
+      v1RuntimePolicy,
     } = validateManifestForExecution();
     listChildren(
       core,
@@ -3867,6 +4304,7 @@ try {
       v1AdminPolicy,
       v1StagingPolicy,
       phaseCompilerPolicy,
+      v1RuntimePolicy,
     );
   } else if (option === "--c1-policy") {
     const { c1Policy } = validateManifestForExecution();
@@ -3886,6 +4324,9 @@ try {
   } else if (option === "--phase-compiler-policy") {
     const { phaseCompilerPolicy } = validateManifestForExecution();
     await runPhaseCompilerPolicy(phaseCompilerPolicy);
+  } else if (option === "--v1-runtime-policy") {
+    const { v1RuntimePolicy } = validateManifestForExecution();
+    await runV1RuntimePolicy(v1RuntimePolicy);
   } else if (option === "") {
     const {
       core,
@@ -3895,6 +4336,7 @@ try {
       v1AdminPolicy,
       v1StagingPolicy,
       phaseCompilerPolicy,
+      v1RuntimePolicy,
     } = validateManifestForExecution();
     await runCore(core);
     await runC1Policy(c1Policy);
@@ -3917,6 +4359,10 @@ try {
     await runPhaseCompilerPolicy(phaseCompilerPolicy);
     console.log(
       "PASS_STATIC_READINESS_PHASE_COMPILER_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 total=20 fail=0 repository_mutations=0 source_identities=21 import_allowlists=17 capability_profiles=21 compiled_phase_commands_executed=0",
+    );
+    await runV1RuntimePolicy(v1RuntimePolicy);
+    console.log(
+      "PASS_STATIC_READINESS_V1_RUNTIME_COMPLETE core=5 c1=4 c2_1=2 c2_2=2 v1_admin=2 v1_staging=2 phase_compiler=3 v1_runtime=2 total=22 fail=0 repository_mutations=0 live_orchestrator_executed=0",
     );
     console.log(
       "PASS_STATIC_READINESS_COMPLETE core=5 c1=4 fail=0 repository_mutations=0",

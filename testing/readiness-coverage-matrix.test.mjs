@@ -27,6 +27,12 @@ const V1_STAGING_EVIDENCE_PATH =
   "testing/admin-v1-staging-readiness-evidence.json";
 const V1_STAGING_EVIDENCE_TEST_PATH =
   "testing/admin-v1-staging-readiness-evidence.test.mjs";
+const V1_RUNTIME_EVIDENCE_PATH =
+  "testing/admin-v1-staging-runtime-evidence.json";
+const V1_PRE_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
+const V1_POST_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
 const RUNTIME_EVIDENCE_PATH =
   "testing/public-production-runtime-evidence.json";
 const BROWSER_LIVE_EVIDENCE_PATH =
@@ -72,7 +78,8 @@ const COVERAGE_STATES = new Set([
   "BROWSER_LIVE_EVIDENCE_INTEGRATED",
   "LIVE_ROUTE_EVIDENCE_INTEGRATED",
   "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
-  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
+  V1_PRE_RUNTIME_STATE,
+  V1_POST_RUNTIME_STATE,
   "V1_ADMIN_DEFERRED_FAIL_CLOSED",
 ]);
 const STATIC_CLASSES = new Set([
@@ -407,8 +414,7 @@ function validateMatrix() {
       );
       assert(entry.gap_code_or_null === null, "MATRIX_COVERED_WITH_GAP");
     } else if (
-      entry.coverage_state ===
-      "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED"
+      entry.coverage_state === V1_PRE_RUNTIME_STATE
     ) {
       assert(
         entry.static_evidence_paths.includes(V1_SCOPE_LEDGER_PATH) &&
@@ -424,6 +430,22 @@ function validateMatrix() {
         entry.gap_code_or_null === V1_ADMIN_GAP_CODE,
         "MATRIX_V1_ADMIN_CRITICAL_GAP",
       );
+    } else if (entry.coverage_state === V1_POST_RUNTIME_STATE) {
+      assert(
+        entry.static_evidence_paths.includes(V1_SCOPE_LEDGER_PATH) &&
+          entry.static_evidence_paths.includes(V1_SCOPE_TEST_PATH) &&
+          entry.static_evidence_paths.includes(V1_HERMETIC_TEST_PATH) &&
+          entry.static_evidence_paths.includes(V1_STAGING_SOURCE_POLICY_PATH) &&
+          entry.static_evidence_paths.includes(V1_STAGING_EVIDENCE_PATH) &&
+          entry.static_evidence_paths.includes(V1_STAGING_EVIDENCE_TEST_PATH) &&
+          entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+        "MATRIX_V1_ADMIN_RUNTIME_EVIDENCE_MISSING",
+      );
+      assert(
+        entry.launch_blocking === false,
+        "MATRIX_V1_ADMIN_RUNTIME_STILL_BLOCKING",
+      );
+      assert(entry.gap_code_or_null === null, "MATRIX_V1_ADMIN_RUNTIME_GAP");
     } else if (entry.coverage_state === "V1_ADMIN_DEFERRED_FAIL_CLOSED") {
       assert(
         entry.static_evidence_paths.includes(V1_SCOPE_LEDGER_PATH) &&
@@ -470,11 +492,18 @@ function validateMatrix() {
       "MATRIX_EVIDENCE_ARRAYS",
     );
     if (V1_ADMIN_CRITICAL_PATHS.includes(entry.path)) {
+      const preRuntime =
+        entry.coverage_state === V1_PRE_RUNTIME_STATE &&
+        entry.launch_blocking === true &&
+        entry.gap_code_or_null === V1_ADMIN_GAP_CODE &&
+        !entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH);
+      const postRuntime =
+        entry.coverage_state === V1_POST_RUNTIME_STATE &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null &&
+        entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH);
       assert(
-        entry.coverage_state ===
-          "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
-          entry.launch_blocking === true &&
-          entry.gap_code_or_null === V1_ADMIN_GAP_CODE &&
+        preRuntime !== postRuntime &&
           entry.static_evidence_paths.includes(V1_HERMETIC_TEST_PATH) &&
           entry.static_evidence_paths.includes(V1_STAGING_SOURCE_POLICY_PATH) &&
           entry.static_evidence_paths.includes(V1_STAGING_EVIDENCE_PATH) &&
@@ -530,6 +559,9 @@ function validateMatrix() {
   const authenticatedBrowserRuntimeEvidenceManifestEntry = manifestByPath.get(
     AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
   );
+  const v1RuntimeEvidenceManifestEntry = manifestByPath.get(
+    V1_RUNTIME_EVIDENCE_PATH,
+  );
   const authenticatedBrowserGapPaths = matrix.entries
     .filter(
       (entry) =>
@@ -549,6 +581,23 @@ function validateMatrix() {
   const v1AdminDeferredEntries = authenticatedLiveRouteEntries.filter(
     (entry) => V1_ADMIN_DEFERRED_PATHS.includes(entry.path),
   );
+  const v1AdminPreRuntime = v1AdminCriticalEntries.every(
+    (entry) =>
+      entry.coverage_state === V1_PRE_RUNTIME_STATE &&
+      entry.launch_blocking === true &&
+      entry.gap_code_or_null === V1_ADMIN_GAP_CODE &&
+      !entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+  );
+  const v1AdminPostRuntime = v1AdminCriticalEntries.every(
+    (entry) =>
+      entry.coverage_state === V1_POST_RUNTIME_STATE &&
+      entry.launch_blocking === false &&
+      entry.gap_code_or_null === null &&
+      entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+  );
+  const currentGovernance = v1AdminPostRuntime
+    ? "POST_RUNTIME"
+    : "PRE_RUNTIME";
   const partialStatic = matrix.entries.filter(
     (entry) => entry.coverage_state === "PARTIAL_STATIC",
   );
@@ -580,6 +629,7 @@ function validateMatrix() {
         ...LIVE_ROUTE_EVIDENCE_PATHS,
         ...AUTHENTICATED_BROWSER_PATHS,
         ...V1_ADMIN_DEFERRED_PATHS,
+        ...(v1AdminPostRuntime ? V1_ADMIN_CRITICAL_PATHS : []),
       ]).equal &&
       authenticatedBrowserGapPaths.length === 0 &&
       authenticatedBrowserEntries.length === 18 &&
@@ -603,13 +653,7 @@ function validateMatrix() {
         v1AdminCriticalEntries.map((entry) => entry.path),
         V1_ADMIN_CRITICAL_PATHS,
       ) &&
-      v1AdminCriticalEntries.every(
-        (entry) =>
-          entry.coverage_state ===
-            "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED" &&
-          entry.launch_blocking === true &&
-          entry.gap_code_or_null === V1_ADMIN_GAP_CODE,
-      ) &&
+      v1AdminPreRuntime !== v1AdminPostRuntime &&
       v1AdminDeferredEntries.length === 21 &&
       exactSet(
         v1AdminDeferredEntries.map((entry) => entry.path),
@@ -622,7 +666,7 @@ function validateMatrix() {
           entry.gap_code_or_null === null,
       ) &&
       partialStatic.length === 0 &&
-      launchBlocking === 7,
+      launchBlocking === (v1AdminPostRuntime ? 0 : 7),
     "MATRIX_RUNTIME_EVIDENCE_PARTITION",
   );
 
@@ -630,11 +674,13 @@ function validateMatrix() {
     (entry) => entry.launch_blocking === true,
   );
   assert(
-    launchBlockingEntries.length === 7 &&
-      exactSet(
-        launchBlockingEntries.map((entry) => entry.path),
-        V1_ADMIN_CRITICAL_PATHS,
-      ),
+    v1AdminPostRuntime
+      ? launchBlockingEntries.length === 0
+      : launchBlockingEntries.length === 7 &&
+        exactSet(
+          launchBlockingEntries.map((entry) => entry.path),
+          V1_ADMIN_CRITICAL_PATHS,
+        ),
     "MATRIX_BLOCKER_PARTITION",
   );
   assert(
@@ -744,6 +790,15 @@ function validateMatrix() {
         "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE",
     "MATRIX_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_SAFETY",
   );
+  assert(
+    v1RuntimeEvidenceManifestEntry?.role === "CONFIG" &&
+      v1RuntimeEvidenceManifestEntry.safety_class === "SAFE_STATIC_SUPPORT" &&
+      v1RuntimeEvidenceManifestEntry.ci_disposition === "VALIDATE_ONLY" &&
+      v1RuntimeEvidenceManifestEntry.command_argv === null &&
+      v1RuntimeEvidenceManifestEntry.reason_code ===
+        "ADMIN_V1_STAGING_RUNTIME_EVIDENCE",
+    "MATRIX_V1_RUNTIME_EVIDENCE_SAFETY",
+  );
   const partialEvidenceManifestEntry = manifestByPath.get(PARTIAL_EVIDENCE_PATH);
   assert(
     partialEvidenceManifestEntry?.role === "CONFIG" &&
@@ -765,35 +820,20 @@ function validateMatrix() {
     authenticatedBrowserIntegrated:
       authenticatedBrowserEvidenceIntegrated.length,
     v1AdminHermetic: v1AdminCriticalEntries.length,
+    v1AdminRuntimeValidated: v1AdminPostRuntime
+      ? v1AdminCriticalEntries.length
+      : 0,
     v1AdminDeferred: v1AdminDeferredEntries.length,
+    currentGovernance,
     launchBlocking,
     gaps,
   };
 }
 
-const currentLaunchBlocking = readStrictJson(MATRIX_PATH).entries.filter(
-  (entry) => entry.launch_blocking === true,
-).length;
-const currentDependencyReady = readStrictJson(MATRIX_PATH).entries.filter(
-  (entry) =>
-    entry.coverage_state ===
-    "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED",
-).length;
-
-if (currentLaunchBlocking === 7 && currentDependencyReady !== 7) {
-  console.log(
-    `EXPECTED_FAIL_READINESS_COVERAGE_MATRIX_ADMIN_V1_STAGING launch_blocking=${currentLaunchBlocking} dependency_ready=${currentDependencyReady} expected_dependency_ready=7 failures=1 internal_failures=0`,
-  );
-  process.exitCode = 1;
-} else if (currentLaunchBlocking !== 7) {
-  console.log(
-    `EXPECTED_FAIL_READINESS_COVERAGE_MATRIX_V1_ADMIN launch_blocking=${currentLaunchBlocking} expected=7 failures=1 internal_failures=0`,
-  );
-  process.exitCode = 1;
-} else try {
+try {
   const result = validateMatrix();
   console.log(
-    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} v1_admin_staging_dependency_ready=${result.v1AdminHermetic} v1_admin_deferred=${result.v1AdminDeferred} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} failures=0 internal_failures=0`,
+    `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} current_governance=${result.currentGovernance} v1_admin_staging_dependency_ready=${result.v1AdminHermetic} v1_admin_runtime_validated=${result.v1AdminRuntimeValidated} v1_admin_deferred=${result.v1AdminDeferred} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} public_launch=NO_GO failures=0 internal_failures=0`,
   );
 } catch (caught) {
   if (caught instanceof GovernanceError) {

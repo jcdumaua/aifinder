@@ -2,7 +2,7 @@ import path from "node:path";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 const PHASE = "34IA-34IZ";
-const BASELINE = "e2c7025a3985d71a7e354e9644bbd9069db0ab80";
+const BASELINE = "f7143b756b062287ab89e525a53010a379b51098";
 const BRANCH =
   "aifinder-phase-34ia-evidence-publication-runtime-validation-v3";
 const MARKER_PATH =
@@ -50,7 +50,7 @@ const PLAN = deepFreeze({
   marker: Object.freeze({
     bytes: 475,
     lf: 10,
-    sha256: "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e",
+    sha256: "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f",
     trailing_lf: true,
   }),
   environment_names: Object.freeze([
@@ -1537,7 +1537,7 @@ const DELTA13_BRANCH =
 const DELTA14_REGISTRATION_VERCEL_JSON_SHA256 =
   "2a4aac1c038892c42f499100077a443bfc17b50187f5eb020dfd066f96a77f7c";
 const DELTA14_MARKER_SHA256 =
-  "f3ad712e4b322a2ed57d5f7bd1e53eac02d6c3715e77a7f76b0d490ca28d358e";
+  "f8ad3e3d1d764c92d03bf44081e3b341d93680664645c257726a54940bfd4b2f";
 const DELTA14_AUTHORIZED_REPOSITORY_PATHS = Object.freeze([
   "testing/admin-v1-staging-runtime-core.mjs",
   "testing/admin-v1-staging-runtime-orchestrator.mjs",

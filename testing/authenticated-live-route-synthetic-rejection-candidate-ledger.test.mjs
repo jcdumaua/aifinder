@@ -103,9 +103,13 @@ const V1_DEFERRED_ROUTE_PATHS = Object.freeze(
 );
 const V1_CRITICAL_STATE =
   "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
+const V1_POST_RUNTIME_STATE =
+  "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
 const V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
 const V1_STAGING_GAP =
   "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
+const V1_RUNTIME_EVIDENCE_PATH =
+  "testing/admin-v1-staging-runtime-evidence.json";
 const C2_1_LEDGER_PATH =
   "testing/authenticated-live-route-semantic-branch-ledger.json";
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
@@ -1012,17 +1016,49 @@ function currentGovernanceValid(matrix, registry, historicalLedger) {
   const deferredWorkstream = registry?.workstreams?.find(
     (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED",
   );
-  return (
-    historicalLedger?.summary?.launch_blockers === 28 &&
-    historicalLedger?.summary?.routes_unblocked === 0 &&
-    currentRows?.length === 28 &&
+  const preRuntime =
     criticalRows?.length === 7 &&
     criticalRows.every(
       (entry) =>
         entry.coverage_state === V1_CRITICAL_STATE &&
         entry.launch_blocking === true &&
-        entry.gap_code_or_null === V1_STAGING_GAP,
+        entry.gap_code_or_null === V1_STAGING_GAP &&
+        !entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
     ) &&
+    matrix?.entries?.filter((entry) => entry.launch_blocking === true).length === 7 &&
+    registry?.source_matrix?.launch_blocking_count === 7 &&
+    criticalWorkstream?.gap_code === V1_STAGING_GAP &&
+    criticalWorkstream?.state ===
+      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+    criticalWorkstream?.authority_class ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
+    criticalWorkstream?.next_gate ===
+      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
+    registry?.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES";
+  const postRuntime =
+    criticalRows?.length === 7 &&
+    criticalRows.every(
+      (entry) =>
+        entry.coverage_state === V1_POST_RUNTIME_STATE &&
+        entry.launch_blocking === false &&
+        entry.gap_code_or_null === null &&
+        entry.static_evidence_paths.includes(V1_RUNTIME_EVIDENCE_PATH),
+    ) &&
+    matrix?.entries?.filter((entry) => entry.launch_blocking === true).length === 0 &&
+    registry?.source_matrix?.launch_blocking_count === 0 &&
+    criticalWorkstream?.gap_code === null &&
+    criticalWorkstream?.state ===
+      "STAGING_AUTHENTICATED_RUNTIME_EVIDENCE_COMPLETE" &&
+    criticalWorkstream?.authority_class === "ADMIN_V1_STAGING_RUNTIME_COMPLETE" &&
+    criticalWorkstream?.next_gate === "LEGAL_COMPLIANCE_POLICY_DESIGN" &&
+    registry?.overall_decision ===
+      "NO_GO_PENDING_LEGAL_COMPLIANCE_AND_FINAL_LAUNCH_AUTHORITY";
+  return (
+    historicalLedger?.summary?.launch_blockers === 28 &&
+    historicalLedger?.summary?.routes_unblocked === 0 &&
+    currentRows?.length === 28 &&
+    preRuntime !== postRuntime &&
+    (preRuntime || postRuntime) &&
     deferredRows?.length === 21 &&
     deferredRows.every(
       (entry) =>
@@ -1030,14 +1066,7 @@ function currentGovernanceValid(matrix, registry, historicalLedger) {
         entry.launch_blocking === false &&
         entry.gap_code_or_null === null,
     ) &&
-    matrix.entries.filter((entry) => entry.launch_blocking === true).length === 7 &&
     criticalWorkstream?.entry_count === 7 &&
-    criticalWorkstream.state ===
-      "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
-    criticalWorkstream.authority_class ===
-      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME" &&
-    criticalWorkstream.next_gate ===
-      "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
     criticalWorkstream.execution_authorized === false &&
     JSON.stringify(criticalWorkstream.source_paths) ===
       JSON.stringify(V1_CRITICAL_ROUTE_PATHS) &&
@@ -1046,8 +1075,7 @@ function currentGovernanceValid(matrix, registry, historicalLedger) {
     deferredWorkstream.execution_authorized === false &&
     JSON.stringify(deferredWorkstream.source_paths) ===
       JSON.stringify(V1_DEFERRED_ROUTE_PATHS) &&
-    registry.execution_authorized === false &&
-    registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES"
+    registry.execution_authorized === false
   );
 }
 
