@@ -9,12 +9,14 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rename,
   rm,
   symlink,
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -501,7 +503,7 @@ async function testDiagnostics() {
 }
 
 async function testSnapshotAdapter(referenceSpec) {
-  const tempRoot = await mkdtemp('/private/tmp/aifinder-phase-34ba-task1-');
+  const tempRoot = await mkdtemp(join(await realpath(tmpdir()), 'aifinder-phase-34ba-task1-'));
   const repo = await createSyntheticRepository(tempRoot);
   const outPath = join(tempRoot, 'snapshot.json');
   try {

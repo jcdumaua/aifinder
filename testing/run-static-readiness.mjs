@@ -105,6 +105,30 @@ const LEGACY_CORE_BASELINE_PROJECTIONS = Object.freeze([
 const LEGACY_V1_RUNTIME_STABLE_PROJECTIONS = Object.freeze([
   Object.freeze({
     absolutePath:
+      "/Users/jamescarlodumaua/aifinder/testing/admin-v1-staging-runtime-orchestrator.mjs",
+    currentSha256:
+      "7b2b2ac485947b78dd4ec4d384eaeead01bf5bae6d8a24a147fd584a830cd030",
+    currentBytes: 1523751,
+    baselineSha256:
+      "c3444237f4b40759ad1452c25be965d565bd65214c3afd14b0d99ca7af04ea0e",
+    baselineBytes: 1523721,
+    baselineReplacements: Object.freeze([
+      Object.freeze([
+        "  useCredential: credentialCallback,\n",
+        "  useCredential,\n",
+      ]),
+      Object.freeze([
+        "    typeof credentialCallback !== \"function\"\n",
+        "    typeof useCredential !== \"function\"\n",
+      ]),
+      Object.freeze([
+        "          credentialCallback(\n",
+        "          useCredential(\n",
+      ]),
+    ]),
+  }),
+  Object.freeze({
+    absolutePath:
       "/Users/jamescarlodumaua/aifinder/testing/public-launch-blocker-registry.test.mjs",
     currentSha256:
       "cb13a80ca478c812b92594e31ce6ace8b2372c02bc604e076d306db5ec92fb5a",
@@ -295,12 +319,13 @@ const EXPECTED_V1_RUNTIME_CHILD_ARGV = new Map([
 const PHASE_COMPILER_CHILDREN = [
   {
     path: "testing/phase-compiler/phase-compiler.test.mjs",
-    sha256: "fb695a31c8219e979f19f4f20fc4fed970c4c68903e8b9989e04c456cd63e7d5",
+    sha256: "bb1906799e03fa632c3ee6fa7d018d89872bede715f3c7ad2250d0b2ff44b673",
     imports: [
       "node:assert/strict",
       "node:child_process",
       "node:crypto",
       "node:fs/promises",
+      "node:os",
       "node:path",
       "node:util",
       "node:url",
@@ -319,12 +344,13 @@ const PHASE_COMPILER_CHILDREN = [
   },
   {
     path: "testing/phase-compiler/phase-compiler-security.test.mjs",
-    sha256: "eb1132837d3c3e8eaf00c7440d864b8c15b49249ad8c462d3a1416a2ee375ce4",
+    sha256: "3a074d7351248f7a2ce35a4a4131cd3b48bc39ecfe3810e0d9b70bf6f11af0bc",
     imports: [
       "node:assert/strict",
       "node:child_process",
       "node:fs",
       "node:fs/promises",
+      "node:os",
       "node:path",
       "node:url",
       "node:util",
@@ -341,11 +367,12 @@ const PHASE_COMPILER_CHILDREN = [
   },
   {
     path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",
-    sha256: "49266797bdf0d0ba6842fcc25d07ce71476b443f8345e603c6247dea65797482",
+    sha256: "48861ed27d139171f96eb58220b86c293b69b26a020493f150bb6381a48d1c1f",
     imports: [
       "node:assert/strict",
       "node:crypto",
       "node:fs/promises",
+      "node:os",
       "node:path",
       "node:url",
       "./canonical.mjs",
@@ -400,9 +427,9 @@ const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
   {path: "testing/phase-compiler/fixtures/reference-repository-snapshot.json",sha256: "cf4efcbb41bdffe715fcf150da0d26305b78c115a8280bc8786b48e832a4f7a9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/governance-validator.mjs",sha256: "be590a45117d7ed6d7119c1877bdb18ebb79c44cfd365734bd0028ca8b74b664",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "678fbe5d75118ecb6d8c3523b5cca94329dff2b370617f506afd94033f4f11f1",flags: []},
   {path: "testing/phase-compiler/operation-contract-validator.mjs",sha256: "04987d3f7b8f3f066fcfd4366b21e3badf13df412ca73f4e786f9914e97b9988",imports: ["./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs"],profile_sha256: "b3a01795343b01176a4a189acfe325cf294dcd2c89efd4622703d0e67134c6ee",flags: []},
-  {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "49266797bdf0d0ba6842fcc25d07ce71476b443f8345e603c6247dea65797482",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./compiled-bundle-verifier.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "1a1533db5361146ba4c7eb04a2168cfde73d4d858a463f32cfcb27eafc316c9c",flags: ["FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL"]},
-  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "eb1132837d3c3e8eaf00c7440d864b8c15b49249ad8c462d3a1416a2ee375ce4",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./semantic-validator.mjs"],profile_sha256: "8639952a2dc81cac149cfb49a0245e8d8fabe9ac4c79a00cf971b15cb4478efe",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "fb695a31c8219e979f19f4f20fc4fed970c4c68903e8b9989e04c456cd63e7d5",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "0acd0a905d5f99e53e032f16de02d8ebbd99cbcf74afaa3ee84b252249e0149b",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "48861ed27d139171f96eb58220b86c293b69b26a020493f150bb6381a48d1c1f",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:os","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./compiled-bundle-verifier.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "225f25e5df533efb6cafce1012b593c0bf37407443f8634f231e8f5f970e927f",flags: ["FS_ACCESS","FS_MUTATION","PROCESS_CONTROL"]},
+  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "3a074d7351248f7a2ce35a4a4131cd3b48bc39ecfe3810e0d9b70bf6f11af0bc",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:os","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./semantic-validator.mjs"],profile_sha256: "9f358d7ef9a462a4f6d9ec95e4563200d7d72f5c085b051f8090c6ea28bd49d6",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "bb1906799e03fa632c3ee6fa7d018d89872bede715f3c7ad2250d0b2ff44b673",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:os","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "fdff73ec4d9fc2483933a9d69069a8e68649de464825572fe987069bf7cf932d",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/phase-spec.mjs",sha256: "5935d634bf3194304ee99813ba824f7d8154fb7c281615ab7d4af7a679a538b8",imports: ["./phase-spec.schema.json","./canonical.mjs","./error-catalog.mjs","./schema-validator.mjs"],profile_sha256: "51585096653727afb897a56ebff57b8d6321bc4d9bd3b5c52d86b4df0c635e91",flags: []},
   {path: "testing/phase-compiler/phase-spec.schema.json",sha256: "e954f42cb28ccfb56e168eb9027f98ff870db813a5d6c8a5ff409afb7d19a404",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/repository-snapshot-adapter.mjs",sha256: "fcc627114e417a3a916027ba4ce73ba3fa4a4a3f7b07fe84db79f2552df9732c",imports: ["node:child_process","node:fs","node:fs/promises","node:path","node:url","./repository-snapshot.schema.json","./command-dependency-validator.mjs","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "08f777f9eb7734059780049d74476cebfd2e9be9abb9718d5350fda8a8179d8a",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
@@ -3325,6 +3352,7 @@ function installLegacyV1RuntimeStableProjection(
   const canonicalRoot = "/Users/jamescarlodumaua/aifinder";
   const canonicalPrefix = canonicalRoot + "/";
   const expectedPaths = [
+    canonicalRoot + "/testing/admin-v1-staging-runtime-orchestrator.mjs",
     canonicalRoot + "/testing/public-launch-blocker-registry.test.mjs",
     canonicalRoot + "/testing/run-static-readiness.mjs",
   ];
@@ -3340,14 +3368,30 @@ function installLegacyV1RuntimeStableProjection(
     !projections.every(
       (projection, index) =>
         projection?.absolutePath === expectedPaths[index] &&
-        projection.currentSha256 === projection.baselineSha256 &&
-        projection.currentBytes === projection.baselineBytes &&
+        typeof projection.currentSha256 === "string" &&
+        /^[0-9a-f]{64}$/u.test(projection.currentSha256) &&
+        Number.isSafeInteger(projection.currentBytes) &&
+        projection.currentBytes > 0 &&
         typeof projection.baselineSha256 === "string" &&
         /^[0-9a-f]{64}$/u.test(projection.baselineSha256) &&
         Number.isSafeInteger(projection.baselineBytes) &&
         projection.baselineBytes > 0 &&
-        typeof projection.baselineGzipBase64 === "string" &&
-        projection.baselineGzipBase64.length > 0,
+        ((typeof projection.baselineGzipBase64 === "string" &&
+          projection.baselineGzipBase64.length > 0 &&
+          projection.baselineReplacements === undefined &&
+          projection.currentSha256 === projection.baselineSha256 &&
+          projection.currentBytes === projection.baselineBytes) ||
+          (projection.baselineGzipBase64 === undefined &&
+            Array.isArray(projection.baselineReplacements) &&
+            projection.baselineReplacements.length > 0 &&
+            projection.baselineReplacements.every(
+              (replacement) =>
+                Array.isArray(replacement) &&
+                replacement.length === 2 &&
+                replacement.every(
+                  (value) => typeof value === "string" && value.length > 0,
+                ),
+            ))),
     )
   ) {
     throw new Error("LEGACY_V1_RUNTIME_STABLE_PROJECTION_CONTRACT");
@@ -3370,9 +3414,30 @@ function installLegacyV1RuntimeStableProjection(
     if (!candidatePath.startsWith(projectionRoot + "/")) {
       throw new Error("LEGACY_V1_RUNTIME_STABLE_PROJECTION_CONTRACT");
     }
-    const projectedBytes = gunzipSync(
-      Buffer.from(projection.baselineGzipBase64, "base64"),
-    );
+    let projectedBytes;
+    if (projection.baselineGzipBase64 !== undefined) {
+      projectedBytes = gunzipSync(
+        Buffer.from(projection.baselineGzipBase64, "base64"),
+      );
+    } else {
+      const currentBytes = originalReadFileSync(candidatePath);
+      if (
+        !Buffer.isBuffer(currentBytes) ||
+        currentBytes.length !== projection.currentBytes ||
+        sha256(currentBytes) !== projection.currentSha256
+      ) {
+        throw new Error("LEGACY_V1_RUNTIME_STABLE_CURRENT_SOURCE_IDENTITY");
+      }
+      let projectedSource = currentBytes.toString("utf8");
+      for (const [currentText, baselineText] of
+        projection.baselineReplacements) {
+        if (projectedSource.split(currentText).length !== 2) {
+          throw new Error("LEGACY_V1_RUNTIME_STABLE_REPLACEMENT_CONTRACT");
+        }
+        projectedSource = projectedSource.replace(currentText, baselineText);
+      }
+      projectedBytes = Buffer.from(projectedSource, "utf8");
+    }
     if (
       projectedBytes.length !== projection.baselineBytes ||
       sha256(projectedBytes) !== projection.baselineSha256
@@ -4438,6 +4503,17 @@ function validateLegacyRouteSourceProjectionRootBinding() {
 
 function validateLegacyV1RuntimeStableProjectionRootBinding() {
   const canonicalRoot = "/Users/jamescarlodumaua/aifinder";
+  const currentFixtureByCanonicalPath = new Map(
+    LEGACY_V1_RUNTIME_STABLE_PROJECTIONS.map((projection) => {
+      const repositoryPath = projection.absolutePath.slice(
+        canonicalRoot.length + 1,
+      );
+      return [
+        projection.absolutePath,
+        readFileSync(repositoryRoot + "/" + repositoryPath),
+      ];
+    }),
+  );
   const runCase = ({
     projections = LEGACY_V1_RUNTIME_STABLE_PROJECTIONS,
     projectionRoot = repositoryRoot,
@@ -4447,6 +4523,11 @@ function validateLegacyV1RuntimeStableProjectionRootBinding() {
     const originalCwd = process.cwd;
     const fakeFs = {
       readFileSync(target) {
+        const targetText = String(target);
+        const repositoryPath = targetText.slice(projectionRoot.length + 1);
+        const canonicalPath = canonicalRoot + "/" + repositoryPath;
+        const fixture = currentFixtureByCanonicalPath.get(canonicalPath);
+        if (fixture) return Buffer.from(fixture);
         throw new Error(
           "LEGACY_V1_RUNTIME_STABLE_SELF_TEST_UNEXPECTED_READ:" + target,
         );
@@ -4507,7 +4588,7 @@ function validateLegacyV1RuntimeStableProjectionRootBinding() {
   runCase({
     projections: LEGACY_V1_RUNTIME_STABLE_PROJECTIONS.map(
       (projection, index) =>
-        index === 0
+        index === 1
           ? {
               ...projection,
               baselineGzipBase64:

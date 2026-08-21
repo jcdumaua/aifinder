@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bufferIdentity, canonicalJsonBuffer, compareUtf8, parseStrictJson, repositorySnapshotDigest, semanticDigest } from './canonical.mjs';
@@ -533,7 +534,7 @@ async function main() {
     variant,
     artifacts: mutateInspectionRenderedContent(p04Bundle, variant),
   }));
-  const tempRoot = await mkdtemp('/private/tmp/aifinder-phase-34ba-determinism-');
+  const tempRoot = await mkdtemp(join(await realpath(tmpdir()), 'aifinder-phase-34ba-determinism-'));
   try {
     const firstDestination = join(tempRoot, 'first');
     const secondDestination = join(tempRoot, 'second');

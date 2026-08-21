@@ -18125,11 +18125,11 @@ function generateProjectOidcCredential(budgets) {
 async function runTemporaryAutomationBypassCycle({
   budgets,
   hostname,
-  useCredential,
+  useCredential: credentialCallback,
 }) {
   if (
     protectedAccessCredentialActive ||
-    typeof useCredential !== "function"
+    typeof credentialCallback !== "function"
   ) {
     fail("TEMPORARY_BYPASS_CYCLE_STATE");
   }
@@ -18207,7 +18207,7 @@ async function runTemporaryAutomationBypassCycle({
           });
         },
         use: async (activeCredential) =>
-          useCredential(
+          credentialCallback(
             activeCredential,
             Object.freeze({
               environment_designated_record_present:

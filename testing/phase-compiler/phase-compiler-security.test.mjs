@@ -10,6 +10,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   symlink,
@@ -17,6 +18,7 @@ import {
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -276,7 +278,7 @@ async function main() {
   const alternateZipSpec = structuredClone(alternateSpec);
   alternateZipSpec.artifact_policy.allow_zip = true;
   const alternateZipCompiled = compilePhaseBundle({ authoredSpec: alternateZipSpec, snapshot });
-  const tempRoot = await mkdtemp('/private/tmp/aifinder-phase-34ba-security-');
+  const tempRoot = await mkdtemp(join(await realpath(tmpdir()), 'aifinder-phase-34ba-security-'));
   let compiledCommandsExecuted = 0;
   try {
     const destination = join(tempRoot, 'compiled');
