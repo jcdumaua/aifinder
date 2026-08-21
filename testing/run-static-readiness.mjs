@@ -3,6 +3,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -107,8 +108,17 @@ const LEGACY_V1_RUNTIME_STABLE_PROJECTIONS = Object.freeze([
     absolutePath:
       "/Users/jamescarlodumaua/aifinder/testing/admin-v1-staging-runtime-orchestrator.mjs",
     currentSha256:
-      "7b2b2ac485947b78dd4ec4d384eaeead01bf5bae6d8a24a147fd584a830cd030",
+      "b532650b0c3173f16e9d175741586d4acda9a0160f4aef2239a9843cc4b0f095",
     currentBytes: 1523751,
+    currentIdentityNormalization: "ZERO_REVIEWED_DIGEST_PINS",
+    baselineReviewedPins: Object.freeze([
+      "fa50068bd98788f6d468cd9ea34ec447007d74cd979585fd321ce4867822d1b9",
+      "919aa7c687be1481509a1c225537245d5490b6b1f20dd39b32557e6d49b78cce",
+    ]),
+    projectedReviewedPins: Object.freeze([
+      "f6abe133fcde945384e5aeb8c2e399b439fc9b1e49fbf04bc37339011b16aae4",
+      "cf668b71448ebd144bfde73419050ebd492ddaceccb1e6910f6448a2d44a0ecd",
+    ]),
     baselineSha256:
       "c3444237f4b40759ad1452c25be965d565bd65214c3afd14b0d99ca7af04ea0e",
     baselineBytes: 1523721,
@@ -3358,6 +3368,39 @@ function installLegacyV1RuntimeStableProjection(
   ];
   const sha256 = (bytes) =>
     createHash("sha256").update(bytes).digest("hex");
+  const reviewedPinNames = [
+    "REVIEWED_PRELIVE_AGGREGATE_SHA256",
+    "REVIEWED_STABLE_SURFACE_SHA256",
+  ];
+  const replaceReviewedPins = (source, replacements) => {
+    if (
+      !Array.isArray(replacements) ||
+      replacements.length !== reviewedPinNames.length ||
+      !replacements.every(
+        (replacement) =>
+          typeof replacement === "string" &&
+          /^[0-9a-f]{64}$/u.test(replacement),
+      )
+    ) {
+      throw new Error("LEGACY_V1_RUNTIME_STABLE_REVIEWED_PIN_CONTRACT");
+    }
+    let result = source;
+    for (const [index, name] of reviewedPinNames.entries()) {
+      const pattern = new RegExp(
+        `(const ${name} =\\n  ")[a-f0-9]{64}(";)`,
+        "gu",
+      );
+      if ([...result.matchAll(pattern)].length !== 1) {
+        throw new Error("LEGACY_V1_RUNTIME_STABLE_REVIEWED_PIN_CONTRACT");
+      }
+      result = result.replace(
+        pattern,
+        (_match, prefix, suffix) =>
+          prefix + replacements[index] + suffix,
+      );
+    }
+    return result;
+  };
   if (
     typeof projectionRoot !== "string" ||
     !projectionRoot.startsWith("/") ||
@@ -3372,6 +3415,28 @@ function installLegacyV1RuntimeStableProjection(
         /^[0-9a-f]{64}$/u.test(projection.currentSha256) &&
         Number.isSafeInteger(projection.currentBytes) &&
         projection.currentBytes > 0 &&
+        (index === 0
+          ? projection.currentIdentityNormalization ===
+              "ZERO_REVIEWED_DIGEST_PINS" &&
+            Array.isArray(projection.baselineReviewedPins) &&
+            projection.baselineReviewedPins.length ===
+              reviewedPinNames.length &&
+            projection.baselineReviewedPins.every(
+              (pin) =>
+                typeof pin === "string" &&
+                /^[0-9a-f]{64}$/u.test(pin),
+            ) &&
+            Array.isArray(projection.projectedReviewedPins) &&
+            projection.projectedReviewedPins.length ===
+              reviewedPinNames.length &&
+            projection.projectedReviewedPins.every(
+              (pin) =>
+                typeof pin === "string" &&
+                /^[0-9a-f]{64}$/u.test(pin),
+            )
+          : projection.currentIdentityNormalization === undefined &&
+            projection.baselineReviewedPins === undefined &&
+            projection.projectedReviewedPins === undefined) &&
         typeof projection.baselineSha256 === "string" &&
         /^[0-9a-f]{64}$/u.test(projection.baselineSha256) &&
         Number.isSafeInteger(projection.baselineBytes) &&
@@ -3415,32 +3480,107 @@ function installLegacyV1RuntimeStableProjection(
       throw new Error("LEGACY_V1_RUNTIME_STABLE_PROJECTION_CONTRACT");
     }
     let projectedBytes;
+    let historicalProjectedBytes;
     if (projection.baselineGzipBase64 !== undefined) {
       projectedBytes = gunzipSync(
         Buffer.from(projection.baselineGzipBase64, "base64"),
       );
     } else {
       const currentBytes = originalReadFileSync(candidatePath);
+      let currentSource;
+      let currentIdentityBytes = currentBytes;
+      if (
+        Buffer.isBuffer(currentBytes) &&
+        projection.currentIdentityNormalization ===
+          "ZERO_REVIEWED_DIGEST_PINS"
+      ) {
+        currentSource = currentBytes.toString("utf8");
+        currentIdentityBytes = Buffer.from(
+          replaceReviewedPins(
+            currentSource,
+            reviewedPinNames.map(() => "0".repeat(64)),
+          ),
+          "utf8",
+        );
+      }
       if (
         !Buffer.isBuffer(currentBytes) ||
         currentBytes.length !== projection.currentBytes ||
-        sha256(currentBytes) !== projection.currentSha256
+        sha256(currentIdentityBytes) !== projection.currentSha256
       ) {
         throw new Error("LEGACY_V1_RUNTIME_STABLE_CURRENT_SOURCE_IDENTITY");
       }
-      let projectedSource = currentBytes.toString("utf8");
+      let projectedSource = currentSource ?? currentBytes.toString("utf8");
+      let historicalProjectedSource;
+      if (
+        projection.currentIdentityNormalization ===
+        "ZERO_REVIEWED_DIGEST_PINS"
+      ) {
+        historicalProjectedSource = replaceReviewedPins(
+          projectedSource,
+          projection.baselineReviewedPins,
+        );
+        projectedSource = replaceReviewedPins(
+          projectedSource,
+          projection.projectedReviewedPins,
+        );
+      }
       for (const [currentText, baselineText] of
         projection.baselineReplacements) {
         if (projectedSource.split(currentText).length !== 2) {
           throw new Error("LEGACY_V1_RUNTIME_STABLE_REPLACEMENT_CONTRACT");
         }
         projectedSource = projectedSource.replace(currentText, baselineText);
+        if (historicalProjectedSource !== undefined) {
+          if (historicalProjectedSource.split(currentText).length !== 2) {
+            throw new Error(
+              "LEGACY_V1_RUNTIME_STABLE_REPLACEMENT_CONTRACT",
+            );
+          }
+          historicalProjectedSource = historicalProjectedSource.replace(
+            currentText,
+            baselineText,
+          );
+        }
       }
       projectedBytes = Buffer.from(projectedSource, "utf8");
+      if (historicalProjectedSource !== undefined) {
+        historicalProjectedBytes = Buffer.from(
+          historicalProjectedSource,
+          "utf8",
+        );
+        if (
+          historicalProjectedBytes.length !== projection.baselineBytes ||
+          sha256(historicalProjectedBytes) !== projection.baselineSha256
+        ) {
+          throw new Error("LEGACY_V1_RUNTIME_STABLE_SOURCE_IDENTITY");
+        }
+      }
     }
+    const projectionIdentityMatches =
+      historicalProjectedBytes === undefined
+        ? sha256(projectedBytes) === projection.baselineSha256
+        : sha256(
+            Buffer.from(
+              replaceReviewedPins(
+                projectedBytes.toString("utf8"),
+                reviewedPinNames.map(() => "0".repeat(64)),
+              ),
+              "utf8",
+            ),
+          ) ===
+          sha256(
+            Buffer.from(
+              replaceReviewedPins(
+                historicalProjectedBytes.toString("utf8"),
+                reviewedPinNames.map(() => "0".repeat(64)),
+              ),
+              "utf8",
+            ),
+          );
     if (
       projectedBytes.length !== projection.baselineBytes ||
-      sha256(projectedBytes) !== projection.baselineSha256
+      !projectionIdentityMatches
     ) {
       throw new Error("LEGACY_V1_RUNTIME_STABLE_SOURCE_IDENTITY");
     }
@@ -3465,7 +3605,7 @@ function installLegacyV1RuntimeStableProjection(
   syncBuiltinESMExports();
 }
 
-function legacyV1RuntimeStablePreloadUrl() {
+function legacyV1RuntimeStablePreloadSource() {
   const source = [
     "import " + JSON.stringify(pathToFileURL(SANDBOX_PATH).href) + ";",
     'import fs from "node:fs";',
@@ -3481,14 +3621,77 @@ function legacyV1RuntimeStablePreloadUrl() {
       ");",
     "",
   ].join("\n");
+  return Buffer.from(source, "utf8");
+}
+
+const LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE =
+  legacyV1RuntimeStablePreloadSource();
+
+function isPathInsideRepository(absolutePath) {
+  const relative = path.relative(repositoryRoot, absolutePath);
   return (
-    "data:text/javascript;base64," +
-    Buffer.from(source, "utf8").toString("base64")
+    relative === "" ||
+    (relative !== ".." &&
+      !relative.startsWith(".." + path.sep) &&
+      !path.isAbsolute(relative))
   );
 }
 
-const LEGACY_V1_RUNTIME_STABLE_PRELOAD_URL =
-  legacyV1RuntimeStablePreloadUrl();
+async function withLegacyV1RuntimeStablePreload(callback) {
+  if (typeof callback !== "function") {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_CALLBACK");
+  }
+  let temporaryDirectory;
+  try {
+    temporaryDirectory = mkdtempSync(
+      path.join(os.tmpdir(), "aifinder-v1-runtime-preload-"),
+    );
+    if (isPathInsideRepository(temporaryDirectory)) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_LOCATION");
+    }
+    const preloadPath = path.join(
+      temporaryDirectory,
+      "legacy-v1-runtime-stable-preload.mjs",
+    );
+    writeFileSync(preloadPath, LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    const preloadInfo = statSync(preloadPath);
+    if (!preloadInfo.isFile() || (preloadInfo.mode & 0o777) !== 0o600) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_MODE");
+    }
+    const materializedSource = readFileSync(preloadPath);
+    if (
+      materializedSource.length !==
+        LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE.length ||
+      digest(materializedSource) !==
+        digest(LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE)
+    ) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_SOURCE_IDENTITY");
+    }
+    const preloadUrl = pathToFileURL(preloadPath);
+    if (
+      preloadUrl.protocol !== "file:" ||
+      Buffer.byteLength(preloadUrl.href, "utf8") >= 4_096
+    ) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_URL");
+    }
+    return await callback(
+      Object.freeze({
+        preloadPath,
+        preloadSourceSha256: digest(materializedSource),
+        preloadSourceBytes: materializedSource.length,
+        preloadUrl: preloadUrl.href,
+        temporaryDirectory,
+      }),
+    );
+  } finally {
+    if (temporaryDirectory !== undefined) {
+      rmSync(temporaryDirectory, { recursive: true });
+    }
+  }
+}
 
 function installPhaseCompilerManifestProjection(
   fs,
@@ -4094,73 +4297,75 @@ async function runV1StagingPolicy(v1StagingPolicy) {
 async function runV1RuntimePolicy(v1RuntimePolicy) {
   const totalStarted = performance.now();
   const results = [];
-  for (const child of v1RuntimePolicy) {
-    const remaining =
-      V1_RUNTIME_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
-    if (remaining <= 0) {
-      throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+  await withLegacyV1RuntimeStablePreload(async ({ preloadUrl }) => {
+    for (const child of v1RuntimePolicy) {
+      const remaining =
+        V1_RUNTIME_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
+      if (remaining <= 0) {
+        throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+      }
+      const authorizedBefore = authorizedV1RuntimeSnapshot();
+      const repositoryBefore = repositoryStateDigest();
+      const result = await runScript(
+        child.path,
+        Math.min(V1_RUNTIME_PER_CHILD_TIMEOUT_MS, remaining),
+        {
+          preloads:
+            child.path ===
+            "testing/admin-v1-staging-runtime-source-policy.test.mjs"
+              ? [preloadUrl]
+              : [SANDBOX_PATH],
+          scriptArguments: child.argv,
+          environment: V1_RUNTIME_SAFE_ENVIRONMENT,
+        },
+      );
+      const repositoryAfter = repositoryStateDigest();
+      const authorizedAfter = authorizedV1RuntimeSnapshot();
+      const authorizedUnchanged = authorizedBefore === authorizedAfter;
+      const repositoryUnchanged = repositoryBefore === repositoryAfter;
+      const stdout = outputIdentity(result.stdout);
+      const stderr = outputIdentity(result.stderr);
+      const passed =
+        result.exitCode === 0 &&
+        result.signal === null &&
+        result.stderr === "" &&
+        !result.overflow &&
+        !result.timedOut &&
+        !result.spawnError &&
+        authorizedUnchanged &&
+        repositoryUnchanged;
+      results.push({ path: child.path, passed });
+      console.log(
+        "STATIC_V1_RUNTIME_POLICY path=" +
+          child.path +
+          " exit=" +
+          (result.exitCode ?? "null") +
+          " duration_ms=" +
+          result.durationMs +
+          " stdout_sha256=" +
+          stdout.sha256 +
+          " stdout_bytes=" +
+          stdout.bytes +
+          " stdout_lines=" +
+          stdout.lines +
+          " stderr_sha256=" +
+          stderr.sha256 +
+          " stderr_bytes=" +
+          stderr.bytes +
+          " stderr_lines=" +
+          stderr.lines +
+          " authorized_scope_unchanged=" +
+          authorizedUnchanged +
+          " repository_state_unchanged=" +
+          repositoryUnchanged +
+          " source_identity_verified=true source_policy_verified=true result=" +
+          (passed ? "PASS" : "FAIL"),
+      );
+      if (!passed) {
+        throw new GovernanceError("RUNNER_V1_RUNTIME_POLICY_COMMAND_FAILED");
+      }
     }
-    const authorizedBefore = authorizedV1RuntimeSnapshot();
-    const repositoryBefore = repositoryStateDigest();
-    const result = await runScript(
-      child.path,
-      Math.min(V1_RUNTIME_PER_CHILD_TIMEOUT_MS, remaining),
-      {
-        preloads:
-          child.path ===
-          "testing/admin-v1-staging-runtime-source-policy.test.mjs"
-            ? [LEGACY_V1_RUNTIME_STABLE_PRELOAD_URL]
-            : [SANDBOX_PATH],
-        scriptArguments: child.argv,
-        environment: V1_RUNTIME_SAFE_ENVIRONMENT,
-      },
-    );
-    const repositoryAfter = repositoryStateDigest();
-    const authorizedAfter = authorizedV1RuntimeSnapshot();
-    const authorizedUnchanged = authorizedBefore === authorizedAfter;
-    const repositoryUnchanged = repositoryBefore === repositoryAfter;
-    const stdout = outputIdentity(result.stdout);
-    const stderr = outputIdentity(result.stderr);
-    const passed =
-      result.exitCode === 0 &&
-      result.signal === null &&
-      result.stderr === "" &&
-      !result.overflow &&
-      !result.timedOut &&
-      !result.spawnError &&
-      authorizedUnchanged &&
-      repositoryUnchanged;
-    results.push({ path: child.path, passed });
-    console.log(
-      "STATIC_V1_RUNTIME_POLICY path=" +
-        child.path +
-        " exit=" +
-        (result.exitCode ?? "null") +
-        " duration_ms=" +
-        result.durationMs +
-        " stdout_sha256=" +
-        stdout.sha256 +
-        " stdout_bytes=" +
-        stdout.bytes +
-        " stdout_lines=" +
-        stdout.lines +
-        " stderr_sha256=" +
-        stderr.sha256 +
-        " stderr_bytes=" +
-        stderr.bytes +
-        " stderr_lines=" +
-        stderr.lines +
-        " authorized_scope_unchanged=" +
-        authorizedUnchanged +
-        " repository_state_unchanged=" +
-        repositoryUnchanged +
-        " source_identity_verified=true source_policy_verified=true result=" +
-        (passed ? "PASS" : "FAIL"),
-    );
-    if (!passed) {
-      throw new GovernanceError("RUNNER_V1_RUNTIME_POLICY_COMMAND_FAILED");
-    }
-  }
+  });
   console.log(
     "PASS_STATIC_READINESS_V1_RUNTIME_POLICY children=2 pass=2 fail=0 authorized_scope_mutations=0 repository_mutations=0 source_identities=2 source_policy_gates=2 live_orchestrator_executed=0",
   );
@@ -4551,10 +4756,39 @@ function validateLegacyV1RuntimeStableProjectionRootBinding() {
         const projected = fakeFs.readFileSync(
           projectionRoot + "/" + repositoryPath,
         );
+        let historicalProjected = projected;
+        if (
+          Buffer.isBuffer(projected) &&
+          projection.currentIdentityNormalization ===
+            "ZERO_REVIEWED_DIGEST_PINS"
+        ) {
+          let historicalSource = projected.toString("utf8");
+          const pinNames = [
+            "REVIEWED_PRELIVE_AGGREGATE_SHA256",
+            "REVIEWED_STABLE_SURFACE_SHA256",
+          ];
+          for (const [index, name] of pinNames.entries()) {
+            const pattern = new RegExp(
+              `(const ${name} =\\n  ")[a-f0-9]{64}(";)`,
+              "gu",
+            );
+            if ([...historicalSource.matchAll(pattern)].length !== 1) {
+              throw new GovernanceError(
+                "RUNNER_LEGACY_V1_RUNTIME_STABLE_BASELINE_FIXTURE",
+              );
+            }
+            historicalSource = historicalSource.replace(
+              pattern,
+              (_match, prefix, suffix) =>
+                prefix + projection.baselineReviewedPins[index] + suffix,
+            );
+          }
+          historicalProjected = Buffer.from(historicalSource, "utf8");
+        }
         if (
           !Buffer.isBuffer(projected) ||
           projected.length !== projection.baselineBytes ||
-          digest(projected) !== projection.baselineSha256
+          digest(historicalProjected) !== projection.baselineSha256
         ) {
           throw new GovernanceError(
             "RUNNER_LEGACY_V1_RUNTIME_STABLE_BASELINE_FIXTURE",
@@ -4616,6 +4850,96 @@ function validateLegacyV1RuntimeStableProjectionRootBinding() {
   });
 }
 
+function assertPathAbsent(absolutePath, stage) {
+  try {
+    statSync(absolutePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  throw new GovernanceError(stage);
+}
+
+async function validateLegacyV1RuntimePreloadTransport() {
+  const dataUrlPrefix = "data:text/javascript;base64,";
+  const oldDirectPreloadUrl =
+    dataUrlPrefix +
+    LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE.toString("base64");
+  const oldImportArgumentBytes = Buffer.byteLength(
+    oldDirectPreloadUrl,
+    "utf8",
+  );
+  const oldDecodedPreloadSource = Buffer.from(
+    oldDirectPreloadUrl.slice(dataUrlPrefix.length),
+    "base64",
+  );
+  if (
+    oldImportArgumentBytes < 131_072 ||
+    oldDecodedPreloadSource.length !==
+      LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE.length ||
+    digest(oldDecodedPreloadSource) !==
+      digest(LEGACY_V1_RUNTIME_STABLE_PRELOAD_SOURCE)
+  ) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_RED_FIXTURE");
+  }
+  const repositoryBefore = repositoryStateDigest();
+  let successTemporaryDirectory;
+  let successPreloadUrlBytes;
+  await withLegacyV1RuntimeStablePreload((materialized) => {
+    successTemporaryDirectory = materialized.temporaryDirectory;
+    successPreloadUrlBytes = Buffer.byteLength(materialized.preloadUrl, "utf8");
+    const info = statSync(materialized.preloadPath);
+    const materializedBytes = readFileSync(materialized.preloadPath);
+    if (
+      isPathInsideRepository(materialized.temporaryDirectory) ||
+      new URL(materialized.preloadUrl).protocol !== "file:" ||
+      successPreloadUrlBytes >= 4_096 ||
+      (info.mode & 0o777) !== 0o600 ||
+      materialized.preloadSourceBytes !== oldDecodedPreloadSource.length ||
+      materialized.preloadSourceSha256 !== digest(oldDecodedPreloadSource) ||
+      digest(materializedBytes) !== digest(oldDecodedPreloadSource)
+    ) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_SUCCESS_FIXTURE");
+    }
+  });
+  assertPathAbsent(
+    successTemporaryDirectory,
+    "RUNNER_V1_RUNTIME_PRELOAD_SUCCESS_CLEANUP",
+  );
+  const forcedFailure = new Error("V1_RUNTIME_PRELOAD_FORCED_FAILURE");
+  let failureTemporaryDirectory;
+  let caught;
+  try {
+    await withLegacyV1RuntimeStablePreload((materialized) => {
+      failureTemporaryDirectory = materialized.temporaryDirectory;
+      throw forcedFailure;
+    });
+  } catch (error) {
+    caught = error;
+  }
+  if (caught !== forcedFailure) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_FAILURE_FIXTURE");
+  }
+  assertPathAbsent(
+    failureTemporaryDirectory,
+    "RUNNER_V1_RUNTIME_PRELOAD_FAILURE_CLEANUP",
+  );
+  if (repositoryBefore !== repositoryStateDigest()) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_PRELOAD_REPOSITORY_MUTATION");
+  }
+  console.log(
+    "PRELOAD_TRANSPORT_SELF_TEST old_direct_data_argv=true old_import_argument_bytes=" +
+      oldImportArgumentBytes +
+      " linux_single_argument_boundary=131072 preload_source_sha256=" +
+      digest(oldDecodedPreloadSource) +
+      " preload_source_bytes=" +
+      oldDecodedPreloadSource.length +
+      " new_import_protocol=file: new_import_argument_bytes=" +
+      successPreloadUrlBytes +
+      " temp_file_mode=0600 temp_outside_repository=true cleanup_success=true cleanup_failure=true repository_state_unchanged=true result=PASS",
+  );
+}
+
 async function runSelfTest() {
   const legacyProjectionStarted = performance.now();
   validateLegacyCoreProjectionRootBinding();
@@ -4638,6 +4962,7 @@ async function runSelfTest() {
       Math.round(performance.now() - legacyV1StableProjectionStarted) +
       " cases=6 result=PASS",
   );
+  await validateLegacyV1RuntimePreloadTransport();
   if (
     !exactSet(
       V1_RUNTIME_CHILDREN.map((child) => child.path),
