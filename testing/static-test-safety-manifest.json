@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "ac4bfc4a56163622147d6b58819bd14337d03d7122eb43b500bfb870eb178635",
+  "testing_tree_digest": "a9838c0f943c3b808f13f8a6ced349dfa3711e08582e58fad44663ab8a086333",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -44,19 +44,19 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "f97ef9b3161c8c02c2714173c4d9340795b9f8fac4cb78b1e1c313059c1690db"
+    "sha256": "678f62272a2876ec91ccf531f18dfea43af19a3b0da6d90a2defedb38cb8f5e7"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "10f278024e83a619482110dcbc9fa2133b70287800336b289a532b1beac5c0e4"
+    "sha256": "295e05e6730f4480c97064ac3cb8cd8289e4199ec42bb0737f0c5b67425140f4"
   },
   "phase_c2_2_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "cefa9955743009540c05b4ab19cb0c1e0ea1b4cafaec405119d90c0f3487b004"
+    "sha256": "40a2226337fbdfaaaa3b37ec40175299f4b0728f667f752fa4e8f79478826812"
   },
   "entries": [
     {
@@ -1467,18 +1467,18 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "afa3015db47ec8515c702e5a979f86cef740858b5201fa0ed1603c061eddd2a7"
+    "sha256": "c05e9f58b83b85c474b94c1c1e15a61e549b53a83f5362b8a0d55a2100abebd6"
   },
   "phase_33na_v1_staging_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 15,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "beb0a2dec593b87c832ad76ec293d4c0682f3a9aa1fa8a5b7acf57e4a441ec3d"
+    "sha256": "31328c02fd3e746fea505260fcf6b043a09c38604079d34a7bad389d3300112d"
   },
   "phase_34fa_v1_runtime_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "b4f443b8c70712173df88e7b9b956320e90ba7f99a94f26a7fcd775775f165d0"
+    "sha256": "b8cf1869a3c241faf0c7a225adffa1241fa9813c9aa0e3dc3e6d36fd4a4b5cf7"
   }
 }

@@ -236,8 +236,13 @@ assertIncludes(
 
 assertIncludes(
   route,
+  "function createCandidateDecisionHandler(",
+  "A4 decision route private execution seam",
+);
+assertNotIncludes(
+  route,
   "export function createCandidateDecisionHandler(",
-  "A4 decision route fabricated execution seam",
+  "A4 decision route runtime export",
 );
 assertIncludes(
   route,

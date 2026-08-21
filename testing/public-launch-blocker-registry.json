@@ -3,12 +3,12 @@
   "source_commit": "ef5cbe7aede041d3fd009126de152b4777d160a5",
   "source_matrix": {
     "path": "testing/readiness-coverage-matrix.json",
-    "sha256": "ff21da9dff79d950534263286b019c4639bf0f895be32b34b6ee2f02b58e2bcf",
-    "git_blob": "2bbd4cfcf058a30ba779e355e4b7dbd372c297a9",
+    "sha256": "5732e38f20ec86fc0c7acec45a69f2901d5d7ce2b3ac85b303b06302dd8333f9",
+    "git_blob": "a8ac861995671fd5a74431d17ce19e8ae33a4e21",
     "bytes": 50034,
     "lines": 1280,
     "mode": "0644",
-    "route_inventory_digest": "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
+    "route_inventory_digest": "b859bd6b621ef61acddd5358c77335f21c2751150e1c2874b216d75fe035f8af",
     "entry_count": 69,
     "launch_blocking_count": 7
   },

@@ -100,14 +100,9 @@ const APP_ROUTER_RUNTIME_EXPORTS = new Set([
   "runtime",
   "maxDuration",
 ]);
-const AUTHORIZED_TEST_SEAM_EXPORTS = new Set([
-  "createCandidateDecisionHandler",
-]);
-
 const EXPECTED_ROUTE_EXPORTS = new Set([
   "runtime",
   "dynamic",
-  "createCandidateDecisionHandler",
   "POST",
 ]);
 const HTTP_METHODS = [
@@ -487,8 +482,7 @@ const routeRuntimeExports = topLevelRuntimeExports(route);
 const illegalRouteExports = [...routeRuntimeExports]
   .filter(
     (name) =>
-      !APP_ROUTER_RUNTIME_EXPORTS.has(name) &&
-      !AUTHORIZED_TEST_SEAM_EXPORTS.has(name),
+      !APP_ROUTER_RUNTIME_EXPORTS.has(name),
   )
   .sort();
 
@@ -538,14 +532,14 @@ check(
   "A03",
   Boolean(
     factory &&
-      isExported(factory) &&
+      !isExported(factory) &&
       postInitializer &&
       ts.isCallExpression(postInitializer) &&
       callName(postInitializer) === "createCandidateDecisionHandler" &&
       postInitializer.arguments.length === 0 &&
       factoryCalls.length === 1,
   ),
-  "the decision factory is not an explicit fabricated-execution seam or POST is not its sole zero-argument call site.",
+  "the decision factory is not private or POST is not its sole zero-argument call site.",
 );
 
 check(
@@ -1083,7 +1077,10 @@ check(
   "A23",
   a4Markers.every((marker) => existingStatic.text.includes(marker)) &&
     existingStatic.text.includes(
-      '"export function createCandidateDecisionHandler("',
+      '"function createCandidateDecisionHandler("',
+    ) &&
+    existingStatic.text.includes(
+      '"A4 decision route runtime export"',
     ) &&
     existingStatic.text.includes(
       '"readBoundedRequestBody(request, MAX_BODY_SIZE_BYTES)"',

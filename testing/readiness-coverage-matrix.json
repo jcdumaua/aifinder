@@ -1,7 +1,7 @@
 {
   "matrix_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "route_inventory_digest": "e21fd3656a4bc3157acd23017ee1b5f141535dc239a85365f9268594bc18a780",
+  "route_inventory_digest": "b859bd6b621ef61acddd5358c77335f21c2751150e1c2874b216d75fe035f8af",
   "entries": [
     {
       "path": "app/admin-login/layout.tsx",
