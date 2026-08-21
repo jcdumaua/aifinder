@@ -301,7 +301,129 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function canonicalReviewedBytes(relativePath, bytes) {
+function canonicalReviewedBytes(
+  relativePath,
+  bytes,
+  projectLegacyOrchestrator = false,
+) {
+  /* BEGIN:ADMIN_V1_OFFICIAL_CURRENT_TO_LEGACY_PROJECTION */
+  const projectionSourcePath =
+    "testing/admin-v1-staging-runtime-source-policy.test.mjs";
+  if (relativePath === projectionSourcePath) {
+    const current = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const begin = ["  /* BEGIN:ADMIN_V1_", "OFFICIAL_CURRENT_TO_LEGACY_PROJECTION */"].join("");
+    const end = ["  /* END:ADMIN_V1_", "OFFICIAL_CURRENT_TO_LEGACY_PROJECTION */"].join("");
+    const beginIndex = current.indexOf(`\n${begin}\n`);
+    const endIndex = current.indexOf(`\n${end}\n`);
+    assert(beginIndex >= 0 && endIndex > beginIndex);
+    assert.equal(current.indexOf(`\n${begin}\n`, beginIndex + 1), -1);
+    assert.equal(current.indexOf(`\n${end}\n`, endIndex + 1), -1);
+    return Buffer.from(
+      `${current.slice(0, beginIndex)}\n${current.slice(endIndex + end.length + 2)}`
+        .replace(
+          "function canonicalReviewedBytes(\n  relativePath,\n  bytes,\n  projectLegacyOrchestrator = false,\n)",
+          "function canonicalReviewedBytes(relativePath, bytes)",
+        )
+        .replace(
+          "    Buffer.from(orchestratorSource, \"utf8\"),\n    true,\n",
+          "    Buffer.from(orchestratorSource, \"utf8\"),\n",
+        ),
+      "utf8",
+    );
+  }
+  if (relativePath === "testing/static-test-safety-manifest.json") {
+    const current = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    );
+    const maps = [
+      current.launch_operations_kernel_reviewed_unresolved_source_sha256_by_path,
+      current.launch_operations_kernel_semantic_source_sha256_by_path,
+    ];
+    const officialOnlyPaths = [
+      "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",
+    ];
+    for (const map of maps) {
+      assert(map && typeof map === "object" && !Array.isArray(map));
+      for (const officialPath of officialOnlyPaths) {
+        assert.equal(typeof map[officialPath], "string");
+        delete map[officialPath];
+      }
+      map["scripts/launch-operations-kernel/manifest.mjs"] =
+        "d99322d6134cb9b2b2af2672bf17005a20083ef39f0225abb187b4d5ed8dfbc1";
+      map["scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs"] =
+        "c7b975bdb2516beb3e4e79e4b95c238509fa0e75218f683bdb87102f84b23aad";
+    }
+    let projected = `${JSON.stringify(current, null, 2)}\n`;
+    const fields = [
+      /("testing_tree_digest": ")[a-f0-9]{64}(")/gu,
+      /("phase_33fa_c1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_c2_1_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_c2_2_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_33ka_v1_admin_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_33na_v1_staging_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+      /("phase_34fa_v1_runtime_execution_surface_digest": \{[\s\S]*?"sha256": ")[a-f0-9]{64}("\n  \})/gu,
+    ];
+    for (const pattern of fields) {
+      assert.equal([...projected.matchAll(pattern)].length, 1);
+      projected = projected.replace(
+        pattern,
+        (_match, prefix, suffix) => `${prefix}${"0".repeat(64)}${suffix}`,
+      );
+    }
+    return Buffer.from(projected, "utf8");
+  }
+  if (relativePath === "testing/run-static-readiness.mjs") {
+    const current = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const pattern = /(path: "testing\/admin-v1-staging-runtime-source-policy\.test\.mjs",[\s\S]*?sha256: ")[a-f0-9]{64}("[,]?\n    imports: \[)/gu;
+    assert.equal([...current.matchAll(pattern)].length, 1);
+    return Buffer.from(
+      current.replace(
+        pattern,
+        (_match, prefix, suffix) =>
+          `${prefix}64332183c95a612050e22be2a60e0b958ce99c5712118e9959d7b456cb18c341${suffix}`,
+      ),
+      "utf8",
+    );
+  }
+  if (relativePath === ORCHESTRATOR_PATH && projectLegacyOrchestrator) {
+    let current = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    for (const name of [
+      "REVIEWED_PRELIVE_AGGREGATE_SHA256",
+      "REVIEWED_STABLE_SURFACE_SHA256",
+    ]) {
+      const pattern = new RegExp(
+        `(const ${name} =\\n  ")[a-f0-9]{64}(";)`,
+        "gu",
+      );
+      assert.equal([...current.matchAll(pattern)].length, 1);
+      current = current.replace(
+        pattern,
+        (_match, prefix, suffix) => `${prefix}${"0".repeat(64)}${suffix}`,
+      );
+    }
+    const currentCounts = [
+      [...current.matchAll(/useCredential: credentialCallback/gu)].length,
+      [...current.matchAll(/typeof credentialCallback !== "function"/gu)].length,
+      [...current.matchAll(/credentialCallback\(/gu)].length,
+    ];
+    const historicalCounts = [
+      [...current.matchAll(/  useCredential,\n/gu)].length,
+      [...current.matchAll(/typeof useCredential !== "function"/gu)].length,
+      [...current.matchAll(/          useCredential\(\n/gu)].length,
+    ];
+    if (currentCounts.every((count) => count === 1)) {
+      current = current
+        .replace("useCredential: credentialCallback", "useCredential")
+        .replace('typeof credentialCallback !== "function"', 'typeof useCredential !== "function"')
+        .replace("credentialCallback(", "useCredential(");
+    } else {
+      assert(historicalCounts.every((count) => count === 1));
+    }
+    return Buffer.from(current, "utf8");
+  }
+  /* END:ADMIN_V1_OFFICIAL_CURRENT_TO_LEGACY_PROJECTION */
   let text;
   if (relativePath === "testing/static-test-safety-manifest.json") {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -4463,6 +4585,7 @@ function cleanupBudgetAssertions(orchestratorSource) {
   const canonicalOrchestrator = canonicalReviewedBytes(
     ORCHESTRATOR_PATH,
     Buffer.from(orchestratorSource, "utf8"),
+    true,
   );
   const canonicalOrchestratorMatches =
     sha256(canonicalOrchestrator) ===

@@ -40,6 +40,12 @@ import {
   CONCRETE_SUPPORT_PATHS,
   validateConcreteAuthorizationRecord,
 } from "./nonproduction-qualification-authorization.mjs";
+import {
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+  ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+  ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+  validateAdminV1OfficialAuthorization,
+} from "./admin-v1-official-runtime.mjs";
 
 const REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
 const MANIFEST_RELATIVE_PATH =
@@ -336,6 +342,214 @@ function authorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
   }
 }
 
+function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
+  try {
+    if (
+      !supervisorTrust || typeof supervisorTrust !== "object" ||
+      Array.isArray(supervisorTrust) ||
+      Object.keys(supervisorTrust).sort().join("\0") !== [
+        "authorization",
+        "authorization_bytes",
+        "authorization_sha256",
+        "credential_source_policy",
+        "operation_class",
+        "supervisor_policy_sha256",
+        "supervisor_sha256",
+        "verified",
+      ].sort().join("\0") ||
+      supervisorTrust.verified !== true ||
+      supervisorTrust.operation_class !== ADMIN_V1_OFFICIAL_OPERATION_CLASS ||
+      !(supervisorTrust.authorization_bytes instanceof Uint8Array) ||
+      supervisorTrust.authorization_bytes.byteLength < 2 ||
+      supervisorTrust.authorization_bytes.byteLength > 128 * 1024 ||
+      !/^[0-9a-f]{64}$/u.test(supervisorTrust.authorization_sha256) ||
+      !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_sha256) ||
+      !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_policy_sha256)
+    ) throw new Error("SHAPE");
+    const authorizationBytes = Buffer.from(supervisorTrust.authorization_bytes);
+    const authorizationText = new TextDecoder("utf-8", { fatal: true }).decode(
+      authorizationBytes,
+    );
+    if (
+      authorizationText.startsWith("\ufeff") ||
+      authorizationText !== `${canonicalJson(supervisorTrust.authorization)}\n` ||
+      sha256Hex(authorizationBytes) !== supervisorTrust.authorization_sha256 ||
+      supervisorTrust.authorization.supervisor_sha256 !==
+        supervisorTrust.supervisor_sha256 ||
+      supervisorTrust.authorization.supervisor_policy_sha256 !==
+        supervisorTrust.supervisor_policy_sha256 ||
+      canonicalJson(supervisorTrust.credential_source_policy) !==
+        canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY)
+    ) throw new Error("BINDING");
+    return Object.freeze({
+      authorization: validateAdminV1OfficialAuthorization(
+        structuredClone(supervisorTrust.authorization),
+        { now_epoch_ms: nowEpochMs },
+      ),
+      credential_source_policy: Object.freeze(
+        structuredClone(supervisorTrust.credential_source_policy),
+      ),
+    });
+  } catch (error) {
+    if (
+      error?.code === "OFFICIAL_AUTHORIZATION_INVALID" ||
+      error?.code === "OFFICIAL_AUTHORIZATION_EXPIRED"
+    ) throw error;
+    throw new ConcreteRunnerError("OFFICIAL_SUPERVISOR_TRUST_REQUIRED");
+  }
+}
+
+export async function verifyAdminV1OfficialPreEffectAuthorization({
+  authorization_record,
+  dependencies,
+  git_execution_context,
+}) {
+  const authorization = validateAdminV1OfficialAuthorization(
+    authorization_record,
+    { now_epoch_ms: dependencies.now_epoch_ms },
+  );
+  const candidate = await dependencies.verifyCandidate();
+  if (
+    candidate?.verified !== true ||
+    candidate.source_policy_verified !== true ||
+    candidate.activation_source_policy_verified !== true ||
+    candidate.membership_exact !== true ||
+    candidate.legacy_imports !== 0 ||
+    candidate.live_entrypoints !== 1 ||
+    candidate.candidate_identity_sha256 !==
+      authorization.candidate_identity_sha256 ||
+    candidate.manifest_sha256 !== authorization.manifest_sha256
+  ) throw new ConcreteRunnerError("OFFICIAL_CANDIDATE_MISMATCH");
+  for (const supportPath of Object.keys(
+    authorization.compatibility_support_sha256,
+  )) {
+    if (
+      await dependencies.hashCompatibilitySupport(supportPath) !==
+        authorization.compatibility_support_sha256[supportPath]
+    ) throw new ConcreteRunnerError("OFFICIAL_SUPPORT_MISMATCH");
+  }
+  const repository = await dependencies.inspectRepository();
+  if (!exactObject(repository, authorization.repository)) {
+    throw new ConcreteRunnerError("OFFICIAL_REPOSITORY_MISMATCH");
+  }
+  const temporaryCommit = await dependencies.verifyTemporaryCommit(
+    authorization,
+    git_execution_context,
+  );
+  if (temporaryCommit?.verified !== true) {
+    throw new ConcreteRunnerError("OFFICIAL_TEMPORARY_COMMIT_MISMATCH");
+  }
+  for (const routePath of Object.keys(authorization.route_source_sha256)) {
+    if (
+      await dependencies.hashOfficialRouteSource(routePath) !==
+        authorization.route_source_sha256[routePath]
+    ) throw new ConcreteRunnerError("OFFICIAL_ROUTE_SOURCE_MISMATCH");
+  }
+  if (
+    await dependencies.hashOfficialAuthorizationSchema() !==
+      authorization.authorization_schema_sha256 ||
+    canonicalJson(authorization.contract_sha256) !==
+      canonicalJson(ADMIN_V1_OFFICIAL_CONTRACT_SHA256)
+  ) throw new ConcreteRunnerError("OFFICIAL_CONTRACT_MISMATCH");
+  const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
+  if (prior?.status !== "ABSENT") {
+    throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
+  }
+  return Object.freeze({
+    verified: true,
+    operation_class: authorization.operation_class,
+    candidate_identity_sha256: authorization.candidate_identity_sha256,
+    manifest_sha256: authorization.manifest_sha256,
+    token_spent: false,
+  });
+}
+
+function safeOfficialCode(error) {
+  const allowed = new Set([
+    "OFFICIAL_AUTHORIZATION_INVALID",
+    "OFFICIAL_AUTHORIZATION_REQUIRED",
+    "OFFICIAL_AUTHORIZATION_SPENT",
+    "OFFICIAL_BUDGET_EXHAUSTED",
+    "OFFICIAL_CANDIDATE_MISMATCH",
+    "OFFICIAL_CONTRACT_MISMATCH",
+    "OFFICIAL_PRIOR_RECOVERY_PENDING",
+    "OFFICIAL_RECOVERY_PENDING",
+    "OFFICIAL_REPOSITORY_MISMATCH",
+    "OFFICIAL_ROUTE_SOURCE_MISMATCH",
+    "OFFICIAL_RUNTIME_FAILED_CLOSED",
+    "OFFICIAL_SUPPORT_MISMATCH",
+    "OFFICIAL_SUPERVISOR_TRUST_REQUIRED",
+    "OFFICIAL_TEMPORARY_COMMIT_MISMATCH",
+  ]);
+  return allowed.has(error?.code) ? error.code : "OFFICIAL_RUNTIME_FAILED_CLOSED";
+}
+
+export async function dispatchAdminV1OfficialRunner(
+  argumentsList,
+  dependencies = {},
+  supervisorTrust = dependencies.supervisor_trust,
+) {
+  if (
+    !Array.isArray(argumentsList) || argumentsList.length !== 3 ||
+    argumentsList[0] !== "--run-admin-v1-official" ||
+    argumentsList[1] !== "--authorization" ||
+    !exactAuthorizationPath(argumentsList[2])
+  ) {
+    emit(dependencies, { status: "FAIL", code: "OFFICIAL_AUTHORIZATION_REQUIRED" });
+    return { exit_code: 1, code: "OFFICIAL_AUTHORIZATION_REQUIRED" };
+  }
+  try {
+    const trusted = officialAuthorizationFromSupervisorTrust(
+      supervisorTrust,
+      dependencies.now_epoch_ms,
+    );
+    const executionContext = await dependencies.prepareOfficialExecutionContext(
+      trusted.authorization,
+    );
+    const closure = await verifyAdminV1OfficialPreEffectAuthorization({
+      authorization_record: trusted.authorization,
+      dependencies,
+      git_execution_context: executionContext?.git_execution_context,
+    });
+    const credentials = await dependencies.readOfficialCredentials(
+      trusted.authorization,
+      trusted.credential_source_policy,
+    );
+    const result = await dependencies.runAuthorizedOfficialRuntime({
+      authorization: trusted.authorization,
+      authorization_closure: closure,
+      credentials,
+      execution_context: executionContext,
+    });
+    if (
+      result?.classification === "OFFICIAL_RUNTIME_COMPLETE" &&
+      result.official_requests === 20 && result.qualification_requests === 6 &&
+      result.runtime_sessions === 1 && result.runtime_retries === 0 &&
+      result.runtime_replays === 0 && result.zero_residual_owned_state === true
+    ) {
+      emit(dependencies, {
+        status: "PASS",
+        code: "OFFICIAL_RUNTIME_COMPLETE",
+        qualification_requests: 6,
+        official_requests: 20,
+        runtime_sessions: 1,
+        runtime_retries: 0,
+        runtime_replays: 0,
+      });
+      return { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" };
+    }
+    if (result?.classification === "RECOVERY_PENDING") {
+      emit(dependencies, { status: "FAIL", code: "OFFICIAL_RECOVERY_PENDING" });
+      return { exit_code: 1, code: "OFFICIAL_RECOVERY_PENDING" };
+    }
+    throw new ConcreteRunnerError("OFFICIAL_RUNTIME_FAILED_CLOSED");
+  } catch (error) {
+    const code = safeOfficialCode(error);
+    emit(dependencies, { status: "FAIL", code });
+    return { exit_code: 1, code };
+  }
+}
+
 export async function dispatchConcreteQualificationRunner(
   argumentsList,
   dependencies = {},
@@ -354,6 +568,14 @@ export async function dispatchConcreteQualificationRunner(
       live_mutations: 0,
     });
     return { exit_code: 0, code: "PASS_SELF_TEST" };
+  }
+  if (Array.isArray(argumentsList) &&
+    argumentsList[0] === "--run-admin-v1-official") {
+    return dispatchAdminV1OfficialRunner(
+      argumentsList,
+      dependencies,
+      supervisorTrust,
+    );
   }
   if (!Array.isArray(argumentsList) || argumentsList[0] !== "--qualify-nonproduction") {
     emit(dependencies, { status: "FAIL", code: "CONCRETE_MODE_DENIED" });

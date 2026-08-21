@@ -43,11 +43,20 @@ const FRESH_RESOURCE_DIAGNOSTICS_TEST_PATH =
   "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs";
 const CONCRETE_RUNNER_TEST_PATH =
   "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs";
+const OFFICIAL_RUNTIME_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs";
+const OFFICIAL_RUNTIME_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs";
+const OFFICIAL_RUNNER_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs";
 const INDEPENDENT_SOURCE_REVIEW_PATH =
   "testing/static-test-safety-manifest.json";
 const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/activation-bridge.mjs",
   "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  OFFICIAL_RUNNER_TEST_PATH,
+  OFFICIAL_RUNTIME_PATH,
+  OFFICIAL_RUNTIME_TEST_PATH,
   "scripts/launch-operations-kernel/canonical.mjs",
   FRESH_RESOURCE_DIAGNOSTICS_PATH,
   FRESH_RESOURCE_DIAGNOSTICS_TEST_PATH,
@@ -67,6 +76,9 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
 ]);
 const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/activation-bridge.mjs",
+  OFFICIAL_RUNNER_TEST_PATH,
+  OFFICIAL_RUNTIME_PATH,
+  OFFICIAL_RUNTIME_TEST_PATH,
   "scripts/launch-operations-kernel/canonical.mjs",
   "scripts/launch-operations-kernel/cli.mjs",
   FRESH_RESOURCE_DIAGNOSTICS_PATH,
@@ -89,6 +101,7 @@ const CONCRETE_CREDENTIAL_LOADER_TEST_PATH =
 const CONCRETE_PLATFORM_TEST_PATH =
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs";
 const PRIVILEGED_IMPORT_TARGETS = new Set([
+  OFFICIAL_RUNTIME_PATH,
   CONCRETE_RUNNER_PATH,
   CONCRETE_ADAPTER_PATH,
   CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -97,12 +110,23 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
 ]);
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_RUNNER_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
     CONCRETE_ADAPTER_PATH,
     CONCRETE_CREDENTIAL_LOADER_PATH,
     CONCRETE_PLATFORM_PATH,
     CONCRETE_CHECKPOINT_PATH,
   ])],
+  [OFFICIAL_RUNNER_TEST_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
+    CONCRETE_RUNNER_PATH,
+    CONCRETE_ADAPTER_PATH,
+    CONCRETE_CREDENTIAL_LOADER_PATH,
+    CONCRETE_PLATFORM_PATH,
+    CONCRETE_CHECKPOINT_PATH,
+  ])],
+  [OFFICIAL_RUNTIME_TEST_PATH, new Set([OFFICIAL_RUNTIME_PATH])],
   [CONCRETE_RUNNER_TEST_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
     CONCRETE_RUNNER_PATH,
     CONCRETE_ADAPTER_PATH,
     CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -115,6 +139,15 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_CHECKPOINT_TEST_PATH, new Set([CONCRETE_CHECKPOINT_PATH])],
 ]);
 const REVIEWED_NODE_MODULES_BY_PATH = new Map([
+  [OFFICIAL_RUNNER_TEST_PATH, new Set(["node:assert/strict"])],
+  [
+    OFFICIAL_RUNTIME_PATH,
+    new Set(["node:fs", "node:path"]),
+  ],
+  [
+    OFFICIAL_RUNTIME_TEST_PATH,
+    new Set(["node:assert/strict", "node:crypto", "node:fs", "node:path"]),
+  ],
   [
     "scripts/launch-operations-kernel/activation-bridge.test.mjs",
     new Set(["node:assert/strict", "node:fs", "node:path"]),
@@ -1683,6 +1716,7 @@ function sourceSyntaxFacts(relativePath, source) {
   const processExitCodePaths = new Set([
     "scripts/launch-operations-kernel/activation-bridge.test.mjs",
     "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+    OFFICIAL_RUNTIME_TEST_PATH,
     "scripts/launch-operations-kernel/cli.mjs",
     "scripts/launch-operations-kernel/kernel.test.mjs",
     "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
@@ -2292,12 +2326,50 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !elevatedMode.test(source) &&
       !broadGit &&
       source.includes('argumentsList[0] !== "--qualify-nonproduction"') &&
+      source.includes('argumentsList[0] === "--run-admin-v1-official"') &&
+      source.includes("dispatchAdminV1OfficialRunner") &&
       source.includes('argumentsList[0] === "--self-test"') &&
       source.includes("createConcreteRunnerDependencies") &&
       source.includes("verifyConcretePreEffectAuthorization") &&
       source.includes("readLiveCredentials") &&
       source.includes("pathToFileURL")
     );
+  }
+  if (relativePath === OFFICIAL_RUNTIME_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      !broadGit &&
+      source.includes('"ADMIN_V1_OFFICIAL_RUNTIME_V1"') &&
+      source.includes('"SELF_PROJECT_OIDC"') &&
+      source.includes("OFFICIAL_AUTHORIZATION_SPENT") &&
+      source.includes("OFFICIAL_BUDGET_EXHAUSTED") &&
+      source.includes("delete_storage_exact_version") &&
+      source.includes("STORAGE_REPLACEMENT_PRESERVED") &&
+      source.includes("admin-v1-official-runtime-retired.json") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === OFFICIAL_RUNTIME_TEST_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes('mkdtempSync("/tmp/aifinder-admin-v1-official-') &&
+      source.includes("real_calls=0")
+    );
+  }
+  if (relativePath === OFFICIAL_RUNNER_TEST_PATH) {
+    return !capabilities.child_process &&
+      !capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("pre_effect_before_credentials=true") &&
+      source.includes("operation_class_separate=true");
   }
   if (relativePath === CONCRETE_ADAPTER_PATH) {
     return (
@@ -2551,16 +2623,27 @@ export function validateLocalOnlySources(
     if (legacyImportPattern.test(source)) {
       legacyImports += 1;
     }
-    if (
-      !concreteCapabilityAllowed(relativePath, source, capabilities) ||
-      !privilegedImportsAllowed(relativePath, sources, importsByPath)
-    ) {
+    const capabilityAllowed = concreteCapabilityAllowed(
+      relativePath,
+      source,
+      capabilities,
+    );
+    const importsAllowed = privilegedImportsAllowed(
+      relativePath,
+      sources,
+      importsByPath,
+    );
+    if (!capabilityAllowed || !importsAllowed) {
       const error = new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
       error.relative_path = relativePath;
+      error.detail = capabilityAllowed
+        ? "PRIVILEGED_IMPORT_GRAPH"
+        : `CAPABILITY:${canonicalJson(capabilities)}`;
       throw error;
     }
     if (relativePath === CONCRETE_RUNNER_PATH) liveEntrypoints += 1;
     if ([
+      OFFICIAL_RUNTIME_PATH,
       CONCRETE_RUNNER_PATH,
       CONCRETE_ADAPTER_PATH,
       CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -2573,13 +2656,16 @@ export function validateLocalOnlySources(
     if (relativePath === CONCRETE_CHECKPOINT_PATH && capabilities.filesystem_mutation) {
       checkpointWriterFiles += 1;
     }
+    if (relativePath === OFFICIAL_RUNTIME_PATH && capabilities.filesystem_mutation) {
+      checkpointWriterFiles += 1;
+    }
   }
   if (
     hasConcreteSurface &&
     (liveEntrypoints !== 1 ||
-      liveCapabilityFiles !== 5 ||
+      liveCapabilityFiles !== 6 ||
       credentialAccessFiles !== 1 ||
-      checkpointWriterFiles !== 1)
+      checkpointWriterFiles !== 2)
   ) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
@@ -2760,9 +2846,9 @@ export function verifyRepositoryCandidateManifest({
       legacy_imports: 0,
       live_routes: 1,
       live_entrypoints: 1,
-      live_capability_files: 5,
+      live_capability_files: 6,
       credential_access_files: 1,
-      checkpoint_writer_files: 1,
+      checkpoint_writer_files: 2,
     };
     activationSourcePolicy = { verified: true };
   }

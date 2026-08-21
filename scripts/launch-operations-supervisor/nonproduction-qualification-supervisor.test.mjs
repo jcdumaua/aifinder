@@ -182,7 +182,7 @@ function fixture() {
       candidate_identity_sha256: manifest.candidate_identity_sha256,
       member_count: members.length,
     },
-    credential_source_policy: CREDENTIAL_SOURCE_POLICY,
+    credential_source_policy: structuredClone(CREDENTIAL_SOURCE_POLICY),
     compatibility_support_sha256: Object.fromEntries(SUPPORT_PATHS.map(
       (relativePath) => [relativePath, sha256(readFileSync(path.join(root, relativePath)))],
     )),
@@ -273,7 +273,9 @@ async function check(name, operation) {
     await operation();
     assertions += 1;
   } catch (error) {
-    failures.push(`${name}:${error?.code ?? error?.message ?? "UNKNOWN"}`);
+    failures.push(
+      `${name}:${error?.code ?? error?.message ?? "UNKNOWN"}:${error?.stack ?? "NO_STACK"}`,
+    );
   }
 }
 
@@ -666,6 +668,174 @@ for (const [name, mutate] of [
     }
   });
 }
+
+await check("Official class is verified before the same post-trust runner import", async () => {
+  const test = fixture();
+  const officialRunId = "33333333-3333-4333-8333-333333333333";
+  const routePaths = [
+    "app/api/admin/csrf/route.ts",
+    "app/api/admin/login/route.ts",
+    "app/api/admin/logout/route.ts",
+    "app/api/admin/session/route.ts",
+    "app/api/admin/submissions/route.ts",
+    "app/api/admin/tools/route.ts",
+    "app/api/admin/upload-logo/route.ts",
+    "lib/admin-v1-launch-scope.ts",
+    "proxy.ts",
+  ];
+  const contractKeys = [
+    "budgets",
+    "deferred_routes",
+    "environment_names",
+    "official_ledger",
+    "qualification_ledger",
+    "target_routes",
+  ];
+  const officialCredentialPolicy = {
+    ...CREDENTIAL_SOURCE_POLICY,
+    NODE_ENV: "PROVIDER_PRODUCTION_SEMANTICS",
+  };
+  const schemaPath =
+    "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json";
+  const counters = { imports: 0, dispatches: 0, credentials: 0, effects: 0 };
+  try {
+    for (const relativePath of [schemaPath, ...routePaths]) {
+      const target = path.join(test.root, relativePath);
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, `official-${relativePath}\n`, { mode: 0o644 });
+      chmodSync(target, 0o644);
+    }
+    const officialRepository = {
+      ...test.repository,
+      head: "1bddba8b5123d7eec4e986fbeff990a5571358bf",
+      origin_main: "1bddba8b5123d7eec4e986fbeff990a5571358bf",
+    };
+    test.policy.official_runtime = {
+      operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+      authorization_schema_path: schemaPath,
+      authorization_schema_sha256: sha256(readFileSync(path.join(test.root, schemaPath))),
+      contract_sha256: Object.fromEntries(contractKeys.map((entry) => [entry, sha("5")])),
+      credential_source_policy: officialCredentialPolicy,
+      route_source_sha256: Object.fromEntries(routePaths.map((relativePath) => [
+        relativePath,
+        sha256(readFileSync(path.join(test.root, relativePath))),
+      ])),
+      repository: officialRepository,
+      access_mode: "SELF_PROJECT_OIDC",
+    };
+    writeCanonical(test.policyPath, test.policy);
+    const officialAuthorization = {
+      schema_version: 1,
+      operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+      authorization_id_sha256: sha("1"),
+      one_use_authorization_sha256: sha("2"),
+      candidate_identity_sha256: test.policy.candidate.candidate_identity_sha256,
+      manifest_sha256: test.policy.candidate.manifest_sha256,
+      supervisor_sha256: sha256(readFileSync(test.supervisorPath)),
+      supervisor_policy_sha256: sha256(readFileSync(test.policyPath)),
+      authorization_schema_sha256:
+        test.policy.official_runtime.authorization_schema_sha256,
+      compatibility_support_sha256: test.policy.compatibility_support_sha256,
+      route_source_sha256: test.policy.official_runtime.route_source_sha256,
+      contract_sha256: test.policy.official_runtime.contract_sha256,
+      created_at: "2030-01-01T00:00:00.000Z",
+      expires_at: "2030-01-01T01:00:00.000Z",
+      run_id: officialRunId,
+      repository: officialRepository,
+      execution: {
+        access_mode: "SELF_PROJECT_OIDC",
+        branch_name: `aifinder-admin-v1-official-${officialRunId}`,
+        journal_directory:
+          `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${officialRunId}`,
+        preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+        preview_project_name: "aifinder",
+        preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+        preview_team_slug: "ai-finder-s-projects",
+        storage_bucket: "tool-logos",
+        storage_name: `admin/${officialRunId}.png`,
+        temporary_commit_sha: "a".repeat(40),
+        environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"],
+      },
+    };
+    writeCanonical(test.authorizationPath, officialAuthorization, 0o600);
+    const output = [];
+    try {
+      verifyPreImportSupervisorTrust({
+        authorization_path: test.authorizationPath,
+        repository_root: test.root,
+        supervisor_path: test.supervisorPath,
+        policy_path: test.policyPath,
+        now_epoch_ms: Date.parse("2030-01-01T00:30:00.000Z"),
+        inspect_repository: () => structuredClone(officialRepository),
+      });
+    } catch (error) {
+      throw new Error(`${error?.code ?? "UNKNOWN"}:${error?.detail ?? "NO_DETAIL"}`);
+    }
+    const result = await dispatchPreImportSupervisor(
+      ["--run-admin-v1-official", "--authorization", test.authorizationPath],
+      {
+        repository_root: test.root,
+        supervisor_path: test.supervisorPath,
+        policy_path: test.policyPath,
+        now_epoch_ms: Date.parse("2030-01-01T00:30:00.000Z"),
+        inspect_repository: () => structuredClone(officialRepository),
+        async import_runner() {
+          counters.imports += 1;
+          return {
+            createConcreteRunnerDependencies(options) {
+              return { writeOutput: options.writeOutput };
+            },
+            async dispatchConcreteQualificationRunner(
+              argumentsList,
+              runnerDependencies,
+              supervisorTrust,
+            ) {
+              counters.dispatches += 1;
+              assert.equal(argumentsList[0], "--run-admin-v1-official");
+              assert.equal(
+                supervisorTrust.operation_class,
+                "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+              );
+              assert.deepEqual(
+                supervisorTrust.credential_source_policy,
+                officialCredentialPolicy,
+              );
+              runnerDependencies.writeOutput({
+                status: "PASS",
+                code: "OFFICIAL_RUNTIME_COMPLETE",
+              });
+              return { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" };
+            },
+          };
+        },
+        write_output(value) {
+          output.push(structuredClone(value));
+        },
+      },
+    );
+    assert.deepEqual(result, {
+      exit_code: 0,
+      code: "OFFICIAL_RUNTIME_COMPLETE",
+    });
+    assert.deepEqual(counters, {
+      imports: 1,
+      dispatches: 1,
+      credentials: 0,
+      effects: 0,
+    });
+    assert.deepEqual(output, [{
+      status: "PASS",
+      code: "OFFICIAL_RUNTIME_COMPLETE",
+      qualification_requests: 6,
+      official_requests: 20,
+      runtime_sessions: 1,
+      runtime_retries: 0,
+      runtime_replays: 0,
+    }]);
+  } finally {
+    rmSync(test.root, { recursive: true, force: true });
+  }
+});
 
 if (failures.length > 0) {
   console.log(

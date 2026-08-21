@@ -27,6 +27,11 @@ const APPROVAL_TOKEN_SHA256 =
 const RETAINED_IDENTITY_SHA256 =
   "6614d25b486bdf0c4f19c4fd7617a0d46991569b6cd7b66e66cdb8f49b8584c0";
 const OPERATION_CLASS = "NONPRODUCTION_QUALIFICATION";
+const OFFICIAL_OPERATION_CLASS = "ADMIN_V1_OFFICIAL_RUNTIME_V1";
+const OFFICIAL_REQUIRED_BASELINE =
+  "1bddba8b5123d7eec4e986fbeff990a5571358bf";
+const OFFICIAL_AUTHORIZATION_SCHEMA_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json";
 const SPENT_RUN_IDS = Object.freeze([
   "8c0d9e84-62e5-4658-9de0-c0121a302951",
   "e46a0d21-f0b4-4f7d-8a4f-e7f6e8a7eda0",
@@ -46,6 +51,29 @@ const CREDENTIAL_SOURCE_POLICY = Object.freeze({
   ADMIN_PASSWORD: "AVAILABLE_ENV_LOCAL",
   ADMIN_SESSION: "AVAILABLE_ENV_LOCAL",
 });
+const OFFICIAL_CREDENTIAL_SOURCE_POLICY = Object.freeze({
+  ...CREDENTIAL_SOURCE_POLICY,
+  NODE_ENV: "PROVIDER_PRODUCTION_SEMANTICS",
+});
+const OFFICIAL_ROUTE_SOURCE_PATHS = Object.freeze([
+  "app/api/admin/csrf/route.ts",
+  "app/api/admin/login/route.ts",
+  "app/api/admin/logout/route.ts",
+  "app/api/admin/session/route.ts",
+  "app/api/admin/submissions/route.ts",
+  "app/api/admin/tools/route.ts",
+  "app/api/admin/upload-logo/route.ts",
+  "lib/admin-v1-launch-scope.ts",
+  "proxy.ts",
+]);
+const OFFICIAL_CONTRACT_DIGEST_KEYS = Object.freeze([
+  "budgets",
+  "deferred_routes",
+  "environment_names",
+  "official_ledger",
+  "qualification_ledger",
+  "target_routes",
+]);
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const PRE_TRUST_GIT_SANDBOX_PROFILE = [
   "(version 1)",
@@ -201,81 +229,142 @@ function exactRepository(value) {
 }
 
 function validatePolicy(policy, repositoryRoot) {
-  if (
-    !exactKeys(policy, [
-      "schema_version",
-      "policy_class",
-      "operation_class",
-      "supervisor_path",
-      "policy_path",
-      "candidate",
-      "credential_source_policy",
-      "compatibility_support_sha256",
-      "independent_semantic_source_sha256_by_path",
-      "independent_semantic_pin_set_sha256",
-      "approved_runner",
-      "retained_state",
-      "repository",
-      "authorization",
-    ]) ||
-    policy.schema_version !== 1 ||
-    policy.policy_class !== "AIFINDER_PREIMPORT_SUPERVISOR_V1" ||
-    policy.operation_class !== OPERATION_CLASS ||
-    !exactObject(policy.credential_source_policy, CREDENTIAL_SOURCE_POLICY) ||
-    !exactRelativePath(policy.supervisor_path) ||
-    !exactRelativePath(policy.policy_path) ||
-    !exactKeys(policy.candidate, [
+  const baseKeys = [
+    "schema_version",
+    "policy_class",
+    "operation_class",
+    "supervisor_path",
+    "policy_path",
+    "candidate",
+    "credential_source_policy",
+    "compatibility_support_sha256",
+    "independent_semantic_source_sha256_by_path",
+    "independent_semantic_pin_set_sha256",
+    "approved_runner",
+    "retained_state",
+    "repository",
+    "authorization",
+  ];
+  const policyKeys = Object.hasOwn(policy ?? {}, "official_runtime")
+    ? [...baseKeys, "official_runtime"]
+    : baseKeys;
+  const baseChecks = [
+    ["ROOT_KEYS", exactKeys(policy, policyKeys)],
+    ["HEADER", policy.schema_version === 1 &&
+      policy.policy_class === "AIFINDER_PREIMPORT_SUPERVISOR_V1" &&
+      policy.operation_class === OPERATION_CLASS],
+    ["CREDENTIAL_POLICY", exactObject(
+      policy.credential_source_policy,
+      CREDENTIAL_SOURCE_POLICY,
+    )],
+    ["PATHS", exactRelativePath(policy.supervisor_path) &&
+      exactRelativePath(policy.policy_path)],
+    ["CANDIDATE", exactKeys(policy.candidate, [
       "manifest_path",
       "manifest_sha256",
       "candidate_identity_sha256",
       "member_count",
-    ]) ||
-    !exactRelativePath(policy.candidate.manifest_path) ||
-    !isSha256(policy.candidate.manifest_sha256) ||
-    !isSha256(policy.candidate.candidate_identity_sha256) ||
-    !Number.isSafeInteger(policy.candidate.member_count) ||
-    policy.candidate.member_count < 1 ||
-    !exactKeys(policy.compatibility_support_sha256, SUPPORT_PATHS) ||
-    Object.values(policy.compatibility_support_sha256).some((value) => !isSha256(value)) ||
-    !policy.independent_semantic_source_sha256_by_path ||
-    typeof policy.independent_semantic_source_sha256_by_path !== "object" ||
-    Array.isArray(policy.independent_semantic_source_sha256_by_path) ||
-    Object.entries(policy.independent_semantic_source_sha256_by_path).some(
-      ([relativePath, digest]) => !exactRelativePath(relativePath) || !isSha256(digest),
-    ) ||
-    !isSha256(policy.independent_semantic_pin_set_sha256) ||
-    policy.independent_semantic_pin_set_sha256 !== sha256(canonicalJson(
+    ]) && exactRelativePath(policy.candidate?.manifest_path) &&
+      isSha256(policy.candidate?.manifest_sha256) &&
+      isSha256(policy.candidate?.candidate_identity_sha256) &&
+      Number.isSafeInteger(policy.candidate?.member_count) &&
+      policy.candidate.member_count >= 1],
+    ["SUPPORT", exactKeys(policy.compatibility_support_sha256, SUPPORT_PATHS) &&
+      Object.values(policy.compatibility_support_sha256 ?? {}).every(
+        (value) => isSha256(value),
+      )],
+    ["SEMANTIC", policy.independent_semantic_source_sha256_by_path &&
+      typeof policy.independent_semantic_source_sha256_by_path === "object" &&
+      !Array.isArray(policy.independent_semantic_source_sha256_by_path) &&
+      Object.entries(policy.independent_semantic_source_sha256_by_path).every(
+        ([relativePath, digest]) => exactRelativePath(relativePath) && isSha256(digest),
+      ) && isSha256(policy.independent_semantic_pin_set_sha256) &&
+      policy.independent_semantic_pin_set_sha256 === sha256(canonicalJson(
       policy.independent_semantic_source_sha256_by_path,
-    )) ||
-    !exactKeys(policy.approved_runner, ["path", "sha256"]) ||
-    !exactRelativePath(policy.approved_runner.path) ||
-    !isSha256(policy.approved_runner.sha256) ||
-    !exactKeys(policy.retained_state, [
+    ))],
+    ["RUNNER", exactKeys(policy.approved_runner, ["path", "sha256"]) &&
+      exactRelativePath(policy.approved_runner?.path) &&
+      isSha256(policy.approved_runner?.sha256)],
+    ["RETAINED", exactKeys(policy.retained_state, [
       "freeze_path",
       "freeze_sha256",
       "retained_identity_digest_sha256",
       "classification",
-    ]) ||
-    !exactRelativePath(policy.retained_state.freeze_path) ||
-    !isSha256(policy.retained_state.freeze_sha256) ||
-    policy.retained_state.retained_identity_digest_sha256 !==
-      RETAINED_IDENTITY_SHA256 ||
-    policy.retained_state.classification !== "FAIL_CLOSED_UNRESOLVED" ||
-    !exactRepository(policy.repository) ||
-    policy.repository.root !== repositoryRoot ||
-    !exactKeys(policy.authorization, [
+    ]) && exactRelativePath(policy.retained_state?.freeze_path) &&
+      isSha256(policy.retained_state?.freeze_sha256) &&
+      policy.retained_state?.retained_identity_digest_sha256 ===
+        RETAINED_IDENTITY_SHA256 &&
+      policy.retained_state?.classification === "FAIL_CLOSED_UNRESOLVED"],
+    ["REPOSITORY", exactRepository(policy.repository) &&
+      policy.repository?.root === repositoryRoot],
+    ["AUTHORIZATION", exactKeys(policy.authorization, [
       "approval_token_sha256",
       "attempt_limit",
       "request_budget",
       "mutation_budget",
       "success_retention_policy",
-    ]) ||
-    policy.authorization.approval_token_sha256 !== APPROVAL_TOKEN_SHA256 ||
-    policy.authorization.attempt_limit !== 1 ||
-    policy.authorization.request_budget !== 16 ||
-    policy.authorization.mutation_budget !== 15 ||
-    policy.authorization.success_retention_policy !== "RETAIN_EXACTLY_ONE_PREVIEW"
-  ) throw new PreImportSupervisorError("SUPERVISOR_POLICY_INVALID");
+    ]) && policy.authorization?.approval_token_sha256 === APPROVAL_TOKEN_SHA256 &&
+      policy.authorization?.attempt_limit === 1 &&
+      policy.authorization?.request_budget === 16 &&
+      policy.authorization?.mutation_budget === 15 &&
+      policy.authorization?.success_retention_policy ===
+        "RETAIN_EXACTLY_ONE_PREVIEW"],
+  ];
+  const failedBase = baseChecks.find(([, passed]) => !passed);
+  if (failedBase) {
+    const error = new PreImportSupervisorError("SUPERVISOR_POLICY_INVALID");
+    error.detail = `BASE_${failedBase[0]}`;
+    throw error;
+  }
+  if (Object.hasOwn(policy, "official_runtime")) {
+    const official = policy.official_runtime;
+    const checks = [
+      ["SHAPE", exactKeys(official, [
+        "operation_class",
+        "authorization_schema_path",
+        "authorization_schema_sha256",
+        "contract_sha256",
+        "credential_source_policy",
+        "route_source_sha256",
+        "repository",
+        "access_mode",
+      ])],
+      ["CLASS", official.operation_class === OFFICIAL_OPERATION_CLASS],
+      ["SCHEMA_PATH", official.authorization_schema_path ===
+        OFFICIAL_AUTHORIZATION_SCHEMA_PATH],
+      ["SCHEMA_SHA", isSha256(official.authorization_schema_sha256)],
+      ["CONTRACT_KEYS", exactKeys(
+        official.contract_sha256,
+        OFFICIAL_CONTRACT_DIGEST_KEYS,
+      )],
+      ["CONTRACT_SHA", Object.values(official.contract_sha256 ?? {}).every(
+        (value) => isSha256(value),
+      )],
+      ["CREDENTIAL_POLICY", exactObject(
+        official.credential_source_policy,
+        OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+      )],
+      ["ROUTE_KEYS", exactKeys(
+        official.route_source_sha256,
+        OFFICIAL_ROUTE_SOURCE_PATHS,
+      )],
+      ["ROUTE_SHA", Object.values(official.route_source_sha256 ?? {}).every(
+        (value) => isSha256(value),
+      )],
+      ["REPOSITORY", exactRepository(official.repository)],
+      ["REPOSITORY_ROOT", official.repository?.root === repositoryRoot],
+      ["BASELINE_HEAD", official.repository?.head === OFFICIAL_REQUIRED_BASELINE],
+      ["BASELINE_ORIGIN", official.repository?.origin_main ===
+        OFFICIAL_REQUIRED_BASELINE],
+      ["ACCESS_MODE", official.access_mode === "SELF_PROJECT_OIDC"],
+    ];
+    const failed = checks.find(([, passed]) => !passed);
+    if (failed) {
+      const error = new PreImportSupervisorError("SUPERVISOR_POLICY_INVALID");
+      error.detail = `OFFICIAL_${failed[0]}`;
+      throw error;
+    }
+  }
   return policy;
 }
 
@@ -383,6 +472,101 @@ function validateAuthorization(authorization, policy, nowEpochMs) {
     SPENT_RUN_IDS.includes(authorization.run_id) ||
     !exactObject(authorization.repository, policy.repository) ||
     !exactExecution(authorization.execution, authorization.run_id)
+  ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  return authorization;
+}
+
+function exactOfficialExecution(value, runId) {
+  return exactKeys(value, [
+    "access_mode",
+    "branch_name",
+    "journal_directory",
+    "preview_project_id",
+    "preview_project_name",
+    "preview_team_id",
+    "preview_team_slug",
+    "storage_bucket",
+    "storage_name",
+    "temporary_commit_sha",
+    "environment_keys",
+  ]) &&
+    value.access_mode === "SELF_PROJECT_OIDC" &&
+    value.branch_name === `aifinder-admin-v1-official-${runId}` &&
+    value.journal_directory ===
+      `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${runId}` &&
+    value.preview_project_id === "prj_BPaQVKdElriAhxabhoTkg8LysQ5R" &&
+    value.preview_project_name === "aifinder" &&
+    value.preview_team_id === "team_9POJYxNnjIBbrQ19My8M5yG3" &&
+    value.preview_team_slug === "ai-finder-s-projects" &&
+    value.storage_bucket === "tool-logos" &&
+    value.storage_name === `admin/${runId}.png` &&
+    /^[0-9a-f]{40}$/u.test(value.temporary_commit_sha ?? "") &&
+    exactObject(value.environment_keys, [
+      "ADMIN_PASSWORD",
+      "ADMIN_SESSION_SECRET",
+    ]);
+}
+
+export function validateOfficialAuthorizationForSupervisor(
+  authorization,
+  policy,
+  nowEpochMs,
+) {
+  const runIdPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+  const created = Date.parse(authorization?.created_at);
+  const expires = Date.parse(authorization?.expires_at);
+  const official = policy?.official_runtime;
+  if (
+    !Number.isSafeInteger(nowEpochMs) ||
+    !exactKeys(authorization, [
+      "schema_version",
+      "operation_class",
+      "authorization_id_sha256",
+      "one_use_authorization_sha256",
+      "candidate_identity_sha256",
+      "manifest_sha256",
+      "supervisor_sha256",
+      "supervisor_policy_sha256",
+      "authorization_schema_sha256",
+      "compatibility_support_sha256",
+      "route_source_sha256",
+      "contract_sha256",
+      "created_at",
+      "expires_at",
+      "run_id",
+      "repository",
+      "execution",
+    ]) ||
+    authorization.schema_version !== 1 ||
+    authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+    ![
+      authorization.authorization_id_sha256,
+      authorization.one_use_authorization_sha256,
+      authorization.supervisor_sha256,
+      authorization.supervisor_policy_sha256,
+    ].every(isSha256) ||
+    authorization.candidate_identity_sha256 !==
+      policy?.candidate?.candidate_identity_sha256 ||
+    authorization.manifest_sha256 !== policy?.candidate?.manifest_sha256 ||
+    authorization.authorization_schema_sha256 !==
+      official?.authorization_schema_sha256 ||
+    !exactObject(
+      authorization.compatibility_support_sha256,
+      policy?.compatibility_support_sha256,
+    ) ||
+    !exactObject(
+      authorization.route_source_sha256,
+      official?.route_source_sha256,
+    ) ||
+    !exactObject(authorization.contract_sha256, official?.contract_sha256) ||
+    !Number.isFinite(created) || !Number.isFinite(expires) ||
+    created > nowEpochMs || nowEpochMs >= expires || expires <= created ||
+    expires - created > 24 * 60 * 60 * 1000 ||
+    !runIdPattern.test(authorization.run_id ?? "") ||
+    SPENT_RUN_IDS.includes(authorization.run_id) ||
+    !exactObject(authorization.repository, official?.repository) ||
+    !exactOfficialExecution(authorization.execution, authorization.run_id)
   ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
   return authorization;
 }
@@ -625,20 +809,48 @@ export function verifyPreImportSupervisorTrust({
     0o600,
     "SUPERVISOR_AUTHORIZATION_INVALID",
   );
-  const authorization = validateAuthorization(
-    parseJson(authorizationBytes, {
-      canonical: true,
-      code: "SUPERVISOR_AUTHORIZATION_INVALID",
-    }),
-    policy,
-    now_epoch_ms,
-  );
+  const parsedAuthorization = parseJson(authorizationBytes, {
+    canonical: true,
+    code: "SUPERVISOR_AUTHORIZATION_INVALID",
+  });
+  const officialMode =
+    parsedAuthorization.operation_class === OFFICIAL_OPERATION_CLASS;
+  const authorization = officialMode
+    ? validateOfficialAuthorizationForSupervisor(
+      parsedAuthorization,
+      policy,
+      now_epoch_ms,
+    )
+    : validateAuthorization(parsedAuthorization, policy, now_epoch_ms);
   if (
     authorization.supervisor_sha256 !== sha256(supervisorBytes) ||
     authorization.supervisor_policy_sha256 !== sha256(policyBytes)
   ) throw new PreImportSupervisorError("SUPERVISOR_IDENTITY_MISMATCH");
   const manifest = verifyCandidate(repository_root, policy);
   verifySupportsAndPins(repository_root, policy);
+  if (officialMode) {
+    const official = policy.official_runtime;
+    if (
+      sha256(regularFileBytes(
+        repositoryPath(repository_root, official.authorization_schema_path),
+        0o644,
+        "SUPERVISOR_AUTHORIZATION_SCHEMA_MISMATCH",
+      )) !== official.authorization_schema_sha256
+    ) throw new PreImportSupervisorError(
+      "SUPERVISOR_AUTHORIZATION_SCHEMA_MISMATCH",
+    );
+    for (const [relativePath, expectedSha256] of Object.entries(
+      official.route_source_sha256,
+    )) {
+      if (
+        sha256(regularFileBytes(
+          repositoryPath(repository_root, relativePath),
+          0o644,
+          "SUPERVISOR_ROUTE_SOURCE_MISMATCH",
+        )) !== expectedSha256
+      ) throw new PreImportSupervisorError("SUPERVISOR_ROUTE_SOURCE_MISMATCH");
+    }
+  }
   const runnerPath = repositoryPath(repository_root, policy.approved_runner.path);
   if (
     policy.approved_runner.path !== RUNNER_RELATIVE_PATH ||
@@ -657,8 +869,11 @@ export function verifyPreImportSupervisorTrust({
     )) !== policy.retained_state.freeze_sha256
   ) throw new PreImportSupervisorError("SUPERVISOR_RETAINED_STATE_MISMATCH");
   const observedRepository = inspect_repository(repository_root);
+  const expectedRepository = officialMode
+    ? policy.official_runtime.repository
+    : policy.repository;
   if (
-    !exactObject(observedRepository, policy.repository) ||
+    !exactObject(observedRepository, expectedRepository) ||
     !exactObject(observedRepository, authorization.repository)
   ) throw new PreImportSupervisorError("SUPERVISOR_REPOSITORY_MISMATCH");
   return Object.freeze({
@@ -672,13 +887,19 @@ export function verifyPreImportSupervisorTrust({
     authorization: structuredClone(authorization),
     authorization_bytes: Buffer.from(authorizationBytes),
     authorization_sha256: sha256(authorizationBytes),
-    credential_source_policy: structuredClone(policy.credential_source_policy),
+    credential_source_policy: structuredClone(
+      officialMode
+        ? policy.official_runtime.credential_source_policy
+        : policy.credential_source_policy,
+    ),
+    operation_class: authorization.operation_class,
   });
 }
 
 function safeCode(error) {
   return new Set([
     "SUPERVISOR_AUTHORIZATION_CHANGED",
+    "SUPERVISOR_AUTHORIZATION_SCHEMA_MISMATCH",
     "SUPERVISOR_AUTHORIZATION_INVALID",
     "SUPERVISOR_CANDIDATE_MISMATCH",
     "SUPERVISOR_IDENTITY_MISMATCH",
@@ -688,6 +909,7 @@ function safeCode(error) {
     "SUPERVISOR_PATH_INVALID",
     "SUPERVISOR_POLICY_INVALID",
     "SUPERVISOR_REPOSITORY_MISMATCH",
+    "SUPERVISOR_ROUTE_SOURCE_MISMATCH",
     "SUPERVISOR_RETAINED_STATE_MISMATCH",
     "SUPERVISOR_RUNNER_MISMATCH",
     "SUPERVISOR_SEMANTIC_PIN_MISMATCH",
@@ -714,6 +936,21 @@ const SAFE_RUNNER_OUTPUT_CODES = new Set([
   "CONCRETE_SUPERVISOR_TRUST_REQUIRED",
   "CONCRETE_SUPPORT_MISMATCH",
   "CONCRETE_TEMPORARY_COMMIT_MISMATCH",
+  "OFFICIAL_AUTHORIZATION_INVALID",
+  "OFFICIAL_AUTHORIZATION_REQUIRED",
+  "OFFICIAL_AUTHORIZATION_SPENT",
+  "OFFICIAL_BUDGET_EXHAUSTED",
+  "OFFICIAL_CANDIDATE_MISMATCH",
+  "OFFICIAL_CONTRACT_MISMATCH",
+  "OFFICIAL_PRIOR_RECOVERY_PENDING",
+  "OFFICIAL_RECOVERY_PENDING",
+  "OFFICIAL_REPOSITORY_MISMATCH",
+  "OFFICIAL_ROUTE_SOURCE_MISMATCH",
+  "OFFICIAL_RUNTIME_COMPLETE",
+  "OFFICIAL_RUNTIME_FAILED_CLOSED",
+  "OFFICIAL_SUPPORT_MISMATCH",
+  "OFFICIAL_SUPERVISOR_TRUST_REQUIRED",
+  "OFFICIAL_TEMPORARY_COMMIT_MISMATCH",
   "QUALIFIED",
 ]);
 
@@ -722,7 +959,9 @@ function sanitizedRunnerOutput(value) {
     ? value.code
     : "CONCRETE_RUNNER_FAILED";
   const output = {
-    status: code === "QUALIFIED" ? "PASS" : "FAIL",
+    status: ["QUALIFIED", "OFFICIAL_RUNTIME_COMPLETE"].includes(code)
+      ? "PASS"
+      : "FAIL",
     code,
   };
   if (["CONCRETE_CREDENTIAL_MISSING", "CONCRETE_CREDENTIAL_SOURCE_MISMATCH"].includes(code)) {
@@ -767,6 +1006,13 @@ function sanitizedRunnerOutput(value) {
     output.attempts_used = 1;
     output.retained_preview_count = code === "QUALIFIED" ? 1 : 0;
   }
+  if (code === "OFFICIAL_RUNTIME_COMPLETE") {
+    output.qualification_requests = 6;
+    output.official_requests = 20;
+    output.runtime_sessions = 1;
+    output.runtime_retries = 0;
+    output.runtime_replays = 0;
+  }
   return output;
 }
 
@@ -785,10 +1031,13 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
     });
     return { exit_code: 0, code: "PASS_SUPERVISOR_SELF_TEST" };
   }
+  const requestedMode = Array.isArray(argumentsList) ? argumentsList[0] : null;
   if (
     !Array.isArray(argumentsList) ||
     argumentsList.length !== 3 ||
-    argumentsList[0] !== "--qualify-nonproduction" ||
+    !["--qualify-nonproduction", "--run-admin-v1-official"].includes(
+      requestedMode,
+    ) ||
     argumentsList[1] !== "--authorization" ||
     typeof argumentsList[2] !== "string"
   ) {
@@ -837,6 +1086,9 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
         credential_source_policy: structuredClone(trust.credential_source_policy),
         supervisor_sha256: trust.supervisor_sha256,
         supervisor_policy_sha256: trust.supervisor_policy_sha256,
+        ...(trust.operation_class === OFFICIAL_OPERATION_CLASS
+          ? { operation_class: OFFICIAL_OPERATION_CLASS }
+          : {}),
       }),
     );
   } catch (error) {

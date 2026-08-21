@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.invalid/schemas/admin-v1-official-runtime-authorization-v1.json",
+  "title": "AiFinder Admin V1 Official Runtime one-use authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "operation_class",
+    "authorization_id_sha256",
+    "one_use_authorization_sha256",
+    "candidate_identity_sha256",
+    "manifest_sha256",
+    "supervisor_sha256",
+    "supervisor_policy_sha256",
+    "authorization_schema_sha256",
+    "compatibility_support_sha256",
+    "route_source_sha256",
+    "contract_sha256",
+    "created_at",
+    "expires_at",
+    "run_id",
+    "repository",
+    "execution"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "operation_class": { "const": "ADMIN_V1_OFFICIAL_RUNTIME_V1" },
+    "authorization_id_sha256": { "$ref": "#/$defs/sha256" },
+    "one_use_authorization_sha256": { "$ref": "#/$defs/sha256" },
+    "candidate_identity_sha256": { "$ref": "#/$defs/sha256" },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "supervisor_sha256": { "$ref": "#/$defs/sha256" },
+    "supervisor_policy_sha256": { "$ref": "#/$defs/sha256" },
+    "authorization_schema_sha256": { "$ref": "#/$defs/sha256" },
+    "compatibility_support_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "testing/admin-v1-staging-runtime-orchestrator.mjs",
+        "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+        "testing/run-static-readiness.mjs",
+        "testing/static-test-safety-manifest.json"
+      ],
+      "properties": {
+        "testing/admin-v1-staging-runtime-orchestrator.mjs": { "$ref": "#/$defs/sha256" },
+        "testing/admin-v1-staging-runtime-source-policy.test.mjs": { "$ref": "#/$defs/sha256" },
+        "testing/run-static-readiness.mjs": { "$ref": "#/$defs/sha256" },
+        "testing/static-test-safety-manifest.json": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "route_source_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app/api/admin/csrf/route.ts",
+        "app/api/admin/login/route.ts",
+        "app/api/admin/logout/route.ts",
+        "app/api/admin/session/route.ts",
+        "app/api/admin/submissions/route.ts",
+        "app/api/admin/tools/route.ts",
+        "app/api/admin/upload-logo/route.ts",
+        "lib/admin-v1-launch-scope.ts",
+        "proxy.ts"
+      ],
+      "properties": {
+        "app/api/admin/csrf/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/login/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/logout/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/session/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/submissions/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/tools/route.ts": { "$ref": "#/$defs/sha256" },
+        "app/api/admin/upload-logo/route.ts": { "$ref": "#/$defs/sha256" },
+        "lib/admin-v1-launch-scope.ts": { "$ref": "#/$defs/sha256" },
+        "proxy.ts": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "contract_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "budgets",
+        "deferred_routes",
+        "environment_names",
+        "official_ledger",
+        "qualification_ledger",
+        "target_routes"
+      ],
+      "properties": {
+        "budgets": { "$ref": "#/$defs/sha256" },
+        "deferred_routes": { "$ref": "#/$defs/sha256" },
+        "environment_names": { "$ref": "#/$defs/sha256" },
+        "official_ledger": { "$ref": "#/$defs/sha256" },
+        "qualification_ledger": { "$ref": "#/$defs/sha256" },
+        "target_routes": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "run_id": { "$ref": "#/$defs/uuid4" },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root", "branch", "head", "origin_main", "ahead", "behind",
+        "index_empty", "worktree_count", "status_sha256", "remote_repository"
+      ],
+      "properties": {
+        "root": { "const": "/Users/jamescarlodumaua/aifinder" },
+        "branch": { "const": "main" },
+        "head": { "const": "1bddba8b5123d7eec4e986fbeff990a5571358bf" },
+        "origin_main": { "const": "1bddba8b5123d7eec4e986fbeff990a5571358bf" },
+        "ahead": { "const": 0 },
+        "behind": { "const": 0 },
+        "index_empty": { "const": true },
+        "worktree_count": { "const": 1 },
+        "status_sha256": { "$ref": "#/$defs/sha256" },
+        "remote_repository": { "const": "jcdumaua/aifinder" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access_mode", "branch_name", "journal_directory", "preview_project_id",
+        "preview_project_name", "preview_team_id", "preview_team_slug",
+        "storage_bucket", "storage_name", "temporary_commit_sha", "environment_keys"
+      ],
+      "properties": {
+        "access_mode": { "const": "SELF_PROJECT_OIDC" },
+        "branch_name": { "type": "string", "pattern": "^aifinder-admin-v1-official-[0-9a-f-]{36}$" },
+        "journal_directory": { "type": "string", "pattern": "^/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-[0-9a-f-]{36}$" },
+        "preview_project_id": { "const": "prj_BPaQVKdElriAhxabhoTkg8LysQ5R" },
+        "preview_project_name": { "const": "aifinder" },
+        "preview_team_id": { "const": "team_9POJYxNnjIBbrQ19My8M5yG3" },
+        "preview_team_slug": { "const": "ai-finder-s-projects" },
+        "storage_bucket": { "const": "tool-logos" },
+        "storage_name": { "type": "string", "pattern": "^admin/[0-9a-f-]{36}\\.png$" },
+        "temporary_commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "environment_keys": { "const": ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"] }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "uuid4": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    }
+  }
+}

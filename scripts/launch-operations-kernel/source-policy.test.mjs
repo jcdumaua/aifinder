@@ -185,14 +185,14 @@ await check("exact concrete live capability surfaces are isolated", async () => 
   const sources = candidateSources;
   assert.deepEqual(validateCandidateSources(sources), {
     verified: true,
-    source_count: 27,
+    source_count: 30,
     forbidden_capabilities: 0,
     legacy_imports: 0,
     live_routes: 1,
     live_entrypoints: 1,
-    live_capability_files: 5,
+    live_capability_files: 6,
     credential_access_files: 1,
-    checkpoint_writer_files: 1,
+    checkpoint_writer_files: 2,
   });
   assert.equal(
     sources.get(relativePaths[0]).includes(
@@ -740,13 +740,10 @@ for (const [name, addPreGateChildProcessCall] of [
     const runnerPath =
       "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs";
     const original = candidateSources.get(runnerPath);
-    let mutated = original.replace(
-      "if (actual !== authorization.compatibility_support_sha256[supportPath]) {",
-      [
-        "const expected = Object.entries(authorization.compatibility_support_sha256)",
-        "      .find((entry) => entry[0] === supportPath)?.[1];",
-        "    if (actual !== expected) {",
-      ].join("\n"),
+    let mutated = original.replaceAll(
+      "authorization.compatibility_support_sha256[supportPath]",
+      "Object.entries(authorization.compatibility_support_sha256)" +
+        ".find((entry) => entry[0] === supportPath)?.[1]",
     );
     if (addPreGateChildProcessCall) {
       mutated = mutated.replace(
