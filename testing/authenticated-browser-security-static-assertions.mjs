@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 
@@ -1050,10 +1051,142 @@ function testingTreeDigest() {
         repositoryPath,
         file.sha256,
         file.bytes,
-        file.mode,
+        independentCanonicalRegularFileMode(Number.parseInt(file.mode, 8)),
       ].join("\0");
     });
   return sha256(Buffer.from(rows.join("\n")));
+}
+
+const PORTABLE_TESTING_TREE_SELF_TEST_ARGUMENT =
+  "--self-test-portable-testing-tree-digest";
+
+function portableTestingTreeArgumentMode(arguments_) {
+  if (arguments_.length === 0) return "HISTORICAL";
+  if (
+    arguments_.length === 1 &&
+    arguments_[0] === PORTABLE_TESTING_TREE_SELF_TEST_ARGUMENT
+  ) {
+    return "SELF_TEST";
+  }
+  return "REJECT";
+}
+
+function independentCanonicalRegularFileMode(mode) {
+  return (mode & 0o111) !== 0 ? "0755" : "0644";
+}
+
+function independentTestingTreeIdentity({ repositoryPath, bytes, byteCount, mode }) {
+  return sha256(
+    Buffer.from(
+      [
+        repositoryPath,
+        sha256(bytes),
+        byteCount,
+        independentCanonicalRegularFileMode(mode),
+      ].join("\0"),
+    ),
+  );
+}
+
+function runPortableTestingTreeDigestSelfTest() {
+  const fixtureRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "aifinder-auth-portable-tree-test-"),
+  );
+  fs.chmodSync(fixtureRoot, 0o700);
+  const fixturePath = path.join(fixtureRoot, "fixture.mjs");
+  const repositoryPath = "testing/portable-auth-fixture.mjs";
+  const initialBytes = Buffer.from("portable-auth-testing-tree-v1\n");
+  const changedBytes = Buffer.from("portable-auth-testing-tree-v2\n");
+  let result;
+  try {
+    fs.writeFileSync(fixturePath, initialBytes, { mode: 0o600 });
+    const identities = {};
+    for (const mode of [0o600, 0o644, 0o664, 0o755]) {
+      fs.chmodSync(fixturePath, mode);
+      const info = fs.lstatSync(fixturePath);
+      requireContract(
+        info.isFile() && !info.isSymbolicLink(),
+        "AUTH_PORTABLE_TESTING_TREE_FIXTURE_IDENTITY",
+      );
+      const bytes = fs.readFileSync(fixturePath);
+      identities[mode.toString(8).padStart(4, "0")] =
+        independentTestingTreeIdentity({
+          repositoryPath,
+          bytes,
+          byteCount: bytes.length,
+          mode: info.mode,
+        });
+    }
+    fs.chmodSync(fixturePath, 0o644);
+    fs.writeFileSync(fixturePath, changedBytes);
+    const changedInfo = fs.lstatSync(fixturePath);
+    const changedContentIdentity = independentTestingTreeIdentity({
+      repositoryPath,
+      bytes: fs.readFileSync(fixturePath),
+      byteCount: changedBytes.length,
+      mode: changedInfo.mode,
+    });
+    const baseIdentity = independentTestingTreeIdentity({
+      repositoryPath,
+      bytes: initialBytes,
+      byteCount: initialBytes.length,
+      mode: 0o644,
+    });
+    result = {
+      schema_version: 1,
+      result: "PASS_AUTH_PORTABLE_TESTING_TREE_DIGEST_SELF_TEST_V1",
+      reference_identity_sha256: baseIdentity,
+      non_executable_mode_equivalence:
+        identities["0600"] === identities["0644"] &&
+        identities["0644"] === identities["0664"],
+      executable_distinction: identities["0644"] !== identities["0755"],
+      content_mutation_changes_identity: baseIdentity !== changedContentIdentity,
+      path_mutation_changes_identity:
+        baseIdentity !==
+        independentTestingTreeIdentity({
+          repositoryPath: "testing/portable-auth-fixture-renamed.mjs",
+          bytes: initialBytes,
+          byteCount: initialBytes.length,
+          mode: 0o644,
+        }),
+      byte_count_mutation_changes_identity:
+        baseIdentity !==
+        independentTestingTreeIdentity({
+          repositoryPath,
+          bytes: initialBytes,
+          byteCount: initialBytes.length + 1,
+          mode: 0o644,
+        }),
+      clean_checkout_equals_shadow_0600:
+        identities["0644"] === identities["0600"],
+      unknown_arguments_reject:
+        portableTestingTreeArgumentMode(["--unknown"]) === "REJECT" &&
+        portableTestingTreeArgumentMode([
+          PORTABLE_TESTING_TREE_SELF_TEST_ARGUMENT,
+          "extra",
+        ]) === "REJECT",
+    };
+    requireContract(
+      Object.entries(result)
+        .filter(
+          ([key]) =>
+            ![
+              "schema_version",
+              "result",
+              "reference_identity_sha256",
+            ].includes(key),
+        )
+        .every(([, value]) => value === true),
+      "AUTH_PORTABLE_TESTING_TREE_SELF_TEST",
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+  requireContract(
+    !fs.existsSync(fixtureRoot),
+    "AUTH_PORTABLE_TESTING_TREE_FIXTURE_CLEANUP",
+  );
+  return { ...result, fixture_cleanup: true };
 }
 
 function exactArray(actual, expected) {
@@ -2148,6 +2281,16 @@ function verifyGovernance() {
   );
 }
 
+const portableTestingTreeArgumentModeResult = portableTestingTreeArgumentMode(
+  process.argv.slice(2),
+);
+
+if (portableTestingTreeArgumentModeResult === "SELF_TEST") {
+  console.log(JSON.stringify(runPortableTestingTreeDigestSelfTest()));
+} else if (portableTestingTreeArgumentModeResult === "REJECT") {
+  console.log("FAIL_AUTH_PORTABLE_TESTING_TREE_DIGEST_ARGUMENT_CONTRACT_V1");
+  process.exitCode = 1;
+} else {
 const checks = [
   verifyStandaloneLogin,
   verifyPreview,
@@ -2184,4 +2327,5 @@ if (failures.length > 0) {
   console.log(
     `PASS_AUTHENTICATED_BROWSER_SECURITY_STATIC groups=${checks.length} pass=${checks.length} fail=0 internal_failures=0 surfaces=18 closure_files=66 source_paths=8 discovery_selects=5 discovery_detail=2_TARGETS_8_OF_8_PROFILES terminal_assurance=BOUND audit_get=PURE_READ archive_post=SESSION_CSRF_EXPLICIT`,
   );
+}
 }

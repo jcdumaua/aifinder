@@ -886,9 +886,9 @@ const POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
 ]);
 const REVIEWED_PRELIVE_AGGREGATE_SHA256 =
-  "d4b8b2b4cb669f5fdd4bb552eb718dfbb6d582d122559bfc036ae529d458cdc7";
+  "fa50068bd98788f6d468cd9ea34ec447007d74cd979585fd321ce4867822d1b9";
 const REVIEWED_STABLE_SURFACE_SHA256 =
-  "037dc44ec0de794233d1603d513a38764f8486aac6d9c4ef98b4f2930ea92556";
+  "919aa7c687be1481509a1c225537245d5490b6b1f20dd39b32557e6d49b78cce";
 const PROTECTED_DRAFT_PATHS = Object.freeze([
   "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh",
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-generator-candidate.py",
@@ -902,7 +902,86 @@ const PROTECTED_DRAFT_IDENTITIES = Object.freeze({
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-schema.json":
     Object.freeze({ size: 3777, inode: 167180412, mtime: 1784656551, ctime: 1784656551, birthtime: 1784654319 }),
 });
+let launchKernelSelfTestModifiedPaths = Object.freeze([]);
 let launchKernelSelfTestUntrackedPaths = Object.freeze([]);
+const LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH =
+  "scripts/launch-operations-kernel/candidate-manifest.json";
+const EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT = 31;
+const EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS = Object.freeze([
+  "docs/launch-operations-kernel.md",
+  "scripts/launch-operations-kernel/activation-bridge.mjs",
+  "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+  "scripts/launch-operations-kernel/candidate-manifest.json",
+  "scripts/launch-operations-kernel/canonical.mjs",
+  "scripts/launch-operations-kernel/cli.mjs",
+  "scripts/launch-operations-kernel/evidence.schema.json",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs",
+  "scripts/launch-operations-kernel/kernel.mjs",
+  "scripts/launch-operations-kernel/kernel.test.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+  "scripts/launch-operations-kernel/legacy-freeze.json",
+  "scripts/launch-operations-kernel/manifest.mjs",
+  "scripts/launch-operations-kernel/manifest.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs",
+  "scripts/launch-operations-kernel/recovery.test.mjs",
+  "scripts/launch-operations-kernel/source-policy.test.mjs",
+]);
+const EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS = Object.freeze([
+  "docs/launch-operations-kernel.md",
+  "scripts/launch-operations-kernel/candidate-manifest.json",
+  "scripts/launch-operations-kernel/evidence.schema.json",
+  "scripts/launch-operations-kernel/kernel.mjs",
+  "scripts/launch-operations-kernel/kernel.test.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+  "scripts/launch-operations-kernel/legacy-freeze.json",
+  "scripts/launch-operations-kernel/manifest.mjs",
+  "scripts/launch-operations-kernel/manifest.test.mjs",
+  "scripts/launch-operations-kernel/recovery.test.mjs",
+  "scripts/launch-operations-kernel/source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/run-static-readiness.mjs",
+  "testing/static-test-safety-manifest.json",
+]);
+const EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS = Object.freeze([
+  "scripts/launch-operations-kernel/activation-bridge.mjs",
+  "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs",
+  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.mjs",
+  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.test.mjs",
+  "scripts/launch-operations-supervisor/supervisor-policy.json",
+]);
 const PREDECESSOR_RATIFICATION = Object.freeze({
   phase_33na_passed: false,
   phase_33na_final_dependency_evidence_ratified: true,
@@ -3889,6 +3968,7 @@ function verifyDelta20PublicationStatusOnly(
   repositoryRoot,
   transactionImages,
 ) {
+  const reviewedModifiedPaths = reviewedModifiedPathsForCurrentMode();
   const baselineModified = PRELIVE_BASELINE_PATHS.filter(
     (repositoryPath) =>
       !delta20PublicationFileMatches(
@@ -3897,7 +3977,7 @@ function verifyDelta20PublicationStatusOnly(
       ),
   );
   const expected = [
-    ...RETAINED_WORKTREE_MODIFIED_PATHS.map(
+    ...reviewedModifiedPaths.map(
       (repositoryPath) => ` M\0${repositoryPath}`,
     ),
     ...baselineModified.map((repositoryPath) => ` M\0${repositoryPath}`),
@@ -9615,6 +9695,7 @@ function verifyReviewedCandidate(
   plan,
   selfTestUntrackedPaths = launchKernelSelfTestUntrackedPaths,
 ) {
+  const reviewedModifiedPaths = reviewedModifiedPathsForCurrentMode();
   if (
     PRELIVE_UNTRACKED_CREATE_PATHS.length !== 6 ||
     PRELIVE_MODIFIED_PATHS.length !== 10 ||
@@ -9627,12 +9708,19 @@ function verifyReviewedCandidate(
   if (
     !Array.isArray(selfTestUntrackedPaths) ||
     selfTestUntrackedPaths.length !== new Set(selfTestUntrackedPaths).size ||
+    (launchKernelSelfTestModifiedPaths.length === 0
+      ? selfTestUntrackedPaths.length !== 0
+      : !exactSetEqual(
+        new Set(selfTestUntrackedPaths),
+        new Set(EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS),
+      )) ||
     selfTestUntrackedPaths.some(
       (repositoryPath) =>
         (repositoryPath !== "docs/launch-operations-kernel.md" &&
           repositoryPath !==
             "scripts/launch-operations-kernel/candidate-manifest.json" &&
-          !repositoryPath.startsWith("scripts/launch-operations-kernel/")) ||
+          !repositoryPath.startsWith("scripts/launch-operations-kernel/") &&
+          !repositoryPath.startsWith("scripts/launch-operations-supervisor/")) ||
         AUTHORIZED_REPOSITORY_PATHS.includes(repositoryPath) ||
         PROTECTED_DRAFT_PATHS.includes(repositoryPath),
     )
@@ -9651,7 +9739,7 @@ function verifyReviewedCandidate(
       ? PRELIVE_BASELINE_PATHS
       : [];
   const expected = [
-    ...RETAINED_WORKTREE_MODIFIED_PATHS.map(
+    ...reviewedModifiedPaths.map(
       (repositoryPath) => ` M\0${repositoryPath}`,
     ),
     ...conditionalModified.map(
@@ -10629,8 +10717,10 @@ function assertDelta14RealIndexAndWorktreeIsolation(
   plan,
   code,
 ) {
+  const expectedIndexTree =
+    launchKernelSelfTestUntrackedPaths.length === 0 ? plan.baseline : "HEAD";
   const diffIndex = runGitChild(
-    ["diff-index", "--cached", "--quiet", plan.baseline, "--"],
+    ["diff-index", "--cached", "--quiet", expectedIndexTree, "--"],
     { cwd: repositoryRoot },
   );
   try {
@@ -35574,13 +35664,78 @@ function runDelta20VerifiedPublicationSelfTest() {
   );
 }
 
+function validateLaunchKernelSelfTestCompatibility(
+  launchKernelVerification,
+  launchKernelUntrackedPaths,
+) {
+  if (
+    launchKernelVerification === null ||
+    typeof launchKernelVerification !== "object" ||
+    !Array.isArray(launchKernelVerification.member_paths) ||
+    !Array.isArray(launchKernelUntrackedPaths)
+  ) {
+    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
+  }
+  const memberPaths = launchKernelVerification.member_paths;
+  const memberPathSet = new Set(memberPaths);
+  const untrackedPathSet = new Set(launchKernelUntrackedPaths);
+  const expectedUntrackedPathSet = new Set(
+    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS,
+  );
+  const expectedMemberPathSet = new Set(
+    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.filter(
+      (repositoryPath) =>
+        repositoryPath !== LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
+    ),
+  );
+  const manifestPathOccurrences = launchKernelUntrackedPaths.filter(
+    (repositoryPath) =>
+      repositoryPath === LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
+  ).length;
+  if (
+    launchKernelVerification.verified !== true ||
+    launchKernelVerification.source_policy_verified !== true ||
+    launchKernelVerification.legacy_imports !== 0 ||
+    launchKernelVerification.live_routes !== 1 ||
+    launchKernelVerification.member_count !==
+      EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT ||
+    memberPaths.length !== launchKernelVerification.member_count ||
+    memberPathSet.size !== memberPaths.length ||
+    launchKernelUntrackedPaths.length !==
+      launchKernelVerification.member_count + 1 ||
+    launchKernelUntrackedPaths.length !==
+      EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.length ||
+    untrackedPathSet.size !== launchKernelUntrackedPaths.length ||
+    manifestPathOccurrences !== 1 ||
+    !exactSetEqual(memberPathSet, expectedMemberPathSet) ||
+    !exactSetEqual(untrackedPathSet, expectedUntrackedPathSet)
+  ) {
+    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
+  }
+}
+
+function reviewedModifiedPathsForCurrentMode() {
+  if (launchKernelSelfTestModifiedPaths.length === 0) {
+    return RETAINED_WORKTREE_MODIFIED_PATHS;
+  }
+  if (
+    !exactSetEqual(
+      new Set(launchKernelSelfTestModifiedPaths),
+      new Set(EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS),
+    )
+  ) {
+    fail("SELF_TEST_LAUNCH_KERNEL_STATUS_COMPOSITION");
+  }
+  return launchKernelSelfTestModifiedPaths;
+}
+
 async function prepareLaunchKernelSelfTestCompatibility() {
   if (launchKernelSelfTestUntrackedPaths.length !== 0) {
     return launchKernelSelfTestUntrackedPaths;
   }
   const launchKernelManifestPath = path.join(
     process.cwd(),
-    "scripts/launch-operations-kernel/candidate-manifest.json",
+    LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
   );
   const { verifyRepositoryCandidateManifest } = await import(
     "../scripts/launch-operations-kernel/manifest.mjs"
@@ -35590,21 +35745,17 @@ async function prepareLaunchKernelSelfTestCompatibility() {
     manifestPath: launchKernelManifestPath,
   });
   const launchKernelUntrackedPaths = [
-    "scripts/launch-operations-kernel/candidate-manifest.json",
+    LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
     ...launchKernelVerification.member_paths,
   ].sort();
-  if (
-    launchKernelVerification.verified !== true ||
-    launchKernelVerification.source_policy_verified !== true ||
-    launchKernelVerification.legacy_imports !== 0 ||
-    launchKernelVerification.live_routes !== 0 ||
-    launchKernelUntrackedPaths.length !== 14
-  ) {
-    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
-  }
-  launchKernelSelfTestUntrackedPaths = Object.freeze(
+  validateLaunchKernelSelfTestCompatibility(
+    launchKernelVerification,
     launchKernelUntrackedPaths,
   );
+  launchKernelSelfTestModifiedPaths =
+    EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS;
+  launchKernelSelfTestUntrackedPaths =
+    EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS;
   return launchKernelSelfTestUntrackedPaths;
 }
 

@@ -95,7 +95,7 @@ const V1_ADMIN_TOTAL_TIMEOUT_MS = 60_000;
 const V1_STAGING_TOTAL_TIMEOUT_MS = 60_000;
 const V1_RUNTIME_PER_CHILD_TIMEOUT_MS = 55_000;
 const V1_RUNTIME_TOTAL_TIMEOUT_MS = 90_000;
-const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 90_000;
+const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 120_000;
 const PHASE_COMPILER_TOTAL_TIMEOUT_MS = 180_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
 const CORE_CHILD_PATHS = [
@@ -128,7 +128,7 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "81bd94f14852cca2b23ad4ce0c10a148a56c918fb3580198d0132a194309e160",
+    sha256: "f13cb17d53f72e5d0080c79f1ad6bcf0a15afc02b0265f4b0239d666a04f5339",
     imports: [
       "./static-governance-utils.mjs",
       "node:crypto",
@@ -220,7 +220,7 @@ const V1_RUNTIME_CHILDREN = [
   {
     path: "testing/admin-v1-staging-runtime-source-policy.test.mjs",
     argv: [],
-    sha256: "fccb673715b1a41350f092857db3b5392403ab8df5937dac5952a5fd71da7198",
+    sha256: "64332183c95a612050e22be2a60e0b958ce99c5712118e9959d7b456cb18c341",
     imports: [
       "./admin-v1-staging-runtime-core.mjs",
       "node:assert/strict",
@@ -2200,7 +2200,7 @@ function validateManifestForExecution() {
     ) ||
     !compareExactPathSets(paths, inventory).equal ||
     manifest.testing_tree_digest_state !==
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34FA_STAGING_RUNTIME" ||
+      "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME" ||
     manifest.testing_tree_digest !== testingTreeDigest(MANIFEST_PATH)
   ) {
     throw new GovernanceError("RUNNER_MANIFEST_INVENTORY");
@@ -2553,7 +2553,10 @@ function installLegacyCoreManifestProjection(
   createHash,
   baselineProjections,
   phaseCompilerContracts,
+  projectionRoot,
 ) {
+  const canonicalProjectedMode = (mode) =>
+    (mode & 0o111) !== 0 ? "0755" : "0644";
   const manifestSuffix = "/testing/static-test-safety-manifest.json";
   const additiveContracts = new Map([
     [
@@ -2914,6 +2917,7 @@ function installLegacyCoreManifestProjection(
     JSON.stringify(actual) === JSON.stringify(expected);
   const sha256 = (bytes) =>
     createHash("sha256").update(bytes).digest("hex");
+  const historicalRepositoryRoot = "/Users/jamescarlodumaua/aifinder";
   const expectedAbsolutePaths = [
     "/Users/jamescarlodumaua/aifinder/components/admin/admin-dashboard-client.tsx",
     "/Users/jamescarlodumaua/aifinder/testing/readiness-coverage-matrix.json",
@@ -2921,6 +2925,10 @@ function installLegacyCoreManifestProjection(
     "/Users/jamescarlodumaua/aifinder/proxy.ts",
   ];
   if (
+    typeof projectionRoot !== "string" ||
+    !projectionRoot.startsWith("/") ||
+    projectionRoot.endsWith("/") ||
+    projectionRoot !== process.cwd() ||
     !Array.isArray(baselineProjections) ||
     baselineProjections.length !== expectedAbsolutePaths.length ||
     !baselineProjections.every(
@@ -2948,7 +2956,22 @@ function installLegacyCoreManifestProjection(
   }
   const projectedBaselineByAbsolutePath = new Map();
   for (const projection of baselineProjections) {
-    const currentBytes = originalReadFileSync(projection.absolutePath);
+    const repositoryPath = projection.absolutePath.slice(
+      historicalRepositoryRoot.length + 1,
+    );
+    if (
+      !projection.absolutePath.startsWith(historicalRepositoryRoot + "/") ||
+      repositoryPath.length === 0 ||
+      repositoryPath.startsWith("../") ||
+      repositoryPath.includes("/../")
+    ) {
+      throw new Error("LEGACY_CORE_BASELINE_PROJECTION_CONTRACT");
+    }
+    const candidatePath = projectionRoot + "/" + repositoryPath;
+    if (!candidatePath.startsWith(projectionRoot + "/")) {
+      throw new Error("LEGACY_CORE_BASELINE_PROJECTION_CONTRACT");
+    }
+    const currentBytes = originalReadFileSync(candidatePath);
     const currentIdentity = {
       bytes: currentBytes.length,
       sha256: sha256(currentBytes),
@@ -2983,13 +3006,13 @@ function installLegacyCoreManifestProjection(
       throw new Error("LEGACY_CORE_BASELINE_SOURCE_IDENTITY");
     }
     projectedBaselineByAbsolutePath.set(
-      projection.absolutePath,
+      candidatePath,
       baselineBytes,
     );
   }
-  const testingRoot = "/Users/jamescarlodumaua/aifinder/testing";
+  const testingRoot = projectionRoot + "/testing";
   const manifestAbsolutePath =
-    "/Users/jamescarlodumaua/aifinder/testing/static-test-safety-manifest.json";
+    testingRoot + "/static-test-safety-manifest.json";
   const testingFiles = [];
   const walkTestingFiles = (absoluteDirectory) => {
     const entries = fs
@@ -3011,9 +3034,7 @@ function installLegacyCoreManifestProjection(
       const bytes =
         projectedBaselineByAbsolutePath.get(absolutePath) ??
         originalReadFileSync(absolutePath);
-      const mode = (fs.statSync(absolutePath).mode & 0o777)
-        .toString(8)
-        .padStart(4, "0");
+      const mode = canonicalProjectedMode(fs.statSync(absolutePath).mode);
       return [
         "testing/" + absolutePath.slice(testingRoot.length + 1),
         sha256(bytes),
@@ -3035,7 +3056,7 @@ function installLegacyCoreManifestProjection(
     const targetText = String(target);
     const projectionLookupPath =
       targetText === "proxy.ts"
-        ? "/Users/jamescarlodumaua/aifinder/proxy.ts"
+        ? projectionRoot + "/proxy.ts"
         : targetText;
     const projectedBaseline = projectedBaselineByAbsolutePath.get(
       projectionLookupPath,
@@ -3111,6 +3132,8 @@ function legacyCorePreloadUrl() {
       JSON.stringify(LEGACY_CORE_BASELINE_PROJECTIONS) +
       ", " +
       JSON.stringify(PHASE_COMPILER_MANIFEST_CONTRACTS) +
+      ", " +
+      JSON.stringify(process.cwd()) +
       ");",
     "",
   ].join("\n");

@@ -2,11 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aifinder.local/schemas/launch-operations-kernel-evidence-v1.json",
   "title": "AiFinder Launch Operations Kernel Evidence",
+  "$comment": "Strict controller failure projections, including duplicate or unknown BEGIN and failure-cleanup checkpoint outcomes, are recovery-needed non-journal results returned beside, never as, this deterministic compact evidence document. Compact evidence supports only exact bridge-emittable READY, QUALIFIED, FAILED_RECOVERABLE, and FAILED_CLOSED stories; lifecycle claims requiring omitted checkpoint history are rejected. Read-only terminal admission reconstructs the exact terminal evidence identity before acknowledging an authenticated checkpoint. Draft 2020-12 structurally enforces terminal effect count, status/cleanup pairs, and the activation run-id grammar. Exact one-of-each activation resource-plan topology, fixed retained-state attestation, owner/receipt cross-links, and verifier chronology additionally require the mandatory shared validateActivationSemanticParity and validateCompactEvidence semantic layer; the only plan-empty evidence stories are the deterministic pre-effect READY or sanitized failure forms that cannot claim an attempted activation.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "authority_envelope",
+    "authority_envelope_sha256",
     "candidate_identity_sha256",
+    "run_id",
+    "phase",
+    "operation_class",
+    "review_approval_sha256",
+    "freeze_document_sha256",
+    "retained_state_sha256",
+    "resource_plan",
+    "resource_plan_sha256",
+    "operation_reservation",
+    "recovery_operation_state",
+    "journal_identity_sha256",
     "lifecycle_state",
     "authorization_class",
     "budgets",
@@ -20,18 +34,55 @@
   ],
   "properties": {
     "schema_version": { "const": 1 },
+    "authority_envelope": { "$ref": "#/$defs/authority_envelope" },
+    "authority_envelope_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "candidate_identity_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "phase": { "const": "34JA-34JZ" },
+    "operation_class": { "const": "NONPRODUCTION_QUALIFICATION" },
+    "review_approval_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "freeze_document_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "retained_state_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "resource_plan": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/owned_resource" }
+    },
+    "resource_plan_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "operation_reservation": { "$ref": "#/$defs/operation_reservation" },
+    "recovery_operation_state": {
+      "$ref": "#/$defs/recovery_operation_state"
+    },
+    "journal_identity_sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
     "lifecycle_state": {
       "enum": [
         "READY",
-        "QUALIFYING",
         "QUALIFIED",
-        "OFFICIAL_RUNTIME_AUTHORIZED",
-        "OFFICIAL_RUNTIME_RUNNING",
-        "COMPLETE",
         "FAILED_RECOVERABLE",
         "FAILED_CLOSED"
       ]
@@ -90,14 +141,887 @@
       "pattern": "^[0-9a-f]{64}$"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "lifecycle_state": { "const": "QUALIFIED" } },
+        "required": ["lifecycle_state"]
+      },
+      "then": {
+        "properties": {
+          "authorization_class": { "const": "LOCAL_QUALIFICATION" },
+          "budgets": {
+            "properties": {
+              "requests": {
+                "properties": { "used": { "const": 4 } }
+              },
+              "mutations": {
+                "properties": { "used": { "const": 9 } }
+              }
+            }
+          },
+          "resource_plan": { "minItems": 5, "maxItems": 5 },
+          "owned_resources": { "minItems": 5, "maxItems": 5 },
+          "effect_ledger": {
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "oneOf": [
+                { "$ref": "#/$defs/terminal_retained_effect" },
+                { "$ref": "#/$defs/terminal_cleaned_effect" }
+              ]
+            },
+            "contains": { "$ref": "#/$defs/terminal_retained_effect" },
+            "minContains": 1,
+            "maxContains": 1
+          },
+          "recovery_operation_state": {
+            "properties": {
+              "qualification_slot_usage": {
+                "properties": {
+                  "requests": { "minItems": 4, "maxItems": 4 },
+                  "mutations": { "minItems": 9, "maxItems": 9 }
+                }
+              },
+              "qualification_operation_slots": {
+                "minItems": 15,
+                "maxItems": 15
+              }
+            }
+          },
+          "cleanup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required", "verified"],
+            "properties": {
+              "required": { "const": true },
+              "verified": { "const": true }
+            }
+          },
+          "recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": { "status": { "const": "NOT_REQUIRED" } }
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "successful"],
+            "properties": {
+              "code": { "const": "QUALIFIED" },
+              "successful": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "lifecycle_state": { "const": "READY" } },
+        "required": ["lifecycle_state"]
+      },
+      "then": {
+        "properties": {
+          "authorization_class": { "const": "NONE" },
+          "budgets": {
+            "properties": {
+              "requests": {
+                "properties": { "used": { "const": 0 } }
+              },
+              "mutations": {
+                "properties": { "used": { "const": 0 } }
+              }
+            }
+          },
+          "owned_resources": { "maxItems": 0 },
+          "effect_ledger": { "maxItems": 0 },
+          "recovery_operation_state": {
+            "properties": {
+              "recovery_anchor": { "type": "null" },
+              "recovery_grant": { "type": "null" },
+              "qualification_slot_usage": {
+                "properties": {
+                  "requests": { "maxItems": 0 },
+                  "mutations": { "maxItems": 0 }
+                }
+              },
+              "qualification_operation_slots": {
+                "items": {
+                  "properties": {
+                    "reservation_ordinal": { "type": "null" },
+                    "predecessor_reservation_proof_sha256": { "type": "null" },
+                    "reservation_proof_sha256": { "type": "null" },
+                    "status": { "const": "NOT_STARTED" },
+                    "receipt": { "type": "null" },
+                    "receipt_sha256": { "type": "null" }
+                  }
+                }
+              },
+              "operation_slots": {
+                "items": {
+                  "properties": {
+                    "operation_binding_sha256": { "type": "null" },
+                    "status": { "const": "NOT_STARTED" },
+                    "receipt": { "type": "null" },
+                    "receipt_sha256": { "type": "null" }
+                  }
+                }
+              }
+            }
+          },
+          "cleanup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required", "verified"],
+            "properties": {
+              "required": { "const": false },
+              "verified": { "const": true }
+            }
+          },
+          "recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": { "status": { "const": "NOT_REQUIRED" } }
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "successful"],
+            "properties": {
+              "code": { "const": "READY" },
+              "successful": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "lifecycle_state": { "const": "FAILED_RECOVERABLE" } },
+        "required": ["lifecycle_state"]
+      },
+      "then": {
+        "properties": {
+          "authorization_class": {
+            "enum": ["NONE", "LOCAL_QUALIFICATION"]
+          },
+          "effect_ledger": {
+            "items": {
+              "properties": {
+                "cleanup_status": { "not": { "const": "RETAINED" } }
+              }
+            }
+          },
+          "recovery_operation_state": {
+            "properties": {
+              "recovery_anchor": { "type": "null" },
+              "recovery_grant": { "type": "null" },
+              "operation_slots": {
+                "items": {
+                  "properties": {
+                    "operation_binding_sha256": { "type": "null" },
+                    "status": { "const": "NOT_STARTED" },
+                    "receipt": { "type": "null" },
+                    "receipt_sha256": { "type": "null" }
+                  }
+                }
+              }
+            }
+          },
+          "cleanup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required", "verified"],
+            "properties": {
+              "required": { "type": "boolean" },
+              "verified": { "const": false }
+            }
+          },
+          "recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "resume_to"],
+            "properties": {
+              "status": { "const": "PENDING" },
+              "resume_to": { "const": "READY" }
+            }
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "successful"],
+            "properties": {
+              "code": { "$ref": "#/$defs/qualification_failure_code" },
+              "successful": { "const": false }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "authorization_class": { "const": "NONE" } },
+              "required": ["authorization_class"]
+            },
+            "then": {
+              "properties": {
+                "cleanup": {
+                  "properties": { "required": { "const": true } }
+                },
+                "outcome": {
+                  "properties": {
+                    "code": { "$ref": "#/$defs/unknown_qualification_failure_code" }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "authorization_class": { "const": "LOCAL_QUALIFICATION" }
+              },
+              "required": ["authorization_class"]
+            },
+            "then": {
+              "properties": {
+                "outcome": {
+                  "properties": {
+                    "code": { "$ref": "#/$defs/local_qualification_failure_code" }
+                  }
+                }
+              },
+              "oneOf": [
+                {
+                  "properties": {
+                    "owned_resources": { "maxItems": 0 },
+                    "cleanup": {
+                      "properties": { "required": { "const": false } }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "owned_resources": { "minItems": 1 },
+                    "cleanup": {
+                      "properties": { "required": { "const": true } }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": { "lifecycle_state": { "const": "FAILED_CLOSED" } },
+        "required": ["lifecycle_state"]
+      },
+      "then": {
+        "properties": {
+          "authorization_class": {
+            "enum": ["NONE", "LOCAL_QUALIFICATION"]
+          },
+          "effect_ledger": {
+            "items": { "$ref": "#/$defs/terminal_cleaned_effect" }
+          },
+          "recovery_operation_state": {
+            "properties": {
+              "recovery_anchor": { "type": "null" },
+              "recovery_grant": { "type": "null" },
+              "operation_slots": {
+                "items": {
+                  "properties": {
+                    "operation_binding_sha256": { "type": "null" },
+                    "status": { "const": "NOT_STARTED" },
+                    "receipt": { "type": "null" },
+                    "receipt_sha256": { "type": "null" }
+                  }
+                }
+              }
+            }
+          },
+          "cleanup": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["required", "verified"],
+            "properties": {
+              "required": { "type": "boolean" },
+              "verified": { "const": true }
+            }
+          },
+          "recovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": { "status": { "const": "NOT_REQUIRED" } }
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "successful"],
+            "properties": {
+              "code": { "$ref": "#/$defs/qualification_failure_code" },
+              "successful": { "const": false }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "authorization_class": { "const": "NONE" } },
+              "required": ["authorization_class"]
+            },
+            "then": {
+              "properties": {
+                "budgets": {
+                  "properties": {
+                    "requests": { "properties": { "used": { "const": 0 } } },
+                    "mutations": { "properties": { "used": { "const": 0 } } }
+                  }
+                },
+                "owned_resources": { "maxItems": 0 },
+                "effect_ledger": { "maxItems": 0 },
+                "cleanup": {
+                  "properties": { "required": { "const": false } }
+                },
+                "outcome": {
+                  "properties": {
+                    "code": { "$ref": "#/$defs/qualification_failure_code" }
+                  }
+                },
+                "recovery_operation_state": {
+                  "properties": {
+                    "qualification_slot_usage": {
+                      "properties": {
+                        "requests": { "maxItems": 0 },
+                        "mutations": { "maxItems": 0 }
+                      }
+                    },
+                    "qualification_operation_slots": {
+                      "items": {
+                        "properties": {
+                          "reservation_ordinal": { "type": "null" },
+                          "predecessor_reservation_proof_sha256": { "type": "null" },
+                          "reservation_proof_sha256": { "type": "null" },
+                          "status": { "const": "NOT_STARTED" },
+                          "receipt": { "type": "null" },
+                          "receipt_sha256": { "type": "null" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "authorization_class": { "const": "LOCAL_QUALIFICATION" }
+              },
+              "required": ["authorization_class"]
+            },
+            "then": {
+              "properties": {
+                "outcome": {
+                  "properties": {
+                    "code": { "$ref": "#/$defs/local_qualification_failure_code" }
+                  }
+                }
+              },
+              "oneOf": [
+                {
+                  "properties": {
+                    "owned_resources": { "maxItems": 0 },
+                    "cleanup": {
+                      "properties": { "required": { "const": false } }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "owned_resources": { "minItems": 1 },
+                    "cleanup": {
+                      "properties": { "required": { "const": true } }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
   "$defs": {
-    "counter": {
+    "qualification_failure_code": {
+      "enum": [
+        "ATTEMPT_ALREADY_EXISTS",
+        "ATTEMPT_BEGIN_FAILED",
+        "ATTEMPT_BEGIN_STATE_UNKNOWN",
+        "AUTHORITY_VERIFICATION_FAILED",
+        "BUDGET_EXHAUSTED",
+        "CLEANUP_CHECKPOINT_FAILED",
+        "CLEANUP_CHECKPOINT_STATE_UNKNOWN",
+        "CLEANUP_FAILED",
+        "CLEANUP_VERIFICATION_FAILED",
+        "EVIDENCE_DIVERGENCE",
+        "EVIDENCE_FINALIZATION_FAILED",
+        "EVIDENCE_INPUT_UNSAFE",
+        "FREEZE_APPROVAL_MISMATCH",
+        "LEGACY_CLASSIFICATION_MISMATCH",
+        "LEGACY_FREEZE_DOCUMENT_BYTES",
+        "LEGACY_FREEZE_DOCUMENT_DRIFT",
+        "LEGACY_FREEZE_DOCUMENT_PARSE",
+        "LEGACY_FREEZE_METADATA_DRIFT",
+        "LEGACY_PRESERVATION_POLICY",
+        "OPERATION_RECEIPT_MISMATCH",
+        "OPERATION_RESERVATION_CHECKPOINT_FAILED",
+        "OWNERSHIP_AMBIGUOUS",
+        "OWNERSHIP_UNPROVEN",
+        "QUALIFICATION_AUTHORITY_INVALID",
+        "QUALIFICATION_BUDGET_MISMATCH",
+        "QUALIFICATION_FAILED",
+        "RESOURCE_CREATE_FAILED",
+        "RESOURCE_CREATE_UNCONFIRMED",
+        "RETAINED_PREVIEW_POLICY",
+        "RETAINED_STATE_ATTESTATION_MISMATCH",
+        "RETAINED_STATE_DRIFT",
+        "REVIEWED_CANDIDATE_MISMATCH",
+        "RUN_NAMESPACE_INSPECTION_FAILED",
+        "RUN_NAMESPACE_NOT_FRESH",
+        "STAGING_VERIFICATION_FAILED",
+        "STORAGE_VERSION_MISMATCH",
+        "TERMINAL_CHECKPOINT_FAILED",
+        "TERMINAL_CHECKPOINT_STATE_UNKNOWN",
+        "TERMINAL_COMPENSATION_CHECKPOINT_FAILED",
+        "TERMINAL_COMPENSATION_DELETE_FAILED",
+        "TERMINAL_COMPENSATION_VERIFICATION_FAILED"
+      ]
+    },
+    "local_qualification_failure_code": {
+      "enum": [
+        "AUTHORITY_VERIFICATION_FAILED",
+        "BUDGET_EXHAUSTED",
+        "CLEANUP_CHECKPOINT_FAILED",
+        "CLEANUP_CHECKPOINT_STATE_UNKNOWN",
+        "CLEANUP_FAILED",
+        "CLEANUP_VERIFICATION_FAILED",
+        "EVIDENCE_DIVERGENCE",
+        "EVIDENCE_FINALIZATION_FAILED",
+        "OPERATION_RECEIPT_MISMATCH",
+        "OPERATION_RESERVATION_CHECKPOINT_FAILED",
+        "OWNERSHIP_AMBIGUOUS",
+        "OWNERSHIP_UNPROVEN",
+        "QUALIFICATION_FAILED",
+        "RESOURCE_CREATE_FAILED",
+        "RESOURCE_CREATE_UNCONFIRMED",
+        "RETAINED_STATE_ATTESTATION_MISMATCH",
+        "REVIEWED_CANDIDATE_MISMATCH",
+        "RUN_NAMESPACE_INSPECTION_FAILED",
+        "RUN_NAMESPACE_NOT_FRESH",
+        "STAGING_VERIFICATION_FAILED",
+        "STORAGE_VERSION_MISMATCH",
+        "TERMINAL_CHECKPOINT_FAILED",
+        "TERMINAL_CHECKPOINT_STATE_UNKNOWN",
+        "TERMINAL_COMPENSATION_CHECKPOINT_FAILED",
+        "TERMINAL_COMPENSATION_DELETE_FAILED",
+        "TERMINAL_COMPENSATION_VERIFICATION_FAILED"
+      ]
+    },
+    "unknown_qualification_failure_code": {
+      "anyOf": [
+        { "const": "ATTEMPT_ALREADY_EXISTS" },
+        { "const": "ATTEMPT_BEGIN_STATE_UNKNOWN" },
+        { "$ref": "#/$defs/local_qualification_failure_code" }
+      ]
+    },
+    "authority_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "candidate_identity_sha256",
+        "run_id",
+        "phase",
+        "operation_class",
+        "review_approval_sha256",
+        "freeze_document_sha256",
+        "current_retained_state_attestation_sha256",
+        "resource_plan_sha256"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "candidate_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "phase": { "const": "34JA-34JZ" },
+        "operation_class": { "const": "NONPRODUCTION_QUALIFICATION" },
+        "review_approval_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "freeze_document_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "current_retained_state_attestation_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "resource_plan_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "operation_reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "authority_envelope_sha256",
+        "request_limit",
+        "mutation_limit",
+        "identity_sha256"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "authority_envelope_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "request_limit": { "const": 16 },
+        "mutation_limit": { "const": 15 },
+        "identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "recovery_operation_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "recovery_anchor",
+        "recovery_grant",
+        "qualification_slot_usage",
+        "qualification_operation_slots",
+        "operation_slots"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "recovery_anchor": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/recovery_anchor" }
+          ]
+        },
+        "recovery_grant": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/recovery_grant" }
+          ]
+        },
+        "qualification_slot_usage": {
+          "$ref": "#/$defs/qualification_slot_usage"
+        },
+        "qualification_operation_slots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/qualification_operation_slot" },
+          "uniqueItems": true
+        },
+        "operation_slots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/recovery_operation_slot" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "qualification_slot_usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "mutations"],
+      "properties": {
+        "requests": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "mutations": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "recovery_anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint_identity_sha256",
+        "checkpoint_sequence",
+        "predecessor_checkpoint_identity_sha256"
+      ],
+      "properties": {
+        "checkpoint_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "checkpoint_sequence": { "type": "integer", "minimum": 0 },
+        "predecessor_checkpoint_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "recovery_grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorization_class",
+        "authority_receipt_sha256",
+        "recovery_anchor_checkpoint_identity_sha256",
+        "review_sha256"
+      ],
+      "properties": {
+        "authorization_class": { "const": "RECOVERY_CONTROLLER" },
+        "authority_receipt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recovery_anchor_checkpoint_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "review_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "recovery_operation_slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "index",
+        "operation",
+        "resource_key",
+        "operation_slot_sha256",
+        "operation_binding_sha256",
+        "status",
+        "receipt",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "category": { "enum": ["requests", "mutations"] },
+        "index": { "type": "integer", "minimum": 0 },
+        "operation": { "type": "string", "minLength": 1 },
+        "resource_key": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "operation_slot_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "operation_binding_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "status": {
+          "enum": [
+            "NOT_STARTED",
+            "RESERVED",
+            "RECEIPT_KNOWN",
+            "RESULT_APPLIED"
+          ]
+        },
+        "receipt": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object" }
+          ]
+        },
+        "receipt_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        }
+      }
+    },
+    "qualification_operation_slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "index",
+        "operation",
+        "resource_key",
+        "operation_slot_sha256",
+        "reservation_ordinal",
+        "predecessor_reservation_proof_sha256",
+        "reservation_proof_sha256",
+        "status",
+        "receipt",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "category": { "enum": ["requests", "mutations"] },
+        "index": { "type": "integer", "minimum": 0 },
+        "operation": { "type": "string", "minLength": 1 },
+        "resource_key": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "operation_slot_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reservation_ordinal": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "integer", "minimum": 0 }
+          ]
+        },
+        "predecessor_reservation_proof_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "reservation_proof_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "status": {
+          "enum": ["NOT_STARTED", "RESERVED", "RESULT_APPLIED"]
+        },
+        "receipt": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object" }
+          ]
+        },
+        "receipt_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "NOT_STARTED" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "reservation_ordinal": { "type": "null" },
+              "predecessor_reservation_proof_sha256": { "type": "null" },
+              "reservation_proof_sha256": { "type": "null" },
+              "receipt": { "type": "null" },
+              "receipt_sha256": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": { "enum": ["RESERVED", "RESULT_APPLIED"] }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "reservation_ordinal": { "type": "integer", "minimum": 0 },
+              "predecessor_reservation_proof_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "reservation_proof_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "RESERVED" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "receipt": { "type": "null" },
+              "receipt_sha256": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "RESULT_APPLIED" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "receipt": { "type": "object" },
+              "receipt_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "request_counter": {
       "type": "object",
       "additionalProperties": false,
       "required": ["limit", "used"],
       "properties": {
-        "limit": { "type": "integer", "minimum": 0 },
-        "used": { "type": "integer", "minimum": 0 }
+        "limit": { "const": 16 },
+        "used": { "type": "integer", "minimum": 0, "maximum": 16 }
+      }
+    },
+    "mutation_counter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit", "used"],
+      "properties": {
+        "limit": { "const": 15 },
+        "used": { "type": "integer", "minimum": 0, "maximum": 15 }
       }
     },
     "budgets": {
@@ -105,8 +1029,8 @@
       "additionalProperties": false,
       "required": ["requests", "mutations"],
       "properties": {
-        "requests": { "$ref": "#/$defs/counter" },
-        "mutations": { "$ref": "#/$defs/counter" }
+        "requests": { "$ref": "#/$defs/request_counter" },
+        "mutations": { "$ref": "#/$defs/mutation_counter" }
       }
     },
     "owned_resource": {
@@ -121,12 +1045,46 @@
     "owner": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phase", "candidate_identity_sha256"],
+      "required": [
+        "candidate_identity_sha256",
+        "run_id",
+        "phase",
+        "operation_class",
+        "resource_type",
+        "locator_sha256",
+        "cleanup_policy"
+      ],
       "properties": {
         "phase": { "const": "34JA-34JZ" },
         "candidate_identity_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "operation_class": { "const": "NONPRODUCTION_QUALIFICATION" },
+        "resource_type": {
+          "enum": [
+            "DATABASE_ROW",
+            "STORAGE_OBJECT",
+            "PREVIEW_DEPLOYMENT",
+            "GIT_BRANCH",
+            "ENVIRONMENT_RECORD"
+          ]
+        },
+        "locator_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "cleanup_policy": {
+          "enum": [
+            "DELETE_EXACT",
+            "RETAIN_ON_SUCCESS_EXACTLY_ONE_PREVIEW"
+          ]
         }
       }
     },
@@ -251,14 +1209,144 @@
     "effect": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sequence", "resource_key", "effect", "status"],
+      "required": [
+        "sequence",
+        "resource_key",
+        "effect",
+        "status",
+        "cleanup_status",
+        "creation_operation_slot_sha256",
+        "creation_receipt_sha256"
+      ],
       "properties": {
         "sequence": { "type": "integer", "minimum": 1 },
         "resource_key": { "type": "string", "minLength": 1 },
         "effect": { "const": "CREATE" },
         "status": {
           "enum": ["INTENT_ONLY", "APPLIED", "UNCERTAIN", "CLEANED"]
+        },
+        "cleanup_status": {
+          "enum": [
+            "PENDING",
+            "NOT_REQUIRED",
+            "INTENT_ONLY",
+            "APPLIED",
+            "UNCERTAIN",
+            "VERIFIED",
+            "RETAINED",
+            "VERSION_MISMATCH_PRESERVED"
+          ]
+        },
+        "creation_operation_slot_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "creation_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            { "type": "null" }
+          ]
         }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "cleanup_status": { "const": "RETAINED" } },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": { "status": { "const": "APPLIED" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_status": { "const": "PENDING" }
+            },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": {
+              "status": {
+                "enum": ["INTENT_ONLY", "APPLIED", "UNCERTAIN"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_status": {
+                "enum": [
+                  "INTENT_ONLY",
+                  "UNCERTAIN",
+                  "VERSION_MISMATCH_PRESERVED"
+                ]
+              }
+            },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": {
+              "status": { "enum": ["APPLIED", "UNCERTAIN"] }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_status": { "const": "APPLIED" }
+            },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": { "status": { "const": "CLEANED" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_status": { "const": "VERIFIED" }
+            },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": { "status": { "const": "CLEANED" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_status": { "const": "NOT_REQUIRED" }
+            },
+            "required": ["cleanup_status"]
+          },
+          "then": {
+            "properties": {
+              "status": { "const": "CLEANED" },
+              "creation_receipt_sha256": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "terminal_retained_effect": {
+      "type": "object",
+      "required": ["status", "cleanup_status"],
+      "properties": {
+        "status": { "const": "APPLIED" },
+        "cleanup_status": { "const": "RETAINED" }
+      }
+    },
+    "terminal_cleaned_effect": {
+      "type": "object",
+      "required": ["status", "cleanup_status"],
+      "properties": {
+        "status": { "const": "CLEANED" },
+        "cleanup_status": { "enum": ["VERIFIED", "NOT_REQUIRED"] }
       }
     }
   }

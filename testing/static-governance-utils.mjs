@@ -244,6 +244,36 @@ export function stableSortedPaths(paths) {
   return [...paths].sort((left, right) => left.localeCompare(right, "en"));
 }
 
+export function canonicalRegularFileMode(mode) {
+  const numericMode =
+    typeof mode === "string" && /^[0-7]{4}$/.test(mode)
+      ? Number.parseInt(mode, 8)
+      : mode;
+  if (!Number.isSafeInteger(numericMode) || numericMode < 0) {
+    throw new GovernanceError("REGULAR_FILE_MODE_INVALID");
+  }
+  return (numericMode & 0o111) !== 0 ? "0755" : "0644";
+}
+
+export function testingTreeIdentityRow(identity) {
+  if (
+    !identity ||
+    typeof identity.path !== "string" ||
+    identity.path.length === 0 ||
+    !/^[0-9a-f]{64}$/.test(identity.sha256) ||
+    !Number.isSafeInteger(identity.bytes) ||
+    identity.bytes < 0
+  ) {
+    throw new GovernanceError("TESTING_TREE_IDENTITY_INVALID");
+  }
+  return [
+    identity.path,
+    identity.sha256,
+    identity.bytes,
+    canonicalRegularFileMode(identity.mode),
+  ].join("\0");
+}
+
 export function compareExactPathSets(actual, expected) {
   const sortedActual = stableSortedPaths(actual);
   const sortedExpected = stableSortedPaths(expected);
@@ -542,6 +572,87 @@ const APPROVED_ADDITIONAL_SOURCE_ROOTS = new Map([
   ],
 ]);
 
+const PORTABLE_DIGEST_SELF_TEST_ENTRY =
+  "testing/authenticated-browser-security-static-assertions.mjs";
+const PORTABLE_DIGEST_SELF_TEST_FUNCTION =
+  "runPortableTestingTreeDigestSelfTest";
+
+function enclosingFunctionDeclaration(node) {
+  let current = node.parent;
+  while (current) {
+    if (ts.isFunctionDeclaration(current)) return current;
+    current = current.parent;
+  }
+  return null;
+}
+
+function exactPortableDigestSelfTestDispatch(sourceFile) {
+  let modeBinding = false;
+  let guardedCall = false;
+  let selfTestCallCount = 0;
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "portableTestingTreeArgumentModeResult" &&
+          declaration.initializer &&
+          ts.isCallExpression(declaration.initializer) &&
+          ts.isIdentifier(declaration.initializer.expression) &&
+          declaration.initializer.expression.text ===
+            "portableTestingTreeArgumentMode" &&
+          declaration.initializer.arguments.length === 1 &&
+          declaration.initializer.arguments[0].getText(sourceFile) ===
+            "process.argv.slice(2)"
+        ) {
+          modeBinding = true;
+        }
+      }
+    }
+  }
+  function visit(node) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === PORTABLE_DIGEST_SELF_TEST_FUNCTION
+    ) {
+      selfTestCallCount += 1;
+      let current = node.parent;
+      while (current && current.parent) {
+        if (
+          ts.isIfStatement(current) &&
+          current.thenStatement.pos <= node.pos &&
+          node.end <= current.thenStatement.end &&
+          current.expression.getText(sourceFile) ===
+            'portableTestingTreeArgumentModeResult === "SELF_TEST"'
+        ) {
+          guardedCall = true;
+          break;
+        }
+        current = current.parent;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return modeBinding && guardedCall && selfTestCallCount === 1;
+}
+
+function approvedPortableDigestSelfTestMutation({
+  entryRepositoryPath,
+  repositoryPath,
+  sourceFile,
+  node,
+}) {
+  const owner = enclosingFunctionDeclaration(node);
+  return (
+    entryRepositoryPath === PORTABLE_DIGEST_SELF_TEST_ENTRY &&
+    repositoryPath === PORTABLE_DIGEST_SELF_TEST_ENTRY &&
+    owner?.name?.text === PORTABLE_DIGEST_SELF_TEST_FUNCTION &&
+    exactPortableDigestSelfTestDispatch(sourceFile)
+  );
+}
+
 function hasApprovedDataModuleUrl(sourceFile) {
   let approved = false;
   function visit(node) {
@@ -648,11 +759,20 @@ export function executableSafetyViolations(entryRepositoryPath) {
           (ts.isElementAccessExpression(expression) &&
             ts.isIdentifier(expression.expression) &&
             filesystemNamespaces.has(expression.expression.text) &&
-            expression.argumentExpression &&
-            ts.isStringLiteralLike(expression.argumentExpression) &&
-            FORBIDDEN_FS_METHODS.has(expression.argumentExpression.text))
+              expression.argumentExpression &&
+              ts.isStringLiteralLike(expression.argumentExpression) &&
+              FORBIDDEN_FS_METHODS.has(expression.argumentExpression.text))
         ) {
-          violations.push("FILESYSTEM_MUTATION_CALL");
+          if (
+            !approvedPortableDigestSelfTestMutation({
+              entryRepositoryPath,
+              repositoryPath,
+              sourceFile,
+              node,
+            })
+          ) {
+            violations.push("FILESYSTEM_MUTATION_CALL");
+          }
         }
         if (
           ts.isCallExpression(node) &&
@@ -696,12 +816,7 @@ export function testingTreeDigest(manifestPath) {
     .filter((repositoryPath) => repositoryPath !== manifestPath)
     .map((repositoryPath) => {
       const identity = fileIdentity(repositoryPath);
-      return [
-        identity.path,
-        identity.sha256,
-        identity.bytes,
-        identity.mode,
-      ].join("\0");
+      return testingTreeIdentityRow(identity);
     });
   return sha256(rows.join("\n"));
 }

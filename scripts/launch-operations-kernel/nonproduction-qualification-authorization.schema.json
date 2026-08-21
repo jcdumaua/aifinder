@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifinder.local/schemas/nonproduction-qualification-authorization-v1.json",
+  "title": "AiFinder one-use nonproduction qualification authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authorization_id_sha256",
+    "candidate_identity_sha256",
+    "manifest_sha256",
+    "supervisor_sha256",
+    "supervisor_policy_sha256",
+    "compatibility_support_sha256",
+    "retained_legacy_identity_sha256",
+    "retained_legacy_classification",
+    "preserve_ambiguous_legacy_resources",
+    "operation_class",
+    "attempt_limit",
+    "request_budget",
+    "mutation_budget",
+    "success_retention_policy",
+    "independent_review_approval_token_sha256",
+    "created_at",
+    "expires_at",
+    "run_id",
+    "repository",
+    "execution"
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "gitSha1": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "authorization_id_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "candidate_identity_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "supervisor_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "supervisor_policy_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "compatibility_support_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "testing/admin-v1-staging-runtime-orchestrator.mjs",
+        "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+        "testing/run-static-readiness.mjs",
+        "testing/static-test-safety-manifest.json"
+      ],
+      "properties": {
+        "testing/admin-v1-staging-runtime-orchestrator.mjs": {
+          "$ref": "#/$defs/sha256"
+        },
+        "testing/admin-v1-staging-runtime-source-policy.test.mjs": {
+          "$ref": "#/$defs/sha256"
+        },
+        "testing/run-static-readiness.mjs": {
+          "$ref": "#/$defs/sha256"
+        },
+        "testing/static-test-safety-manifest.json": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "retained_legacy_identity_sha256": {
+      "const": "6614d25b486bdf0c4f19c4fd7617a0d46991569b6cd7b66e66cdb8f49b8584c0"
+    },
+    "retained_legacy_classification": {
+      "const": "FAIL_CLOSED_UNRESOLVED"
+    },
+    "preserve_ambiguous_legacy_resources": {
+      "const": true
+    },
+    "operation_class": {
+      "const": "NONPRODUCTION_QUALIFICATION"
+    },
+    "attempt_limit": {
+      "const": 1
+    },
+    "request_budget": {
+      "const": 16
+    },
+    "mutation_budget": {
+      "const": 15
+    },
+    "success_retention_policy": {
+      "const": "RETAIN_EXACTLY_ONE_PREVIEW"
+    },
+    "independent_review_approval_token_sha256": {
+      "const": "fa0968309b6c9a27c6fc90c7f065b3017c71e586ef247707536089a32534d386"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "not": {
+        "enum": [
+          "8c0d9e84-62e5-4658-9de0-c0121a302951",
+          "e46a0d21-f0b4-4f7d-8a4f-e7f6e8a7eda0",
+          "26199d3a-5bcd-4a48-9f31-c7a081195207",
+          "f16a8383-a3ff-4c51-bec6-dc8beba5f4eb",
+          "89336a0a-b67c-4ad6-99d2-b527ffdca9fd",
+          "8e694077-7724-46b4-88ae-1e959d7c28de",
+          "716fcb1b-7999-42b4-82f8-e5e8e65b644f",
+          "a397fbe1-1107-40df-86b2-83b153d8b8cc"
+        ]
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "branch",
+        "head",
+        "origin_main",
+        "ahead",
+        "behind",
+        "index_empty",
+        "worktree_count",
+        "status_sha256",
+        "remote_repository"
+      ],
+      "properties": {
+        "root": {
+          "const": "/Users/jamescarlodumaua/aifinder"
+        },
+        "branch": {
+          "const": "main"
+        },
+        "head": {
+          "const": "ae614fa904e4c00d1dacec8493969fdce6fff3a3"
+        },
+        "origin_main": {
+          "const": "ae614fa904e4c00d1dacec8493969fdce6fff3a3"
+        },
+        "ahead": {
+          "const": 0
+        },
+        "behind": {
+          "const": 0
+        },
+        "index_empty": {
+          "const": true
+        },
+        "worktree_count": {
+          "const": 1
+        },
+        "status_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "remote_repository": {
+          "const": "jcdumaua/aifinder"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "journal_directory",
+        "branch_name",
+        "temporary_commit_sha",
+        "preview_project_id",
+        "preview_project_name",
+        "preview_team_id",
+        "preview_team_slug",
+        "fixture_website",
+        "fixture_name",
+        "supabase_origin_sha256",
+        "supabase_project_ref_sha256",
+        "storage_bucket",
+        "storage_name",
+        "environment_keys",
+        "staging_checks"
+      ],
+      "properties": {
+        "journal_directory": {
+          "type": "string",
+          "pattern": "^/Users/jamescarlodumaua/Downloads/AiFinder-Qualification-[a-z0-9-]+$"
+        },
+        "branch_name": {
+          "type": "string",
+          "pattern": "^aifinder-qualification-[a-z0-9-]+$"
+        },
+        "temporary_commit_sha": {
+          "$ref": "#/$defs/gitSha1"
+        },
+        "preview_project_id": {
+          "const": "prj_BPaQVKdElriAhxabhoTkg8LysQ5R"
+        },
+        "preview_project_name": {
+          "const": "aifinder"
+        },
+        "preview_team_id": {
+          "const": "team_9POJYxNnjIBbrQ19My8M5yG3"
+        },
+        "preview_team_slug": {
+          "const": "ai-finder-s-projects"
+        },
+        "fixture_website": {
+          "type": "string",
+          "pattern": "^https://[a-z0-9-]+\\.invalid/$"
+        },
+        "fixture_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "supabase_origin_sha256": {
+          "const": "25af71e2a439228b8c71e3ab09b27fc2ed4b12a00ba15c8f85ea354664893777"
+        },
+        "supabase_project_ref_sha256": {
+          "const": "30ea077ffbf9cc9243b35ad3d67348004d32d49078787b5b305b65495ecb2914"
+        },
+        "storage_bucket": {
+          "const": "tool-logos"
+        },
+        "storage_name": {
+          "type": "string",
+          "pattern": "^admin/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.png$"
+        },
+        "environment_keys": {
+          "const": [
+            "ADMIN_PASSWORD",
+            "ADMIN_SESSION_SECRET"
+          ]
+        },
+        "staging_checks": {
+          "const": [
+            {
+              "method": "GET",
+              "path": "/",
+              "status": 200
+            },
+            {
+              "method": "GET",
+              "path": "/api/admin/session",
+              "status": 401
+            }
+          ]
+        }
+      }
+    }
+  }
+}

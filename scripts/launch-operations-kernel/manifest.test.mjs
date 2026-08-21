@@ -62,6 +62,10 @@ await check("canonical manifest determinism", async () => {
     "docs/example.md",
     "scripts/example.mjs",
   ]);
+  assert.equal(
+    first.completion_marker,
+    "LAUNCH_OPERATIONS_KERNEL_VERCEL_AUTHENTICATION_AUTHORIZATION_DIAGNOSTIC_LOCAL_REPAIR_COMPLETE_V1",
+  );
 });
 
 await check("derived digest determinism", async () => {
@@ -91,6 +95,7 @@ await check("current candidate verifies", async () => {
   assert.equal(report.verified, true);
   assert.equal(report.source_policy_verified, true);
   assert.ok(report.member_count >= 9);
+  assert.equal(report.activation_source_policy_verified, true);
 });
 
 await check("source mutation is detected", async () => {
@@ -112,6 +117,44 @@ await check("source mutation is detected", async () => {
   );
 });
 
+await check("reviewed-identity attestation never weakens byte closure", async () => {
+  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
+  const report = verifyRepositoryCandidateManifest({
+    repositoryRoot: ROOT,
+    manifestPath: MANIFEST_PATH,
+    sourcePolicyMode: "ATTESTED_BY_REVIEWED_IDENTITY",
+  });
+  assert.equal(report.verified, true);
+  assert.equal(report.source_policy_verified, true);
+  assert.equal(report.activation_source_policy_verified, true);
+  assert.equal(report.live_entrypoints, 1);
+  assert.throws(
+    () =>
+      verifyRepositoryCandidateManifest({
+        repositoryRoot: ROOT,
+        manifestPath: MANIFEST_PATH,
+        sourcePolicyMode: "ATTESTED_BY_REVIEWED_IDENTITY",
+        readMember(relativePath) {
+          const bytes = readFileSync(path.join(ROOT, relativePath));
+          return relativePath.endsWith("kernel.mjs")
+            ? Buffer.concat([bytes, Buffer.from("\n", "utf8")])
+            : bytes;
+        },
+        manifest,
+      }),
+    (error) => error?.code === "CANDIDATE_MEMBER_IDENTITY_MISMATCH",
+  );
+  assert.throws(
+    () =>
+      verifyRepositoryCandidateManifest({
+        repositoryRoot: ROOT,
+        manifestPath: MANIFEST_PATH,
+        sourcePolicyMode: "UNREVIEWED",
+      }),
+    (error) => error?.code === "SOURCE_POLICY_INPUT",
+  );
+});
+
 await check("static readiness integration", async () => {
   const report = buildStaticReadinessReport({
     repositoryRoot: ROOT,
@@ -123,7 +166,9 @@ await check("static readiness integration", async () => {
     candidate_verified: true,
     source_policy_verified: true,
     legacy_route_current: false,
-    kernel_live_routes: 0,
+    kernel_live_routes: 1,
+    routed_entrypoint:
+      "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
     network_requests: 0,
     external_mutations: 0,
     database_writes: 0,
@@ -140,6 +185,10 @@ await check("historical and current candidates are separated", async () => {
   assert.notEqual(report.candidate_identity_sha256, LEGACY_CANDIDATE);
   assert.equal(report.historical_current_equal, false);
   assert.match(report.manifest_sha256, /^[0-9a-f]{64}$/u);
+  assert.equal(
+    report.completion_marker,
+    "LAUNCH_OPERATIONS_KERNEL_VERCEL_AUTHENTICATION_AUTHORIZATION_DIAGNOSTIC_LOCAL_REPAIR_COMPLETE_V1",
+  );
 });
 
 if (failures.length > 0) {

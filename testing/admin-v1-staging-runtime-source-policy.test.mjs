@@ -32,7 +32,7 @@ const TARGET_SHA256 =
 const CONFIRMED_DELTA09_REBOUND_TARGET_SHA256 =
   "47ed7f660868ccb3d7e22793917a043cc75b0ee987e568fb26bfa83212b908d4";
 const EXPECTED_CANONICAL_ORCHESTRATOR_SHA256 =
-  "7ca3653fffd48223d54dd54cf0fac52871d2f30e5385971007c40eefd7a200f9";
+  "f4e1d2746de64f8c094deec7bafdb34edcd6b6b9faeb7c8c151f2b5bc7898401";
 const EXPECTED_SUPABASE_PROJECT_REF_SHA256 =
   "30ea077ffbf9cc9243b35ad3d67348004d32d49078787b5b305b65495ecb2914";
 const MARKER_LINES = Object.freeze([
@@ -202,6 +202,81 @@ const EXPECTED_RETAINED_WORKTREE_MODIFIED_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
   "testing/static-test-safety-manifest.test.mjs",
   "testing/run-static-readiness.mjs",
+]);
+const EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS = Object.freeze([
+  "docs/launch-operations-kernel.md",
+  "scripts/launch-operations-kernel/activation-bridge.mjs",
+  "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+  "scripts/launch-operations-kernel/candidate-manifest.json",
+  "scripts/launch-operations-kernel/canonical.mjs",
+  "scripts/launch-operations-kernel/cli.mjs",
+  "scripts/launch-operations-kernel/evidence.schema.json",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs",
+  "scripts/launch-operations-kernel/kernel.mjs",
+  "scripts/launch-operations-kernel/kernel.test.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+  "scripts/launch-operations-kernel/legacy-freeze.json",
+  "scripts/launch-operations-kernel/manifest.mjs",
+  "scripts/launch-operations-kernel/manifest.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs",
+  "scripts/launch-operations-kernel/recovery.test.mjs",
+  "scripts/launch-operations-kernel/source-policy.test.mjs",
+]);
+const REQUIRED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS = Object.freeze([
+  "docs/launch-operations-kernel.md",
+  "scripts/launch-operations-kernel/candidate-manifest.json",
+  "scripts/launch-operations-kernel/evidence.schema.json",
+  "scripts/launch-operations-kernel/kernel.mjs",
+  "scripts/launch-operations-kernel/kernel.test.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.mjs",
+  "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+  "scripts/launch-operations-kernel/legacy-freeze.json",
+  "scripts/launch-operations-kernel/manifest.mjs",
+  "scripts/launch-operations-kernel/manifest.test.mjs",
+  "scripts/launch-operations-kernel/recovery.test.mjs",
+  "scripts/launch-operations-kernel/source-policy.test.mjs",
+  "testing/admin-v1-staging-runtime-orchestrator.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/run-static-readiness.mjs",
+  "testing/static-test-safety-manifest.json",
+]);
+const REQUIRED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS = Object.freeze([
+  "scripts/launch-operations-kernel/activation-bridge.mjs",
+  "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs",
+  "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json",
+  "scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs",
+  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.mjs",
+  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.test.mjs",
+  "scripts/launch-operations-supervisor/supervisor-policy.json",
 ]);
 const EXPECTED_POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/admin-v1-staging-runtime-evidence.json",
@@ -4148,6 +4223,181 @@ function baseAssertions(coreSource, orchestratorSource) {
   ];
 }
 
+function launchKernelCompatibilityAssertions(orchestratorSource) {
+  const root = astFacts(ORCHESTRATOR_PATH, orchestratorSource).root;
+  const actualPaths = literalArrayFromDeclaration(
+    root,
+    "EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS",
+  );
+  const actualModifiedPaths = literalArrayFromDeclaration(
+    root,
+    "EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS",
+  );
+  const actualUntrackedPaths = literalArrayFromDeclaration(
+    root,
+    "EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS",
+  );
+  const validatorText =
+    namedFunctionText(root, "validateLaunchKernelSelfTestCompatibility") ??
+    "";
+  const prepareText =
+    namedFunctionText(root, "prepareLaunchKernelSelfTestCompatibility") ??
+    "";
+  const reviewedModifiedPathsText =
+    namedFunctionText(root, "reviewedModifiedPathsForCurrentMode") ?? "";
+  const reviewedCandidateText =
+    namedFunctionText(root, "verifyReviewedCandidate") ?? "";
+  const publicationStatusText =
+    namedFunctionText(root, "verifyDelta20PublicationStatusOnly") ?? "";
+  const realIndexIsolationText =
+    namedFunctionText(root, "assertDelta14RealIndexAndWorktreeIsolation") ??
+    "";
+  return [
+    orchestratorSource.includes(
+      "const EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT = 31;",
+    ) &&
+      Array.isArray(actualPaths) &&
+      actualPaths.length === 32 &&
+      new Set(actualPaths).size === actualPaths.length &&
+      exactSet(actualPaths, EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS) &&
+      Array.isArray(actualModifiedPaths) &&
+      actualModifiedPaths.length === 16 &&
+      new Set(actualModifiedPaths).size === actualModifiedPaths.length &&
+      exactSet(
+        actualModifiedPaths,
+        REQUIRED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS,
+      ) &&
+      Array.isArray(actualUntrackedPaths) &&
+      actualUntrackedPaths.length === 21 &&
+      new Set(actualUntrackedPaths).size === actualUntrackedPaths.length &&
+      exactSet(
+        actualUntrackedPaths,
+        REQUIRED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS,
+      ) &&
+      validatorText.includes(
+        "launchKernelVerification.verified !== true",
+      ) &&
+      validatorText.includes(
+        "launchKernelVerification.source_policy_verified !== true",
+      ) &&
+      validatorText.includes(
+        "launchKernelVerification.live_routes !== 1",
+      ) &&
+      validatorText.includes(
+        "launchKernelVerification.member_count !==\n      EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT",
+      ) &&
+      validatorText.includes(
+        "memberPaths.length !== launchKernelVerification.member_count",
+      ) &&
+      validatorText.includes(
+        "memberPathSet.size !== memberPaths.length",
+      ) &&
+      validatorText.includes(
+        "launchKernelUntrackedPaths.length !==\n      launchKernelVerification.member_count + 1",
+      ) &&
+      validatorText.includes(
+        "launchKernelUntrackedPaths.length !==\n      EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.length",
+      ) &&
+      validatorText.includes(
+        "untrackedPathSet.size !== launchKernelUntrackedPaths.length",
+      ) &&
+      validatorText.includes(
+        "manifestPathOccurrences !== 1",
+      ) &&
+      validatorText.includes(
+        "!exactSetEqual(memberPathSet, expectedMemberPathSet)",
+      ) &&
+      validatorText.includes(
+        "!exactSetEqual(untrackedPathSet, expectedUntrackedPathSet)",
+      ) &&
+      prepareText.includes(
+        "validateLaunchKernelSelfTestCompatibility(\n    launchKernelVerification,\n    launchKernelUntrackedPaths,\n  );",
+      ) &&
+      prepareText.includes(
+        "launchKernelSelfTestModifiedPaths =\n    EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS;",
+      ) &&
+      prepareText.includes(
+        "launchKernelSelfTestUntrackedPaths =\n    EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS;",
+      ) &&
+      reviewedModifiedPathsText.includes(
+        "return RETAINED_WORKTREE_MODIFIED_PATHS;",
+      ) &&
+      reviewedModifiedPathsText.includes(
+        "!exactSetEqual(\n      new Set(launchKernelSelfTestModifiedPaths),\n      new Set(EXPECTED_LAUNCH_KERNEL_SELF_TEST_MODIFIED_PATHS)",
+      ) &&
+      reviewedCandidateText.includes(
+        "const reviewedModifiedPaths = reviewedModifiedPathsForCurrentMode();",
+      ) &&
+      reviewedCandidateText.includes(
+        "...reviewedModifiedPaths.map(",
+      ) &&
+      reviewedCandidateText.includes(
+        "!exactSetEqual(\n        new Set(selfTestUntrackedPaths),\n        new Set(EXPECTED_LAUNCH_KERNEL_SELF_TEST_UNTRACKED_PATHS)",
+      ) &&
+      publicationStatusText.includes(
+        "const reviewedModifiedPaths = reviewedModifiedPathsForCurrentMode();",
+      ) &&
+      publicationStatusText.includes("...reviewedModifiedPaths.map(") &&
+      realIndexIsolationText.includes(
+        'const expectedIndexTree =\n    launchKernelSelfTestUntrackedPaths.length === 0 ? plan.baseline : "HEAD";',
+      ) &&
+      realIndexIsolationText.includes(
+        '["diff-index", "--cached", "--quiet", expectedIndexTree, "--"]',
+      ) &&
+      !prepareText.includes("launchKernelUntrackedPaths.length !== 3"),
+  ];
+}
+
+function launchKernelCompatibilityMutationResults(orchestratorSource) {
+  const mutations = [
+    replaceExactlyOnce(
+      orchestratorSource,
+      "const EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT = 31;",
+      "const EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT = 14;",
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      '  "docs/launch-operations-kernel.md",\n  "scripts/launch-operations-kernel/activation-bridge.mjs",',
+      '  "docs/launch-operations-kernel.md",\n  "scripts/launch-operations-kernel/arbitrary.mjs",',
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      '  "scripts/launch-operations-kernel/activation-e2e.test.mjs",\n  "scripts/launch-operations-kernel/candidate-manifest.json",',
+      '  "scripts/launch-operations-kernel/candidate-manifest.json",',
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      '  "scripts/launch-operations-kernel/activation-e2e.test.mjs",\n  "scripts/launch-operations-kernel/candidate-manifest.json",',
+      '  "scripts/launch-operations-kernel/activation-bridge.mjs",\n  "scripts/launch-operations-kernel/candidate-manifest.json",',
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      '  "scripts/launch-operations-kernel/canonical.mjs",',
+      '  "scripts/launch-operations-kernel/unexpected.mjs",',
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      "memberPaths.length !== launchKernelVerification.member_count",
+      "memberPaths.length === launchKernelVerification.member_count",
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      "launchKernelVerification.verified !== true",
+      "launchKernelVerification.verified === true",
+    ),
+    replaceExactlyOnce(
+      orchestratorSource,
+      "launchKernelVerification.live_routes !== 1",
+      "launchKernelVerification.live_routes !== 0",
+    ),
+  ];
+  return mutations.map((candidate) =>
+    launchKernelCompatibilityAssertions(candidate).every(
+      (result) => result === false,
+    ),
+  );
+}
+
 function markerRuntimeAssertions(orchestratorSource) {
   const marker = markerFacts(orchestratorSource);
   const root = astFacts(ORCHESTRATOR_PATH, orchestratorSource).root;
@@ -4642,7 +4892,7 @@ function cleanupBudgetAssertions(orchestratorSource) {
       "pushUrl",
       "`${repairCommitSha}:${branchRef}`",
     ],
-    ["diff-index", "--cached", "--quiet", "plan.baseline", "--"],
+    ["diff-index", "--cached", "--quiet", "expectedIndexTree", "--"],
     ["diff", "--cached", "--name-only"],
     ["hash-object", "-w", "--stdin"],
     ["cat-file", "-e", "`${commitSha}:${repositoryPath}`"],
@@ -12134,6 +12384,15 @@ try {
     );
     process.exit(1);
   }
+  const launchKernelCompatibilityResults =
+    launchKernelCompatibilityAssertions(orchestratorSource);
+  assert.equal(launchKernelCompatibilityResults.length, 1);
+  if (!launchKernelCompatibilityResults[0]) {
+    process.stdout.write(
+      "EXPECTED_FAIL_ADMIN_V1_LAUNCH_KERNEL_COMPATIBILITY assertions=1 failures=1 internal_failures=0\n",
+    );
+    process.exit(1);
+  }
   const baseResults = baseAssertions(coreSource, orchestratorSource);
   const markerResults = markerRuntimeAssertions(orchestratorSource);
   const cleanupResults = cleanupBudgetAssertions(orchestratorSource);
@@ -12166,8 +12425,12 @@ try {
   const mutations = mutationResults(orchestratorSource);
   assert.equal(mutations.length, 41);
   assert(mutations.every(Boolean));
+  const launchKernelCompatibilityMutations =
+    launchKernelCompatibilityMutationResults(orchestratorSource);
+  assert.equal(launchKernelCompatibilityMutations.length, 8);
+  assert(launchKernelCompatibilityMutations.every(Boolean));
   process.stdout.write(
-    "PASS_ADMIN_V1_STAGING_RUNTIME_SOURCE_POLICY assertions=60 mutations=41 branch_transaction_gates=4 branch_transaction_mutations=70 branch_transaction_states=16 branch_transaction_cases=14 branch_delete_pushes_maximum=2 git_remote_reads_maximum=42 sanitized_branch_journal=true runtime_routes=7 runtime_methods=13 application_requests=20 runtime_sessions=1 retries=0 pretarget_qualification_requests=6 durable_projection_requests=20 poststate_oracle=COMPLETE runtime_environment_metadata=5_of_5 local_environment_names=4 environment_pulls=0 direct_data_success_requests=14 direct_data_maximum=26 cleanup_storage_list_reserve=4 cleanup_storage_download_reserve=3 preview_deployments=8 qualification_get_requests_maximum=4 metadata_reprobes=0 cleanup_required=true owner_cleanup_fallback=0 raw_child_output_persisted=0 failures=0 internal_failures=0\n",
+    "PASS_ADMIN_V1_STAGING_RUNTIME_SOURCE_POLICY assertions=60 mutations=41 launch_kernel_compatibility_assertions=1 launch_kernel_compatibility_mutations=8 branch_transaction_gates=4 branch_transaction_mutations=70 branch_transaction_states=16 branch_transaction_cases=14 branch_delete_pushes_maximum=2 git_remote_reads_maximum=42 sanitized_branch_journal=true runtime_routes=7 runtime_methods=13 application_requests=20 runtime_sessions=1 retries=0 pretarget_qualification_requests=6 durable_projection_requests=20 poststate_oracle=COMPLETE runtime_environment_metadata=5_of_5 local_environment_names=4 environment_pulls=0 direct_data_success_requests=14 direct_data_maximum=26 cleanup_storage_list_reserve=4 cleanup_storage_download_reserve=3 preview_deployments=8 qualification_get_requests_maximum=4 metadata_reprobes=0 cleanup_required=true owner_cleanup_fallback=0 raw_child_output_persisted=0 failures=0 internal_failures=0\n",
   );
 } catch (caught) {
   const diagnostic =

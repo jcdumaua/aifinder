@@ -98,8 +98,8 @@
   ],
   "current_route": {
     "legacy_route_current": false,
-    "kernel_live_routes": 0,
-    "routed_entrypoint": null
+    "kernel_live_routes": 1,
+    "routed_entrypoint": "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs"
   },
   "fresh_gemini_review_boundaries": [
     "MATERIAL_ARCHITECTURE_CHANGE",

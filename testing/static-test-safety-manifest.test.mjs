@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   GovernanceError,
+  canonicalRegularFileMode,
   categoricalFailure,
   compareExactPathSets,
   executableSafetyViolations,
@@ -9,6 +10,7 @@ import {
   readStrictJson,
   stableSortedPaths,
   testingTreeDigest,
+  testingTreeIdentityRow,
 } from "./static-governance-utils.mjs";
 
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
@@ -88,6 +90,66 @@ const C2_2_EXECUTION_SURFACE_PATHS = [
   "testing/run-static-readiness.mjs",
 ];
 const V1_ADMIN_SCHEMA_PATH = "testing/admin-v1-launch-scope.schema.json";
+
+function validatePortableTestingTreeIdentity() {
+  const contentSha256 = createHash("sha256")
+    .update("portable-testing-tree-content-v1\n")
+    .digest("hex");
+  const base = {
+    path: "testing/portable-fixture.mjs",
+    sha256: contentSha256,
+    bytes: 33,
+  };
+  const nonExecutableRows = [0o600, 0o644, 0o664].map((mode) =>
+    testingTreeIdentityRow({ ...base, mode }),
+  );
+  assert(
+    nonExecutableRows.every((row) => row === nonExecutableRows[0]),
+    "PORTABLE_TREE_NON_EXECUTABLE_MODE_CLASS",
+  );
+  assert(
+    canonicalRegularFileMode(0o600) === "0644" &&
+      canonicalRegularFileMode(0o644) === "0644" &&
+      canonicalRegularFileMode(0o664) === "0644" &&
+      canonicalRegularFileMode(0o755) === "0755",
+    "PORTABLE_TREE_GIT_MODE_CANONICALIZATION",
+  );
+  assert(
+    testingTreeIdentityRow({ ...base, mode: 0o644 }) !==
+      testingTreeIdentityRow({ ...base, mode: 0o755 }),
+    "PORTABLE_TREE_EXECUTABLE_DISTINCTION",
+  );
+  assert(
+    testingTreeIdentityRow({ ...base, mode: 0o644 }) !==
+      testingTreeIdentityRow({
+        ...base,
+        sha256: createHash("sha256")
+          .update("portable-testing-tree-content-v2\n")
+          .digest("hex"),
+        mode: 0o644,
+      }),
+    "PORTABLE_TREE_CONTENT_MUTATION",
+  );
+  assert(
+    testingTreeIdentityRow({ ...base, mode: 0o644 }) !==
+      testingTreeIdentityRow({
+        ...base,
+        path: "testing/portable-fixture-renamed.mjs",
+        mode: 0o644,
+      }),
+    "PORTABLE_TREE_PATH_MUTATION",
+  );
+  assert(
+    testingTreeIdentityRow({ ...base, mode: 0o644 }) !==
+      testingTreeIdentityRow({ ...base, bytes: base.bytes + 1, mode: 0o644 }),
+    "PORTABLE_TREE_BYTE_COUNT_MUTATION",
+  );
+  assert(
+    testingTreeIdentityRow({ ...base, mode: 0o644 }) ===
+      testingTreeIdentityRow({ ...base, mode: 0o600 }),
+    "PORTABLE_TREE_CLEAN_CHECKOUT_SHADOW_0600",
+  );
+}
 const V1_ADMIN_LEDGER_PATH = "testing/admin-v1-launch-scope.json";
 const V1_ADMIN_SCOPE_TEST_PATH = "testing/admin-v1-launch-scope.test.mjs";
 const V1_ADMIN_HERMETIC_TEST_PATH =
@@ -391,7 +453,7 @@ function validateManifest() {
   );
   assert(
     manifest.testing_tree_digest_state ===
-      "CURRENT_TESTING_TREE_DIGEST_RECOMPUTED_PHASE_34FA_STAGING_RUNTIME",
+      "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
     "MANIFEST_TREE_DIGEST",
   );
   assert(
@@ -978,6 +1040,8 @@ function validateManifest() {
     validateOnly,
   };
 }
+
+validatePortableTestingTreeIdentity();
 
 const currentManifest = readStrictJson(MANIFEST_PATH);
 const missingV1StagingClassifications = V1_STAGING_CLASSIFICATION_PATHS.filter(

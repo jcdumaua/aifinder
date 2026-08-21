@@ -88,8 +88,9 @@ export function assertLegacyFreezePolicy(freeze) {
     freeze.legacy_entrypoints[0]?.current !== false ||
     freeze.legacy_entrypoints[0]?.preserved_for_forensics !== true ||
     freeze.current_route?.legacy_route_current !== false ||
-    freeze.current_route?.kernel_live_routes !== 0 ||
-    freeze.current_route?.routed_entrypoint !== null ||
+    freeze.current_route?.kernel_live_routes !== 1 ||
+    freeze.current_route?.routed_entrypoint !==
+      "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs" ||
     !exactArray(freeze.fresh_gemini_review_boundaries, requiredBoundaries)
   ) {
     throw new LegacyClassifierError("LEGACY_FREEZE_POLICY");
@@ -98,7 +99,9 @@ export function assertLegacyFreezePolicy(freeze) {
     status: "PASS",
     legacy_route_current: false,
     legacy_entrypoints_preserved: 1,
-    kernel_live_routes: 0,
+    kernel_live_routes: 1,
+    routed_entrypoint:
+      "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
     fresh_review_boundaries: requiredBoundaries.length,
   };
 }
