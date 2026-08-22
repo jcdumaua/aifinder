@@ -7,7 +7,6 @@ import {
 } from "node:fs";
 import path from "node:path";
 import {
-  ADMIN_V1_OFFICIAL_BASELINE,
   ADMIN_V1_OFFICIAL_BUDGET_LIMITS,
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
   ADMIN_V1_OFFICIAL_DEFERRED_ROUTES,
@@ -25,6 +24,7 @@ import {
 
 const DIGEST = "a".repeat(64);
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
+const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const SENTINELS = Object.freeze({
   admin_password: Buffer.from("SENTINEL_ADMIN_PASSWORD_7e9d", "utf8"),
   admin_session_secret: Buffer.from("SENTINEL_SESSION_SECRET_a213", "utf8"),
@@ -53,6 +53,7 @@ function authorization(overrides = {}) {
     operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
     authorization_id_sha256: "1".repeat(64),
     one_use_authorization_sha256: "2".repeat(64),
+    review_approval_sha256: "d".repeat(64),
     candidate_identity_sha256: "3".repeat(64),
     manifest_sha256: "4".repeat(64),
     supervisor_sha256: "5".repeat(64),
@@ -76,14 +77,15 @@ function authorization(overrides = {}) {
       "proxy.ts",
     ].map((entry) => [entry, DIGEST])),
     contract_sha256: structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256),
-    created_at: "2026-08-21T00:00:00.000Z",
-    expires_at: "2026-08-22T00:00:00.000Z",
+    created_at: "2026-08-21T12:00:00.000Z",
+    expires_at: "2026-08-22T12:00:00.000Z",
     run_id: RUN_ID,
     repository: {
       root: "/Users/jamescarlodumaua/aifinder",
       branch: "main",
-      head: ADMIN_V1_OFFICIAL_BASELINE,
-      origin_main: ADMIN_V1_OFFICIAL_BASELINE,
+      head: PUBLISHED_HEAD,
+      origin_main: PUBLISHED_HEAD,
+      remote_main: PUBLISHED_HEAD,
       ahead: 0,
       behind: 0,
       index_empty: true,
@@ -189,7 +191,7 @@ function fakeAdapters({
         return {
           status: "EXACT",
           repository: "jcdumaua/aifinder",
-          baseline: ADMIN_V1_OFFICIAL_BASELINE,
+          baseline: PUBLISHED_HEAD,
         };
       }
       if (operation === "inspect_environment_contract") {
@@ -325,7 +327,6 @@ function fakeAdapters({
 
 await check("binding constants", async () => {
   assert.equal(ADMIN_V1_OFFICIAL_OPERATION_CLASS, "ADMIN_V1_OFFICIAL_RUNTIME_V1");
-  assert.equal(ADMIN_V1_OFFICIAL_BASELINE, "1bddba8b5123d7eec4e986fbeff990a5571358bf");
   assert.equal(ADMIN_V1_OFFICIAL_QUALIFICATION_LEDGER.length, 6);
   assert.deepEqual(ADMIN_V1_OFFICIAL_QUALIFICATION_LEDGER.map((entry) => entry.ordinal), [1, 2, 3, 4, 19, 20]);
   assert.equal(ADMIN_V1_OFFICIAL_LEDGER.length, 20);
@@ -406,11 +407,11 @@ await check("crash recovery state classification", async () => {
   ]);
 });
 
-await check("baseline-bound one-use authorization", async () => {
+await check("published-head-bound one-use authorization", async () => {
   const valid = validateAdminV1OfficialAuthorization(authorization(), {
     now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"),
   });
-  assert.equal(valid.repository.head, ADMIN_V1_OFFICIAL_BASELINE);
+  assert.equal(valid.repository.head, PUBLISHED_HEAD);
   assert.throws(
     () => validateAdminV1OfficialAuthorization(authorization({
       repository: { ...authorization().repository, head: "e".repeat(40) },
@@ -419,7 +420,7 @@ await check("baseline-bound one-use authorization", async () => {
   );
 });
 
-await check("authorization schema binds current baseline and operation", async () => {
+await check("authorization schema binds published-head shape and operation", async () => {
   const schema = JSON.parse(readFileSync(
     path.join(
       import.meta.dirname,
@@ -428,7 +429,7 @@ await check("authorization schema binds current baseline and operation", async (
     "utf8",
   ));
   assert.equal(schema.properties.operation_class.const, ADMIN_V1_OFFICIAL_OPERATION_CLASS);
-  assert.equal(schema.properties.repository.properties.head.const, ADMIN_V1_OFFICIAL_BASELINE);
+  assert.equal(schema.properties.repository.properties.head.pattern, "^[0-9a-f]{40}$");
   assert.equal(schema.properties.repository.additionalProperties, false);
   assert.equal(schema.properties.execution.properties.access_mode.const, "SELF_PROJECT_OIDC");
 });

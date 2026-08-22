@@ -64,7 +64,7 @@ await check("canonical manifest determinism", async () => {
   ]);
   assert.equal(
     first.completion_marker,
-    "LAUNCH_OPERATIONS_KERNEL_VERCEL_AUTHENTICATION_AUTHORIZATION_DIAGNOSTIC_LOCAL_REPAIR_COMPLETE_V1",
+    "ADMIN_V1_OFFICIAL_RUNTIME_POST_PUBLICATION_ACTIVATION_BRIDGE_CANDIDATE_V1",
   );
 });
 
@@ -187,7 +187,7 @@ await check("historical and current candidates are separated", async () => {
   assert.match(report.manifest_sha256, /^[0-9a-f]{64}$/u);
   assert.equal(
     report.completion_marker,
-    "LAUNCH_OPERATIONS_KERNEL_VERCEL_AUTHENTICATION_AUTHORIZATION_DIAGNOSTIC_LOCAL_REPAIR_COMPLETE_V1",
+    "ADMIN_V1_OFFICIAL_RUNTIME_POST_PUBLICATION_ACTIVATION_BRIDGE_CANDIDATE_V1",
   );
 });
 

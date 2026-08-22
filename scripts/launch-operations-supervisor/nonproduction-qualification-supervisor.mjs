@@ -28,8 +28,6 @@ const RETAINED_IDENTITY_SHA256 =
   "6614d25b486bdf0c4f19c4fd7617a0d46991569b6cd7b66e66cdb8f49b8584c0";
 const OPERATION_CLASS = "NONPRODUCTION_QUALIFICATION";
 const OFFICIAL_OPERATION_CLASS = "ADMIN_V1_OFFICIAL_RUNTIME_V1";
-const OFFICIAL_REQUIRED_BASELINE =
-  "1bddba8b5123d7eec4e986fbeff990a5571358bf";
 const OFFICIAL_AUTHORIZATION_SCHEMA_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json";
 const SPENT_RUN_IDS = Object.freeze([
@@ -228,6 +226,60 @@ function exactRepository(value) {
     value.remote_repository === "jcdumaua/aifinder";
 }
 
+function exactOfficialRepository(value) {
+  return exactKeys(value, [
+    "root",
+    "branch",
+    "head",
+    "origin_main",
+    "remote_main",
+    "ahead",
+    "behind",
+    "index_empty",
+    "worktree_count",
+    "status_sha256",
+    "remote_repository",
+  ]) &&
+    path.isAbsolute(value.root) &&
+    value.branch === "main" &&
+    /^[0-9a-f]{40}$/u.test(value.head) &&
+    value.origin_main === value.head &&
+    value.remote_main === value.head &&
+    value.ahead === 0 &&
+    value.behind === 0 &&
+    value.index_empty === true &&
+    value.worktree_count === 1 &&
+    isSha256(value.status_sha256) &&
+    value.remote_repository === "jcdumaua/aifinder";
+}
+
+function exactOfficialRepositoryContract(value, repositoryRoot) {
+  return exactKeys(value, [
+    "root",
+    "branch",
+    "ahead",
+    "behind",
+    "index_empty",
+    "worktree_count",
+    "remote_repository",
+    "head_binding",
+    "origin_main_binding",
+    "remote_main_binding",
+    "status_binding",
+  ]) &&
+    value.root === repositoryRoot &&
+    value.branch === "main" &&
+    value.ahead === 0 &&
+    value.behind === 0 &&
+    value.index_empty === true &&
+    value.worktree_count === 1 &&
+    value.remote_repository === "jcdumaua/aifinder" &&
+    value.head_binding === "AUTHORIZATION_PUBLISHED_HEAD" &&
+    value.origin_main_binding === "SAME_AS_HEAD" &&
+    value.remote_main_binding === "SAME_AS_HEAD" &&
+    value.status_binding === "AUTHORIZATION_STATUS_SHA256";
+}
+
 function validatePolicy(policy, repositoryRoot) {
   const baseKeys = [
     "schema_version",
@@ -326,7 +378,7 @@ function validatePolicy(policy, repositoryRoot) {
         "contract_sha256",
         "credential_source_policy",
         "route_source_sha256",
-        "repository",
+        "repository_contract",
         "access_mode",
       ])],
       ["CLASS", official.operation_class === OFFICIAL_OPERATION_CLASS],
@@ -351,11 +403,10 @@ function validatePolicy(policy, repositoryRoot) {
       ["ROUTE_SHA", Object.values(official.route_source_sha256 ?? {}).every(
         (value) => isSha256(value),
       )],
-      ["REPOSITORY", exactRepository(official.repository)],
-      ["REPOSITORY_ROOT", official.repository?.root === repositoryRoot],
-      ["BASELINE_HEAD", official.repository?.head === OFFICIAL_REQUIRED_BASELINE],
-      ["BASELINE_ORIGIN", official.repository?.origin_main ===
-        OFFICIAL_REQUIRED_BASELINE],
+      ["REPOSITORY_CONTRACT", exactOfficialRepositoryContract(
+        official.repository_contract,
+        repositoryRoot,
+      )],
       ["ACCESS_MODE", official.access_mode === "SELF_PROJECT_OIDC"],
     ];
     const failed = checks.find(([, passed]) => !passed);
@@ -524,6 +575,7 @@ export function validateOfficialAuthorizationForSupervisor(
       "operation_class",
       "authorization_id_sha256",
       "one_use_authorization_sha256",
+      "review_approval_sha256",
       "candidate_identity_sha256",
       "manifest_sha256",
       "supervisor_sha256",
@@ -543,6 +595,7 @@ export function validateOfficialAuthorizationForSupervisor(
     ![
       authorization.authorization_id_sha256,
       authorization.one_use_authorization_sha256,
+      authorization.review_approval_sha256,
       authorization.supervisor_sha256,
       authorization.supervisor_policy_sha256,
     ].every(isSha256) ||
@@ -565,7 +618,11 @@ export function validateOfficialAuthorizationForSupervisor(
     expires - created > 24 * 60 * 60 * 1000 ||
     !runIdPattern.test(authorization.run_id ?? "") ||
     SPENT_RUN_IDS.includes(authorization.run_id) ||
-    !exactObject(authorization.repository, official?.repository) ||
+    !exactOfficialRepository(authorization.repository) ||
+    !exactOfficialRepositoryContract(
+      official?.repository_contract,
+      authorization.repository.root,
+    ) ||
     !exactOfficialExecution(authorization.execution, authorization.run_id)
   ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
   return authorization;
@@ -724,7 +781,54 @@ function oneLine(repositoryRoot, args) {
   return value.slice(0, -1);
 }
 
-export function inspectPreImportRepository(repositoryRoot) {
+function inspectPublishedRemoteMain(repositoryRoot) {
+  const result = spawnSync("/usr/bin/git", [
+    "--no-replace-objects",
+    ...PRE_TRUST_GIT_CONFIG,
+    "--no-optional-locks",
+    "ls-remote",
+    "--heads",
+    "https://github.com/jcdumaua/aifinder.git",
+    "refs/heads/main",
+  ], {
+    cwd: repositoryRoot,
+    encoding: null,
+    env: {
+      GIT_ASKPASS: "/usr/bin/false",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_CONFIG_SYSTEM: "/dev/null",
+      GIT_NO_REPLACE_OBJECTS: "1",
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_TERMINAL_PROMPT: "0",
+      LC_ALL: "C",
+      PATH: "/usr/bin:/bin",
+      SSH_ASKPASS: "/usr/bin/false",
+    },
+    maxBuffer: 4096,
+    timeout: 20_000,
+  });
+  if (
+    result?.status !== 0 ||
+    !(result.stdout instanceof Uint8Array) ||
+    !(result.stderr instanceof Uint8Array) ||
+    result.stderr.byteLength !== 0
+  ) throw new PreImportSupervisorError("SUPERVISOR_REMOTE_MAIN_MISMATCH");
+  let output;
+  try {
+    output = new TextDecoder("utf-8", { fatal: true }).decode(result.stdout);
+  } catch {
+    throw new PreImportSupervisorError("SUPERVISOR_REMOTE_MAIN_MISMATCH");
+  }
+  const match = /^([0-9a-f]{40})\trefs\/heads\/main\n$/u.exec(output);
+  if (!match) throw new PreImportSupervisorError("SUPERVISOR_REMOTE_MAIN_MISMATCH");
+  return match[1];
+}
+
+export function inspectPreImportRepository(
+  repositoryRoot,
+  { include_remote_main = false } = {},
+) {
   const branch = oneLine(repositoryRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const head = oneLine(repositoryRoot, ["rev-parse", "HEAD"]);
   const originMain = oneLine(repositoryRoot, ["rev-parse", "refs/remotes/origin/main"]);
@@ -762,6 +866,9 @@ export function inspectPreImportRepository(repositoryRoot) {
     branch,
     head,
     origin_main: originMain,
+    ...(include_remote_main
+      ? { remote_main: inspectPublishedRemoteMain(repositoryRoot) }
+      : {}),
     ahead: Number(counts[0]),
     behind: Number(counts[1]),
     index_empty: index.status === 0,
@@ -868,9 +975,11 @@ export function verifyPreImportSupervisorTrust({
       "SUPERVISOR_RETAINED_STATE_MISMATCH",
     )) !== policy.retained_state.freeze_sha256
   ) throw new PreImportSupervisorError("SUPERVISOR_RETAINED_STATE_MISMATCH");
-  const observedRepository = inspect_repository(repository_root);
+  const observedRepository = inspect_repository(repository_root, {
+    include_remote_main: officialMode,
+  });
   const expectedRepository = officialMode
-    ? policy.official_runtime.repository
+    ? authorization.repository
     : policy.repository;
   if (
     !exactObject(observedRepository, expectedRepository) ||
@@ -893,6 +1002,9 @@ export function verifyPreImportSupervisorTrust({
         : policy.credential_source_policy,
     ),
     operation_class: authorization.operation_class,
+    ...(officialMode
+      ? { repository_observation: structuredClone(observedRepository) }
+      : {}),
   });
 }
 
@@ -1074,6 +1186,30 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
     return runner.dispatchConcreteQualificationRunner(
       argumentsList,
       runner.createConcreteRunnerDependencies({
+        repositoryRoot: dependencies.repository_root,
+        ...(trust.operation_class === OFFICIAL_OPERATION_CLASS
+          ? {
+              nowEpochMs: dependencies.now_epoch_ms,
+              officialRepositoryObservation: structuredClone(
+                trust.repository_observation,
+              ),
+              ...(dependencies.official_transport
+                ? { officialTransport: dependencies.official_transport }
+                : {}),
+              ...(dependencies.read_credential_environment
+                ? {
+                    readCredentialEnvironment:
+                      dependencies.read_credential_environment,
+                  }
+                : {}),
+              ...(dependencies.resolve_credential_environment
+                ? {
+                    resolveCredentialEnvironment:
+                      dependencies.resolve_credential_environment,
+                  }
+                : {}),
+            }
+          : {}),
         writeOutput(value) {
           dependencies.write_output(sanitizedRunnerOutput(value));
         },
@@ -1087,7 +1223,12 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
         supervisor_sha256: trust.supervisor_sha256,
         supervisor_policy_sha256: trust.supervisor_policy_sha256,
         ...(trust.operation_class === OFFICIAL_OPERATION_CLASS
-          ? { operation_class: OFFICIAL_OPERATION_CLASS }
+          ? {
+              operation_class: OFFICIAL_OPERATION_CLASS,
+              repository_observation: structuredClone(
+                trust.repository_observation,
+              ),
+            }
           : {}),
       }),
     );

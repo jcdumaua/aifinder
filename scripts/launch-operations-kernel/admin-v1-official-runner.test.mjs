@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
-  ADMIN_V1_OFFICIAL_BASELINE,
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
@@ -12,6 +11,7 @@ import {
 } from "./nonproduction-qualification-runner.mjs";
 
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
+const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const SUPPORT_PATHS = [
   "testing/admin-v1-staging-runtime-orchestrator.mjs",
   "testing/admin-v1-staging-runtime-source-policy.test.mjs",
@@ -36,6 +36,7 @@ function record() {
     operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
     authorization_id_sha256: "1".repeat(64),
     one_use_authorization_sha256: "2".repeat(64),
+    review_approval_sha256: "d".repeat(64),
     candidate_identity_sha256: "3".repeat(64),
     manifest_sha256: "4".repeat(64),
     supervisor_sha256: "5".repeat(64),
@@ -48,14 +49,15 @@ function record() {
       ROUTE_PATHS.map((entry) => [entry, "a".repeat(64)]),
     ),
     contract_sha256: structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256),
-    created_at: "2026-08-21T00:00:00.000Z",
-    expires_at: "2026-08-22T00:00:00.000Z",
+    created_at: "2026-08-21T12:00:00.000Z",
+    expires_at: "2026-08-22T12:00:00.000Z",
     run_id: RUN_ID,
     repository: {
       root: "/Users/jamescarlodumaua/aifinder",
       branch: "main",
-      head: ADMIN_V1_OFFICIAL_BASELINE,
-      origin_main: ADMIN_V1_OFFICIAL_BASELINE,
+      head: PUBLISHED_HEAD,
+      origin_main: PUBLISHED_HEAD,
+      remote_main: PUBLISHED_HEAD,
       ahead: 0,
       behind: 0,
       index_empty: true,
@@ -85,6 +87,7 @@ function trust(authorization) {
   return Object.freeze({
     verified: true,
     operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+    repository_observation: structuredClone(authorization.repository),
     authorization: structuredClone(authorization),
     authorization_bytes: bytes,
     authorization_sha256: sha256Hex(bytes),

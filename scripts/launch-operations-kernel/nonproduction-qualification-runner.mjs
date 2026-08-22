@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
   readFileSync,
+  lstatSync,
   realpathSync,
 } from "node:fs";
 import path from "node:path";
@@ -45,7 +46,14 @@ import {
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   validateAdminV1OfficialAuthorization,
+  createAdminV1OfficialJournal,
+  classifyAdminV1OfficialRecoveryState,
 } from "./admin-v1-official-runtime.mjs";
+import {
+  loadAdminV1OfficialCredentials,
+  createAdminV1OfficialConcreteTransport,
+  runConcreteAdminV1OfficialRuntime,
+} from "./admin-v1-official-live-platform.mjs";
 
 const REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
 const MANIFEST_RELATIVE_PATH =
@@ -58,6 +66,8 @@ const PROTECTED_DRAFT_PATHS = Object.freeze([
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-schema.json",
 ]);
 const GIT_TIMEOUT_MS = 20_000;
+const OFFICIAL_AUTHORIZATION_SCHEMA_RELATIVE_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json";
 const PRE_EFFECT_GIT_SANDBOX_PROFILE = [
   "(version 1)",
   "(allow default)",
@@ -353,12 +363,17 @@ function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
         "authorization_sha256",
         "credential_source_policy",
         "operation_class",
+        "repository_observation",
         "supervisor_policy_sha256",
         "supervisor_sha256",
         "verified",
       ].sort().join("\0") ||
       supervisorTrust.verified !== true ||
       supervisorTrust.operation_class !== ADMIN_V1_OFFICIAL_OPERATION_CLASS ||
+      !exactObject(
+        supervisorTrust.repository_observation,
+        supervisorTrust.authorization?.repository,
+      ) ||
       !(supervisorTrust.authorization_bytes instanceof Uint8Array) ||
       supervisorTrust.authorization_bytes.byteLength < 2 ||
       supervisorTrust.authorization_bytes.byteLength > 128 * 1024 ||
@@ -472,6 +487,9 @@ function safeOfficialCode(error) {
     "OFFICIAL_BUDGET_EXHAUSTED",
     "OFFICIAL_CANDIDATE_MISMATCH",
     "OFFICIAL_CONTRACT_MISMATCH",
+    "OFFICIAL_CREDENTIAL_MISSING",
+    "OFFICIAL_CREDENTIAL_SOURCE_MISMATCH",
+    "OFFICIAL_CONCRETE_TRANSPORT_MISSING",
     "OFFICIAL_PRIOR_RECOVERY_PENDING",
     "OFFICIAL_RECOVERY_PENDING",
     "OFFICIAL_REPOSITORY_MISMATCH",
@@ -784,7 +802,7 @@ function exactRemoteRepository(repositoryRoot) {
   return "jcdumaua/aifinder";
 }
 
-function inspectConcreteRepository(repositoryRoot) {
+function inspectConcreteRepository(repositoryRoot, officialRepositoryObservation = null) {
   if (realpathSync(repositoryRoot) !== repositoryRoot) {
     throw new ConcreteRunnerError("CONCRETE_REPOSITORY_MISMATCH");
   }
@@ -820,11 +838,14 @@ function inspectConcreteRepository(repositoryRoot) {
     "--untracked-files=all",
     "-z",
   ]).stdout;
-  return {
+  const repository = {
     root: repositoryRoot,
     branch,
     head,
     origin_main: originMain,
+    ...(officialRepositoryObservation === null
+      ? {}
+      : { remote_main: officialRepositoryObservation.remote_main }),
     ahead: Number(counts[0]),
     behind: Number(counts[1]),
     index_empty: index.status === 0,
@@ -832,6 +853,11 @@ function inspectConcreteRepository(repositoryRoot) {
     status_sha256: sha256Hex(statusBytes),
     remote_repository: exactRemoteRepository(repositoryRoot),
   };
+  if (
+    officialRepositoryObservation !== null &&
+    !exactObject(repository, officialRepositoryObservation)
+  ) throw new ConcreteRunnerError("OFFICIAL_REPOSITORY_MISMATCH");
+  return repository;
 }
 
 function statusPaths(repositoryRoot, gitExecutionContext) {
@@ -961,6 +987,22 @@ function verifyConcreteCandidate(repositoryRoot) {
     membership_exact: true,
     live_entrypoints: verification.live_entrypoints,
   };
+}
+
+function hashExactOfficialFile(repositoryRoot, relativePath, allowlist) {
+  if (!allowlist.has(relativePath)) {
+    throw new ConcreteRunnerError("OFFICIAL_ROUTE_SOURCE_MISMATCH");
+  }
+  const target = path.resolve(repositoryRoot, relativePath);
+  if (!target.startsWith(`${repositoryRoot}${path.sep}`)) {
+    throw new ConcreteRunnerError("OFFICIAL_ROUTE_SOURCE_MISMATCH");
+  }
+  const metadata = lstatSync(target);
+  if (
+    !metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1 ||
+    (metadata.mode & 0o777) !== 0o644 || realpathSync(target) !== target
+  ) throw new ConcreteRunnerError("OFFICIAL_ROUTE_SOURCE_MISMATCH");
+  return sha256Hex(readFileSync(target));
 }
 
 function classifyConcreteRetainedLegacy(repositoryRoot) {
@@ -1108,20 +1150,52 @@ async function prepareConcreteAuthorizedExecutionContext(authorization) {
 
 export function createConcreteRunnerDependencies({
   repositoryRoot = REPOSITORY_ROOT,
+  officialRepositoryObservation = null,
+  officialTransport = null,
   readCredentialEnvironment = readConcreteCredentialEnvironment,
   resolveCredentialEnvironment = resolveConcreteCredentialEnvironment,
+  nowEpochMs = Date.now(),
   writeOutput,
 } = {}) {
+  const officialContexts = new Map();
+  const officialRoutePaths = new Set([
+    "app/api/admin/csrf/route.ts",
+    "app/api/admin/login/route.ts",
+    "app/api/admin/logout/route.ts",
+    "app/api/admin/session/route.ts",
+    "app/api/admin/submissions/route.ts",
+    "app/api/admin/tools/route.ts",
+    "app/api/admin/upload-logo/route.ts",
+    "lib/admin-v1-launch-scope.ts",
+    "proxy.ts",
+  ]);
   return {
-    now_epoch_ms: Date.now(),
+    now_epoch_ms: nowEpochMs,
     verifyCandidate() {
       return verifyConcreteCandidate(repositoryRoot);
     },
     inspectRepository() {
-      return inspectConcreteRepository(repositoryRoot);
+      return inspectConcreteRepository(
+        repositoryRoot,
+        officialRepositoryObservation,
+      );
     },
     hashCompatibilitySupport(relativePath) {
       return sha256Hex(readFileSync(path.join(repositoryRoot, relativePath)));
+    },
+    hashOfficialRouteSource(relativePath) {
+      return hashExactOfficialFile(
+        repositoryRoot,
+        relativePath,
+        officialRoutePaths,
+      );
+    },
+    hashOfficialAuthorizationSchema() {
+      return hashExactOfficialFile(
+        repositoryRoot,
+        OFFICIAL_AUTHORIZATION_SCHEMA_RELATIVE_PATH,
+        new Set([OFFICIAL_AUTHORIZATION_SCHEMA_RELATIVE_PATH]),
+      );
     },
     verifyTemporaryCommit: verifyConcreteTemporaryCommit,
     classifyRetainedLegacy() {
@@ -1129,6 +1203,52 @@ export function createConcreteRunnerDependencies({
     },
     prepareAuthorizedExecutionContext:
       prepareConcreteAuthorizedExecutionContext,
+    async prepareOfficialExecutionContext(authorization) {
+      const checkpointStore = createConcreteCheckpointStore({
+        directory: authorization.execution.journal_directory,
+        identity: {
+          authorization_id_sha256: authorization.authorization_id_sha256,
+          candidate_identity_sha256: authorization.candidate_identity_sha256,
+          manifest_sha256: authorization.manifest_sha256,
+          run_id: authorization.run_id,
+        },
+      });
+      const journal = createAdminV1OfficialJournal({
+        directory: authorization.execution.journal_directory,
+        identity: {
+          authorization_id_sha256: authorization.authorization_id_sha256,
+          run_id: authorization.run_id,
+        },
+      });
+      const gitExecutionContext = await checkpointStore.prepareGitExecutionContext({
+        repository_root: authorization.repository.root,
+      });
+      const context = Object.freeze({
+        journal,
+        git_execution_context: gitExecutionContext,
+      });
+      officialContexts.set(authorization.authorization_id_sha256, context);
+      return context;
+    },
+    verifyNoPriorOfficialRecovery(authorization) {
+      const context = officialContexts.get(authorization.authorization_id_sha256);
+      if (!context) return { status: "MISMATCH" };
+      let existing;
+      try {
+        existing = context.journal.load();
+      } catch {
+        return { status: "MISMATCH" };
+      }
+      if (existing === null) return { status: "ABSENT" };
+      if (existing.retired === true) return { status: "RETIRED" };
+      try {
+        const classification = classifyAdminV1OfficialRecoveryState(existing);
+        if (classification === "CLEANUP_COMPLETE") return { status: "SPENT" };
+        return { status: "RECOVERY_PENDING" };
+      } catch {
+        return { status: "MISMATCH" };
+      }
+    },
     async readLiveCredentials(authorization, credentialSourcePolicy) {
       const environment = readCredentialEnvironment({ repositoryRoot });
       const resolved = resolveCredentialEnvironment({
@@ -1154,7 +1274,43 @@ export function createConcreteRunnerDependencies({
         authorization,
       });
     },
+    async readOfficialCredentials(authorization, credentialSourcePolicy) {
+      const environment = readCredentialEnvironment({ repositoryRoot });
+      const resolved = resolveCredentialEnvironment({
+        environment,
+        repositoryRoot,
+      });
+      const officialSources = Object.freeze({
+        ...resolved.sources,
+        NODE_ENV: "PROVIDER_PRODUCTION_SEMANTICS",
+      });
+      if (
+        canonicalJson(officialSources) !== canonicalJson(credentialSourcePolicy) ||
+        canonicalJson(credentialSourcePolicy) !==
+          canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY)
+      ) throw new ConcreteRunnerError("OFFICIAL_CREDENTIAL_SOURCE_MISMATCH");
+      return loadAdminV1OfficialCredentials({
+        environment: { ...resolved.environment, NODE_ENV: "production" },
+        credential_source_policy: officialSources,
+      });
+    },
     runAuthorizedQualification: runConcreteAuthorizedQualification,
+    runAuthorizedOfficialRuntime({
+      authorization,
+      credentials,
+      execution_context,
+    }) {
+      const concreteTransport = typeof officialTransport?.execute === "function"
+        ? officialTransport
+        : createAdminV1OfficialConcreteTransport({ execution_context });
+      return runConcreteAdminV1OfficialRuntime({
+        authorization,
+        credentials,
+        execution_context,
+        transport: concreteTransport,
+        now_epoch_ms: nowEpochMs,
+      });
+    },
     writeOutput,
   };
 }

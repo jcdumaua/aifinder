@@ -340,6 +340,11 @@ function canonicalReviewedBytes(
       current.launch_operations_kernel_semantic_source_sha256_by_path,
     ];
     const officialOnlyPaths = [
+      "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",

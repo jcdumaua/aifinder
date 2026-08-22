@@ -22,9 +22,9 @@ const FIXED_MANIFEST_PATH =
 const MANIFEST_MODULE_PATH =
   "scripts/launch-operations-kernel/manifest.mjs";
 const CANDIDATE_VERSION =
-  "launch-operations-kernel-vercel-authentication-authorization-diagnostic-repair-v1";
+  "admin-v1-official-runtime-post-publication-activation-bridge-v1";
 const COMPLETION_MARKER =
-  "LAUNCH_OPERATIONS_KERNEL_VERCEL_AUTHENTICATION_AUTHORIZATION_DIAGNOSTIC_LOCAL_REPAIR_COMPLETE_V1";
+  "ADMIN_V1_OFFICIAL_RUNTIME_POST_PUBLICATION_ACTIVATION_BRIDGE_CANDIDATE_V1";
 const CONCRETE_RUNNER_PATH =
   "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs";
 const CONCRETE_ADAPTER_PATH =
@@ -49,11 +49,26 @@ const OFFICIAL_RUNTIME_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs";
 const OFFICIAL_RUNNER_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs";
+const OFFICIAL_AUTHORIZATION_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs";
+const OFFICIAL_AUTHORIZATION_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs";
+const OFFICIAL_LIVE_PLATFORM_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs";
+const OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs";
+const OFFICIAL_CONCRETE_BRIDGE_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs";
 const INDEPENDENT_SOURCE_REVIEW_PATH =
   "testing/static-test-safety-manifest.json";
 const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/activation-bridge.mjs",
   "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+  OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH,
+  OFFICIAL_AUTHORIZATION_PATH,
+  OFFICIAL_AUTHORIZATION_TEST_PATH,
+  OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
   OFFICIAL_RUNTIME_PATH,
   OFFICIAL_RUNTIME_TEST_PATH,
@@ -76,6 +91,11 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
 ]);
 const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/activation-bridge.mjs",
+  OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH,
+  OFFICIAL_AUTHORIZATION_PATH,
+  OFFICIAL_AUTHORIZATION_TEST_PATH,
+  OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
   OFFICIAL_RUNTIME_PATH,
   OFFICIAL_RUNTIME_TEST_PATH,
@@ -111,6 +131,7 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_RUNNER_PATH, new Set([
     OFFICIAL_RUNTIME_PATH,
+    OFFICIAL_LIVE_PLATFORM_PATH,
     CONCRETE_ADAPTER_PATH,
     CONCRETE_CREDENTIAL_LOADER_PATH,
     CONCRETE_PLATFORM_PATH,
@@ -118,6 +139,34 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   ])],
   [OFFICIAL_RUNNER_TEST_PATH, new Set([
     OFFICIAL_RUNTIME_PATH,
+    CONCRETE_RUNNER_PATH,
+    CONCRETE_ADAPTER_PATH,
+    CONCRETE_CREDENTIAL_LOADER_PATH,
+    CONCRETE_PLATFORM_PATH,
+    CONCRETE_CHECKPOINT_PATH,
+    OFFICIAL_LIVE_PLATFORM_PATH,
+  ])],
+  [OFFICIAL_AUTHORIZATION_PATH, new Set([OFFICIAL_RUNTIME_PATH])],
+  [OFFICIAL_AUTHORIZATION_TEST_PATH, new Set([
+    OFFICIAL_AUTHORIZATION_PATH,
+    OFFICIAL_RUNTIME_PATH,
+  ])],
+  [OFFICIAL_LIVE_PLATFORM_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
+    CONCRETE_PLATFORM_PATH,
+  ])],
+  [OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
+    OFFICIAL_LIVE_PLATFORM_PATH,
+    CONCRETE_RUNNER_PATH,
+    CONCRETE_ADAPTER_PATH,
+    CONCRETE_CREDENTIAL_LOADER_PATH,
+    CONCRETE_PLATFORM_PATH,
+    CONCRETE_CHECKPOINT_PATH,
+  ])],
+  [OFFICIAL_CONCRETE_BRIDGE_TEST_PATH, new Set([
+    OFFICIAL_RUNTIME_PATH,
+    OFFICIAL_LIVE_PLATFORM_PATH,
     CONCRETE_RUNNER_PATH,
     CONCRETE_ADAPTER_PATH,
     CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -139,6 +188,12 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_CHECKPOINT_TEST_PATH, new Set([CONCRETE_CHECKPOINT_PATH])],
 ]);
 const REVIEWED_NODE_MODULES_BY_PATH = new Map([
+  [OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH, new Set([
+    "node:assert/strict", "node:fs", "node:path",
+  ])],
+  [OFFICIAL_AUTHORIZATION_PATH, new Set(["node:fs", "node:path"])],
+  [OFFICIAL_AUTHORIZATION_TEST_PATH, new Set(["node:assert/strict"])],
+  [OFFICIAL_CONCRETE_BRIDGE_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_RUNNER_TEST_PATH, new Set(["node:assert/strict"])],
   [
     OFFICIAL_RUNTIME_PATH,
@@ -2359,8 +2414,46 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       capabilities.filesystem_mutation &&
       !capabilities.network &&
       !capabilities.environment &&
-      source.includes('mkdtempSync("/tmp/aifinder-admin-v1-official-') &&
+      source.includes('"/tmp/aifinder-admin-v1-official-') &&
       source.includes("real_calls=0")
+    );
+  }
+  if (relativePath === OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes('"/tmp/aifinder-admin-v1-official-') &&
+      source.includes("real_external_actions=0")
+    );
+  }
+  if (relativePath === OFFICIAL_AUTHORIZATION_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("constants.O_EXCL") &&
+      source.includes("constants.O_NOFOLLOW") &&
+      source.includes("0o600") &&
+      source.includes("OFFICIAL_AUTHORIZATION_GENERATOR_REPOSITORY_MISMATCH") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === OFFICIAL_LIVE_PLATFORM_PATH) {
+    return (
+      !capabilities.child_process &&
+      !capabilities.filesystem_mutation &&
+      capabilities.network &&
+      !capabilities.environment &&
+      source.includes("ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP") &&
+      source.includes("createAdminV1OfficialConcreteTransport") &&
+      source.includes("createConcreteLiveTransport") &&
+      source.includes("runAdminV1OfficialRuntime") &&
+      source.includes("OFFICIAL_ADAPTER_OPERATION_DENIED") &&
+      !source.includes("process.env")
     );
   }
   if (relativePath === OFFICIAL_RUNNER_TEST_PATH) {

@@ -3,7 +3,7 @@ import {
   validateOfficialAuthorizationForSupervisor,
 } from "./nonproduction-qualification-supervisor.mjs";
 
-const BASELINE = "1bddba8b5123d7eec4e986fbeff990a5571358bf";
+const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const RUN_ID = "33333333-3333-4333-8333-333333333333";
 const sha = (character) => character.repeat(64);
 const SUPPORT_PATHS = [
@@ -42,12 +42,13 @@ const CREDENTIAL_POLICY = {
   NODE_ENV: "PROVIDER_PRODUCTION_SEMANTICS",
 };
 
-function repository(head = BASELINE) {
+function repository(head = PUBLISHED_HEAD) {
   return {
     root: "/Users/jamescarlodumaua/aifinder",
     branch: "main",
     head,
     origin_main: head,
+    remote_main: head,
     ahead: 0,
     behind: 0,
     index_empty: true,
@@ -74,7 +75,19 @@ function policy() {
       contract_sha256: Object.fromEntries(CONTRACT_KEYS.map((entry) => [entry, sha("5")])),
       credential_source_policy: CREDENTIAL_POLICY,
       route_source_sha256: Object.fromEntries(ROUTE_PATHS.map((entry) => [entry, sha("6")])),
-      repository: repository(),
+      repository_contract: {
+        root: "/Users/jamescarlodumaua/aifinder",
+        branch: "main",
+        ahead: 0,
+        behind: 0,
+        index_empty: true,
+        worktree_count: 1,
+        remote_repository: "jcdumaua/aifinder",
+        head_binding: "AUTHORIZATION_PUBLISHED_HEAD",
+        origin_main_binding: "SAME_AS_HEAD",
+        remote_main_binding: "SAME_AS_HEAD",
+        status_binding: "AUTHORIZATION_STATUS_SHA256",
+      },
       access_mode: "SELF_PROJECT_OIDC",
     },
   };
@@ -87,6 +100,7 @@ function authorization() {
     operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
     authorization_id_sha256: sha("7"),
     one_use_authorization_sha256: sha("8"),
+    review_approval_sha256: sha("c"),
     candidate_identity_sha256: reviewed.candidate.candidate_identity_sha256,
     manifest_sha256: reviewed.candidate.manifest_sha256,
     supervisor_sha256: sha("9"),
@@ -97,10 +111,10 @@ function authorization() {
       reviewed.compatibility_support_sha256,
     route_source_sha256: reviewed.official_runtime.route_source_sha256,
     contract_sha256: reviewed.official_runtime.contract_sha256,
-    created_at: "2026-08-21T00:00:00.000Z",
-    expires_at: "2026-08-22T00:00:00.000Z",
+    created_at: "2026-08-21T12:00:00.000Z",
+    expires_at: "2026-08-22T12:00:00.000Z",
     run_id: RUN_ID,
-    repository: reviewed.official_runtime.repository,
+    repository: repository(),
     execution: {
       access_mode: "SELF_PROJECT_OIDC",
       branch_name: `aifinder-admin-v1-official-${RUN_ID}`,
@@ -125,11 +139,14 @@ const valid = validateOfficialAuthorizationForSupervisor(
   Date.parse("2026-08-21T12:00:00.000Z"),
 );
 assert.equal(valid.operation_class, "ADMIN_V1_OFFICIAL_RUNTIME_V1");
-assert.equal(valid.repository.head, BASELINE);
+assert.equal(valid.repository.head, PUBLISHED_HEAD);
 
 assert.throws(
   () => validateOfficialAuthorizationForSupervisor(
-    { ...authorization(), repository: repository("f".repeat(40)) },
+    {
+      ...authorization(),
+      repository: { ...authorization().repository, head: "f".repeat(40) },
+    },
     reviewedPolicy,
     Date.parse("2026-08-21T12:00:00.000Z"),
   ),

@@ -17,8 +17,6 @@ import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
 
 export const ADMIN_V1_OFFICIAL_OPERATION_CLASS =
   "ADMIN_V1_OFFICIAL_RUNTIME_V1";
-export const ADMIN_V1_OFFICIAL_BASELINE =
-  "1bddba8b5123d7eec4e986fbeff990a5571358bf";
 
 const freezeRows = (rows) => Object.freeze(rows.map((row) => Object.freeze(row)));
 
@@ -231,6 +229,7 @@ const AUTHORIZATION_KEYS = Object.freeze([
   "operation_class",
   "authorization_id_sha256",
   "one_use_authorization_sha256",
+  "review_approval_sha256",
   "candidate_identity_sha256",
   "manifest_sha256",
   "supervisor_sha256",
@@ -246,7 +245,7 @@ const AUTHORIZATION_KEYS = Object.freeze([
   "execution",
 ]);
 const REPOSITORY_KEYS = Object.freeze([
-  "root", "branch", "head", "origin_main", "ahead", "behind",
+  "root", "branch", "head", "origin_main", "remote_main", "ahead", "behind",
   "index_empty", "worktree_count", "status_sha256", "remote_repository",
 ]);
 const EXECUTION_KEYS = Object.freeze([
@@ -318,6 +317,7 @@ export function validateAdminV1OfficialAuthorization(
     ![
       value.authorization_id_sha256,
       value.one_use_authorization_sha256,
+      value.review_approval_sha256,
       value.candidate_identity_sha256,
       value.manifest_sha256,
       value.supervisor_sha256,
@@ -334,10 +334,12 @@ export function validateAdminV1OfficialAuthorization(
     expires - created > 24 * 60 * 60 * 1000 ||
     !UUID_PATTERN.test(value.run_id ?? "") ||
     !exactKeys(repository, REPOSITORY_KEYS) ||
-    repository.root !== "/Users/jamescarlodumaua/aifinder" ||
+    !path.isAbsolute(repository.root) ||
+    realpathSync(repository.root) !== repository.root ||
     repository.branch !== "main" ||
-    repository.head !== ADMIN_V1_OFFICIAL_BASELINE ||
-    repository.origin_main !== ADMIN_V1_OFFICIAL_BASELINE ||
+    !/^[0-9a-f]{40}$/u.test(repository.head ?? "") ||
+    repository.origin_main !== repository.head ||
+    repository.remote_main !== repository.head ||
     repository.ahead !== 0 || repository.behind !== 0 ||
     repository.index_empty !== true || repository.worktree_count !== 1 ||
     !isSha256(repository.status_sha256) ||
@@ -444,8 +446,28 @@ export function createAdminV1OfficialJournal({ directory, identity }) {
     canonicalDirectory,
     "admin-v1-official-runtime-retired.json",
   );
+  const identityPath = path.join(
+    canonicalDirectory,
+    "admin-v1-official-runtime-identity.json",
+  );
   let sequence = 0;
   const exactIdentity = Object.freeze(structuredClone(identity));
+  const identityDocument = {
+    schema_version: 1,
+    identity: structuredClone(exactIdentity),
+  };
+  if (!existsSync(identityPath)) {
+    writeFileSync(identityPath, `${canonicalJson(identityDocument)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    fsyncPath(identityPath);
+    fsyncPath(canonicalDirectory);
+  }
+  const persistedIdentity = strictJournalObject(identityPath);
+  if (canonicalJson(persistedIdentity.value) !== canonicalJson(identityDocument)) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
+  }
 
   const load = () => {
     if (existsSync(retiredPath)) {
@@ -543,7 +565,7 @@ function createBudget(overrides) {
   };
 }
 
-const ACTION_COSTS = Object.freeze({
+export const ADMIN_V1_OFFICIAL_ACTION_COSTS = Object.freeze({
   inspect_prior_residue: { provider_control_invocations: 1 },
   prepare_local_temporary_commit: { local_temporary_commits: 1 },
   inspect_github_metadata: { git_remote_reads: 1 },
@@ -853,7 +875,7 @@ export async function runAdminV1OfficialRuntime({
   journal.publish(publicState(state));
 
   const invoke = async (operation, input = {}, extraCost = {}) => {
-    const fixed = ACTION_COSTS[operation];
+    const fixed = ADMIN_V1_OFFICIAL_ACTION_COSTS[operation];
     if (!fixed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
     budget.take({ ...fixed, ...extraCost });
     return adapters.invoke(operation, input);
@@ -1119,7 +1141,7 @@ export async function runAdminV1OfficialRuntime({
     state.owned.local_temp_state = await mutation(
       "prepare_local_temporary_commit",
       {
-        baseline: ADMIN_V1_OFFICIAL_BASELINE,
+        baseline: validated.repository.head,
         temporary_commit_sha: validated.execution.temporary_commit_sha,
       },
       (response) => {
@@ -1141,7 +1163,7 @@ export async function runAdminV1OfficialRuntime({
     if (
       github?.status !== "EXACT" ||
       github.repository !== validated.repository.remote_repository ||
-      github.baseline !== ADMIN_V1_OFFICIAL_BASELINE
+      github.baseline !== validated.repository.head
     ) throw new AdminV1OfficialRuntimeError("OFFICIAL_GITHUB_IDENTITY_MISMATCH");
     const remote = await invoke("inspect_remote_ref");
     if (remote?.status !== "ABSENT") {

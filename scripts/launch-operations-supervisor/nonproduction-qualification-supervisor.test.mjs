@@ -707,8 +707,9 @@ await check("Official class is verified before the same post-trust runner import
     }
     const officialRepository = {
       ...test.repository,
-      head: "1bddba8b5123d7eec4e986fbeff990a5571358bf",
-      origin_main: "1bddba8b5123d7eec4e986fbeff990a5571358bf",
+      head: "5071f818e6c6aeadbfa708fc937a7ce7e30968eb",
+      origin_main: "5071f818e6c6aeadbfa708fc937a7ce7e30968eb",
+      remote_main: "5071f818e6c6aeadbfa708fc937a7ce7e30968eb",
     };
     test.policy.official_runtime = {
       operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
@@ -720,7 +721,19 @@ await check("Official class is verified before the same post-trust runner import
         relativePath,
         sha256(readFileSync(path.join(test.root, relativePath))),
       ])),
-      repository: officialRepository,
+      repository_contract: {
+        root: test.root,
+        branch: "main",
+        ahead: 0,
+        behind: 0,
+        index_empty: true,
+        worktree_count: 1,
+        remote_repository: "jcdumaua/aifinder",
+        head_binding: "AUTHORIZATION_PUBLISHED_HEAD",
+        origin_main_binding: "SAME_AS_HEAD",
+        remote_main_binding: "SAME_AS_HEAD",
+        status_binding: "AUTHORIZATION_STATUS_SHA256",
+      },
       access_mode: "SELF_PROJECT_OIDC",
     };
     writeCanonical(test.policyPath, test.policy);
@@ -729,6 +742,7 @@ await check("Official class is verified before the same post-trust runner import
       operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
       authorization_id_sha256: sha("1"),
       one_use_authorization_sha256: sha("2"),
+      review_approval_sha256: sha("3"),
       candidate_identity_sha256: test.policy.candidate.candidate_identity_sha256,
       manifest_sha256: test.policy.candidate.manifest_sha256,
       supervisor_sha256: sha256(readFileSync(test.supervisorPath)),
@@ -783,6 +797,10 @@ await check("Official class is verified before the same post-trust runner import
           counters.imports += 1;
           return {
             createConcreteRunnerDependencies(options) {
+              assert.deepEqual(
+                options.officialRepositoryObservation,
+                officialRepository,
+              );
               return { writeOutput: options.writeOutput };
             },
             async dispatchConcreteQualificationRunner(
@@ -799,6 +817,10 @@ await check("Official class is verified before the same post-trust runner import
               assert.deepEqual(
                 supervisorTrust.credential_source_policy,
                 officialCredentialPolicy,
+              );
+              assert.deepEqual(
+                supervisorTrust.repository_observation,
+                officialRepository,
               );
               runnerDependencies.writeOutput({
                 status: "PASS",
