@@ -6,6 +6,9 @@ import {
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
 } from "./admin-v1-official-runtime.mjs";
 import {
+  concreteTemporaryCommitBlobMatches,
+  concreteTemporaryCommitMetadataMatches,
+  concreteTemporaryCommitParentMatches,
   dispatchAdminV1OfficialRunner,
   dispatchConcreteQualificationRunner,
 } from "./nonproduction-qualification-runner.mjs";
@@ -29,7 +32,6 @@ const ROUTE_PATHS = [
   "lib/admin-v1-launch-scope.ts",
   "proxy.ts",
 ];
-
 function record() {
   return {
     schema_version: 1,
@@ -219,6 +221,78 @@ const routedResult = await dispatchConcreteQualificationRunner(
 );
 assert.equal(routedResult.code, "OFFICIAL_RUNTIME_COMPLETE");
 
+const commit = "1".repeat(40);
+const publishedHead = "2".repeat(40);
+const publishedHeadTree = "3".repeat(40);
+const alteredTree = "4".repeat(40);
+
+assert.equal(concreteTemporaryCommitMetadataMatches({
+  changedPaths: [],
+  expectedPaths: [],
+  temporaryTreeSha: alteredTree,
+  publishedHeadTreeSha: publishedHeadTree,
+}), false);
+console.log("ALTERED_TREE_EMPTY_CHILD_REJECTED=PASS");
+
+assert.equal(concreteTemporaryCommitMetadataMatches({
+  changedPaths: [
+    "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh",
+  ],
+  expectedPaths: [],
+  temporaryTreeSha: alteredTree,
+  publishedHeadTreeSha: publishedHeadTree,
+}), false);
+console.log("PROTECTED_DRAFT_COMMIT_REJECTED=PASS");
+
+assert.equal(concreteTemporaryCommitMetadataMatches({
+  changedPaths: ["a.txt"],
+  expectedPaths: ["a.txt"],
+  temporaryTreeSha: alteredTree,
+  publishedHeadTreeSha: publishedHeadTree,
+}), true);
+assert.equal(
+  concreteTemporaryCommitBlobMatches(
+    Buffer.from("candidate\n"),
+    Buffer.from("candidate\n"),
+  ),
+  true,
+);
+assert.equal(
+  concreteTemporaryCommitBlobMatches(
+    Buffer.from("candidate\n"),
+    Buffer.from("different\n"),
+  ),
+  false,
+);
+console.log("NONEMPTY_EXACT_PATH_BLOB_BEHAVIOR_UNCHANGED=PASS");
+
+assert.equal(
+  concreteTemporaryCommitParentMatches(
+    [commit, publishedHead, "5".repeat(40)],
+    commit,
+    publishedHead,
+  ),
+  false,
+);
+assert.equal(
+  concreteTemporaryCommitParentMatches(
+    [commit, publishedHead],
+    commit,
+    publishedHead,
+  ),
+  true,
+);
+console.log("SINGLE_PARENT_RULE_UNCHANGED=PASS");
+
+assert.equal(concreteTemporaryCommitMetadataMatches({
+  changedPaths: [],
+  expectedPaths: [],
+  temporaryTreeSha: publishedHeadTree,
+  publishedHeadTreeSha: publishedHeadTree,
+}), true);
+console.log("EMPTY_CHILD_CLEAN_REPOSITORY=PASS");
+console.log("EMPTY_CHILD_HEAD_TREE_EQUALITY=PASS");
+
 console.log(
-  "PASS_ADMIN_V1_OFFICIAL_RUNNER assertions=8 pre_effect_before_credentials=true operation_class_separate=true real_calls=0 failures=0 internal_failures=0",
+  "PASS_ADMIN_V1_OFFICIAL_RUNNER assertions=16 pre_effect_before_credentials=true operation_class_separate=true real_calls=0 failures=0 internal_failures=0",
 );

@@ -11,7 +11,7 @@
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "9e64571a5da8409b1a00b1cdd84425e0945a77f673cdf544459c59037406da43",
     "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "ba6dae160d3f7af2d8f15a510587afaa78faf2b11ffccd5d752943916d2666ed",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "4cdede12a090ed87d633f51899da093b6d0e25aeddbbca5dd6a834a098152536",
-    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "2ea03bf8bca76643523abdc8a659c55db0496e8536873abe16c6e4de72cc7d4c",
+    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "8aa02cb6478ba5c10ef74b78750083c25e76999581d87f8ad8b248c0834944a9",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "4ab16cb98cbca12844f0882196714b489f9decb83fec7446872a91084f0dc0ac",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "6eb690da03c290d04719b0040785fccd7521fc60bd7c1802d95a3c45937f9722",
     "scripts/launch-operations-kernel/canonical.mjs": "8b9aa4eca1330011569b9831a2e216840367a67cb74a99976ea072fcb3d18821",
@@ -27,7 +27,7 @@
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs": "a1d4a8a7ad1d062f762f2749bcd8e9ffc7847736a00498983942f502b4c58743",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs": "6a98516ac6bf24af0a4580b54466bd8166b7cf3edeb0369a4ae56e9411fce81b",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs": "71ce34b0989be5994eb66a71c0fbfd9bc929a619805315c97dcdbb22b103ab34",
-    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "a1f881edcfd56214c48db9ba9953cb0d10a9a839fe0bab3321a603439cb1875e",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "5c4921e5518fcefb8a4758f299d17cbda744f4607bdbc057f607a254cd7e2b45",
     "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs": "df713b9b0cf524be731f89431dc2f19f6ca04d36e5e35ca3daa5302a928e7fd4",
     "scripts/launch-operations-kernel/recovery.test.mjs": "66e9a59a21593a7136012939aac5f891fb6332fd2b9dc1ba71a4f96771b506a3"
   },
@@ -38,7 +38,7 @@
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "9e64571a5da8409b1a00b1cdd84425e0945a77f673cdf544459c59037406da43",
     "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "ba6dae160d3f7af2d8f15a510587afaa78faf2b11ffccd5d752943916d2666ed",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "4cdede12a090ed87d633f51899da093b6d0e25aeddbbca5dd6a834a098152536",
-    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "2ea03bf8bca76643523abdc8a659c55db0496e8536873abe16c6e4de72cc7d4c",
+    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "8aa02cb6478ba5c10ef74b78750083c25e76999581d87f8ad8b248c0834944a9",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "4ab16cb98cbca12844f0882196714b489f9decb83fec7446872a91084f0dc0ac",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "6eb690da03c290d04719b0040785fccd7521fc60bd7c1802d95a3c45937f9722",
     "scripts/launch-operations-kernel/canonical.mjs": "8b9aa4eca1330011569b9831a2e216840367a67cb74a99976ea072fcb3d18821",
@@ -53,7 +53,7 @@
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs": "20be54fabc307997affd99467b9ca0d912884e41a777f6c76cf7a357552699ac",
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs": "a1d4a8a7ad1d062f762f2749bcd8e9ffc7847736a00498983942f502b4c58743",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs": "6a98516ac6bf24af0a4580b54466bd8166b7cf3edeb0369a4ae56e9411fce81b",
-    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "a1f881edcfd56214c48db9ba9953cb0d10a9a839fe0bab3321a603439cb1875e",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "5c4921e5518fcefb8a4758f299d17cbda744f4607bdbc057f607a254cd7e2b45",
     "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs": "df713b9b0cf524be731f89431dc2f19f6ca04d36e5e35ca3daa5302a928e7fd4"
   },
   "phase_33fa_c1_execution_surface_digest": {

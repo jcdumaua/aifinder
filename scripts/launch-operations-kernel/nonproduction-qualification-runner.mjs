@@ -894,6 +894,46 @@ function statusPaths(repositoryRoot, gitExecutionContext) {
   return paths;
 }
 
+export function concreteTemporaryCommitParentMatches(
+  commitLine,
+  commit,
+  publishedHead,
+) {
+  return (
+    Array.isArray(commitLine) &&
+    commitLine.length === 2 &&
+    /^[0-9a-f]{40}$/u.test(commit ?? "") &&
+    /^[0-9a-f]{40}$/u.test(publishedHead ?? "") &&
+    commitLine[0] === commit &&
+    commitLine[1] === publishedHead
+  );
+}
+
+export function concreteTemporaryCommitMetadataMatches({
+  changedPaths,
+  expectedPaths,
+  temporaryTreeSha,
+  publishedHeadTreeSha,
+}) {
+  if (
+    !Array.isArray(changedPaths) ||
+    !Array.isArray(expectedPaths) ||
+    changedPaths.some((entry) => typeof entry !== "string") ||
+    expectedPaths.some((entry) => typeof entry !== "string") ||
+    !/^[0-9a-f]{40}$/u.test(temporaryTreeSha ?? "") ||
+    !/^[0-9a-f]{40}$/u.test(publishedHeadTreeSha ?? "") ||
+    !exactObject(changedPaths, expectedPaths)
+  ) return false;
+  return expectedPaths.length > 0 ||
+    (changedPaths.length === 0 && temporaryTreeSha === publishedHeadTreeSha);
+}
+
+export function concreteTemporaryCommitBlobMatches(current, committed) {
+  return current instanceof Uint8Array &&
+    committed instanceof Uint8Array &&
+    Buffer.from(current).equals(Buffer.from(committed));
+}
+
 export function verifyConcreteTemporaryCommit(authorization, gitExecutionContext) {
   const repositoryRoot = authorization.repository.root;
   const commit = authorization.execution.temporary_commit_sha;
@@ -911,8 +951,11 @@ export function verifyConcreteTemporaryCommit(authorization, gitExecutionContext
     ).split(/\s+/u);
     if (
       commitLine.length !== 2 ||
-      commitLine[0] !== commit ||
-      commitLine[1] !== authorization.repository.head
+      !concreteTemporaryCommitParentMatches(
+        commitLine,
+        commit,
+        authorization.repository.head,
+      )
     ) {
       throw new ConcreteRunnerError("CONCRETE_TEMPORARY_COMMIT_MISMATCH");
     }
@@ -929,27 +972,43 @@ export function verifyConcreteTemporaryCommit(authorization, gitExecutionContext
       .filter((entry) => !PROTECTED_DRAFT_PATHS.includes(entry))
       .sort();
     verificationStage = "PATH_EQUIVALENCE";
-    if (!exactObject(changed, expected) || expected.length < 1) {
+    if (!exactObject(changed, expected)) {
       throw new ConcreteRunnerError("CONCRETE_TEMPORARY_COMMIT_MISMATCH");
-    }
-    for (const relativePath of expected) {
-      verificationStage = `BLOB:${relativePath}`;
-      const current = readFileSync(path.join(repositoryRoot, relativePath));
-      const committed = rawGit([
-        "show",
-        `${commit}:${relativePath}`,
-      ]).stdout;
-      if (!current.equals(committed)) {
-        throw new ConcreteRunnerError("CONCRETE_TEMPORARY_COMMIT_MISMATCH");
-      }
     }
     verificationStage = "TREE";
     const treeSha = singleLine(
       rawGit(["show", "-s", "--format=%T", commit]),
       "CONCRETE_TEMPORARY_COMMIT_MISMATCH",
     );
-    if (!/^[0-9a-f]{40}$/u.test(treeSha)) {
+    const publishedHeadTreeSha = singleLine(
+      rawGit([
+        "show",
+        "-s",
+        "--format=%T",
+        authorization.repository.head,
+      ]),
+      "CONCRETE_TEMPORARY_COMMIT_MISMATCH",
+    );
+    if (!concreteTemporaryCommitMetadataMatches({
+      changedPaths: changed,
+      expectedPaths: expected,
+      temporaryTreeSha: treeSha,
+      publishedHeadTreeSha,
+    })) {
       throw new ConcreteRunnerError("CONCRETE_TEMPORARY_COMMIT_MISMATCH");
+    }
+    if (expected.length > 0) {
+      for (const relativePath of expected) {
+        verificationStage = `BLOB:${relativePath}`;
+        const current = readFileSync(path.join(repositoryRoot, relativePath));
+        const committed = rawGit([
+          "show",
+          `${commit}:${relativePath}`,
+        ]).stdout;
+        if (!concreteTemporaryCommitBlobMatches(current, committed)) {
+          throw new ConcreteRunnerError("CONCRETE_TEMPORARY_COMMIT_MISMATCH");
+        }
+      }
     }
     return {
       verified: true,
