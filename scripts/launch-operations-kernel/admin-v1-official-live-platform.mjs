@@ -1,6 +1,7 @@
 import { canonicalJson } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+  ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   runAdminV1OfficialRuntime,
 } from "./admin-v1-official-runtime.mjs";
@@ -77,6 +78,9 @@ export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP = Object.freeze(
 const OPERATION_BY_NAME = new Map(
   ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP.map((entry) => [entry.operation, entry]),
 );
+const CREDENTIAL_ENVIRONMENT_OBSERVATION = Symbol(
+  "ADMIN_V1_OFFICIAL_CREDENTIAL_ENVIRONMENT_OBSERVATION",
+);
 
 export class AdminV1OfficialLivePlatformError extends Error {
   constructor(code) {
@@ -101,6 +105,100 @@ function transportCredentials(credentials) {
     supabase_anon_key: credentialText(credentials.supabase_anon_key),
     supabase_service_role_key: credentialText(credentials.supabase_service_role_key),
   };
+}
+
+function boundedText(value, maximum = 1024) {
+  return typeof value === "string" && value.length >= 1 &&
+    value.length <= maximum && !value.includes("\0");
+}
+
+function terminalDeploymentInventory(body) {
+  if (
+    !body || typeof body !== "object" || Array.isArray(body) ||
+    !Array.isArray(body.deployments) || body.deployments.length > 100 ||
+    !body.pagination || typeof body.pagination !== "object" ||
+    Array.isArray(body.pagination) ||
+    !Number.isSafeInteger(body.pagination.count) ||
+    body.pagination.count !== body.deployments.length ||
+    body.pagination.next !== null
+  ) return null;
+  return body.deployments;
+}
+
+function terminalEnvironmentInventory(body) {
+  if (
+    !body || typeof body !== "object" || Array.isArray(body) ||
+    !Array.isArray(body.envs) || body.envs.length > 100 ||
+    !body.pagination || typeof body.pagination !== "object" ||
+    Array.isArray(body.pagination) ||
+    !Number.isSafeInteger(body.pagination.count) ||
+    body.pagination.count !== body.envs.length ||
+    body.pagination.next !== null
+  ) return null;
+  return body.envs;
+}
+
+function exactOwnedDeployment(candidate, authorization) {
+  const [owner, repository] = authorization.repository.remote_repository.split("/");
+  const identifiers = [candidate?.id, candidate?.uid]
+    .filter((value) => value !== undefined && value !== null);
+  const id = candidate?.id ?? candidate?.uid;
+  const meta = candidate?.meta;
+  return boundedText(id, 256) && identifiers.length >= 1 &&
+    identifiers.every((value) => value === id) &&
+    candidate.target === null && candidate.production !== true &&
+    meta && typeof meta === "object" && !Array.isArray(meta) &&
+    meta.aifinderRunId === authorization.run_id &&
+    meta.aifinderCandidate === authorization.candidate_identity_sha256 &&
+    meta.githubCommitSha === authorization.execution.temporary_commit_sha &&
+    meta.githubCommitRef === authorization.execution.branch_name &&
+    meta.githubCommitRepo === repository && meta.githubCommitOrg === owner;
+}
+
+function exactEnvironmentRecord(record, authorization) {
+  return record && typeof record === "object" && !Array.isArray(record) &&
+    boundedText(record.id, 256) && boundedText(record.key, 256) &&
+    canonicalJson(record.target) === '["preview"]' &&
+    (!Object.hasOwn(record, "gitBranch") ||
+      record.gitBranch === authorization.execution.branch_name);
+}
+
+function exactProjectObservation(project, authorization) {
+  if (!project || typeof project !== "object" || Array.isArray(project)) return false;
+  const teamFacts = [project.accountId, project.teamId]
+    .filter((value) => value !== undefined && value !== null);
+  return project.id === authorization.execution.preview_project_id &&
+    project.name === authorization.execution.preview_project_name &&
+    teamFacts.length >= 1 && teamFacts.every(
+      (value) => value === authorization.execution.preview_team_id,
+    );
+}
+
+function exactStorageObservation(body, authorization) {
+  return body && typeof body === "object" && !Array.isArray(body) &&
+    body.bucket_id === authorization.execution.storage_bucket &&
+    body.name === authorization.execution.storage_name &&
+    boundedText(body.version, 1024);
+}
+
+function exactOwnedRows(input, limits) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const output = {};
+  for (const [name, maximum] of Object.entries(limits)) {
+    const rows = input[name];
+    if (!Array.isArray(rows) || rows.length > maximum) return null;
+    const ids = [];
+    for (const row of rows) {
+      if (
+        !row || typeof row !== "object" || Array.isArray(row) ||
+        !boundedText(row.row_id, 256) || !boundedText(row.version, 256)
+      ) return null;
+      ids.push(row.row_id);
+    }
+    if (new Set(ids).size !== ids.length) return null;
+    output[name] = ids;
+  }
+  return output;
 }
 
 function providerDescriptor(operation, input, authorization, bindings) {
@@ -227,13 +325,10 @@ function providerDescriptor(operation, input, authorization, bindings) {
     service: "SUPABASE_SERVICE", method: "DELETE",
     path: table("admin_audit_logs", `?id=in.(${input.rows.map((row) => encodeURIComponent(row.row_id)).join(",")})`),
   };
-  if (["verify_zero_data_residual", "verify_zero_external_residual"].includes(operation)) {
-    return { service: "VERCEL", method: "GET", path: `/v13/deployments?${team}&limit=1` };
-  }
   throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
 }
 
-function normalizedProviderResult(operation, response, bindings) {
+function normalizedProviderResult(operation, response, bindings, input) {
   const body = response?.body;
   if (operation === "detect_automatic_preview") {
     const deployments = Array.isArray(body?.deployments) ? body.deployments : [];
@@ -269,16 +364,23 @@ function normalizedProviderResult(operation, response, bindings) {
   }
   if (operation === "prepare_storage_cleanup_grant") {
     const row = Array.isArray(body) ? body[0] : body;
-    return { status: response.status < 300 ? "PREPARED" : "FAILED", grant_id: row?.grant_id };
+    if (response.status >= 300 || !boundedText(row?.grant_id, 128)) {
+      return { status: "FAILED" };
+    }
+    bindings.cleanup_grant_id = row.grant_id;
+    bindings.cleanup_grant_revoked = false;
+    return { status: "PREPARED", grant_id: row.grant_id };
   }
   if (operation === "revoke_storage_cleanup_grant") {
-    return { status: response.status < 300 ? "REVOKED_EXACT" : "FAILED" };
+    if (
+      response.status >= 300 || body !== true ||
+      input?.grant_id !== bindings.cleanup_grant_id
+    ) return { status: "FAILED" };
+    bindings.cleanup_grant_revoked = true;
+    return { status: "REVOKED_EXACT" };
   }
   if (operation === "delete_storage_exact_version" || operation.startsWith("delete_") || operation === "retire_protected_access") {
     return { status: response.status < 300 || response.status === 404 ? "DELETED_EXACT" : "FAILED" };
-  }
-  if (["verify_zero_data_residual", "verify_zero_external_residual"].includes(operation)) {
-    return { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true };
   }
   if (["inspect_submissions_poststate", "inspect_tools_poststate", "inspect_audits_poststate", "application_request"].includes(operation)) {
     return body;
@@ -297,13 +399,316 @@ export function createAdminV1OfficialConcreteTransport({
     git_execution_context: execution_context?.git_execution_context,
   });
   const bindings = {};
+  const request = (operation, credentials, descriptor) => lowLevel.request({
+    ...descriptor,
+    credentials,
+    operation,
+  });
+  const teamQuery = (authorization) =>
+    `teamId=${encodeURIComponent(authorization.execution.preview_team_id)}`;
+  const projectPath = (authorization) =>
+    encodeURIComponent(authorization.execution.preview_project_id);
+  const storageInfoPath = (authorization) =>
+    `/storage/v1/object/info/${encodeURIComponent(authorization.execution.storage_bucket)}/${authorization.execution.storage_name.split("/").map(encodeURIComponent).join("/")}`;
+
+  async function readDeploymentNamespace(operation, authorization, credentials) {
+    const response = await request(operation, credentials, {
+      service: "VERCEL",
+      method: "GET",
+      path: `/v6/deployments?projectId=${projectPath(authorization)}&${teamQuery(authorization)}&limit=100&meta-aifinderRunId=${encodeURIComponent(authorization.run_id)}`,
+    });
+    if (response.status !== 200) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_UNPROVEN");
+    }
+    const deployments = terminalDeploymentInventory(response.body);
+    if (
+      deployments === null ||
+      !deployments.every((entry) => exactOwnedDeployment(entry, authorization))
+    ) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+    }
+    return deployments;
+  }
+
+  async function readEnvironmentNamespace(operation, authorization, credentials) {
+    const response = await request(operation, credentials, {
+      service: "VERCEL",
+      method: "GET",
+      path: `/v10/projects/${projectPath(authorization)}/env?target=preview&gitBranch=${encodeURIComponent(authorization.execution.branch_name)}&decrypt=false&${teamQuery(authorization)}`,
+    });
+    if (response.status !== 200) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_UNPROVEN");
+    }
+    const records = terminalEnvironmentInventory(response.body);
+    if (
+      records === null ||
+      !records.every((entry) => exactEnvironmentRecord(entry, authorization))
+    ) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+    }
+    return records;
+  }
+
+  async function inspectPriorExternalResidue({ authorization, credentials }) {
+    const remote = await lowLevel.git.inspect({ authorization, credentials });
+    if (remote.status !== "ABSENT") return { status: "PRESENT" };
+    if ((await readDeploymentNamespace(
+      "inspect_prior_residue",
+      authorization,
+      credentials,
+    )).length !== 0) return { status: "PRESENT" };
+    if ((await readEnvironmentNamespace(
+      "inspect_prior_residue",
+      authorization,
+      credentials,
+    )).length !== 0) return { status: "PRESENT" };
+    return { status: "ABSENT" };
+  }
+
+  async function inspectEnvironmentContract({ authorization, credentials, rawCredentials }) {
+    const observation = rawCredentials?.[CREDENTIAL_ENVIRONMENT_OBSERVATION];
+    if (
+      !observation || observation.github_alias_count !== 1 ||
+      observation.node_env !== "production" ||
+      canonicalJson(observation.names) !==
+        canonicalJson(ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES) ||
+      canonicalJson(observation.credential_source_policy) !==
+        canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY) ||
+      canonicalJson(authorization.execution.environment_keys) !==
+        canonicalJson(["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"])
+    ) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN");
+    }
+    const response = await request("inspect_environment_contract", credentials, {
+      service: "VERCEL",
+      method: "GET",
+      path: `/v9/projects/${projectPath(authorization)}?${teamQuery(authorization)}`,
+    });
+    if (response.status !== 200 || !exactProjectObservation(response.body, authorization)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN");
+    }
+    return {
+      status: "EXACT",
+      names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES],
+    };
+  }
+
+  async function inspectOwnedDataNamespace({
+    authorization,
+    credentials,
+    allowedStorageReplacementVersion = null,
+    operation = "inspect_owned_database_residue",
+  }) {
+    const run = encodeURIComponent(authorization.run_id);
+    const descriptors = [
+      `/rest/v1/submitted_tools?select=id&website=like.*${run}*&limit=4`,
+      `/rest/v1/tools?select=id&website=like.*${run}*&limit=3`,
+      `/rest/v1/admin_audit_logs?select=id&metadata->>run_id=eq.${run}&limit=9`,
+    ];
+    for (const path of descriptors) {
+      const response = await request(operation, credentials, {
+        service: "SUPABASE_SERVICE",
+        method: "GET",
+        path,
+      });
+      if (
+        response.status !== 200 || !Array.isArray(response.body) ||
+        response.body.length > 9
+      ) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+      }
+      if (response.body.length !== 0) return { status: "PRESENT" };
+    }
+    const storage = await request(operation, credentials, {
+      service: "SUPABASE_SERVICE",
+      method: "GET",
+      path: storageInfoPath(authorization),
+    });
+    if (storage.status === 404) return { status: "ABSENT" };
+    if (storage.status === 200 && exactStorageObservation(storage.body, authorization)) {
+      if (
+        allowedStorageReplacementVersion !== null &&
+        storage.body.version !== allowedStorageReplacementVersion
+      ) return { status: "ABSENT" };
+      return { status: "PRESENT" };
+    }
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+  }
+
+  async function verifyZeroDataResidual({ authorization, credentials, input }) {
+    if (
+      typeof input.allow_non_owned_storage_replacement !== "boolean" ||
+      !input.owned || typeof input.owned !== "object" || Array.isArray(input.owned)
+    ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    const ownedRows = exactOwnedRows(input.owned, {
+      audit_rows: 8,
+      submissions: 3,
+      tools: 2,
+    });
+    if (ownedRows === null) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    }
+    const logo = input.owned.logo;
+    if (
+      (logo !== null && (
+        !logo || typeof logo !== "object" || Array.isArray(logo) ||
+        !boundedText(logo.object_id, 128) || !boundedText(logo.version, 128)
+      )) ||
+      (input.allow_non_owned_storage_replacement && logo === null)
+    ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    const namespace = await inspectOwnedDataNamespace({
+      authorization,
+      credentials,
+      allowedStorageReplacementVersion:
+        input.allow_non_owned_storage_replacement ? logo.version : null,
+      operation: "verify_zero_data_residual",
+    });
+    if (namespace.status !== "ABSENT") {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_RESIDUAL_PRESENT");
+    }
+    const relations = [
+      ["admin_audit_logs", ownedRows.audit_rows],
+      ["submitted_tools", ownedRows.submissions],
+      ["tools", ownedRows.tools],
+    ];
+    for (const [relation, ids] of relations) {
+      if (ids.length === 0) continue;
+      const response = await request("verify_zero_data_residual", credentials, {
+        service: "SUPABASE_SERVICE",
+        method: "GET",
+        path: `/rest/v1/${relation}?select=id&id=in.(${ids.map(encodeURIComponent).join(",")})&limit=${ids.length + 1}`,
+      });
+      if (
+        response.status !== 200 || !Array.isArray(response.body) ||
+        response.body.length > ids.length ||
+        response.body.some((row) =>
+          !row || typeof row !== "object" || Array.isArray(row) ||
+          !ids.includes(String(row.id))
+        )
+      ) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+      }
+      if (response.body.length !== 0) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_RESIDUAL_PRESENT");
+      }
+    }
+    if (logo !== null) {
+      const storage = await request("verify_zero_data_residual", credentials, {
+        service: "SUPABASE_SERVICE",
+        method: "GET",
+        path: storageInfoPath(authorization),
+      });
+      if (input.allow_non_owned_storage_replacement) {
+        if (
+          storage.status !== 200 ||
+          !exactStorageObservation(storage.body, authorization) ||
+          storage.body.version === logo.version
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+      } else if (storage.status !== 404) {
+        if (storage.status === 200 && exactStorageObservation(storage.body, authorization)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_RESIDUAL_PRESENT");
+        }
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+      }
+    }
+    if (
+      bindings.cleanup_grant_id !== undefined &&
+      bindings.cleanup_grant_revoked !== true
+    ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_GRANT_RESIDUAL_UNPROVEN");
+    return {
+      status: "PROVEN_ABSENT",
+      ownership_readback: "EXACT",
+      unrelated_preserved: true,
+    };
+  }
+
+  async function verifyZeroExternalResidual({ authorization, credentials, input }) {
+    const expectedRef = `refs/heads/${authorization.execution.branch_name}`;
+    if (
+      !input || typeof input !== "object" || Array.isArray(input) ||
+      ![null, expectedRef].includes(input.remote_ref) ||
+      (input.deployment_id !== null && !boundedText(input.deployment_id, 256)) ||
+      !Array.isArray(input.environment_record_ids) ||
+      input.environment_record_ids.length > 2 ||
+      input.environment_record_ids.some((value) => !boundedText(value, 256)) ||
+      new Set(input.environment_record_ids).size !== input.environment_record_ids.length ||
+      (input.local_state_id !== null && !boundedText(input.local_state_id, 256))
+    ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+    if (
+      input.local_state_id !== null &&
+      (bindings.local_state_id !== input.local_state_id ||
+        bindings.local_state_cleaned !== true)
+    ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_LOCAL_STATE_RESIDUAL_UNPROVEN");
+    const remote = await lowLevel.git.inspect({ authorization, credentials });
+    if (remote.status !== "ABSENT") {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
+    }
+    if (input.deployment_id !== null) {
+      const deployment = await request("verify_zero_external_residual", credentials, {
+        service: "VERCEL",
+        method: "GET",
+        path: `/v13/deployments/${encodeURIComponent(input.deployment_id)}?${teamQuery(authorization)}&withGitRepoInfo=true`,
+      });
+      if (deployment.status !== 404) {
+        if (
+          deployment.status === 200 &&
+          exactOwnedDeployment(deployment.body, authorization) &&
+          (deployment.body.id ?? deployment.body.uid) === input.deployment_id
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+      }
+    }
+    if ((await readDeploymentNamespace(
+      "verify_zero_external_residual",
+      authorization,
+      credentials,
+    )).length !== 0) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
+    }
+    for (const recordId of input.environment_record_ids) {
+      const environment = await request("verify_zero_external_residual", credentials, {
+        service: "VERCEL",
+        method: "GET",
+        path: `/v9/projects/${projectPath(authorization)}/env/${encodeURIComponent(recordId)}?${teamQuery(authorization)}`,
+      });
+      if (environment.status !== 404) {
+        if (
+          environment.status === 200 &&
+          exactEnvironmentRecord(environment.body, authorization) &&
+          environment.body.id === recordId
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+      }
+    }
+    if ((await readEnvironmentNamespace(
+      "verify_zero_external_residual",
+      authorization,
+      credentials,
+    )).length !== 0) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
+    }
+    return {
+      status: "PROVEN_ABSENT",
+      ownership_readback: "EXACT",
+      unrelated_preserved: true,
+    };
+  }
+
   return Object.freeze({
     async execute({ operation, input, authorization, credentials }) {
       const textCredentials = transportCredentials(credentials);
       if (operation === "prepare_local_temporary_commit") {
-        return { status: "VERIFIED_EXACT", commit_sha: input.temporary_commit_sha, local_state_id: `git:${input.temporary_commit_sha}` };
+        bindings.local_state_id = `git:${input.temporary_commit_sha}`;
+        bindings.local_state_cleaned = false;
+        return { status: "VERIFIED_EXACT", commit_sha: input.temporary_commit_sha, local_state_id: bindings.local_state_id };
       }
-      if (operation === "cleanup_local_owned_temp_state") return { status: "DELETED_EXACT" };
+      if (operation === "cleanup_local_owned_temp_state") {
+        if (input.local_state_id !== bindings.local_state_id) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_LOCAL_STATE_OWNERSHIP_MISMATCH");
+        }
+        bindings.local_state_cleaned = true;
+        return { status: "DELETED_EXACT" };
+      }
       if (operation === "inspect_github_metadata") {
         return { status: "EXACT", repository: authorization.repository.remote_repository, baseline: authorization.repository.head };
       }
@@ -320,13 +725,38 @@ export function createAdminV1OfficialConcreteTransport({
       if (operation === "delete_remote_ref") {
         return lowLevel.git.delete({ authorization, credentials: textCredentials, commit_sha: authorization.execution.temporary_commit_sha });
       }
-      if (operation === "inspect_prior_residue") return { status: "ABSENT" };
+      if (operation === "inspect_prior_residue") {
+        return inspectPriorExternalResidue({
+          authorization,
+          credentials: textCredentials,
+        });
+      }
       if (operation === "inspect_environment_contract") {
-        return { status: "EXACT", names: [
-          "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-          "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "NODE_ENV",
-          "GH_TOKEN", "GITHUB_TOKEN", "VERCEL_TOKEN",
-        ] };
+        return inspectEnvironmentContract({
+          authorization,
+          credentials: textCredentials,
+          rawCredentials: credentials,
+        });
+      }
+      if (operation === "inspect_owned_database_residue") {
+        return inspectOwnedDataNamespace({
+          authorization,
+          credentials: textCredentials,
+        });
+      }
+      if (operation === "verify_zero_data_residual") {
+        return verifyZeroDataResidual({
+          authorization,
+          credentials: textCredentials,
+          input,
+        });
+      }
+      if (operation === "verify_zero_external_residual") {
+        return verifyZeroExternalResidual({
+          authorization,
+          credentials: textCredentials,
+          input,
+        });
       }
       const descriptor = providerDescriptor(operation, input, authorization, bindings);
       const response = await lowLevel.request({
@@ -334,7 +764,7 @@ export function createAdminV1OfficialConcreteTransport({
         credentials: textCredentials,
         operation,
       });
-      return normalizedProviderResult(operation, response, bindings);
+      return normalizedProviderResult(operation, response, bindings, input);
     },
   });
 }
@@ -384,6 +814,17 @@ export function loadAdminV1OfficialCredentials({
     for (const [name, value] of Object.entries(slots)) {
       sensitive[name] = Buffer.from(value, "utf8");
     }
+    Object.defineProperty(sensitive, CREDENTIAL_ENVIRONMENT_OBSERVATION, {
+      configurable: false,
+      enumerable: false,
+      value: Object.freeze({
+        credential_source_policy: structuredClone(credential_source_policy),
+        github_alias_count: githubNames.length,
+        names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES],
+        node_env: environment.NODE_ENV,
+      }),
+      writable: false,
+    });
     return Object.freeze(sensitive);
   } catch {
     zeroRecord(sensitive);

@@ -6,6 +6,7 @@ import {
   existsSync,
   lstatSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -25,15 +26,23 @@ import {
 } from "../launch-operations-kernel/nonproduction-qualification-runner.mjs";
 import { dispatchPreImportSupervisor } from "./nonproduction-qualification-supervisor.mjs";
 
-const ROOT = realpathSync(path.resolve(import.meta.dirname, "../.."));
+const SOURCE_ROOT = realpathSync(path.resolve(import.meta.dirname, "../.."));
 const RUN_ID = "66666666-6666-4666-8666-666666666666";
 const NOW = Date.parse("2030-01-01T00:30:00.000Z");
+const SYNTHETIC_PROOF_PATH =
+  "testing/admin-v1-official-supervisor-synthetic-proof.txt";
+const SYNTHETIC_PROOF_BYTES = Buffer.from(
+  "admin-v1-official-supervisor-synthetic-proof-v1\n",
+  "utf8",
+);
 const AUTHORIZATION_PATH =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-Synthetic-${RUN_ID}.json`;
 const JOURNAL_DIRECTORY =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${RUN_ID}`;
 const POLICY_RELATIVE_PATH =
-  `scripts/launch-operations-supervisor/.admin-v1-official-concrete-${RUN_ID}.json`;
+  `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
+const SYNTHETIC_REPOSITORY = createSyntheticRepository();
+const ROOT = SYNTHETIC_REPOSITORY.root;
 const POLICY_PATH = path.join(ROOT, POLICY_RELATIVE_PATH);
 const SUPERVISOR_PATH = path.join(
   ROOT,
@@ -66,9 +75,13 @@ const canonicalJson = (value) => {
   throw new Error("SYNTHETIC_CANONICAL_JSON");
 };
 
-function git(argumentsList, { indexFile = null } = {}) {
+function runGit(argumentsList, {
+  cwd,
+  environment = {},
+  input = null,
+} = {}) {
   const result = spawnSync("/usr/bin/git", argumentsList, {
-    cwd: ROOT,
+    cwd,
     encoding: "utf8",
     env: {
       GIT_AUTHOR_EMAIL: "synthetic@example.invalid",
@@ -82,14 +95,122 @@ function git(argumentsList, { indexFile = null } = {}) {
       GIT_OPTIONAL_LOCKS: "0",
       LC_ALL: "C",
       PATH: "/usr/bin:/bin",
-      ...(indexFile === null ? {} : { GIT_INDEX_FILE: indexFile }),
+      ...environment,
     },
+    input,
     maxBuffer: 4 * 1024 * 1024,
     timeout: 20_000,
   });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stderr, "");
   return result.stdout;
+}
+
+function sourceGit(argumentsList) {
+  return runGit(argumentsList, { cwd: SOURCE_ROOT });
+}
+
+function git(argumentsList, { indexFile = null, input = null } = {}) {
+  return runGit(argumentsList, {
+    cwd: ROOT,
+    environment: {
+      ...SYNTHETIC_REPOSITORY.git_environment,
+      GIT_INDEX_FILE: indexFile ?? SYNTHETIC_REPOSITORY.worktree_index,
+    },
+    input,
+  });
+}
+
+function createSyntheticRepository() {
+  const temporaryRoot = realpathSync(
+    mkdtempSync("/tmp/aifinder-official-supervisor-repository."),
+  );
+  try {
+    const root = path.join(temporaryRoot, "worktree");
+    const gitDirectory = path.join(root, ".git");
+    const objectDirectory = path.join(gitDirectory, "objects");
+    const worktreeIndex = path.join(gitDirectory, "index");
+    mkdirSync(path.join(objectDirectory, "info"), { recursive: true, mode: 0o700 });
+    mkdirSync(path.join(gitDirectory, "refs", "heads"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    mkdirSync(path.join(gitDirectory, "refs", "remotes", "origin"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    mkdirSync(path.join(gitDirectory, "info"), { recursive: true, mode: 0o700 });
+    const canonicalRoot = realpathSync(root);
+    const canonicalGitDirectory = realpathSync(gitDirectory);
+    const canonicalObjectDirectory = realpathSync(objectDirectory);
+    const sourceObjectDirectory = realpathSync(
+      path.join(SOURCE_ROOT, ".git", "objects"),
+    );
+    const parent = sourceGit(["rev-parse", "HEAD"]).trim();
+    writeFileSync(
+      path.join(gitDirectory, "config"),
+      `[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = ${canonicalRoot}\n[remote "origin"]\n\turl = https://github.com/jcdumaua/aifinder.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`,
+      { mode: 0o600 },
+    );
+    writeFileSync(path.join(gitDirectory, "HEAD"), "ref: refs/heads/main\n", {
+      mode: 0o600,
+    });
+    writeFileSync(path.join(gitDirectory, "refs", "heads", "main"), `${parent}\n`, {
+      mode: 0o600,
+    });
+    writeFileSync(
+      path.join(gitDirectory, "refs", "remotes", "origin", "main"),
+      `${parent}\n`,
+      { mode: 0o600 },
+    );
+    writeFileSync(
+      path.join(objectDirectory, "info", "alternates"),
+      `${sourceObjectDirectory}\n`,
+      { mode: 0o600 },
+    );
+    const gitEnvironment = Object.freeze({
+      GIT_ALTERNATE_OBJECT_DIRECTORIES: sourceObjectDirectory,
+      GIT_DIR: canonicalGitDirectory,
+      GIT_OBJECT_DIRECTORY: canonicalObjectDirectory,
+      GIT_WORK_TREE: canonicalRoot,
+    });
+    runGit(["read-tree", parent], {
+      cwd: canonicalRoot,
+      environment: {
+        ...gitEnvironment,
+        GIT_INDEX_FILE: worktreeIndex,
+      },
+    });
+    runGit(["checkout-index", "--all", "--force", `--prefix=${canonicalRoot}/`], {
+      cwd: canonicalRoot,
+      environment: {
+        ...gitEnvironment,
+        GIT_INDEX_FILE: worktreeIndex,
+      },
+    });
+    runGit(["update-index", "--refresh"], {
+      cwd: canonicalRoot,
+      environment: {
+        ...gitEnvironment,
+        GIT_INDEX_FILE: worktreeIndex,
+      },
+    });
+    writeFileSync(path.join(canonicalRoot, SYNTHETIC_PROOF_PATH), SYNTHETIC_PROOF_BYTES, {
+      flag: "wx",
+      mode: 0o644,
+    });
+    return Object.freeze({
+      git_environment: gitEnvironment,
+      object_directory: canonicalObjectDirectory,
+      root: canonicalRoot,
+      temporary_root: temporaryRoot,
+      worktree_index: worktreeIndex,
+    });
+  } catch (error) {
+    makeTreeOwnerWritable(temporaryRoot);
+    rmSync(temporaryRoot, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function repositoryObservation() {
@@ -114,24 +235,26 @@ function repositoryObservation() {
 }
 
 function temporaryCommit(parent) {
-  const temporary = realpathSync(mkdtempSync("/tmp/aifinder-official-index."));
-  const indexFile = path.join(temporary, "index");
-  try {
-    git(["read-tree", parent], { indexFile });
-    const paths = git(["ls-files", "-m", "-o", "--exclude-standard", "-z"])
-      .split("\0").filter(Boolean);
-    assert(paths.length > 0);
-    git(["add", "--", ...paths], { indexFile });
-    const tree = git(["write-tree"], { indexFile }).trim();
-    const commit = git([
-      "commit-tree", tree, "-p", parent, "-m",
-      "synthetic admin v1 official concrete supervisor proof",
-    ]).trim();
-    assert.match(commit, /^[0-9a-f]{40}$/u);
-    return commit;
-  } finally {
-    rmSync(temporary, { recursive: true, force: true });
-  }
+  const indexFile = path.join(
+    SYNTHETIC_REPOSITORY.temporary_root,
+    "synthetic-commit.index",
+  );
+  git(["read-tree", parent], { indexFile });
+  const blob = git([
+    "hash-object", "-w", "--stdin", "--path", SYNTHETIC_PROOF_PATH,
+  ], { indexFile, input: SYNTHETIC_PROOF_BYTES }).trim();
+  assert.match(blob, /^[0-9a-f]{40}$/u);
+  git([
+    "update-index", "--add", "--cacheinfo", "100644", blob,
+    SYNTHETIC_PROOF_PATH,
+  ], { indexFile });
+  const tree = git(["write-tree"], { indexFile }).trim();
+  const commit = git([
+    "commit-tree", tree, "-p", parent, "-m",
+    "synthetic admin v1 official concrete supervisor proof",
+  ], { indexFile }).trim();
+  assert.match(commit, /^[0-9a-f]{40}$/u);
+  return commit;
 }
 
 function exactEffect(ordinal) {
@@ -259,6 +382,13 @@ function syntheticOperationTransport(counters) {
     },
   };
 }
+
+const sourceObjectStateBefore = sourceGit(["count-objects", "-v"]);
+const sourceIndexShaBefore = sha256(readFileSync(path.join(SOURCE_ROOT, ".git", "index")));
+const sourceRefsShaBefore = sha256(sourceGit([
+  "for-each-ref",
+  "--format=%(refname)%00%(objectname)%00%(symref)",
+]));
 
 let policyCreated = false;
 let authorizationCreated = false;
@@ -392,12 +522,23 @@ try {
     runtime_retries: 0,
     runtime_replays: 0,
   }]);
+  assert.equal(sourceGit(["count-objects", "-v"]), sourceObjectStateBefore);
+  assert.equal(
+    sha256(readFileSync(path.join(SOURCE_ROOT, ".git", "index"))),
+    sourceIndexShaBefore,
+  );
+  assert.equal(sha256(sourceGit([
+    "for-each-ref",
+    "--format=%(refname)%00%(objectname)%00%(symref)",
+  ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR real_supervisor=true real_factory=true real_state_machine=true qualification=6 official=20 sessions=1 retries=0 replays=0 credential_reads=1 low_level_fakes=true real_external_actions=0",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR real_supervisor=true real_factory=true real_state_machine=true qualification=6 official=20 sessions=1 retries=0 replays=0 credential_reads=1 low_level_fakes=true isolated_index=true isolated_objects=true source_object_writes=0 source_index_writes=0 source_ref_writes=0 protected_draft_reads=0 real_external_actions=0",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);
   if (policyCreated) unlinkSync(POLICY_PATH);
   makeTreeOwnerWritable(JOURNAL_DIRECTORY);
   rmSync(JOURNAL_DIRECTORY, { recursive: true, force: true });
+  makeTreeOwnerWritable(SYNTHETIC_REPOSITORY.temporary_root);
+  rmSync(SYNTHETIC_REPOSITORY.temporary_root, { recursive: true, force: true });
 }

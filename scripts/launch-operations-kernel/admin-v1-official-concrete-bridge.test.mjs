@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import {
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+  ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_LEDGER,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   ADMIN_V1_OFFICIAL_QUALIFICATION_LEDGER,
 } from "./admin-v1-official-runtime.mjs";
+import {
+  createAdminV1OfficialConcreteTransport,
+  loadAdminV1OfficialCredentials,
+} from "./admin-v1-official-live-platform.mjs";
 import {
   createConcreteRunnerDependencies,
 } from "./nonproduction-qualification-runner.mjs";
@@ -259,6 +264,257 @@ const credentials = {
   supabase_url: Buffer.from("https://synthetic.supabase.co"),
   vercel_token: Buffer.from("synthetic-vercel"),
 };
+
+function jsonResponse(body, status = 200) {
+  return {
+    status,
+    async text() {
+      return body === null ? "" : JSON.stringify(body);
+    },
+  };
+}
+
+function concreteTransport({ fetch_impl, spawn_sync }) {
+  return createAdminV1OfficialConcreteTransport({
+    execution_context: {
+      git_execution_context: {
+        git_dir: "/tmp/aifinder-official-synthetic-git-dir",
+        object_directory: "/tmp/aifinder-official-synthetic-objects",
+      },
+    },
+    fetch_impl,
+    spawn_sync,
+  });
+}
+
+const absentRef = () => ({ status: 0, stdout: "", stderr: "" });
+const focusedFailures = [];
+async function focusedCheck(name, check) {
+  try {
+    await check();
+  } catch (error) {
+    focusedFailures.push(`${name}: ${error?.message ?? String(error)}`);
+  }
+}
+
+async function assertFailsClosed({
+  operation,
+  input = {},
+  forbiddenStatus,
+  fetch_impl,
+  spawn_sync = absentRef,
+  operationCredentials = credentials,
+}) {
+  try {
+    const result = await concreteTransport({ fetch_impl, spawn_sync }).execute({
+      operation,
+      input,
+      authorization,
+      credentials: operationCredentials,
+    });
+    assert.notEqual(result?.status, forbiddenStatus);
+  } catch (error) {
+    if (error?.code === "ERR_ASSERTION") throw error;
+    assert.match(error?.code ?? "", /^OFFICIAL_/u);
+  }
+}
+
+await focusedCheck("owned data residue cannot be certified absent", async () => {
+  await assertFailsClosed({
+    operation: "verify_zero_data_residual",
+    forbiddenStatus: "PROVEN_ABSENT",
+    input: {
+      allow_non_owned_storage_replacement: false,
+      owned: {
+        audit_rows: [],
+        logo: null,
+        submissions: [{ row_id: "submission-1", version: "v1" }],
+        tools: [],
+      },
+    },
+    fetch_impl: async (url) => {
+      if (String(url).includes("/rest/v1/submitted_tools")) {
+        return jsonResponse([{ id: "submission-1", updated_at: "v1" }]);
+      }
+      return jsonResponse([]);
+    },
+  });
+});
+
+await focusedCheck("unjournaled run-owned data cannot be certified absent", async () => {
+  await assertFailsClosed({
+    operation: "verify_zero_data_residual",
+    forbiddenStatus: "PROVEN_ABSENT",
+    input: {
+      allow_non_owned_storage_replacement: false,
+      owned: {
+        audit_rows: [],
+        logo: null,
+        submissions: [],
+        tools: [],
+      },
+    },
+    fetch_impl: async (url) => {
+      if (String(url).includes("/rest/v1/submitted_tools")) {
+        return jsonResponse([{ id: "unjournaled-run-owned-submission" }]);
+      }
+      if (String(url).includes("/storage/v1/object/info/")) {
+        return jsonResponse(null, 404);
+      }
+      return jsonResponse([]);
+    },
+  });
+});
+
+await focusedCheck("owned external residue cannot be certified absent", async () => {
+  await assertFailsClosed({
+    operation: "verify_zero_external_residual",
+    forbiddenStatus: "PROVEN_ABSENT",
+    input: {
+      local_state_id: null,
+      remote_ref: `refs/heads/${authorization.execution.branch_name}`,
+      deployment_id: null,
+      environment_record_ids: [],
+    },
+    fetch_impl: async () => jsonResponse({
+      deployments: [],
+      pagination: { count: 0, next: null },
+    }),
+    spawn_sync: () => ({
+      status: 0,
+      stderr: "",
+      stdout: `${authorization.execution.temporary_commit_sha}\trefs/heads/${authorization.execution.branch_name}\n`,
+    }),
+  });
+});
+
+await focusedCheck("ambiguous external pagination cannot be certified absent", async () => {
+  await assertFailsClosed({
+    operation: "verify_zero_external_residual",
+    forbiddenStatus: "PROVEN_ABSENT",
+    input: {
+      local_state_id: null,
+      remote_ref: `refs/heads/${authorization.execution.branch_name}`,
+      deployment_id: null,
+      environment_record_ids: [],
+    },
+    fetch_impl: async () => jsonResponse({
+      deployments: [],
+      pagination: { count: 0, next: "next-page" },
+    }),
+  });
+});
+
+await focusedCheck("missing environment pagination cannot prove prior absence", async () => {
+  let requestOrdinal = 0;
+  await assertFailsClosed({
+    operation: "inspect_prior_residue",
+    forbiddenStatus: "ABSENT",
+    fetch_impl: async () => {
+      requestOrdinal += 1;
+      if (requestOrdinal === 1) {
+        return jsonResponse({
+          deployments: [],
+          pagination: { count: 0, next: null },
+        });
+      }
+      return jsonResponse({ envs: [] });
+    },
+  });
+});
+
+await focusedCheck("non-owned Storage replacement remains preserved", async () => {
+  const result = await concreteTransport({
+    fetch_impl: async (url) => {
+      if (String(url).includes("/storage/v1/object/info/")) {
+        return jsonResponse({
+          bucket_id: authorization.execution.storage_bucket,
+          name: authorization.execution.storage_name,
+          version: "replacement-v2",
+        });
+      }
+      return jsonResponse([]);
+    },
+    spawn_sync: absentRef,
+  }).execute({
+    operation: "verify_zero_data_residual",
+    input: {
+      allow_non_owned_storage_replacement: true,
+      owned: {
+        audit_rows: [],
+        logo: { object_id: "logo-owned-v1", version: "owned-v1" },
+        submissions: [],
+        tools: [],
+      },
+    },
+    authorization,
+    credentials,
+  });
+  assert.deepEqual(result, {
+    status: "PROVEN_ABSENT",
+    ownership_readback: "EXACT",
+    unrelated_preserved: true,
+  });
+});
+
+await focusedCheck("present prior namespace cannot be reported absent", async () => {
+  await assertFailsClosed({
+    operation: "inspect_prior_residue",
+    forbiddenStatus: "ABSENT",
+    fetch_impl: async () => jsonResponse({
+      deployments: [{
+        id: "dpl-owned",
+        uid: "dpl-owned",
+        url: "aifinder-owned-preview.vercel.app",
+        target: null,
+        production: false,
+        readyState: "READY",
+        meta: {
+          aifinderRunId: authorization.run_id,
+          aifinderCandidate: authorization.candidate_identity_sha256,
+          githubCommitSha: authorization.execution.temporary_commit_sha,
+          githubCommitRef: authorization.execution.branch_name,
+          githubCommitRepo: "aifinder",
+          githubCommitOrg: "jcdumaua",
+        },
+      }],
+      pagination: { count: 1, next: null },
+    }),
+  });
+});
+
+await focusedCheck("mismatched provider project cannot satisfy environment gate", async () => {
+  const observedCredentials = loadAdminV1OfficialCredentials({
+    environment: {
+      ADMIN_PASSWORD: "synthetic-admin",
+      ADMIN_SESSION_SECRET: "synthetic-session-secret",
+      GH_TOKEN: "synthetic-github",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-anon",
+      NEXT_PUBLIC_SUPABASE_URL: "https://synthetic.supabase.invalid",
+      NODE_ENV: "production",
+      SUPABASE_SERVICE_ROLE_KEY: "synthetic-service-role",
+      VERCEL_TOKEN: "synthetic-vercel",
+    },
+    credential_source_policy: ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+  });
+  try {
+    await assertFailsClosed({
+      operation: "inspect_environment_contract",
+      forbiddenStatus: "EXACT",
+      operationCredentials: observedCredentials,
+      fetch_impl: async () => jsonResponse({
+        id: "wrong-project",
+        name: authorization.execution.preview_project_name,
+        accountId: authorization.execution.preview_team_id,
+      }),
+    });
+  } finally {
+    for (const value of Object.values(observedCredentials)) value.fill(0);
+  }
+});
+
+assert.deepEqual(focusedFailures, [], focusedFailures.join("\n"));
+
 const dependencies = createConcreteRunnerDependencies({
   officialTransport: transport,
 });
@@ -293,5 +549,5 @@ assert.equal(operations.includes("verify_zero_external_residual"), true);
 assert.equal(Object.values(credentials).every((value) => value.every((byte) => byte === 0)), true);
 
 console.log(
-  "PASS_ADMIN_V1_OFFICIAL_CONCRETE_BRIDGE assertions=13 qualification=6 official=20 sessions=1 retries=0 replays=0 storage_cas=true residual=zero low_level_fakes=true real_external_actions=0",
+  "PASS_ADMIN_V1_OFFICIAL_CONCRETE_BRIDGE assertions=21 qualification=6 official=20 sessions=1 retries=0 replays=0 storage_cas=true residual=zero low_level_fakes=true real_external_actions=0",
 );
