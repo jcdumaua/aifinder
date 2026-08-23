@@ -170,7 +170,12 @@ const C2_2_TOTAL_TIMEOUT_MS = 60_000;
 const V1_ADMIN_TOTAL_TIMEOUT_MS = 60_000;
 const V1_STAGING_TOTAL_TIMEOUT_MS = 60_000;
 const V1_RUNTIME_PER_CHILD_TIMEOUT_MS = 55_000;
-const V1_RUNTIME_TOTAL_TIMEOUT_MS = 90_000;
+const V1_RUNTIME_SOURCE_POLICY_TIMEOUT_MS = 90_000;
+const V1_RUNTIME_TOTAL_TIMEOUT_MS = 120_000;
+const V1_RUNTIME_CHILD_TIMEOUT_MS = Object.freeze({
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs":
+    V1_RUNTIME_SOURCE_POLICY_TIMEOUT_MS,
+});
 const PHASE_COMPILER_PER_CHILD_TIMEOUT_MS = 120_000;
 const PHASE_COMPILER_TOTAL_TIMEOUT_MS = 180_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
@@ -3866,6 +3871,27 @@ function runScript(
   });
 }
 
+function v1RuntimePerChildTimeoutMs(childPath) {
+  const configured =
+    V1_RUNTIME_CHILD_TIMEOUT_MS[childPath] ??
+    V1_RUNTIME_PER_CHILD_TIMEOUT_MS;
+  if (
+    !Number.isSafeInteger(configured) ||
+    configured <= 0 ||
+    configured > 120_000
+  ) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_TIMEOUT_POLICY");
+  }
+  return configured;
+}
+
+function boundedV1RuntimeChildTimeoutMs(childPath, remaining) {
+  if (!Number.isFinite(remaining) || remaining <= 0) {
+    throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
+  }
+  return Math.min(v1RuntimePerChildTimeoutMs(childPath), remaining);
+}
+
 async function runCore(core) {
   const totalStarted = performance.now();
   const results = [];
@@ -4301,14 +4327,15 @@ async function runV1RuntimePolicy(v1RuntimePolicy) {
     for (const child of v1RuntimePolicy) {
       const remaining =
         V1_RUNTIME_TOTAL_TIMEOUT_MS - (performance.now() - totalStarted);
-      if (remaining <= 0) {
-        throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
-      }
+      const childTimeoutMs = boundedV1RuntimeChildTimeoutMs(
+        child.path,
+        remaining,
+      );
       const authorizedBefore = authorizedV1RuntimeSnapshot();
       const repositoryBefore = repositoryStateDigest();
       const result = await runScript(
         child.path,
-        Math.min(V1_RUNTIME_PER_CHILD_TIMEOUT_MS, remaining),
+        childTimeoutMs,
         {
           preloads:
             child.path ===
@@ -4941,6 +4968,7 @@ async function validateLegacyV1RuntimePreloadTransport() {
 }
 
 async function runSelfTest() {
+  await validateV1RuntimeTimeoutModel();
   const legacyProjectionStarted = performance.now();
   validateLegacyCoreProjectionRootBinding();
   console.log(
@@ -5157,6 +5185,83 @@ async function runSelfTest() {
   }
 }
 
+async function validateV1RuntimeTimeoutModel() {
+  const sourcePolicyPath =
+    "testing/admin-v1-staging-runtime-source-policy.test.mjs";
+  if (
+    v1RuntimePerChildTimeoutMs(sourcePolicyPath) !==
+      V1_RUNTIME_SOURCE_POLICY_TIMEOUT_MS ||
+    v1RuntimePerChildTimeoutMs(
+      "testing/admin-v1-staging-runtime-evidence.test.mjs",
+    ) !== V1_RUNTIME_PER_CHILD_TIMEOUT_MS ||
+    V1_RUNTIME_SOURCE_POLICY_TIMEOUT_MS > 120_000 ||
+    V1_RUNTIME_TOTAL_TIMEOUT_MS > 180_000
+  ) {
+    throw new GovernanceError("RUNNER_V1_RUNTIME_TIMEOUT_POLICY");
+  }
+  const temporaryDirectory = mkdtempSync(
+    path.join(os.tmpdir(), "aifinder-timeout-model-"),
+  );
+  const fixture = path.join(temporaryDirectory, "timeout-fixture.mjs");
+  try {
+    writeFileSync(
+      fixture,
+      "const delay = Number(process.argv[2]);\n" +
+        "setTimeout(() => process.stdout.write('DONE\\n'), delay);\n",
+      { mode: 0o600 },
+    );
+    const underLimit = await runScript(fixture, 1_000, {
+      scriptArguments: ["10"],
+      preloads: [],
+      environment: V1_RUNTIME_SAFE_ENVIRONMENT,
+      cwd: temporaryDirectory,
+    });
+    const overLimit = await runScript(fixture, 50, {
+      scriptArguments: ["500"],
+      preloads: [],
+      environment: V1_RUNTIME_SAFE_ENVIRONMENT,
+      cwd: temporaryDirectory,
+    });
+    let totalFailureStage = null;
+    try {
+      boundedV1RuntimeChildTimeoutMs(sourcePolicyPath, 0);
+    } catch (caught) {
+      totalFailureStage =
+        caught instanceof GovernanceError ? caught.stage : null;
+    }
+    const underLimitPassed =
+      underLimit.exitCode === 0 &&
+      underLimit.signal === null &&
+      underLimit.stdout === "DONE\n" &&
+      underLimit.stderr === "" &&
+      !underLimit.overflow &&
+      !underLimit.timedOut &&
+      !underLimit.spawnError;
+    const overLimitKilled =
+      overLimit.exitCode === null &&
+      overLimit.signal === "SIGKILL" &&
+      overLimit.stderr === "" &&
+      !overLimit.overflow &&
+      overLimit.timedOut &&
+      !overLimit.spawnError;
+    const totalFailedClosed = totalFailureStage === "RUNNER_TOTAL_TIMEOUT";
+    if (!underLimitPassed || !overLimitKilled || !totalFailedClosed) {
+      throw new GovernanceError("RUNNER_V1_RUNTIME_TIMEOUT_SELF_TEST");
+    }
+    console.log(
+      "TIMEOUT_MODEL_SELF_TEST source_policy_timeout_ms=" +
+        V1_RUNTIME_SOURCE_POLICY_TIMEOUT_MS +
+        " default_timeout_ms=" +
+        V1_RUNTIME_PER_CHILD_TIMEOUT_MS +
+        " total_timeout_ms=" +
+        V1_RUNTIME_TOTAL_TIMEOUT_MS +
+        " under_limit_pass=true over_limit_killed=true total_fail_closed=true result=PASS",
+    );
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+
 function listChildren(
   core,
   c1Policy,
@@ -5269,6 +5374,8 @@ try {
   const option = argumentsList[0] ?? "";
   if (option === "--self-test") {
     await runSelfTest();
+  } else if (option === "--timeout-model-self-test") {
+    await validateV1RuntimeTimeoutModel();
   } else if (option === "--list") {
     const {
       core,

@@ -41,10 +41,9 @@ const JOURNAL_DIRECTORY =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${RUN_ID}`;
 const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
-const PUBLISHED_HEAD = "36f1c313b9fb6858013531516cc2b8d364657d4f";
-const MAXIMUM_OVERLAY_FILE_BYTES = 1024 * 1024;
+const MAXIMUM_OVERLAY_FILE_BYTES = 2 * 1024 * 1024;
 const GIT_TIMEOUT_MS = 60_000;
-const CANDIDATE_OVERLAY_PATHS = Object.freeze([
+const ORIGINAL_CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
@@ -58,6 +57,14 @@ const CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",
   "testing/admin-v1-staging-runtime-source-policy.test.mjs",
   "testing/run-static-readiness.mjs",
+]);
+const ORCHESTRATOR_OVERLAY_PATH =
+  "testing/admin-v1-staging-runtime-orchestrator.mjs";
+const ORCHESTRATOR_OVERLAY_SHA256 =
+  "0f8a35567bae55e7c875accf15745a679a8cfb263803f3aabb5c0afbefa22951";
+const CANDIDATE_OVERLAY_PATHS = Object.freeze([
+  ...ORIGINAL_CANDIDATE_OVERLAY_PATHS,
+  ORCHESTRATOR_OVERLAY_PATH,
 ]);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 function makeTreeOwnerWritable(target) {
@@ -111,6 +118,41 @@ function readExactOverlayBytes(root, relativePath) {
   return bytes;
 }
 
+function assertExactCandidateOverlayPaths(paths) {
+  assert.equal(paths.length, 14, "SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT");
+  assert.equal(
+    new Set(paths).size,
+    14,
+    "SYNTHETIC_OVERLAY_DUPLICATE_MEMBER_FORBIDDEN",
+  );
+  assert.deepEqual(
+    paths,
+    CANDIDATE_OVERLAY_PATHS,
+    "SYNTHETIC_OVERLAY_UNEXPECTED_MEMBER_FORBIDDEN",
+  );
+}
+
+function assertPinnedOrchestratorCovered(paths, publishedOrchestratorSha256) {
+  const materializedOrchestratorSha256 = paths.includes(ORCHESTRATOR_OVERLAY_PATH)
+    ? ORCHESTRATOR_OVERLAY_SHA256
+    : publishedOrchestratorSha256;
+  assert.equal(
+    materializedOrchestratorSha256,
+    ORCHESTRATOR_OVERLAY_SHA256,
+    "SYNTHETIC_MISSING_ORCHESTRATOR_SUPPORT_MISMATCH",
+  );
+}
+
+function assertPublicationStableOrchestratorBaseline(
+  publishedOrchestratorSha256,
+) {
+  assert.match(publishedOrchestratorSha256, /^[0-9a-f]{64}$/u);
+  assertPinnedOrchestratorCovered(
+    CANDIDATE_OVERLAY_PATHS,
+    publishedOrchestratorSha256,
+  );
+}
+
 function runGit(argumentsList, {
   cwd,
   environment = {},
@@ -137,13 +179,35 @@ function runGit(argumentsList, {
     maxBuffer: 4 * 1024 * 1024,
     timeout: GIT_TIMEOUT_MS,
   });
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, JSON.stringify({
+    arguments: argumentsList,
+    error: result.error?.message ?? null,
+    signal: result.signal,
+    stderr: result.stderr,
+  }));
   assert.equal(result.stderr, "");
   return result.stdout;
 }
 
 function sourceGit(argumentsList) {
   return runGit(argumentsList, { cwd: SOURCE_ROOT });
+}
+
+function resolveSourcePublishedHead(expectedHead = null) {
+  const publishedHead = sourceGit([
+    "rev-parse", "--verify", "HEAD^{commit}",
+  ]).trim();
+  assert.match(publishedHead, /^[0-9a-f]{40}$/u);
+  assert.equal(publishedHead.split("\n").length, 1);
+  if (expectedHead !== null) {
+    assert.match(expectedHead, /^[0-9a-f]{40}$/u);
+    assert.equal(
+      expectedHead,
+      publishedHead,
+      "SYNTHETIC_EXTERNAL_BASELINE_MUST_EQUAL_ACTUAL_SOURCE_HEAD",
+    );
+  }
+  return publishedHead;
 }
 
 function git(argumentsList, { indexFile = null, input = null } = {}) {
@@ -182,8 +246,52 @@ function createSyntheticRepository() {
     const sourceObjectDirectory = realpathSync(
       path.join(SOURCE_ROOT, ".git", "objects"),
     );
-    const parent = sourceGit(["rev-parse", "HEAD"]).trim();
-    assert.equal(parent, PUBLISHED_HEAD);
+    const publishedOrchestratorSha256 = sha256(sourceGit([
+      "show", `HEAD:${ORCHESTRATOR_OVERLAY_PATH}`,
+    ]));
+    assert.doesNotThrow(() => assertPublicationStableOrchestratorBaseline(
+      ORCHESTRATOR_OVERLAY_SHA256,
+    ));
+    assertPublicationStableOrchestratorBaseline(publishedOrchestratorSha256);
+    assert.deepEqual(
+      CANDIDATE_OVERLAY_PATHS.slice(0, -1),
+      ORIGINAL_CANDIDATE_OVERLAY_PATHS,
+    );
+    assertExactCandidateOverlayPaths(CANDIDATE_OVERLAY_PATHS);
+    assertPinnedOrchestratorCovered(
+      CANDIDATE_OVERLAY_PATHS,
+      publishedOrchestratorSha256,
+    );
+    assert.doesNotThrow(() => assertPinnedOrchestratorCovered(
+      ORIGINAL_CANDIDATE_OVERLAY_PATHS,
+      ORCHESTRATOR_OVERLAY_SHA256,
+    ));
+    assert.throws(
+      () => assertPinnedOrchestratorCovered(
+        ORIGINAL_CANDIDATE_OVERLAY_PATHS,
+        "0".repeat(64),
+      ),
+      /SYNTHETIC_MISSING_ORCHESTRATOR_SUPPORT_MISMATCH/u,
+    );
+    assert.throws(
+      () => assertExactCandidateOverlayPaths([
+        ...CANDIDATE_OVERLAY_PATHS,
+        "testing/unexpected-overlay-member.mjs",
+      ]),
+      /SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT/u,
+    );
+    assert.throws(
+      () => assertExactCandidateOverlayPaths([
+        ...CANDIDATE_OVERLAY_PATHS.slice(0, -1),
+        CANDIDATE_OVERLAY_PATHS[0],
+      ]),
+      /SYNTHETIC_OVERLAY_DUPLICATE_MEMBER_FORBIDDEN/u,
+    );
+    const parent = resolveSourcePublishedHead();
+    assert.throws(
+      () => resolveSourcePublishedHead("0".repeat(40)),
+      /SYNTHETIC_EXTERNAL_BASELINE_MUST_EQUAL_ACTUAL_SOURCE_HEAD/u,
+    );
     writeFileSync(
       path.join(gitDirectory, "config"),
       `[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = ${canonicalRoot}\n[remote "origin"]\n\turl = https://github.com/jcdumaua/aifinder.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`,
@@ -227,7 +335,7 @@ function createSyntheticRepository() {
       const baselineTree = isolatedGit([
         "rev-parse", `${baselineCommit}^{tree}`,
       ]).trim();
-      assert.equal(new Set(CANDIDATE_OVERLAY_PATHS).size, 13);
+      assertExactCandidateOverlayPaths(CANDIDATE_OVERLAY_PATHS);
       for (const relativePath of CANDIDATE_OVERLAY_PATHS) {
         const bytes = readExactOverlayBytes(sourceRoot, relativePath);
         const { target } = exactOverlayTarget(canonicalRoot, relativePath);
@@ -281,26 +389,149 @@ function createSyntheticRepository() {
         overlay_paths: CANDIDATE_OVERLAY_PATHS.length,
       });
     };
+    const assertExactlyOneSyntheticCommit = (state) => {
+      assert.equal(state.commit_created, true);
+      assert.notEqual(state.candidate_tree, state.baseline_tree);
+      assert.equal(isolatedGit([
+        "rev-parse", `${state.candidate_commit}^`,
+      ]).trim(), state.baseline_commit);
+      assert.equal(isolatedGit([
+        "rev-list", "--count",
+        `${state.baseline_commit}..${state.candidate_commit}`,
+      ]).trim(), "1");
+      assert.equal(isolatedGit([
+        "rev-parse", `${state.candidate_commit}^{tree}`,
+      ]).trim(), state.candidate_tree);
+    };
+    const createAlteredOverlayBaseline = (parentCommit) => {
+      const exactBytes = readExactOverlayBytes(
+        canonicalRoot,
+        ORCHESTRATOR_OVERLAY_PATH,
+      );
+      const alteredBytes = Buffer.from(exactBytes);
+      alteredBytes[0] ^= 1;
+      const { target } = exactOverlayTarget(
+        canonicalRoot,
+        ORCHESTRATOR_OVERLAY_PATH,
+      );
+      writeFileSync(target, alteredBytes, { mode: 0o644 });
+      chmodSync(target, 0o644);
+      const blob = isolatedGit([
+        "hash-object", "-w", "--stdin", "--path", ORCHESTRATOR_OVERLAY_PATH,
+      ], { input: alteredBytes }).trim();
+      assert.match(blob, /^[0-9a-f]{40}$/u);
+      isolatedGit([
+        "update-index", "--add", "--cacheinfo", "100644", blob,
+        ORCHESTRATOR_OVERLAY_PATH,
+      ]);
+      const tree = isolatedGit(["write-tree"]).trim();
+      const commit = isolatedGit([
+        "commit-tree", tree, "-p", parentCommit, "-m",
+        "synthetic clean-to-dirty transition baseline",
+      ]).trim();
+      assert.match(commit, /^[0-9a-f]{40}$/u);
+      isolatedGit([
+        "update-ref", "refs/heads/main", commit, parentCommit,
+      ]);
+      isolatedGit([
+        "update-ref", "refs/remotes/origin/main", commit, parentCommit,
+      ]);
+      isolatedGit(["read-tree", "--reset", "-u", commit]);
+      assert.equal(isolatedGit([
+        "diff-tree", "--no-commit-id", "--name-only", "-r", commit,
+      ]), `${ORCHESTRATOR_OVERLAY_PATH}\n`);
+      assert.notEqual(sha256(alteredBytes), ORCHESTRATOR_OVERLAY_SHA256);
+      return Object.freeze({ commit, tree });
+    };
     isolatedGit(["read-tree", parent]);
     isolatedGit([
       "checkout-index", "--all", "--force", `--prefix=${canonicalRoot}/`,
     ]);
     isolatedGit(["update-index", "--refresh"]);
-    const cleanCandidateState = materializeCandidateState(canonicalRoot);
-    assert.equal(cleanCandidateState.commit_created, false);
-    assert.equal(cleanCandidateState.candidate_commit, parent);
-    assert.equal(cleanCandidateState.candidate_tree, cleanCandidateState.baseline_tree);
+    const sourceMaterializationState = materializeCandidateState(SOURCE_ROOT);
+    assert.equal(sourceMaterializationState.baseline_commit, parent);
+    if (sourceMaterializationState.commit_created) {
+      assertExactlyOneSyntheticCommit(sourceMaterializationState);
+    } else {
+      assert.equal(
+        sourceMaterializationState.candidate_commit,
+        sourceMaterializationState.baseline_commit,
+      );
+      assert.equal(
+        sourceMaterializationState.candidate_tree,
+        sourceMaterializationState.baseline_tree,
+      );
+    }
+    assert.equal(sourceMaterializationState.overlay_paths, 14);
+    const dirtyCandidateBaseline = createAlteredOverlayBaseline(
+      sourceMaterializationState.candidate_commit,
+    );
     const candidateState = materializeCandidateState(SOURCE_ROOT);
-    assert.equal(candidateState.baseline_commit, parent);
-    assert.equal(candidateState.commit_created, true);
-    assert.notEqual(candidateState.candidate_tree, candidateState.baseline_tree);
-    assert.equal(candidateState.overlay_paths, 13);
-    assert.equal(isolatedGit([
-      "rev-parse", `${candidateState.candidate_commit}^`,
-    ]).trim(), parent);
+    assert.equal(candidateState.baseline_commit, dirtyCandidateBaseline.commit);
+    assert.equal(candidateState.baseline_tree, dirtyCandidateBaseline.tree);
+    assertExactlyOneSyntheticCommit(candidateState);
+    assert.equal(candidateState.overlay_paths, 14);
+    assert.equal(
+      sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
+      ORCHESTRATOR_OVERLAY_SHA256,
+    );
     assert.equal(isolatedGit([
       "cat-file", "-t", candidateState.candidate_commit,
     ]).trim(), "commit");
+    const cleanPostPublicationState = materializeCandidateState(SOURCE_ROOT);
+    assert.equal(
+      cleanPostPublicationState.baseline_commit,
+      candidateState.candidate_commit,
+    );
+    assert.equal(cleanPostPublicationState.commit_created, false);
+    assert.equal(
+      cleanPostPublicationState.candidate_commit,
+      cleanPostPublicationState.baseline_commit,
+    );
+    assert.equal(
+      cleanPostPublicationState.candidate_tree,
+      cleanPostPublicationState.baseline_tree,
+    );
+    assert.equal(
+      sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
+      ORCHESTRATOR_OVERLAY_SHA256,
+    );
+    assert.equal(cleanPostPublicationState.overlay_paths, 14);
+    assertPinnedOrchestratorCovered(
+      CANDIDATE_OVERLAY_PATHS,
+      ORCHESTRATOR_OVERLAY_SHA256,
+    );
+    const alteredOverlayBaseline = createAlteredOverlayBaseline(
+      cleanPostPublicationState.candidate_commit,
+    );
+    const negativeTransitionState = materializeCandidateState(SOURCE_ROOT);
+    assert.equal(
+      negativeTransitionState.baseline_commit,
+      alteredOverlayBaseline.commit,
+    );
+    assert.equal(
+      negativeTransitionState.baseline_tree,
+      alteredOverlayBaseline.tree,
+    );
+    assertExactlyOneSyntheticCommit(negativeTransitionState);
+    assert.equal(
+      sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
+      ORCHESTRATOR_OVERLAY_SHA256,
+    );
+    isolatedGit([
+      "update-ref", "refs/heads/main", candidateState.candidate_commit,
+      negativeTransitionState.candidate_commit,
+    ]);
+    isolatedGit([
+      "update-ref", "refs/remotes/origin/main", candidateState.candidate_commit,
+      negativeTransitionState.candidate_commit,
+    ]);
+    isolatedGit([
+      "read-tree", "--reset", "-u", candidateState.candidate_commit,
+    ]);
+    assert.equal(isolatedGit([
+      "status", "--porcelain=v1", "--untracked-files=all",
+    ]), "");
     writeFileSync(path.join(canonicalRoot, SYNTHETIC_PROOF_PATH), SYNTHETIC_PROOF_BYTES, {
       flag: "wx",
       mode: 0o644,
@@ -309,7 +540,8 @@ function createSyntheticRepository() {
       git_environment: gitEnvironment,
       object_directory: canonicalObjectDirectory,
       candidate_state: candidateState,
-      clean_candidate_state: cleanCandidateState,
+      clean_postpublication_state: cleanPostPublicationState,
+      negative_transition_state: negativeTransitionState,
       root: canonicalRoot,
       temporary_root: temporaryRoot,
       worktree_index: worktreeIndex,
@@ -534,6 +766,10 @@ try {
     repository.head,
     SYNTHETIC_REPOSITORY.candidate_state.candidate_commit,
   );
+  assert.equal(
+    repository.head,
+    SYNTHETIC_REPOSITORY.clean_postpublication_state.candidate_commit,
+  );
   const candidateVerification = createConcreteRunnerDependencies({
     repositoryRoot: ROOT,
     officialRepositoryObservation: repository,
@@ -671,7 +907,7 @@ try {
     "--format=%(refname)%00%(objectname)%00%(symref)",
   ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_CANDIDATE_OVERLAY_PATHS=13 SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_CLEAN_CANDIDATE_STATE_NO_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_DYNAMIC_SOURCE_HEAD=PASS SYNTHETIC_EXTERNAL_BASELINE_SUBSTITUTION=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_PATHS=14 SYNTHETIC_CANDIDATE_OVERLAY_ORIGINAL_13_PRESERVED=PASS SYNTHETIC_ORIGINAL_13_BASELINE_ORCHESTRATOR_EQUALITY=PASS SYNTHETIC_CANDIDATE_OVERLAY_MISSING_ORCHESTRATOR=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_UNEXPECTED_15TH=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_DUPLICATE=REJECTED SYNTHETIC_ORCHESTRATOR_SHA256=0f8a35567bae55e7c875accf15745a679a8cfb263803f3aabb5c0afbefa22951 SYNTHETIC_BASELINE_ORCHESTRATOR_EQUALITY_ALLOWED=PASS SYNTHETIC_SOURCE_MATERIALIZATION_PUBLICATION_STABLE=PASS SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_DIRTY_CANDIDATE_STATE_A_COMMIT_CREATED=true SYNTHETIC_DIRTY_CANDIDATE_STATE_A_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_COMMIT_CREATED=false SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_TREE_EQUAL=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_CANDIDATE_VERIFY=PASS SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_COMMIT_CREATED=true SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);
