@@ -16,10 +16,11 @@ const rows = [
   ["inspect_environment_contract", "PRE_EFFECT", "provider.environment", "PROVIDER_CONTROL", "provider_control_invocations+environment_metadata_controls", "read", "READ_ONLY", "ZERO"],
   ["inspect_remote_ref", "SETUP", "git.remote", "GIT_REMOTE_READ", "git_remote_reads", "read", "READ_ONLY", "ZERO"],
   ["create_remote_ref", "SETUP", "git.remote", "GIT_REMOTE_MUTATION", "git_remote_mutations", "mutation", "CREATE_IF_ABSENT", "ZERO"],
-  ["detect_automatic_preview", "SETUP", "vercel.inventory", "PROVIDER_INVENTORY", "provider_control_invocations+provider_inventory_traversals+provider_inventory_pages", "read", "READ_ONLY", "ZERO"],
   ["create_environment_1", "SETUP", "vercel.environment", "PROVIDER_MUTATION", "provider_direct_mutations+environment_records_created", "mutation", "CREATE_EXACT", "ZERO"],
   ["create_environment_2", "SETUP", "vercel.environment", "PROVIDER_MUTATION", "provider_direct_mutations+environment_records_created", "mutation", "CREATE_EXACT", "ZERO"],
-  ["create_preview", "SETUP", "vercel.preview", "PROVIDER_MUTATION", "provider_direct_mutations+preview_creations", "mutation", "CREATE_EXACT", "ZERO"],
+  ["verify_environment_1", "SETUP", "vercel.environment", "PROVIDER_CONTROL", "provider_control_invocations+environment_metadata_controls", "read", "READ_ONLY", "ZERO"],
+  ["verify_environment_2", "SETUP", "vercel.environment", "PROVIDER_CONTROL", "provider_control_invocations+environment_metadata_controls", "read", "READ_ONLY", "ZERO"],
+  ["acquire_automatic_preview", "SETUP", "vercel.inventory", "PROVIDER_INVENTORY", "provider_control_invocations+provider_inventory_traversals+provider_inventory_pages", "read", "BOUNDED_OBSERVATION", "ZERO"],
   ["verify_preview_identity", "SETUP", "vercel.preview", "PROVIDER_CONTROL", "provider_control_invocations", "read", "READ_ONLY", "ZERO"],
   ["generate_oidc", "SETUP", "vercel.oidc", "OIDC", "oidc_generations", "read", "ONE_SHOT", "ZERO"],
   ["protected_access_handshake", "SETUP", "preview.protected", "PROTECTED_ACCESS", "protected_handshake_requests", "read", "ONE_SHOT", "ZERO"],
@@ -142,7 +143,7 @@ function terminalEnvironmentInventory(body) {
     !Array.isArray(body.envs) || body.envs.length > 100
   ) return null;
   if (!Object.hasOwn(body, "pagination")) {
-    return body.envs.length === 0 ? body.envs : null;
+    return body.envs;
   }
   if (
     !body.pagination || typeof body.pagination !== "object" ||
@@ -172,11 +173,34 @@ function exactOwnedDeployment(candidate, authorization) {
 }
 
 function exactEnvironmentRecord(record, authorization) {
-  return record && typeof record === "object" && !Array.isArray(record) &&
+  if (!(record && typeof record === "object" && !Array.isArray(record) &&
     boundedText(record.id, 256) && boundedText(record.key, 256) &&
+    authorization.execution.environment_keys.includes(record.key) &&
+    record.type === "encrypted" &&
     canonicalJson(record.target) === '["preview"]' &&
-    (!Object.hasOwn(record, "gitBranch") ||
-      record.gitBranch === authorization.execution.branch_name);
+    record.gitBranch === authorization.execution.branch_name &&
+    (!Object.hasOwn(record, "projectId") ||
+      record.projectId === authorization.execution.preview_project_id) &&
+    (!Object.hasOwn(record, "teamId") ||
+      record.teamId === authorization.execution.preview_team_id) &&
+    (!Object.hasOwn(record, "accountId") ||
+      record.accountId === authorization.execution.preview_team_id))) return false;
+  if (Object.hasOwn(record, "project")) {
+    if (typeof record.project === "string") {
+      if (record.project !== authorization.execution.preview_project_id) return false;
+    } else if (
+      !record.project || typeof record.project !== "object" ||
+      Array.isArray(record.project) ||
+      record.project.id !== authorization.execution.preview_project_id ||
+      (Object.hasOwn(record.project, "name") &&
+        record.project.name !== authorization.execution.preview_project_name) ||
+      (Object.hasOwn(record.project, "accountId") &&
+        record.project.accountId !== authorization.execution.preview_team_id) ||
+      (Object.hasOwn(record.project, "teamId") &&
+        record.project.teamId !== authorization.execution.preview_team_id)
+    ) return false;
+  }
+  return true;
 }
 
 function exactCreatedEnvironmentResponseId(body) {
@@ -207,6 +231,7 @@ function exactCreatedEnvironmentReadbackRecord(
   if (
     !record || typeof record !== "object" || Array.isArray(record) ||
     record.id !== expectedId || record.key !== expectedKey ||
+    record.type !== "encrypted" ||
     canonicalJson(record.target) !== '["preview"]' ||
     record.gitBranch !== authorization.execution.branch_name
   ) return false;
@@ -235,38 +260,6 @@ function exactCreatedEnvironmentReadbackRecord(
   return teamFacts.every(
     (value) => value === authorization.execution.preview_team_id,
   );
-}
-
-function exactCreatedEnvironmentReadback(
-  records,
-  authorization,
-  expectedId,
-  expectedKey,
-) {
-  if (!Array.isArray(records)) return false;
-  const ids = new Set();
-  const keys = new Set();
-  for (const record of records) {
-    if (
-      !record || typeof record !== "object" || Array.isArray(record) ||
-      !boundedText(record.id, 256) || !boundedText(record.key, 256) ||
-      ids.has(record.id) || keys.has(record.key) ||
-      !authorization.execution.environment_keys.includes(record.key) ||
-      canonicalJson(record.target) !== '["preview"]' ||
-      record.gitBranch !== authorization.execution.branch_name
-    ) return false;
-    ids.add(record.id);
-    keys.add(record.key);
-  }
-  const matches = records.filter((record) =>
-    exactCreatedEnvironmentReadbackRecord(
-      record,
-      authorization,
-      expectedId,
-      expectedKey,
-    )
-  );
-  return matches.length === 1;
 }
 
 function exactProjectObservation(project, authorization) {
@@ -365,9 +358,11 @@ function exactReadyPreviewDeployment(deployment, authorization, bindings) {
   const teamFacts = [
     deployment?.ownerId,
     deployment?.teamId,
+    deployment?.accountId,
     deployment?.project?.accountId,
+    deployment?.project?.teamId,
   ].filter((value) => value !== undefined && value !== null);
-  return exactOwnedDeployment(deployment, authorization) &&
+  return exactAutomaticPreviewDeployment(deployment, authorization) &&
     identifiers.length >= 1 && identifiers.every((value) => value === id) &&
     id === bindings.deployment_id &&
     exactPreviewHostname(deployment.url) &&
@@ -379,6 +374,41 @@ function exactReadyPreviewDeployment(deployment, authorization, bindings) {
       (value) => value === authorization.execution.preview_team_id,
     ) &&
     readinessFacts.length >= 1 && readinessFacts.every((value) => value === "READY");
+}
+
+function exactAutomaticPreviewDeployment(deployment, authorization) {
+  const identifiers = [deployment?.id, deployment?.uid]
+    .filter((value) => value !== undefined && value !== null);
+  const id = deployment?.id ?? deployment?.uid;
+  const teamFacts = [
+    deployment?.ownerId,
+    deployment?.teamId,
+    deployment?.accountId,
+    deployment?.project?.accountId,
+    deployment?.project?.teamId,
+  ].filter((value) => value !== undefined && value !== null);
+  const createdAt = typeof deployment?.createdAt === "number"
+    ? deployment.createdAt
+    : Date.parse(deployment?.createdAt);
+  const createdMinimum = Date.parse(authorization.created_at);
+  const createdMaximum = Date.parse(authorization.expires_at);
+  const readinessFacts = [deployment?.readyState, deployment?.state]
+    .filter((value) => value !== undefined && value !== null);
+  return boundedText(id, 256) && identifiers.length >= 1 &&
+    identifiers.every((value) => value === id) &&
+    exactPreviewHostname(deployment?.url) &&
+    deployment.target === null && deployment.production === false &&
+    deployment?.gitSource?.type === "github" &&
+    exactPreviewProject(deployment, authorization) &&
+    exactPreviewGit(deployment, authorization) &&
+    teamFacts.length >= 1 && teamFacts.every(
+      (value) => value === authorization.execution.preview_team_id,
+    ) &&
+    Number.isFinite(createdAt) && createdAt >= createdMinimum &&
+    createdAt <= createdMaximum &&
+    readinessFacts.length >= 1 && readinessFacts.every((value) =>
+      ["QUEUED", "INITIALIZING", "BUILDING", "READY"].includes(value)
+    );
 }
 
 function verifiedPreviewUrl(bindings) {
@@ -1028,7 +1058,7 @@ function providerDescriptor(operation, input, authorization, bindings) {
   const run = encodeURIComponent(authorization.run_id);
   const branch = encodeURIComponent(authorization.execution.branch_name);
   const table = (name, query = "") => `/rest/v1/${name}${query}`;
-  if (operation === "detect_automatic_preview") return {
+  if (operation === "acquire_automatic_preview") return {
     service: "VERCEL", method: "GET",
     path: `/v6/deployments?${team}&projectId=${project}&target=preview&meta-githubCommitRef=${branch}&limit=100`,
   };
@@ -1043,23 +1073,9 @@ function providerDescriptor(operation, input, authorization, bindings) {
       gitBranch: authorization.execution.branch_name,
     },
   };
-  if (operation === "create_preview") return {
-    service: "VERCEL", method: "POST", path: `/v13/deployments?${team}`,
-    body: {
-      name: authorization.execution.preview_project_name,
-      project: authorization.execution.preview_project_id,
-      target: null,
-      gitSource: {
-        type: "github",
-        repo: authorization.repository.remote_repository,
-        ref: authorization.execution.branch_name,
-        sha: authorization.execution.temporary_commit_sha,
-      },
-      meta: {
-        aifinderRunId: authorization.run_id,
-        aifinderCandidate: authorization.candidate_identity_sha256,
-      },
-    },
+  if (operation.startsWith("verify_environment_")) return {
+    service: "VERCEL", method: "GET",
+    path: `/v9/projects/${project}/env/${encodeURIComponent(input.record_id)}?decrypt=false&${team}`,
   };
   if (operation === "verify_preview_identity") return {
     service: "VERCEL", method: "GET",
@@ -1165,38 +1181,49 @@ function normalizedProviderResult(
   credentials,
 ) {
   const body = response?.body;
-  if (operation === "detect_automatic_preview") {
+  if (operation === "acquire_automatic_preview") {
     const deployments = response?.status === 200
       ? terminalDeploymentInventory(body)
       : null;
     if (deployments === null) {
       throw new AdminV1OfficialLivePlatformError(
-        "OFFICIAL_AUTOMATIC_PREVIEW_INVENTORY_UNPROVEN",
+        "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_UNPROVEN",
       );
     }
-    return { count: deployments.length };
-  }
-  if (operation === "create_preview") {
-    const identifiers = [body?.id, body?.uid]
-      .filter((value) => value !== undefined && value !== null);
-    const deploymentId = body?.id ?? body?.uid;
+    if (deployments.length === 0) return { status: "PENDING" };
     if (
-      response.status < 200 || response.status >= 300 ||
-      !boundedText(deploymentId, 256) || identifiers.length < 1 ||
-      !identifiers.every((value) => value === deploymentId) ||
-      !exactPreviewHostname(body?.url)
+      deployments.length !== 1 ||
+      !exactAutomaticPreviewDeployment(deployments[0], authorization)
     ) {
       throw new AdminV1OfficialLivePlatformError(
-        "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN",
+        "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_UNPROVEN",
       );
     }
+    const deployment = deployments[0];
+    const deploymentId = deployment.id ?? deployment.uid;
     bindings.deployment_id = deploymentId;
-    bindings.deployment_url = body.url;
+    bindings.deployment_url = deployment.url;
     bindings.preview_identity_verified = false;
     return {
-      status: "CREATED_EXACT",
+      status: "ACQUIRED_EXACT",
       deployment_id: bindings.deployment_id,
     };
+  }
+  if (operation.startsWith("verify_environment_")) {
+    if (
+      response.status !== 200 ||
+      !exactCreatedEnvironmentReadbackRecord(
+        body,
+        authorization,
+        input.record_id,
+        input.key,
+      )
+    ) {
+      throw new AdminV1OfficialLivePlatformError(
+        "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+      );
+    }
+    return { status: "EXACT", record_id: input.record_id };
   }
   if (operation === "verify_preview_identity") {
     if (
@@ -1405,7 +1432,7 @@ export function createAdminV1OfficialConcreteTransport({
     const response = await request(operation, credentials, {
       service: "VERCEL",
       method: "GET",
-      path: `/v6/deployments?projectId=${projectPath(authorization)}&${teamQuery(authorization)}&limit=100&meta-aifinderRunId=${encodeURIComponent(authorization.run_id)}`,
+      path: `/v6/deployments?${teamQuery(authorization)}&projectId=${projectPath(authorization)}&target=preview&meta-githubCommitRef=${encodeURIComponent(authorization.execution.branch_name)}&limit=100`,
     });
     if (response.status !== 200) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_UNPROVEN");
@@ -1413,7 +1440,10 @@ export function createAdminV1OfficialConcreteTransport({
     const deployments = terminalDeploymentInventory(response.body);
     if (
       deployments === null ||
-      !deployments.every((entry) => exactOwnedDeployment(entry, authorization))
+      !deployments.every((entry) =>
+        exactAutomaticPreviewDeployment(entry, authorization) ||
+        exactOwnedDeployment(entry, authorization)
+      )
     ) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
     }
@@ -1434,6 +1464,11 @@ export function createAdminV1OfficialConcreteTransport({
       records === null ||
       !records.every((entry) => exactEnvironmentRecord(entry, authorization))
     ) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
+    }
+    const ids = records.map((entry) => entry.id);
+    const keys = records.map((entry) => entry.key);
+    if (new Set(ids).size !== ids.length || new Set(keys).size !== keys.length) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
     }
     return records;
@@ -1664,7 +1699,7 @@ export function createAdminV1OfficialConcreteTransport({
       if (deployment.status !== 404) {
         if (
           deployment.status === 200 &&
-          exactOwnedDeployment(deployment.body, authorization) &&
+          exactAutomaticPreviewDeployment(deployment.body, authorization) &&
           (deployment.body.id ?? deployment.body.uid) === input.deployment_id
         ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_RESIDUAL_PRESENT");
         throw new AdminV1OfficialLivePlatformError("OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS");
@@ -1766,28 +1801,6 @@ export function createAdminV1OfficialConcreteTransport({
           ? exactCreatedEnvironmentResponseId(response.body)
           : null;
         if (recordId === null) {
-          throw new AdminV1OfficialLivePlatformError(
-            "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
-          );
-        }
-        let records;
-        try {
-          records = await readEnvironmentNamespace(
-            operation,
-            authorization,
-            textCredentials,
-          );
-        } catch {
-          throw new AdminV1OfficialLivePlatformError(
-            "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
-          );
-        }
-        if (!exactCreatedEnvironmentReadback(
-          records,
-          authorization,
-          recordId,
-          input.key,
-        )) {
           throw new AdminV1OfficialLivePlatformError(
             "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
           );

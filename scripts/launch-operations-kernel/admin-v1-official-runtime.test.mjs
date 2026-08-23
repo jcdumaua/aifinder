@@ -28,6 +28,7 @@ const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const TEST_CREATED_EPOCH_MS = Date.parse("2026-08-21T12:00:00.000Z");
 const TEST_EXPIRES_EPOCH_MS = Date.parse("2026-08-22T12:00:00.000Z");
 const TEST_NOW_EPOCH_MS = Date.parse("2026-08-21T18:00:00.000Z");
+const EXPECTED_REMOTE_REF = `refs/heads/aifinder-admin-v1-official-${RUN_ID}`;
 const SENTINELS = Object.freeze({
   admin_password: Buffer.from("SENTINEL_ADMIN_PASSWORD_7e9d", "utf8"),
   admin_session_secret: Buffer.from("SENTINEL_SESSION_SECRET_a213", "utf8"),
@@ -163,14 +164,18 @@ function exactEffectForOrdinal(ordinal) {
 }
 
 function fakeAdapters({
-  automatic_preview_count = 0,
+  automatic_preview_after = 1,
+  automatic_preview_failure = false,
+  external_residual_present = false,
   fail_operation = null,
   prior_residue = false,
+  remote_ref_id = EXPECTED_REMOTE_REF,
   storage_version_mismatch = false,
   unrelated_preserved = true,
 } = {}) {
   const invocations = [];
   let applicationOrdinal = 0;
+  let automaticPreviewObservations = 0;
   let fixtureOrdinal = 0;
   const adapter = {
     invocations,
@@ -204,15 +209,25 @@ function fakeAdapters({
       if (operation === "inspect_remote_ref_before_delete") {
         return { status: "EXACT_OWNED" };
       }
-      if (operation === "create_remote_ref") return { status: "CREATED_EXACT", ref_id: "ref-owned" };
-      if (operation === "detect_automatic_preview") {
-        return { count: automatic_preview_count };
+      if (operation === "create_remote_ref") {
+        return { status: "CREATED_EXACT", ref_id: remote_ref_id };
       }
       if (operation.startsWith("create_environment_")) {
         return { status: "CREATED_EXACT", record_id: `env-${operation.at(-1)}` };
       }
-      if (operation === "create_preview") {
-        return { status: "CREATED_EXACT", deployment_id: "dpl-owned" };
+      if (operation.startsWith("verify_environment_")) {
+        return { status: "EXACT", record_id: input.record_id };
+      }
+      if (operation === "acquire_automatic_preview") {
+        if (automatic_preview_failure) {
+          throw new AdminV1OfficialRuntimeError(
+            "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_UNPROVEN",
+          );
+        }
+        automaticPreviewObservations += 1;
+        return automaticPreviewObservations < automatic_preview_after
+          ? { status: "PENDING" }
+          : { status: "ACQUIRED_EXACT", deployment_id: "dpl-owned" };
       }
       if (operation === "verify_preview_identity") return { status: "EXACT" };
       if (operation === "generate_oidc") return { token: Buffer.from("SENTINEL_OIDC_7be2") };
@@ -316,6 +331,9 @@ function fakeAdapters({
         return { status: "DELETED_EXACT" };
       }
       if (["verify_zero_data_residual", "verify_zero_external_residual"].includes(operation)) {
+        if (operation === "verify_zero_external_residual" && external_residual_present) {
+          return { status: "PRESENT", ownership_readback: "EXACT", unrelated_preserved: true };
+        }
         return {
           status: "PROVEN_ABSENT",
           ownership_readback: "EXACT",
@@ -676,26 +694,285 @@ await check("cleanup ambiguity remains durable recovery pending", async () => {
   );
 });
 
-await check("unexpected automatic Preview stops before explicit Preview", async () => {
-  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-auto-preview.");
-  const adapters = fakeAdapters({ automatic_preview_count: 1 });
+await check("environment IDs are owned before direct readback and branch publication", async () => {
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-env-ownership.");
+  const snapshots = [];
+  let retired = null;
+  const journal = {
+    load: () => null,
+    publish(value) {
+      snapshots.push(structuredClone(value));
+    },
+    retire(value) {
+      retired = structuredClone(value);
+    },
+  };
+  const adapters = fakeAdapters({ fail_operation: "verify_environment_1" });
+  const invoke = adapters.invoke.bind(adapters);
+  adapters.invoke = async (operation, input) => {
+    if (operation === "verify_environment_1") {
+      assert.equal(
+        snapshots.at(-1).owned.environment_record_ids.includes("env-1"),
+        true,
+      );
+    }
+    return invoke(operation, input);
+  };
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
       now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters,
-      journal: createAdminV1OfficialJournal({
-        directory: root,
-        identity: { authorization_id_sha256: "1".repeat(64), run_id: RUN_ID },
-      }),
+      journal,
       sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
         ([key, value]) => [key, Buffer.from(value)],
       )),
     }),
-    (error) => error?.code === "OFFICIAL_AUTOMATIC_PREVIEW_DETECTED",
+    (error) => error?.code === "OFFICIAL_SYNTHETIC_FAILURE",
   );
+  assert.equal(adapters.invocations.filter((entry) => entry === "delete_environment_1").length, 1);
+  assert.equal(adapters.invocations.includes("create_remote_ref"), false);
+  assert.equal(retired.owned.environment_record_ids.includes("env-1"), true);
+});
+
+await check("remote ref creation requires the exact authorized branch", async () => {
+  const adapters = fakeAdapters({ remote_ref_id: "refs/heads/unowned" });
+  await assert.rejects(
+    runAdminV1OfficialRuntime({
+      authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
+      adapters,
+      journal: {
+        load: () => null,
+        publish() {},
+        retire() {},
+      },
+      sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+        ([key, value]) => [key, Buffer.from(value)],
+      )),
+    }),
+    (error) => error?.code === "OFFICIAL_REMOTE_REF_MISMATCH",
+  );
+  assert.equal(adapters.invocations.includes("acquire_automatic_preview"), false);
+  assert.equal(adapters.invocations.includes("delete_remote_ref"), false);
+});
+
+for (const scenario of [
+  {
+    name: "environment ownership survives its COMPLETE journal failure",
+    failedStage: "COMPLETE_CREATE_ENVIRONMENT_1",
+    expectedEnvironmentDeletes: 1,
+    expectedRemoteDelete: false,
+  },
+  {
+    name: "remote-ref ownership survives its COMPLETE journal failure",
+    failedStage: "COMPLETE_CREATE_REMOTE_REF",
+    expectedEnvironmentDeletes: 2,
+    expectedRemoteDelete: true,
+  },
+]) {
+  await check(scenario.name, async () => {
+    const adapters = fakeAdapters();
+    let failedOnce = false;
+    let retired = null;
+    const journal = {
+      load: () => null,
+      publish(value) {
+        if (!failedOnce && value.stage === scenario.failedStage) {
+          failedOnce = true;
+          throw new Error("SYNTHETIC_COMPLETE_PUBLICATION_FAILURE");
+        }
+      },
+      retire(value) {
+        retired = structuredClone(value);
+      },
+    };
+    await assert.rejects(
+      runAdminV1OfficialRuntime({
+        authorization: authorization(),
+        now_epoch_ms: TEST_NOW_EPOCH_MS,
+        adapters,
+        journal,
+        sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+          ([key, value]) => [key, Buffer.from(value)],
+        )),
+      }),
+      (error) => error?.message === "SYNTHETIC_COMPLETE_PUBLICATION_FAILURE",
+    );
+    assert.equal(failedOnce, true);
+    assert.equal(retired.lifecycle, "CLEANUP_COMPLETE");
+    assert.equal(retired.zero_residual, true);
+    assert.equal(
+      adapters.invocations.filter((entry) => entry.startsWith("delete_environment_")).length,
+      scenario.expectedEnvironmentDeletes,
+    );
+    assert.equal(adapters.invocations.includes("delete_remote_ref"), scenario.expectedRemoteDelete);
+  });
+}
+
+await check("delayed automatic Preview is acquired without explicit creation", async () => {
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-auto-preview.");
+  const adapters = fakeAdapters({ automatic_preview_after: 3 });
+  let previewClock = TEST_NOW_EPOCH_MS;
+  const previewWaits = [];
+  const result = await runAdminV1OfficialRuntime({
+    authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
+    adapters,
+    journal: createAdminV1OfficialJournal({
+      directory: root,
+      identity: { authorization_id_sha256: "1".repeat(64), run_id: RUN_ID },
+    }),
+    sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+      ([key, value]) => [key, Buffer.from(value)],
+    )),
+    automatic_preview_now_epoch_ms: () => previewClock,
+    automatic_preview_wait: async (milliseconds) => {
+      previewWaits.push(milliseconds);
+      previewClock += milliseconds;
+    },
+  });
+  assert.equal(result.classification, "OFFICIAL_RUNTIME_COMPLETE");
+  assert.equal(
+    adapters.invocations.filter((entry) => entry === "acquire_automatic_preview").length,
+    3,
+  );
+  assert.deepEqual(previewWaits, [5_000, 5_000]);
+  assert.equal(adapters.invocations.includes("detect_automatic_preview"), false);
   assert.equal(adapters.invocations.includes("create_preview"), false);
-  assert.equal(adapters.invocations.includes("application_request"), false);
+  assert(
+    adapters.invocations.indexOf("verify_environment_2") <
+      adapters.invocations.indexOf("create_remote_ref"),
+  );
+  assert(
+    adapters.invocations.indexOf("create_remote_ref") <
+      adapters.invocations.indexOf("acquire_automatic_preview"),
+  );
+});
+
+for (const scenario of [
+  {
+    name: "env 1 created before readback",
+    adapterOptions: { fail_operation: "verify_environment_1" },
+    environmentDeletes: 1,
+    remoteDelete: false,
+    previewDelete: false,
+  },
+  {
+    name: "env 1 verified before env 2 readback",
+    adapterOptions: { fail_operation: "verify_environment_2" },
+    environmentDeletes: 2,
+    remoteDelete: false,
+    previewDelete: false,
+  },
+  {
+    name: "both envs verified before remote ref",
+    adapterOptions: { fail_operation: "create_remote_ref" },
+    environmentDeletes: 2,
+    remoteDelete: false,
+    previewDelete: false,
+  },
+  {
+    name: "remote ref created before automatic Preview appears",
+    adapterOptions: { automatic_preview_after: 6 },
+    environmentDeletes: 2,
+    remoteDelete: true,
+    previewDelete: false,
+  },
+  {
+    name: "automatic Preview acquired before readiness",
+    adapterOptions: { fail_operation: "verify_preview_identity" },
+    environmentDeletes: 2,
+    remoteDelete: true,
+    previewDelete: true,
+  },
+  {
+    name: "automatic Preview readiness passed before protection failure",
+    adapterOptions: { fail_operation: "protected_access_handshake" },
+    environmentDeletes: 2,
+    remoteDelete: true,
+    previewDelete: true,
+  },
+]) {
+  await check(`setup cleanup matrix closes ${scenario.name}`, async () => {
+    const adapters = fakeAdapters(scenario.adapterOptions);
+    let previewClock = TEST_NOW_EPOCH_MS;
+    let previewJournaledBeforeReadiness = false;
+    let remoteJournaledBeforeAcquisition = false;
+    let current = null;
+    let retired = null;
+    const journal = {
+      load: () => null,
+      publish(value) {
+        current = structuredClone(value);
+      },
+      retire(value) {
+        retired = structuredClone(value);
+        current = null;
+      },
+    };
+    const invoke = adapters.invoke.bind(adapters);
+    adapters.invoke = async (operation, input) => {
+      if (operation === "acquire_automatic_preview") {
+        remoteJournaledBeforeAcquisition = current?.owned?.remote_ref === EXPECTED_REMOTE_REF;
+      }
+      if (operation === "verify_preview_identity") {
+        previewJournaledBeforeReadiness = current?.owned?.deployment_id === "dpl-owned";
+      }
+      return invoke(operation, input);
+    };
+    await assert.rejects(runAdminV1OfficialRuntime({
+      authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
+      adapters,
+      journal,
+      sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+        ([key, value]) => [key, Buffer.from(value)],
+      )),
+      automatic_preview_now_epoch_ms: () => previewClock,
+      automatic_preview_wait: async (milliseconds) => {
+        previewClock += milliseconds;
+      },
+    }));
+    assert.equal(retired.lifecycle, "CLEANUP_COMPLETE");
+    assert.equal(retired.zero_residual, true);
+    assert.equal(
+      adapters.invocations.filter((entry) => entry.startsWith("delete_environment_")).length,
+      scenario.environmentDeletes,
+    );
+    assert.equal(adapters.invocations.includes("delete_remote_ref"), scenario.remoteDelete);
+    assert.equal(adapters.invocations.includes("delete_preview"), scenario.previewDelete);
+    if (scenario.remoteDelete) assert.equal(remoteJournaledBeforeAcquisition, true);
+    if (scenario.previewDelete) assert.equal(previewJournaledBeforeReadiness, true);
+  });
+}
+
+await check("automatic Preview collision never deletes the unowned deployment", async () => {
+  const adapters = fakeAdapters({
+    automatic_preview_failure: true,
+    external_residual_present: true,
+  });
+  const result = await runAdminV1OfficialRuntime({
+    authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
+    adapters,
+    journal: {
+      load: () => null,
+      publish() {},
+      retire() {},
+    },
+    sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+      ([key, value]) => [key, Buffer.from(value)],
+    )),
+  });
+  assert.equal(result.classification, "RECOVERY_PENDING");
+  assert.equal(result.zero_residual_owned_state, false);
+  assert.equal(adapters.invocations.includes("delete_preview"), false);
+  assert.equal(
+    adapters.invocations.filter((entry) => entry.startsWith("delete_environment_")).length,
+    2,
+  );
+  assert.equal(adapters.invocations.includes("delete_remote_ref"), true);
 });
 
 await check("Storage CAS replacement preservation", async () => {

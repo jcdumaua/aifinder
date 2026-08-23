@@ -41,7 +41,7 @@ const JOURNAL_DIRECTORY =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${RUN_ID}`;
 const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
-const PUBLISHED_HEAD = "56e106dc8e20dd6a2c6f90553cc02cb297f8422f";
+const PUBLISHED_HEAD = "36f1c313b9fb6858013531516cc2b8d364657d4f";
 const MAXIMUM_OVERLAY_FILE_BYTES = 1024 * 1024;
 const GIT_TIMEOUT_MS = 60_000;
 const CANDIDATE_OVERLAY_PATHS = Object.freeze([
@@ -425,12 +425,21 @@ function syntheticOperationTransport(counters) {
         baseline: authorization.repository.head,
       };
       if (operation === "inspect_remote_ref") return { status: "ABSENT" };
-      if (operation === "create_remote_ref") return { status: "CREATED_EXACT", ref_id: "ref-owned" };
-      if (operation === "detect_automatic_preview") return { count: 0 };
+      if (operation === "create_remote_ref") {
+        return {
+          status: "CREATED_EXACT",
+          ref_id: `refs/heads/${authorization.execution.branch_name}`,
+        };
+      }
       if (operation.startsWith("create_environment_")) {
         return { status: "CREATED_EXACT", record_id: `env-${operation.at(-1)}` };
       }
-      if (operation === "create_preview") return { status: "CREATED_EXACT", deployment_id: "dpl-owned" };
+      if (operation.startsWith("verify_environment_")) {
+        return { status: "EXACT", record_id: input.record_id };
+      }
+      if (operation === "acquire_automatic_preview") {
+        return { status: "ACQUIRED_EXACT", deployment_id: "dpl-owned" };
+      }
       if (operation === "verify_preview_identity") return { status: "EXACT" };
       if (operation === "generate_oidc") return { token: Buffer.from("synthetic-oidc") };
       if (operation === "protected_access_handshake") return { status: "BOUND" };

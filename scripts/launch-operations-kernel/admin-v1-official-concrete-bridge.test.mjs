@@ -141,14 +141,19 @@ const transport = {
     };
     if (operation === "inspect_remote_ref") return { status: "ABSENT" };
     if (operation === "create_remote_ref") {
-      return { status: "CREATED_EXACT", ref_id: "ref-owned" };
+      return {
+        status: "CREATED_EXACT",
+        ref_id: `refs/heads/${authorization.execution.branch_name}`,
+      };
     }
-    if (operation === "detect_automatic_preview") return { count: 0 };
     if (operation.startsWith("create_environment_")) {
       return { status: "CREATED_EXACT", record_id: `env-${operation.at(-1)}` };
     }
-    if (operation === "create_preview") {
-      return { status: "CREATED_EXACT", deployment_id: "dpl-owned" };
+    if (operation.startsWith("verify_environment_")) {
+      return { status: "EXACT", record_id: input.record_id };
+    }
+    if (operation === "acquire_automatic_preview") {
+      return { status: "ACQUIRED_EXACT", deployment_id: "dpl-owned" };
     }
     if (operation === "verify_preview_identity") return { status: "EXACT" };
     if (operation === "generate_oidc") return { token: Buffer.from("synthetic-oidc") };
@@ -337,6 +342,7 @@ function exactOfficialPreviewDeployment() {
     target: null,
     production: false,
     readyState: "READY",
+    createdAt: TEST_NOW_EPOCH_MS,
     project: {
       id: authorization.execution.preview_project_id,
       name: authorization.execution.preview_project_name,
@@ -370,6 +376,12 @@ async function directApplicationRequest({
   let applicationInit = null;
   const concrete = concreteTransport({
     fetch_impl: async (url, init) => {
+      if (String(url).startsWith("https://api.vercel.com/v6/deployments")) {
+        return jsonResponse({
+          deployments: [exactOfficialPreviewDeployment()],
+          pagination: { count: 1, next: null },
+        });
+      }
       if (String(url).startsWith("https://api.vercel.com/v13/deployments")) {
         return jsonResponse(exactOfficialPreviewDeployment());
       }
@@ -402,7 +414,7 @@ async function directApplicationRequest({
     spawn_sync: absentRef,
   });
   await concrete.execute({
-    operation: "create_preview",
+    operation: "acquire_automatic_preview",
     input: { branch_name: authorization.execution.branch_name },
     authorization,
     credentials,
@@ -486,6 +498,12 @@ await focusedCheck("application credentials cannot be sent before exact preview 
   let applicationRequests = 0;
   const concrete = concreteTransport({
     fetch_impl: async (url, init) => {
+      if (String(url).startsWith("https://api.vercel.com/v6/deployments")) {
+        return jsonResponse({
+          deployments: [exactOfficialPreviewDeployment()],
+          pagination: { count: 1, next: null },
+        });
+      }
       if (String(url).startsWith("https://api.vercel.com/v13/deployments")) {
         return jsonResponse(exactOfficialPreviewDeployment());
       }
@@ -502,7 +520,7 @@ await focusedCheck("application credentials cannot be sent before exact preview 
     spawn_sync: absentRef,
   });
   await concrete.execute({
-    operation: "create_preview",
+    operation: "acquire_automatic_preview",
     input: {},
     authorization,
     credentials,
@@ -532,8 +550,6 @@ for (const [name, mutate] of [
   ["deployment URL", (value) => { value.url = "wrong-preview.vercel.app"; }],
   ["project", (value) => { value.project.id = "prj_wrong"; }],
   ["team", (value) => { value.ownerId = "team_wrong"; }],
-  ["run marker", (value) => { value.meta.aifinderRunId = "66666666-6666-4666-8666-666666666666"; }],
-  ["candidate marker", (value) => { value.meta.aifinderCandidate = "f".repeat(64); }],
   ["temporary commit", (value) => { value.gitSource.sha = "e".repeat(40); }],
   ["branch ref", (value) => { value.gitSource.ref = "wrong-branch"; }],
   ["repository", (value) => { value.gitSource.repo = "other/repository"; }],
@@ -550,12 +566,17 @@ for (const [name, mutate] of [
         requestOrdinal += 1;
         const deployment = exactOfficialPreviewDeployment();
         if (requestOrdinal === 2) mutate(deployment);
-        return jsonResponse(deployment);
+        return requestOrdinal === 1
+          ? jsonResponse({
+              deployments: [deployment],
+              pagination: { count: 1, next: null },
+            })
+          : jsonResponse(deployment);
       },
       spawn_sync: absentRef,
     });
     await concrete.execute({
-      operation: "create_preview",
+      operation: "acquire_automatic_preview",
       input: {},
       authorization,
       credentials,
@@ -589,7 +610,12 @@ function createProtectedAccessProbe({
     fetch_impl: async (rawUrl, init) => {
       const url = new URL(String(rawUrl));
       if (url.hostname === "api.vercel.com") {
-        return jsonResponse(exactOfficialPreviewDeployment());
+        return url.pathname === "/v6/deployments"
+          ? jsonResponse({
+              deployments: [exactOfficialPreviewDeployment()],
+              pagination: { count: 1, next: null },
+            })
+          : jsonResponse(exactOfficialPreviewDeployment());
       }
       state.preview_requests.push({
         body: init.body,
@@ -607,7 +633,7 @@ function createProtectedAccessProbe({
     state,
     async execute() {
       await concrete.execute({
-        operation: "create_preview",
+        operation: "acquire_automatic_preview",
         input: {},
         authorization,
         credentials,
@@ -737,7 +763,7 @@ for (const [name, response] of [
   });
 }
 
-await focusedCheck("automatic preview inventory uses exact project branch namespace", async () => {
+await focusedCheck("automatic preview acquisition uses exact project branch namespace", async () => {
   let inspectedUrl = null;
   const result = await concreteTransport({
     fetch_impl: async (url) => {
@@ -746,12 +772,12 @@ await focusedCheck("automatic preview inventory uses exact project branch namesp
     },
     spawn_sync: absentRef,
   }).execute({
-    operation: "detect_automatic_preview",
+    operation: "acquire_automatic_preview",
     input: {},
     authorization,
     credentials,
   });
-  assert.deepEqual(result, { count: 0 });
+  assert.deepEqual(result, { status: "PENDING" });
   assert.equal(
     inspectedUrl.searchParams.get("projectId"),
     authorization.execution.preview_project_id,
@@ -778,12 +804,12 @@ for (const [name, response] of [
         fetch_impl: async () => response,
         spawn_sync: absentRef,
       }).execute({
-        operation: "detect_automatic_preview",
+        operation: "acquire_automatic_preview",
         input: {},
         authorization,
         credentials,
       }),
-      (error) => error?.code === "OFFICIAL_AUTOMATIC_PREVIEW_INVENTORY_UNPROVEN",
+      (error) => error?.code === "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_UNPROVEN",
     );
   });
 }
@@ -899,6 +925,45 @@ await focusedCheck("owned external residue cannot be certified absent", async ()
   });
 });
 
+await focusedCheck("unjournaled automatic Preview residue cannot be certified absent", async () => {
+  await assert.rejects(
+    concreteTransport({
+      fetch_impl: async () => jsonResponse({
+        deployments: [exactAutomaticPreview()],
+        pagination: { count: 1, next: null },
+      }),
+      spawn_sync: absentRef,
+    }).execute({
+      operation: "verify_zero_external_residual",
+      input: {
+        local_state_id: null,
+        remote_ref: null,
+        deployment_id: null,
+        environment_record_ids: [],
+      },
+      authorization,
+      credentials,
+    }),
+    (error) => error?.code === "OFFICIAL_EXTERNAL_RESIDUAL_PRESENT",
+  );
+});
+
+await focusedCheck("prior automatic Preview residue is reported present", async () => {
+  const result = await concreteTransport({
+    fetch_impl: async () => jsonResponse({
+      deployments: [exactAutomaticPreview()],
+      pagination: { count: 1, next: null },
+    }),
+    spawn_sync: absentRef,
+  }).execute({
+    operation: "inspect_prior_residue",
+    input: {},
+    authorization,
+    credentials,
+  });
+  assert.deepEqual(result, { status: "PRESENT" });
+});
+
 await focusedCheck("ambiguous external pagination cannot be certified absent", async () => {
   await assertFailsClosed({
     operation: "verify_zero_external_residual",
@@ -916,11 +981,10 @@ await focusedCheck("ambiguous external pagination cannot be certified absent", a
   });
 });
 
-await focusedCheck("nonempty environment inventory without pagination cannot prove prior absence", async () => {
+await focusedCheck("exact nonempty environment inventory without pagination proves presence", async () => {
   let requestOrdinal = 0;
-  await assertFailsClosed({
-    operation: "inspect_prior_residue",
-    forbiddenStatus: "ABSENT",
+  const result = await concreteTransport({
+    spawn_sync: absentRef,
     fetch_impl: async () => {
       requestOrdinal += 1;
       if (requestOrdinal === 1) {
@@ -933,12 +997,19 @@ await focusedCheck("nonempty environment inventory without pagination cannot pro
         envs: [{
           id: "env-owned",
           key: authorization.execution.environment_keys[0],
+          type: "encrypted",
           target: ["preview"],
           gitBranch: authorization.execution.branch_name,
         }],
       });
     },
+  }).execute({
+    operation: "inspect_prior_residue",
+    input: {},
+    authorization,
+    credentials,
   });
+  assert.deepEqual(result, { status: "PRESENT" });
 });
 
 await focusedCheck("empty environment inventory without pagination proves absence", async () => {
@@ -980,6 +1051,34 @@ await focusedCheck("malformed environment pagination remains ambiguous", async (
   });
 });
 
+for (const [name, envs] of [
+  ["malformed row", [{ id: "env-malformed" }]],
+  ["unrelated row", [{
+    id: "env-unrelated",
+    key: "UNRELATED_KEY",
+    type: "encrypted",
+    target: ["preview"],
+    gitBranch: authorization.execution.branch_name,
+  }]],
+]) {
+  await focusedCheck(`non-pagination environment inventory rejects ${name}`, async () => {
+    let requestOrdinal = 0;
+    await assertFailsClosed({
+      operation: "inspect_prior_residue",
+      forbiddenStatus: "ABSENT",
+      fetch_impl: async () => {
+        requestOrdinal += 1;
+        return requestOrdinal === 1
+          ? jsonResponse({
+              deployments: [],
+              pagination: { count: 0, next: null },
+            })
+          : jsonResponse({ envs });
+      },
+    });
+  });
+}
+
 await focusedCheck("exact paginated environment inventory remains accepted", async () => {
   let requestOrdinal = 0;
   const result = await concreteTransport({
@@ -1007,14 +1106,12 @@ await focusedCheck("exact paginated environment inventory remains accepted", asy
 
 function createEnvironmentReadbackProbe({
   createBody = { id: "env-created-exact" },
-  inventoryBody = {
-    envs: [{
-      id: "env-created-exact",
-      key: authorization.execution.environment_keys[0],
-      target: ["preview"],
-      gitBranch: authorization.execution.branch_name,
-    }],
-    pagination: { count: 1, next: null },
+  readbackBody = {
+    id: "env-created-exact",
+    key: authorization.execution.environment_keys[0],
+    type: "encrypted",
+    target: ["preview"],
+    gitBranch: authorization.execution.branch_name,
   },
 } = {}) {
   const state = {
@@ -1028,12 +1125,13 @@ function createEnvironmentReadbackProbe({
       state.requests.push({ method: init.method, url });
       if (init.method === "POST") return jsonResponse(createBody, 201);
       if (init.method === "GET") {
-        assert.equal(url.pathname, `/v10/projects/${authorization.execution.preview_project_id}/env`);
+        assert.equal(
+          url.pathname,
+          `/v9/projects/${authorization.execution.preview_project_id}/env/env-created-exact`,
+        );
         assert.equal(url.searchParams.get("teamId"), authorization.execution.preview_team_id);
-        assert.equal(url.searchParams.get("target"), "preview");
-        assert.equal(url.searchParams.get("gitBranch"), authorization.execution.branch_name);
         assert.equal(url.searchParams.get("decrypt"), "false");
-        return jsonResponse(inventoryBody);
+        return jsonResponse(readbackBody);
       }
       if (init.method === "DELETE") {
         state.deletes += 1;
@@ -1045,7 +1143,7 @@ function createEnvironmentReadbackProbe({
   });
   return {
     state,
-    execute() {
+    createOnly() {
       return concrete.execute({
         operation: "create_environment_1",
         input: {
@@ -1056,26 +1154,41 @@ function createEnvironmentReadbackProbe({
         credentials,
       });
     },
+    async execute() {
+      const created = await this.createOnly();
+      assert.deepEqual(created, {
+        status: "CREATED_EXACT",
+        record_id: "env-created-exact",
+      });
+      return concrete.execute({
+        operation: "verify_environment_1",
+        input: {
+          key: authorization.execution.environment_keys[0],
+          record_id: created.record_id,
+        },
+        authorization,
+        credentials,
+      });
+    },
   };
 }
 
-await focusedCheck("environment create response ID alone is not ownership", async () => {
-  const probe = createEnvironmentReadbackProbe({
-    inventoryBody: { envs: [], pagination: { count: 0, next: null } },
+await focusedCheck("environment create captures exact ID before direct verification", async () => {
+  const probe = createEnvironmentReadbackProbe();
+  const result = await probe.createOnly();
+  assert.deepEqual(result, {
+    status: "CREATED_EXACT",
+    record_id: "env-created-exact",
   });
-  await assert.rejects(
-    probe.execute(),
-    (error) => error?.code === "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
-  );
-  assert.deepEqual(probe.state.requests.map(({ method }) => method), ["POST", "GET"]);
+  assert.deepEqual(probe.state.requests.map(({ method }) => method), ["POST"]);
   assert.equal(probe.state.deletes, 0);
 });
 
-await focusedCheck("environment create requires exact non-decrypting readback", async () => {
+await focusedCheck("environment verification uses exact non-decrypting direct-ID readback", async () => {
   const probe = createEnvironmentReadbackProbe();
   const result = await probe.execute();
   assert.deepEqual(result, {
-    status: "CREATED_EXACT",
+    status: "EXACT",
     record_id: "env-created-exact",
   });
   assert.deepEqual(probe.state.requests.map(({ method }) => method), ["POST", "GET"]);
@@ -1095,15 +1208,13 @@ for (const [name, mutate] of [
     const record = {
       id: "env-created-exact",
       key: authorization.execution.environment_keys[0],
+      type: "encrypted",
       target: ["preview"],
       gitBranch: authorization.execution.branch_name,
     };
     mutate(record);
     const probe = createEnvironmentReadbackProbe({
-      inventoryBody: {
-        envs: [record],
-        pagination: { count: 1, next: null },
-      },
+      readbackBody: record,
     });
     await assert.rejects(
       probe.execute(),
@@ -1113,38 +1224,156 @@ for (const [name, mutate] of [
   });
 }
 
-for (const [name, createBody, inventoryBody] of [
+for (const [name, createBody, readbackBody] of [
   [
     "duplicate readback records",
     { id: "env-created-exact" },
-    {
-      envs: [1, 2].map(() => ({
-        id: "env-created-exact",
-        key: authorization.execution.environment_keys[0],
-        target: ["preview"],
-        gitBranch: authorization.execution.branch_name,
-      })),
-      pagination: { count: 2, next: null },
-    },
+    [{ id: "env-created-exact" }, { id: "env-created-exact" }],
   ],
   [
     "ambiguous create response",
     { created: [{ id: "env-created-exact" }, { id: "env-unrelated" }] },
-    { envs: [], pagination: { count: 0, next: null } },
+    null,
   ],
   [
-    "malformed readback pagination",
+    "malformed direct readback",
     { id: "env-created-exact" },
-    { envs: [], pagination: { count: 0, next: "next-page" } },
+    { id: "env-created-exact", key: authorization.execution.environment_keys[0] },
   ],
 ]) {
   await focusedCheck(`environment create rejects ${name}`, async () => {
-    const probe = createEnvironmentReadbackProbe({ createBody, inventoryBody });
+    const probe = createEnvironmentReadbackProbe({ createBody, readbackBody });
     await assert.rejects(
       probe.execute(),
       (error) => error?.code === "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
     );
     assert.equal(probe.state.deletes, 0);
+  });
+}
+
+function exactAutomaticPreview(overrides = {}) {
+  return {
+    id: "dpl-automatic",
+    uid: "dpl-automatic",
+    url: "synthetic-automatic-preview.vercel.app",
+    target: null,
+    production: false,
+    readyState: "BUILDING",
+    createdAt: TEST_NOW_EPOCH_MS,
+    project: {
+      id: authorization.execution.preview_project_id,
+      name: authorization.execution.preview_project_name,
+      accountId: authorization.execution.preview_team_id,
+    },
+    ownerId: authorization.execution.preview_team_id,
+    gitSource: {
+      type: "github",
+      repo: authorization.repository.remote_repository,
+      ref: authorization.execution.branch_name,
+      sha: authorization.execution.temporary_commit_sha,
+    },
+    meta: {
+      githubCommitSha: authorization.execution.temporary_commit_sha,
+      githubCommitRef: authorization.execution.branch_name,
+      githubCommitRepo: "aifinder",
+      githubCommitOrg: "jcdumaua",
+    },
+    ...overrides,
+  };
+}
+
+await focusedCheck("automatic Preview acquisition is boundedly observable and exact", async () => {
+  let observations = 0;
+  const concrete = concreteTransport({
+    fetch_impl: async () => {
+      observations += 1;
+      const deployments = observations === 1 ? [] : [exactAutomaticPreview()];
+      return jsonResponse({
+        deployments,
+        pagination: { count: deployments.length, next: null },
+      });
+    },
+    spawn_sync: absentRef,
+  });
+  const pending = await concrete.execute({
+    operation: "acquire_automatic_preview",
+    input: {},
+    authorization,
+    credentials,
+  });
+  assert.deepEqual(pending, { status: "PENDING" });
+  const acquired = await concrete.execute({
+    operation: "acquire_automatic_preview",
+    input: {},
+    authorization,
+    credentials,
+  });
+  assert.deepEqual(acquired, {
+    status: "ACQUIRED_EXACT",
+    deployment_id: "dpl-automatic",
+  });
+  assert.equal(observations, 2);
+});
+
+for (const [name, deployments] of [
+  ["collision", [exactAutomaticPreview(), exactAutomaticPreview({ id: "dpl-other", uid: "dpl-other" })]],
+  ["commit mismatch", [exactAutomaticPreview({
+    gitSource: {
+      type: "github",
+      repo: authorization.repository.remote_repository,
+      ref: authorization.execution.branch_name,
+      sha: "f".repeat(40),
+    },
+  })]],
+  ["ref mismatch", [exactAutomaticPreview({
+    gitSource: {
+      type: "github",
+      repo: authorization.repository.remote_repository,
+      ref: "refs/heads/unowned",
+      sha: authorization.execution.temporary_commit_sha,
+    },
+  })]],
+  ["project mismatch", [exactAutomaticPreview({
+    project: {
+      id: "prj_unowned",
+      name: authorization.execution.preview_project_name,
+      accountId: authorization.execution.preview_team_id,
+    },
+  })]],
+  ["team mismatch", [exactAutomaticPreview({ ownerId: "team_unowned" })]],
+  ["conflicting top-level account alias", [exactAutomaticPreview({
+    accountId: "team_unowned",
+  })]],
+  ["conflicting project team alias", [exactAutomaticPreview({
+    project: {
+      id: authorization.execution.preview_project_id,
+      name: authorization.execution.preview_project_name,
+      accountId: authorization.execution.preview_team_id,
+      teamId: "team_unowned",
+    },
+  })]],
+]) {
+  await focusedCheck(`automatic Preview acquisition rejects ${name}`, async () => {
+    const methods = [];
+    await assert.rejects(
+      concreteTransport({
+        fetch_impl: async (_url, init) => {
+          methods.push(init.method);
+          return jsonResponse({
+            deployments,
+            pagination: { count: deployments.length, next: null },
+          });
+        },
+        spawn_sync: absentRef,
+      }).execute({
+        operation: "acquire_automatic_preview",
+        input: {},
+        authorization,
+        credentials,
+      }),
+      (error) => error?.code === "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_UNPROVEN",
+    );
+    assert.equal(methods.includes("DELETE"), false);
   });
 }
 
@@ -1693,14 +1922,19 @@ await focusedCheck("unproven logo ownership cannot authorize cleanup deletion", 
       };
       if (operation === "inspect_remote_ref") return { status: "ABSENT" };
       if (operation === "create_remote_ref") {
-        return { status: "CREATED_EXACT", ref_id: "ref-provisional-logo" };
+        return {
+          status: "CREATED_EXACT",
+          ref_id: `refs/heads/${authorization.execution.branch_name}`,
+        };
       }
-      if (operation === "detect_automatic_preview") return { count: 0 };
       if (operation.startsWith("create_environment_")) {
         return { status: "CREATED_EXACT", record_id: `env-${operation.at(-1)}` };
       }
-      if (operation === "create_preview") {
-        return { status: "CREATED_EXACT", deployment_id: "dpl-provisional-logo" };
+      if (operation.startsWith("verify_environment_")) {
+        return { status: "EXACT", record_id: input.record_id };
+      }
+      if (operation === "acquire_automatic_preview") {
+        return { status: "ACQUIRED_EXACT", deployment_id: "dpl-provisional-logo" };
       }
       if (operation === "verify_preview_identity") return { status: "EXACT" };
       if (operation === "generate_oidc") return { token: Buffer.from("synthetic-oidc") };
@@ -2175,37 +2409,6 @@ function createSyntheticConcreteRuntimeFixture() {
           pagination: { count: state.deployment === null ? 0 : 1, next: null },
         });
       }
-      if (url.pathname === "/v13/deployments" && init.method === "POST") {
-        state.deployment = {
-          id: "dpl-real",
-          uid: "dpl-real",
-          url: "synthetic-official-preview.vercel.app",
-          target: null,
-          production: false,
-          readyState: "READY",
-          project: {
-            id: authorization.execution.preview_project_id,
-            name: authorization.execution.preview_project_name,
-            accountId: authorization.execution.preview_team_id,
-          },
-          ownerId: authorization.execution.preview_team_id,
-          gitSource: {
-            type: "github",
-            repo: authorization.repository.remote_repository,
-            ref: authorization.execution.branch_name,
-            sha: authorization.execution.temporary_commit_sha,
-          },
-          meta: {
-            aifinderRunId: authorization.run_id,
-            aifinderCandidate: authorization.candidate_identity_sha256,
-            githubCommitSha: authorization.execution.temporary_commit_sha,
-            githubCommitRef: authorization.execution.branch_name,
-            githubCommitRepo: "aifinder",
-            githubCommitOrg: "jcdumaua",
-          },
-        };
-        return jsonResponse(state.deployment);
-      }
       if (url.pathname === "/v13/deployments/dpl-real" && init.method === "GET") {
         return state.deployment === null
           ? jsonResponse(null, 404)
@@ -2350,6 +2553,35 @@ function createSyntheticConcreteRuntimeFixture() {
       state.branch_commit = refspec.startsWith(":")
         ? null
         : authorization.execution.temporary_commit_sha;
+      if (!refspec.startsWith(":")) {
+        state.deployment = {
+          id: "dpl-real",
+          uid: "dpl-real",
+          url: "synthetic-official-preview.vercel.app",
+          target: null,
+          production: false,
+          readyState: "READY",
+          createdAt: TEST_NOW_EPOCH_MS,
+          project: {
+            id: authorization.execution.preview_project_id,
+            name: authorization.execution.preview_project_name,
+            accountId: authorization.execution.preview_team_id,
+          },
+          ownerId: authorization.execution.preview_team_id,
+          gitSource: {
+            type: "github",
+            repo: authorization.repository.remote_repository,
+            ref: authorization.execution.branch_name,
+            sha: authorization.execution.temporary_commit_sha,
+          },
+          meta: {
+            githubCommitSha: authorization.execution.temporary_commit_sha,
+            githubCommitRef: authorization.execution.branch_name,
+            githubCommitRepo: "aifinder",
+            githubCommitOrg: "jcdumaua",
+          },
+        };
+      }
       return { status: 0, stderr: "", stdout: "" };
     }
     assert.fail(`unhandled synthetic git args ${args.join(" ")}`);
@@ -2465,8 +2697,8 @@ assert.equal(
 );
 
 for (const marker of [
-  "ENV_CREATE_RESPONSE_ID_ALONE_NOT_OWNERSHIP=PASS",
-  "ENV_CREATE_NONDECRYPTING_READBACK_REQUIRED=PASS",
+  "ENV_CREATE_RESPONSE_ID_CAPTURED_BEFORE_VERIFICATION=PASS",
+  "ENV_CREATE_DIRECT_ID_NONDECRYPTING_READBACK_REQUIRED=PASS",
   "ENV_CREATE_ID_KEY_TARGET_BRANCH_EXACT=PASS",
   "ENV_CREATE_SUBSTITUTED_ID_REJECTED=PASS",
   "ENV_CREATE_WRONG_KEY_REJECTED=PASS",
@@ -2474,7 +2706,7 @@ for (const marker of [
   "ENV_CREATE_WRONG_BRANCH_REJECTED=PASS",
   "ENV_CREATE_DUPLICATE_OR_AMBIGUOUS_REJECTED=PASS",
   "ENV_CREATE_SECRET_VALUE_READS=0",
-  "ENV_CREATE_UNVERIFIED_ID_DELETE_ARMED=0",
+  "ENV_CREATE_CAPTURED_ID_CLEANUP_ARMED=PASS",
   "ENV_CREATE_UNVERIFIED_OWNERSHIP_FAILS_CLOSED=PASS",
   "PROTECTED_ACCESS_EXACT_PREVIEW_BOUND_FIRST=PASS",
   "PROTECTED_ACCESS_ADMIN_CREDENTIALS_SENT=0",
@@ -2488,7 +2720,7 @@ for (const marker of [
   "FAKE_PROVIDER_MUST_INSPECT_OIDC_HEADER=PASS",
   "OIDC_RAW_OUTPUTS=0",
   "EMPTY_ENV_NO_PAGINATION_ACCEPTED=PASS",
-  "NONEMPTY_ENV_NO_PAGINATION_REJECTED=PASS",
+  "NONEMPTY_ENV_NO_PAGINATION_PRESENT=PASS",
   "MALFORMED_ENV_PAGINATION_REJECTED=PASS",
   "EXACT_PAGINATED_ENV_UNCHANGED=PASS",
   "AUDIT_OWNERSHIP_USES_EXACT_RUN_USER_AGENT=PASS",
@@ -2510,6 +2742,8 @@ for (const marker of [
   "REAL_CONCRETE_DEFERRED_PROXY_PROOF=PASS",
   "OWNERSHIP_IDS_FROM_POSTSTATE_NOT_FABRICATED=PASS",
   "AUTOMATIC_PREVIEW_INVENTORY_FAIL_CLOSED=PASS",
+  "AUTOMATIC_PREVIEW_BOUNDED_ACQUISITION=PASS",
+  "AUTOMATIC_PREVIEW_EXPLICIT_CREATION=0",
   "PREVIEW_READY_ALIASES_EXACT=PASS",
   "PREVIEW_EXACT_READY_IDENTITY_BOUND=PASS",
   "PREVIEW_CREDENTIAL_SEND_GATED=PASS",

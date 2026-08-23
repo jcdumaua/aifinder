@@ -575,11 +575,6 @@ export const ADMIN_V1_OFFICIAL_ACTION_COSTS = Object.freeze({
   },
   inspect_remote_ref: { git_remote_reads: 1 },
   create_remote_ref: { git_remote_mutations: 1 },
-  detect_automatic_preview: {
-    provider_control_invocations: 1,
-    provider_inventory_traversals: 1,
-    provider_inventory_pages: 1,
-  },
   create_environment_1: {
     provider_direct_mutations: 1,
     environment_records_created: 1,
@@ -588,7 +583,19 @@ export const ADMIN_V1_OFFICIAL_ACTION_COSTS = Object.freeze({
     provider_direct_mutations: 1,
     environment_records_created: 1,
   },
-  create_preview: { provider_direct_mutations: 1, preview_creations: 1 },
+  verify_environment_1: {
+    provider_control_invocations: 1,
+    environment_metadata_controls: 1,
+  },
+  verify_environment_2: {
+    provider_control_invocations: 1,
+    environment_metadata_controls: 1,
+  },
+  acquire_automatic_preview: {
+    provider_control_invocations: 1,
+    provider_inventory_traversals: 1,
+    provider_inventory_pages: 1,
+  },
   verify_preview_identity: { provider_control_invocations: 1 },
   generate_oidc: { oidc_generations: 1 },
   protected_access_handshake: { protected_handshake_requests: 1 },
@@ -906,6 +913,9 @@ export async function runAdminV1OfficialRuntime({
   sensitive,
   test_budget_overrides,
   now_epoch_ms = Date.now(),
+  automatic_preview_now_epoch_ms = () => Date.now(),
+  automatic_preview_wait = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds)),
 }) {
   const validated = validateAdminV1OfficialAuthorization(authorization, {
     now_epoch_ms,
@@ -917,7 +927,9 @@ export async function runAdminV1OfficialRuntime({
     !sensitive || !(sensitive.admin_password instanceof Uint8Array) ||
     !(sensitive.admin_session_secret instanceof Uint8Array) ||
     sensitive.admin_password.byteLength === 0 ||
-    sensitive.admin_session_secret.byteLength === 0
+    sensitive.admin_session_secret.byteLength === 0 ||
+    typeof automatic_preview_now_epoch_ms !== "function" ||
+    typeof automatic_preview_wait !== "function"
   ) throw new AdminV1OfficialRuntimeError("OFFICIAL_RUNTIME_INPUT");
   const existing = journal.load();
   if (existing?.retired === true || existing?.value?.state?.token_spent === true) {
@@ -970,11 +982,12 @@ export async function runAdminV1OfficialRuntime({
     return adapters.invoke(operation, input);
   };
 
-  const mutation = async (operation, input, accept) => {
+  const mutation = async (operation, input, accept, commit = () => {}) => {
     state.stage = `INTENT_${operation.toUpperCase()}`;
     journal.publish(publicState(state));
     const response = await invoke(operation, input);
     const value = accept(response);
+    commit(value);
     state.stage = `COMPLETE_${operation.toUpperCase()}`;
     journal.publish(publicState(state));
     return value;
@@ -1291,21 +1304,6 @@ export async function runAdminV1OfficialRuntime({
     if (remote?.status !== "ABSENT") {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_PRIOR_RESIDUE");
     }
-    state.owned.remote_ref = await mutation(
-      "create_remote_ref",
-      { commit_sha: validated.execution.temporary_commit_sha },
-      (response) => {
-        if (!exactAdapterResponse(response, "CREATED_EXACT") ||
-          !boundedAscii(response.ref_id, 128)) {
-          throw new AdminV1OfficialRuntimeError("OFFICIAL_REMOTE_REF_MISMATCH");
-        }
-        return response.ref_id;
-      },
-    );
-    const automatic = await invoke("detect_automatic_preview");
-    if (automatic?.count !== 0) {
-      throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTOMATIC_PREVIEW_DETECTED");
-    }
     for (let index = 1; index <= 2; index += 1) {
       const recordId = await mutation(
         `create_environment_${index}`,
@@ -1320,21 +1318,87 @@ export async function runAdminV1OfficialRuntime({
           }
           return response.record_id;
         },
+        (ownedRecordId) => {
+          state.owned.environment_record_ids.push(ownedRecordId);
+        },
       );
-      state.owned.environment_record_ids.push(recordId);
-      journal.publish(publicState(state));
+      const verifiedEnvironment = await invoke(`verify_environment_${index}`, {
+        key: validated.execution.environment_keys[index - 1],
+        record_id: recordId,
+      });
+      if (
+        !exactAdapterResponse(verifiedEnvironment, "EXACT") ||
+        verifiedEnvironment.record_id !== recordId
+      ) {
+        throw new AdminV1OfficialRuntimeError(
+          "OFFICIAL_ENVIRONMENT_CREATE_MISMATCH",
+        );
+      }
     }
-    state.owned.deployment_id = await mutation(
-      "create_preview",
-      { branch_name: validated.execution.branch_name },
+    await mutation(
+      "create_remote_ref",
+      { commit_sha: validated.execution.temporary_commit_sha },
       (response) => {
         if (!exactAdapterResponse(response, "CREATED_EXACT") ||
-          !boundedAscii(response.deployment_id, 128)) {
-          throw new AdminV1OfficialRuntimeError("OFFICIAL_PREVIEW_CREATE_MISMATCH");
+          response.ref_id !==
+            `refs/heads/${validated.execution.branch_name}`) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_REMOTE_REF_MISMATCH");
         }
-        return response.deployment_id;
+        return response.ref_id;
+      },
+      (ownedRefId) => {
+        state.owned.remote_ref = ownedRefId;
       },
     );
+    const maximumAutomaticPreviewObservations = 5;
+    const maximumAutomaticPreviewElapsedMs = 20_000;
+    const automaticPreviewPollIntervalMs = 5_000;
+    const automaticPreviewStartedAt = automatic_preview_now_epoch_ms();
+    if (!Number.isFinite(automaticPreviewStartedAt)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RUNTIME_INPUT");
+    }
+    for (
+      let observation = 1;
+      observation <= maximumAutomaticPreviewObservations;
+      observation += 1
+    ) {
+      const automatic = await invoke("acquire_automatic_preview", {
+        observation,
+        maximum_observations: maximumAutomaticPreviewObservations,
+        maximum_elapsed_ms: maximumAutomaticPreviewElapsedMs,
+      });
+      if (exactAdapterResponse(automatic, "PENDING")) {
+        if (observation === maximumAutomaticPreviewObservations) break;
+        const observedAt = automatic_preview_now_epoch_ms();
+        if (!Number.isFinite(observedAt) || observedAt < automaticPreviewStartedAt) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_RUNTIME_INPUT");
+        }
+        const remainingMs = maximumAutomaticPreviewElapsedMs -
+          (observedAt - automaticPreviewStartedAt);
+        if (remainingMs <= 0) break;
+        await automatic_preview_wait(Math.min(
+          automaticPreviewPollIntervalMs,
+          remainingMs,
+        ));
+        continue;
+      }
+      if (
+        !exactAdapterResponse(automatic, "ACQUIRED_EXACT") ||
+        !boundedAscii(automatic.deployment_id, 128)
+      ) {
+        throw new AdminV1OfficialRuntimeError(
+          "OFFICIAL_AUTOMATIC_PREVIEW_IDENTITY_MISMATCH",
+        );
+      }
+      state.owned.deployment_id = automatic.deployment_id;
+      journal.publish(publicState(state));
+      break;
+    }
+    if (state.owned.deployment_id === null) {
+      throw new AdminV1OfficialRuntimeError(
+        "OFFICIAL_AUTOMATIC_PREVIEW_NOT_ACQUIRED",
+      );
+    }
     if (!exactAdapterResponse(await invoke("verify_preview_identity"), "EXACT")) {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_PREVIEW_IDENTITY_MISMATCH");
     }
