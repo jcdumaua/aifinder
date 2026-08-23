@@ -41,13 +41,22 @@ const JOURNAL_DIRECTORY =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${RUN_ID}`;
 const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
-const SYNTHETIC_REPOSITORY = createSyntheticRepository();
-const ROOT = SYNTHETIC_REPOSITORY.root;
-const POLICY_PATH = path.join(ROOT, POLICY_RELATIVE_PATH);
-const SUPERVISOR_PATH = path.join(
-  ROOT,
-  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.mjs",
-);
+const PUBLISHED_HEAD = "5e65b992e4b7a959c594e774e8b3c4ddd8567d49";
+const MAXIMUM_OVERLAY_FILE_BYTES = 1024 * 1024;
+const GIT_TIMEOUT_MS = 60_000;
+const CANDIDATE_OVERLAY_PATHS = Object.freeze([
+  "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/candidate-manifest.json",
+  "scripts/launch-operations-supervisor/supervisor-policy.json",
+  "testing/static-test-safety-manifest.json",
+  "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",
+  "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+  "testing/run-static-readiness.mjs",
+]);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 function makeTreeOwnerWritable(target) {
   if (!existsSync(target)) return;
@@ -75,6 +84,31 @@ const canonicalJson = (value) => {
   throw new Error("SYNTHETIC_CANONICAL_JSON");
 };
 
+function exactOverlayTarget(root, relativePath) {
+  assert(CANDIDATE_OVERLAY_PATHS.includes(relativePath));
+  assert(!relativePath.startsWith("scripts/_drafts/"));
+  assert(!path.isAbsolute(relativePath));
+  assert(!relativePath.includes("\0"));
+  assert(!relativePath.split("/").includes(".."));
+  const target = path.resolve(root, relativePath);
+  assert(target.startsWith(`${root}${path.sep}`));
+  const metadata = lstatSync(target);
+  assert(metadata.isFile());
+  assert(!metadata.isSymbolicLink());
+  assert.equal(metadata.nlink, 1);
+  assert.equal(metadata.mode & 0o777, 0o644);
+  assert(metadata.size <= MAXIMUM_OVERLAY_FILE_BYTES);
+  assert.equal(realpathSync(target), target);
+  return Object.freeze({ metadata, target });
+}
+
+function readExactOverlayBytes(root, relativePath) {
+  const { metadata, target } = exactOverlayTarget(root, relativePath);
+  const bytes = readFileSync(target);
+  assert.equal(bytes.byteLength, metadata.size);
+  return bytes;
+}
+
 function runGit(argumentsList, {
   cwd,
   environment = {},
@@ -99,7 +133,7 @@ function runGit(argumentsList, {
     },
     input,
     maxBuffer: 4 * 1024 * 1024,
-    timeout: 20_000,
+    timeout: GIT_TIMEOUT_MS,
   });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stderr, "");
@@ -147,6 +181,7 @@ function createSyntheticRepository() {
       path.join(SOURCE_ROOT, ".git", "objects"),
     );
     const parent = sourceGit(["rev-parse", "HEAD"]).trim();
+    assert.equal(parent, PUBLISHED_HEAD);
     writeFileSync(
       path.join(gitDirectory, "config"),
       `[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = ${canonicalRoot}\n[remote "origin"]\n\turl = https://github.com/jcdumaua/aifinder.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`,
@@ -174,27 +209,96 @@ function createSyntheticRepository() {
       GIT_OBJECT_DIRECTORY: canonicalObjectDirectory,
       GIT_WORK_TREE: canonicalRoot,
     });
-    runGit(["read-tree", parent], {
-      cwd: canonicalRoot,
-      environment: {
-        ...gitEnvironment,
-        GIT_INDEX_FILE: worktreeIndex,
+    const isolatedGit = (argumentsList, { input = null } = {}) => runGit(
+      argumentsList,
+      {
+        cwd: canonicalRoot,
+        environment: {
+          ...gitEnvironment,
+          GIT_INDEX_FILE: worktreeIndex,
+        },
+        input,
       },
-    });
-    runGit(["checkout-index", "--all", "--force", `--prefix=${canonicalRoot}/`], {
-      cwd: canonicalRoot,
-      environment: {
-        ...gitEnvironment,
-        GIT_INDEX_FILE: worktreeIndex,
-      },
-    });
-    runGit(["update-index", "--refresh"], {
-      cwd: canonicalRoot,
-      environment: {
-        ...gitEnvironment,
-        GIT_INDEX_FILE: worktreeIndex,
-      },
-    });
+    );
+    const materializeCandidateState = (sourceRoot) => {
+      const baselineCommit = isolatedGit(["rev-parse", "HEAD"]).trim();
+      const baselineTree = isolatedGit([
+        "rev-parse", `${baselineCommit}^{tree}`,
+      ]).trim();
+      assert.equal(new Set(CANDIDATE_OVERLAY_PATHS).size, 11);
+      for (const relativePath of CANDIDATE_OVERLAY_PATHS) {
+        const bytes = readExactOverlayBytes(sourceRoot, relativePath);
+        const { target } = exactOverlayTarget(canonicalRoot, relativePath);
+        writeFileSync(target, bytes, { mode: 0o644 });
+        chmodSync(target, 0o644);
+        const blob = isolatedGit([
+          "hash-object", "-w", "--stdin", "--path", relativePath,
+        ], { input: bytes }).trim();
+        assert.match(blob, /^[0-9a-f]{40}$/u);
+        isolatedGit([
+          "update-index", "--add", "--cacheinfo", "100644", blob,
+          relativePath,
+        ]);
+      }
+      const candidateTree = isolatedGit(["write-tree"]).trim();
+      let candidateCommit = baselineCommit;
+      if (candidateTree !== baselineTree) {
+        candidateCommit = isolatedGit([
+          "commit-tree", candidateTree, "-p", baselineCommit, "-m",
+          "synthetic pre-publication candidate state",
+        ]).trim();
+        assert.match(candidateCommit, /^[0-9a-f]{40}$/u);
+        isolatedGit([
+          "update-ref", "refs/heads/main", candidateCommit, baselineCommit,
+        ]);
+        isolatedGit([
+          "update-ref", "refs/remotes/origin/main", candidateCommit,
+          baselineCommit,
+        ]);
+        isolatedGit(["read-tree", "--reset", "-u", candidateCommit]);
+      }
+      isolatedGit(["update-index", "--refresh"]);
+      assert.equal(isolatedGit([
+        "status", "--porcelain=v1", "--untracked-files=all",
+      ]), "");
+      assert.equal(isolatedGit(["rev-parse", "HEAD"]).trim(), candidateCommit);
+      assert.equal(
+        isolatedGit(["rev-parse", "refs/remotes/origin/main"]).trim(),
+        candidateCommit,
+      );
+      assert.equal(
+        isolatedGit(["rev-parse", "HEAD^{tree}"]).trim(),
+        candidateTree,
+      );
+      return Object.freeze({
+        baseline_commit: baselineCommit,
+        baseline_tree: baselineTree,
+        candidate_commit: candidateCommit,
+        candidate_tree: candidateTree,
+        commit_created: candidateCommit !== baselineCommit,
+        overlay_paths: CANDIDATE_OVERLAY_PATHS.length,
+      });
+    };
+    isolatedGit(["read-tree", parent]);
+    isolatedGit([
+      "checkout-index", "--all", "--force", `--prefix=${canonicalRoot}/`,
+    ]);
+    isolatedGit(["update-index", "--refresh"]);
+    const cleanCandidateState = materializeCandidateState(canonicalRoot);
+    assert.equal(cleanCandidateState.commit_created, false);
+    assert.equal(cleanCandidateState.candidate_commit, parent);
+    assert.equal(cleanCandidateState.candidate_tree, cleanCandidateState.baseline_tree);
+    const candidateState = materializeCandidateState(SOURCE_ROOT);
+    assert.equal(candidateState.baseline_commit, parent);
+    assert.equal(candidateState.commit_created, true);
+    assert.notEqual(candidateState.candidate_tree, candidateState.baseline_tree);
+    assert.equal(candidateState.overlay_paths, 11);
+    assert.equal(isolatedGit([
+      "rev-parse", `${candidateState.candidate_commit}^`,
+    ]).trim(), parent);
+    assert.equal(isolatedGit([
+      "cat-file", "-t", candidateState.candidate_commit,
+    ]).trim(), "commit");
     writeFileSync(path.join(canonicalRoot, SYNTHETIC_PROOF_PATH), SYNTHETIC_PROOF_BYTES, {
       flag: "wx",
       mode: 0o644,
@@ -202,6 +306,8 @@ function createSyntheticRepository() {
     return Object.freeze({
       git_environment: gitEnvironment,
       object_directory: canonicalObjectDirectory,
+      candidate_state: candidateState,
+      clean_candidate_state: cleanCandidateState,
       root: canonicalRoot,
       temporary_root: temporaryRoot,
       worktree_index: worktreeIndex,
@@ -212,6 +318,20 @@ function createSyntheticRepository() {
     throw error;
   }
 }
+
+const sourceObjectStateBefore = sourceGit(["count-objects", "-v"]);
+const sourceIndexShaBefore = sha256(readFileSync(path.join(SOURCE_ROOT, ".git", "index")));
+const sourceRefsShaBefore = sha256(sourceGit([
+  "for-each-ref",
+  "--format=%(refname)%00%(objectname)%00%(symref)",
+]));
+const SYNTHETIC_REPOSITORY = createSyntheticRepository();
+const ROOT = SYNTHETIC_REPOSITORY.root;
+const POLICY_PATH = path.join(ROOT, POLICY_RELATIVE_PATH);
+const SUPERVISOR_PATH = path.join(
+  ROOT,
+  "scripts/launch-operations-supervisor/nonproduction-qualification-supervisor.mjs",
+);
 
 function repositoryObservation() {
   const status = Buffer.from(git([
@@ -383,13 +503,6 @@ function syntheticOperationTransport(counters) {
   };
 }
 
-const sourceObjectStateBefore = sourceGit(["count-objects", "-v"]);
-const sourceIndexShaBefore = sha256(readFileSync(path.join(SOURCE_ROOT, ".git", "index")));
-const sourceRefsShaBefore = sha256(sourceGit([
-  "for-each-ref",
-  "--format=%(refname)%00%(objectname)%00%(symref)",
-]));
-
 let policyCreated = false;
 let authorizationCreated = false;
 try {
@@ -406,6 +519,21 @@ try {
   const repository = repositoryObservation();
   assert.equal(repository.branch, "main");
   assert.equal(repository.head, repository.origin_main);
+  assert.equal(
+    repository.head,
+    SYNTHETIC_REPOSITORY.candidate_state.candidate_commit,
+  );
+  const candidateVerification = createConcreteRunnerDependencies({
+    repositoryRoot: ROOT,
+    officialRepositoryObservation: repository,
+    nowEpochMs: NOW,
+  }).verifyCandidate();
+  assert.equal(candidateVerification.verified, true);
+  assert.equal(candidateVerification.membership_exact, true);
+  assert.equal(
+    candidateVerification.candidate_identity_sha256,
+    policy.candidate.candidate_identity_sha256,
+  );
   const commit = temporaryCommit(repository.head);
   const authorization = {
     schema_version: 1,
@@ -532,7 +660,7 @@ try {
     "--format=%(refname)%00%(objectname)%00%(symref)",
   ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR real_supervisor=true real_factory=true real_state_machine=true qualification=6 official=20 sessions=1 retries=0 replays=0 credential_reads=1 low_level_fakes=true isolated_index=true isolated_objects=true source_object_writes=0 source_index_writes=0 source_ref_writes=0 protected_draft_reads=0 real_external_actions=0",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_CANDIDATE_OVERLAY_PATHS=11 SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_CLEAN_CANDIDATE_STATE_NO_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);

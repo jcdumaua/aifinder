@@ -1,4 +1,4 @@
-import { canonicalJson } from "./canonical.mjs";
+import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
@@ -81,6 +81,17 @@ const OPERATION_BY_NAME = new Map(
 const CREDENTIAL_ENVIRONMENT_OBSERVATION = Symbol(
   "ADMIN_V1_OFFICIAL_CREDENTIAL_ENVIRONMENT_OBSERVATION",
 );
+const MAX_APPLICATION_JSON_RESPONSE_BYTES = 1024 * 1024;
+const MAX_APPLICATION_ROWS = 1000;
+const MAX_PROTECTION_CHALLENGE_BYTES = 64 * 1024;
+const SESSION_COOKIE_NAME = "aifinder_admin_session";
+const CSRF_COOKIE_NAME = "aifinder_admin_csrf_token";
+const APPLICATION_COOKIE_MAX_AGE_SECONDS = 4 * 60 * 60;
+const TRUSTED_SOURCE_OIDC_HEADER = "x-vercel-trusted-oidc-idp-token";
+const VERCEL_PROTECTION_CHALLENGE_MARKERS = Object.freeze([
+  "vercel.com/sso-api",
+  "<title>Authentication Required</title>",
+]);
 
 export class AdminV1OfficialLivePlatformError extends Error {
   constructor(code) {
@@ -128,7 +139,12 @@ function terminalDeploymentInventory(body) {
 function terminalEnvironmentInventory(body) {
   if (
     !body || typeof body !== "object" || Array.isArray(body) ||
-    !Array.isArray(body.envs) || body.envs.length > 100 ||
+    !Array.isArray(body.envs) || body.envs.length > 100
+  ) return null;
+  if (!Object.hasOwn(body, "pagination")) {
+    return body.envs.length === 0 ? body.envs : null;
+  }
+  if (
     !body.pagination || typeof body.pagination !== "object" ||
     Array.isArray(body.pagination) ||
     !Number.isSafeInteger(body.pagination.count) ||
@@ -163,6 +179,96 @@ function exactEnvironmentRecord(record, authorization) {
       record.gitBranch === authorization.execution.branch_name);
 }
 
+function exactCreatedEnvironmentResponseId(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const hasDirectId = Object.hasOwn(body, "id");
+  const hasEnvelope = Object.hasOwn(body, "created") || Object.hasOwn(body, "failed");
+  if (hasDirectId === hasEnvelope) return null;
+  if (hasDirectId) return boundedText(body.id, 256) ? body.id : null;
+  if (
+    Object.hasOwn(body, "failed") &&
+    (!Array.isArray(body.failed) || body.failed.length !== 0)
+  ) return null;
+  const created = Array.isArray(body.created) ? body.created : [body.created];
+  if (
+    created.length !== 1 || !created[0] ||
+    typeof created[0] !== "object" || Array.isArray(created[0]) ||
+    !boundedText(created[0].id, 256)
+  ) return null;
+  return created[0].id;
+}
+
+function exactCreatedEnvironmentReadbackRecord(
+  record,
+  authorization,
+  expectedId,
+  expectedKey,
+) {
+  if (
+    !record || typeof record !== "object" || Array.isArray(record) ||
+    record.id !== expectedId || record.key !== expectedKey ||
+    canonicalJson(record.target) !== '["preview"]' ||
+    record.gitBranch !== authorization.execution.branch_name
+  ) return false;
+  if (Object.hasOwn(record, "project")) {
+    if (typeof record.project === "string") {
+      if (record.project !== authorization.execution.preview_project_id) return false;
+    } else if (
+      !record.project || typeof record.project !== "object" ||
+      Array.isArray(record.project) ||
+      record.project.id !== authorization.execution.preview_project_id ||
+      (Object.hasOwn(record.project, "name") &&
+        record.project.name !== authorization.execution.preview_project_name)
+    ) return false;
+  }
+  const projectFacts = [record.projectId, record.project?.id]
+    .filter((value) => value !== undefined && value !== null);
+  if (!projectFacts.every(
+    (value) => value === authorization.execution.preview_project_id,
+  )) return false;
+  const teamFacts = [
+    record.accountId,
+    record.teamId,
+    record.project?.accountId,
+    record.project?.teamId,
+  ].filter((value) => value !== undefined && value !== null);
+  return teamFacts.every(
+    (value) => value === authorization.execution.preview_team_id,
+  );
+}
+
+function exactCreatedEnvironmentReadback(
+  records,
+  authorization,
+  expectedId,
+  expectedKey,
+) {
+  if (!Array.isArray(records)) return false;
+  const ids = new Set();
+  const keys = new Set();
+  for (const record of records) {
+    if (
+      !record || typeof record !== "object" || Array.isArray(record) ||
+      !boundedText(record.id, 256) || !boundedText(record.key, 256) ||
+      ids.has(record.id) || keys.has(record.key) ||
+      !authorization.execution.environment_keys.includes(record.key) ||
+      canonicalJson(record.target) !== '["preview"]' ||
+      record.gitBranch !== authorization.execution.branch_name
+    ) return false;
+    ids.add(record.id);
+    keys.add(record.key);
+  }
+  const matches = records.filter((record) =>
+    exactCreatedEnvironmentReadbackRecord(
+      record,
+      authorization,
+      expectedId,
+      expectedKey,
+    )
+  );
+  return matches.length === 1;
+}
+
 function exactProjectObservation(project, authorization) {
   if (!project || typeof project !== "object" || Array.isArray(project)) return false;
   const teamFacts = [project.accountId, project.teamId]
@@ -174,11 +280,142 @@ function exactProjectObservation(project, authorization) {
     );
 }
 
-function exactStorageObservation(body, authorization) {
+function exactPreviewHostname(value) {
+  return boundedText(value, 512) && value === value.toLowerCase() &&
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/u.test(value) &&
+    value.endsWith(".vercel.app");
+}
+
+function exactPreviewProject(deployment, authorization) {
+  const facts = [];
+  if (Object.hasOwn(deployment, "project")) {
+    if (
+      !deployment.project || typeof deployment.project !== "object" ||
+      Array.isArray(deployment.project)
+    ) return false;
+    facts.push({
+      id: deployment.project.id,
+      name: deployment.project.name,
+    });
+  }
+  if (Object.hasOwn(deployment, "projectId") || Object.hasOwn(deployment, "name")) {
+    facts.push({ id: deployment.projectId, name: deployment.name });
+  }
+  return facts.length >= 1 && facts.every((fact) =>
+    fact.id === authorization.execution.preview_project_id &&
+    fact.name === authorization.execution.preview_project_name
+  );
+}
+
+function exactPreviewGit(deployment, authorization) {
+  const [expectedOwner, expectedRepositoryName] =
+    authorization.repository.remote_repository.split("/");
+  const expectedRepository = authorization.repository.remote_repository;
+  if (
+    deployment.gitSource &&
+    deployment.gitSource.type !== undefined &&
+    deployment.gitSource.type !== "github"
+  ) return false;
+  let commitSeen = false;
+  let refSeen = false;
+  let repositorySeen = false;
+  let ownerSeen = false;
+  const sources = [
+    deployment.gitSource,
+    deployment.meta,
+    deployment.gitMetadata,
+  ].filter((value) => value && typeof value === "object" && !Array.isArray(value));
+  for (const source of sources) {
+    const commits = [source.sha, source.commitSha, source.githubCommitSha]
+      .filter((value) => value !== undefined && value !== null && value !== "");
+    const refs = [source.ref, source.commitRef, source.githubCommitRef]
+      .filter((value) => value !== undefined && value !== null && value !== "");
+    const repositories = [
+      source.repo,
+      source.repository,
+      source.githubCommitRepo,
+    ].filter((value) => value !== undefined && value !== null && value !== "");
+    const owners = [source.org, source.owner, source.githubCommitOrg]
+      .filter((value) => value !== undefined && value !== null && value !== "");
+    if (
+      !commits.every(
+        (value) => value === authorization.execution.temporary_commit_sha,
+      ) ||
+      !refs.every((value) => value === authorization.execution.branch_name) ||
+      !repositories.every(
+        (value) => value === expectedRepository || value === expectedRepositoryName,
+      ) ||
+      !owners.every((value) => value === expectedOwner)
+    ) return false;
+    commitSeen ||= commits.length > 0;
+    refSeen ||= refs.length > 0;
+    repositorySeen ||= repositories.length > 0;
+    ownerSeen ||= owners.length > 0;
+  }
+  return commitSeen && refSeen && repositorySeen &&
+    (ownerSeen || sources.some((source) => source.repo === expectedRepository));
+}
+
+function exactReadyPreviewDeployment(deployment, authorization, bindings) {
+  const identifiers = [deployment?.id, deployment?.uid]
+    .filter((value) => value !== undefined && value !== null);
+  const id = deployment?.id ?? deployment?.uid;
+  const readinessFacts = [deployment?.readyState, deployment?.state]
+    .filter((value) => value !== undefined && value !== null);
+  const teamFacts = [
+    deployment?.ownerId,
+    deployment?.teamId,
+    deployment?.project?.accountId,
+  ].filter((value) => value !== undefined && value !== null);
+  return exactOwnedDeployment(deployment, authorization) &&
+    identifiers.length >= 1 && identifiers.every((value) => value === id) &&
+    id === bindings.deployment_id &&
+    exactPreviewHostname(deployment.url) &&
+    deployment.url === bindings.deployment_url &&
+    deployment.production === false &&
+    exactPreviewProject(deployment, authorization) &&
+    exactPreviewGit(deployment, authorization) &&
+    teamFacts.length >= 1 && teamFacts.every(
+      (value) => value === authorization.execution.preview_team_id,
+    ) &&
+    readinessFacts.length >= 1 && readinessFacts.every((value) => value === "READY");
+}
+
+function verifiedPreviewUrl(bindings) {
+  if (
+    bindings.preview_identity_verified !== true ||
+    !boundedText(bindings.deployment_id, 256) ||
+    !exactPreviewHostname(bindings.deployment_url)
+  ) {
+    throw new AdminV1OfficialLivePlatformError(
+      "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN",
+    );
+  }
+  return bindings.deployment_url;
+}
+
+function exactStorageObjectName(value, authorization) {
+  return value === authorization.execution.storage_name ||
+    (boundedText(value, 256) &&
+      /^admin\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/u.test(value));
+}
+
+function exactStorageObservation(body, authorization, objectName) {
   return body && typeof body === "object" && !Array.isArray(body) &&
     body.bucket_id === authorization.execution.storage_bucket &&
-    body.name === authorization.execution.storage_name &&
+    body.name === objectName &&
     boundedText(body.version, 1024);
+}
+
+function exactCreatedStorageObservation(body, authorization, objectName) {
+  return exactStorageObservation(body, authorization, objectName) &&
+    boundedText(body.id, 1024) && boundedText(body.created_at, 64) &&
+    body.created_at === body.updated_at &&
+    Number.isFinite(Date.parse(body.created_at)) &&
+    body.metadata && typeof body.metadata === "object" &&
+    !Array.isArray(body.metadata) && boundedText(body.metadata.eTag, 1024) &&
+    body.metadata.mimetype === "image/png" &&
+    body.metadata.size === OFFICIAL_SYNTHETIC_PNG.byteLength;
 }
 
 function exactOwnedRows(input, limits) {
@@ -201,21 +438,606 @@ function exactOwnedRows(input, limits) {
   return output;
 }
 
+const APPLICATION_AUDIT_ACTIONS = new Map([
+  [8, "tool_added"],
+  [10, "tool_updated"],
+  [11, "tool_deleted"],
+  [12, "submission_updated"],
+  [13, "submission_rejected"],
+  [14, "submission_approved"],
+  [15, "logo_uploaded"],
+  [19, "admin_logout"],
+]);
+const EXPECTED_AUDIT_ACTION_COUNTS = Object.freeze({
+  admin_logout: 2,
+  logo_uploaded: 1,
+  submission_approved: 1,
+  submission_rejected: 1,
+  submission_updated: 1,
+  tool_added: 1,
+  tool_deleted: 1,
+  tool_updated: 1,
+});
+const OFFICIAL_SYNTHETIC_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
+function exactPlainObject(value, keys) {
+  return value && typeof value === "object" && !Array.isArray(value) &&
+    Object.keys(value).sort().join("\0") === [...keys].sort().join("\0");
+}
+
+function runUserAgent(authorization) {
+  return `AiFinder-Official-Run/${authorization.run_id}`;
+}
+
+function memoryText(value, maximum = 16_384) {
+  if (!(value instanceof Uint8Array) || value.byteLength < 1 || value.byteLength > maximum) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_INPUT_INVALID");
+  }
+  const text = Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString("utf8");
+  if (text.includes("\0") || /[\r\n]/u.test(text)) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_INPUT_INVALID");
+  }
+  return text;
+}
+
+function routeToolBody(authorization, id = null) {
+  return {
+    ...(id === null ? {} : { id }),
+    name: `AiFinder Official ${authorization.run_id} Route Tool`,
+    category: "Productivity",
+    description: "Synthetic Official runtime route-owned tool",
+    website: `https://${authorization.run_id}-route.invalid/`,
+    logo_url: null,
+    pricing: "Free",
+  };
+}
+
+function submissionEditBody(binding, authorization) {
+  return {
+    id: binding.row_id,
+    name: `AiFinder Official ${authorization.run_id} 1 Updated`,
+    category: "Productivity",
+    description: "Synthetic Official runtime updated submission",
+    website: binding.website,
+    logo_url: null,
+    pricing: "Free",
+  };
+}
+
+function applicationDescriptor(input, authorization, bindings) {
+  const deploymentUrl = verifiedPreviewUrl(bindings);
+  const contract = input?.contract;
+  if (
+    !contract || typeof contract !== "object" || Array.isArray(contract) ||
+    !Number.isSafeInteger(contract.ordinal) || !boundedText(contract.method, 16) ||
+    !boundedText(contract.path, 512)
+  ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_INPUT_INVALID");
+  const headers = {
+    "user-agent": runUserAgent(authorization),
+    [TRUSTED_SOURCE_OIDC_HEADER]: protectedAccessOidcHeader(bindings),
+  };
+  const cookies = [];
+  if (input.session !== null) {
+    cookies.push(`aifinder_admin_session=${memoryText(input.session)}`);
+  }
+  if (input.csrf_cookie !== null) {
+    cookies.push(`aifinder_admin_csrf_token=${memoryText(input.csrf_cookie)}`);
+  }
+  if (cookies.length > 0) headers.cookie = cookies.join("; ");
+  if (input.csrf_token !== null) {
+    headers["x-csrf-token"] = memoryText(input.csrf_token);
+  }
+  let body = null;
+  if (contract.ordinal === 2) {
+    body = { password: memoryText(input.admin_password) };
+  } else if (contract.ordinal === 8) {
+    body = routeToolBody(authorization);
+  } else if (contract.ordinal === 10) {
+    if (!Number.isSafeInteger(bindings.route_tool_id)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    body = routeToolBody(authorization, bindings.route_tool_id);
+  } else if (contract.ordinal === 11) {
+    if (!Number.isSafeInteger(bindings.route_tool_id)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    body = { id: bindings.route_tool_id };
+  } else if (contract.ordinal === 12) {
+    if (!bindings.submissions?.[0]) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    body = submissionEditBody(bindings.submissions[0], authorization);
+  } else if (contract.ordinal === 13) {
+    if (!bindings.submissions?.[1]) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    body = { submissionId: bindings.submissions[1].row_id };
+  } else if (contract.ordinal === 14) {
+    if (!bindings.submissions?.[2]) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    body = { submissionId: bindings.submissions[2].row_id };
+  } else if (contract.ordinal === 15) {
+    const form = new FormData();
+    form.set(
+      "file",
+      new Blob([OFFICIAL_SYNTHETIC_PNG], { type: "image/png" }),
+      "official.png",
+    );
+    body = form;
+  }
+  if (body !== null && !(body instanceof FormData)) {
+    headers["content-type"] = "application/json";
+  }
+  return {
+    service: "PREVIEW",
+    method: contract.method,
+    path: `https://${deploymentUrl}${contract.path}`,
+    headers,
+    body,
+  };
+}
+
+function exactAuditPoststate(body, authorization) {
+  if (!Array.isArray(body) || body.length !== 9) return null;
+  const marker = runUserAgent(authorization);
+  const counts = {};
+  const ids = new Set();
+  const rows = [];
+  let logoObjectId = null;
+  for (const row of body) {
+    if (
+      !exactPlainObject(row, [
+        "id", "action", "created_at", "target_id", "target_name", "target_type",
+        "user_agent",
+      ]) ||
+      !boundedText(String(row.id), 256) || ids.has(String(row.id)) ||
+      !Object.hasOwn(EXPECTED_AUDIT_ACTION_COUNTS, row.action) ||
+      row.user_agent !== marker || !boundedText(row.created_at, 64) ||
+      !Number.isFinite(Date.parse(row.created_at)) ||
+      ![row.target_id, row.target_name, row.target_type].every((value) =>
+        value === null || boundedText(value, 256)
+      )
+    ) return null;
+    if (row.action === "logo_uploaded") {
+      if (
+        row.target_type !== "storage_object" ||
+        row.target_id !== row.target_name ||
+        !exactStorageObjectName(row.target_id, authorization)
+      ) return null;
+      logoObjectId = row.target_id;
+    }
+    ids.add(String(row.id));
+    counts[row.action] = (counts[row.action] ?? 0) + 1;
+    rows.push({
+      row_id: String(row.id),
+      version: row.created_at,
+      action: row.action,
+    });
+  }
+  if (
+    canonicalJson(counts) !== canonicalJson(EXPECTED_AUDIT_ACTION_COUNTS) ||
+    logoObjectId === null
+  ) return null;
+  return { logo_object_id: logoObjectId, rows };
+}
+
+function exactSubmissionPoststate(body, bindings) {
+  if (!Array.isArray(body) || body.length !== 3 || bindings.submissions?.length !== 3) {
+    return null;
+  }
+  const byId = new Map(body.map((row) => [String(row?.id), row]));
+  if (byId.size !== 3) return null;
+  const expectedStatuses = ["pending", "rejected", "approved"];
+  const rows = [];
+  for (const [index, binding] of bindings.submissions.entries()) {
+    const row = byId.get(String(binding.row_id));
+    if (
+      !row || row.website !== binding.website ||
+      row.status !== expectedStatuses[index] ||
+      !boundedText(row.updated_at, 128) || row.updated_at === binding.version
+    ) return null;
+    rows.push({ row_id: String(row.id), version: row.updated_at });
+  }
+  return rows;
+}
+
+function exactToolsPoststate(body, authorization, bindings) {
+  if (!Array.isArray(body) || body.length !== 2 || !bindings.submissions?.[2]) {
+    return null;
+  }
+  const routeWebsite = routeToolBody(authorization).website;
+  const approvedWebsite = bindings.submissions[2].website;
+  const route = body.filter((row) => row?.website === routeWebsite);
+  const approved = body.filter((row) => row?.website === approvedWebsite);
+  if (
+    route.length !== 1 || approved.length !== 1 ||
+    String(route[0].id) === String(approved[0].id) ||
+    route[0].id !== bindings.route_tool_id || route[0].status !== "archived" ||
+    !boundedText(route[0].deleted_at, 64) ||
+    approved[0].status !== "approved" || approved[0].deleted_at !== null ||
+    !boundedText(route[0].updated_at, 128) ||
+    !boundedText(approved[0].updated_at, 128)
+  ) return null;
+  return [
+    {
+      row_id: String(route[0].id),
+      version: route[0].updated_at,
+      role: "ROUTE_TOOL",
+    },
+    {
+      row_id: String(approved[0].id),
+      version: approved[0].updated_at,
+      role: "APPROVED_SUBMISSION",
+    },
+  ];
+}
+
+function exactApplicationSecurityHeaders(headers) {
+  return headers?.cache_control === "no-store" &&
+    headers.content_security_policy ===
+      "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" &&
+    boundedText(headers.content_type, 256) &&
+    headers.content_type.toLowerCase().startsWith("application/json") &&
+    headers.cross_origin_opener_policy === "same-origin" &&
+    headers.permissions_policy ===
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()" &&
+    headers.referrer_policy === "strict-origin-when-cross-origin" &&
+    headers.strict_transport_security ===
+      "max-age=31536000; includeSubDomains; preload" &&
+    headers.x_content_type_options === "nosniff" &&
+    headers.x_dns_prefetch_control === "off" &&
+    headers.x_frame_options === "DENY";
+}
+
+function zeroProjectedResponseCookies(response) {
+  for (const value of response?.response_headers?.set_cookie ?? []) {
+    if (value instanceof Uint8Array) value.fill(0);
+  }
+}
+
+function exactVercelProtectionChallenge(response, expectedUrl) {
+  const body = response?.body;
+  const headers = response?.response_headers;
+  return response?.status === 401 && response.response_json === "NON_JSON" &&
+    Number.isSafeInteger(response.response_bytes) && response.response_bytes >= 1 &&
+    response.response_bytes <= MAX_PROTECTION_CHALLENGE_BYTES &&
+    typeof body === "string" && !body.includes("\0") &&
+    Buffer.byteLength(body, "utf8") === response.response_bytes &&
+    boundedText(headers?.content_type, 256) &&
+    headers.content_type.toLowerCase().startsWith("text/html") &&
+    Array.isArray(headers.set_cookie) && headers.set_cookie.length === 0 &&
+    VERCEL_PROTECTION_CHALLENGE_MARKERS.every((marker) => body.includes(marker)) &&
+    body.includes(`url=${encodeURIComponent(expectedUrl)}`);
+}
+
+function exactAiFinderUnauthenticatedSession(response) {
+  return response?.status === 401 && response.response_json === "EXACT_BOUNDED" &&
+    Number.isSafeInteger(response.response_bytes) && response.response_bytes >= 1 &&
+    response.response_bytes <= 4096 &&
+    exactApplicationSecurityHeaders(response.response_headers) &&
+    Array.isArray(response.response_headers.set_cookie) &&
+    response.response_headers.set_cookie.length === 0 &&
+    exactPlainObject(response.body, ["authenticated", "message"]) &&
+    response.body.authenticated === false && response.body.message === "Unauthorized.";
+}
+
+function protectedAccessOidcHeader(bindings) {
+  if (
+    bindings.protected_access_verified !== true ||
+    !(bindings.protected_access_oidc_token instanceof Uint8Array)
+  ) {
+    throw new AdminV1OfficialLivePlatformError(
+      "OFFICIAL_PROTECTED_ACCESS_UNPROVEN",
+    );
+  }
+  return credentialText(bindings.protected_access_oidc_token);
+}
+
+function clearProtectedAccessBinding(bindings) {
+  if (bindings.protected_access_oidc_token instanceof Uint8Array) {
+    bindings.protected_access_oidc_token.fill(0);
+  }
+  delete bindings.protected_access_oidc_token;
+  bindings.protected_access_verified = false;
+}
+
+function boundedNullableText(value, maximum) {
+  return value === null ||
+    (typeof value === "string" && value.length <= maximum &&
+      !value.includes("\0") && !/[\r\n]/u.test(value));
+}
+
+function exactBoundedRows(rows, validator) {
+  if (!Array.isArray(rows) || rows.length > MAX_APPLICATION_ROWS) return false;
+  const ids = new Set();
+  for (const row of rows) {
+    if (!validator(row) || ids.has(row.id)) return false;
+    ids.add(row.id);
+  }
+  return true;
+}
+
+function exactApplicationToolRow(row) {
+  return exactPlainObject(row, [
+    "id", "name", "category", "description", "website", "pricing",
+    "logo_url", "status", "deleted_at",
+  ]) && Number.isSafeInteger(row.id) && row.id > 0 &&
+    boundedText(row.name, 256) && boundedText(row.category, 128) &&
+    boundedText(row.description, 8192) && boundedText(row.website, 2048) &&
+    boundedNullableText(row.pricing, 256) &&
+    boundedNullableText(row.logo_url, 2048) && boundedText(row.status, 64) &&
+    boundedNullableText(row.deleted_at, 128);
+}
+
+function exactApplicationSubmissionRow(row) {
+  return exactPlainObject(row, [
+    "id", "name", "category", "description", "website", "pricing",
+    "logo_url", "submitter_name", "submitter_email", "status", "created_at",
+  ]) && Number.isSafeInteger(row.id) && row.id > 0 &&
+    boundedText(row.name, 256) && boundedText(row.category, 128) &&
+    boundedText(row.description, 8192) && boundedText(row.website, 2048) &&
+    boundedNullableText(row.pricing, 256) &&
+    boundedNullableText(row.logo_url, 2048) &&
+    boundedNullableText(row.submitter_name, 256) &&
+    boundedNullableText(row.submitter_email, 320) &&
+    boundedText(row.status, 64) && boundedText(row.created_at, 128) &&
+    Number.isFinite(Date.parse(row.created_at));
+}
+
+function exactNonnegativeCount(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000;
+}
+
+function exactApplicationBody(contract, body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  if (contract.ordinal === 2) {
+    return exactPlainObject(body, ["success", "message"]) && body.success === true &&
+      body.message === "Admin login successful.";
+  }
+  if (contract.ordinal === 3) {
+    return exactPlainObject(body, ["authenticated", "role"]) &&
+      body.authenticated === true && body.role === "admin";
+  }
+  if (contract.ordinal === 4) {
+    return exactPlainObject(body, ["success", "csrfToken"]) && body.success === true &&
+      typeof body.csrfToken === "string" && /^[0-9a-f]{64}$/u.test(body.csrfToken);
+  }
+  if ([6, 7, 9].includes(contract.ordinal)) {
+    if (contract.ordinal === 6) {
+      return exactPlainObject(body, ["stats", "submissions"]) &&
+        exactBoundedRows(body.submissions, exactApplicationSubmissionRow) &&
+        exactPlainObject(body.stats, [
+          "approvedSubmissions", "pendingSubmissions", "rejectedSubmissions", "totalTools",
+        ]) && Object.values(body.stats).every(exactNonnegativeCount);
+    }
+    return exactPlainObject(body, ["tools"]) &&
+      exactBoundedRows(body.tools, exactApplicationToolRow);
+  }
+  if ([8, 10, 11, 12, 13, 14, 19].includes(contract.ordinal)) {
+    return exactPlainObject(body, ["success", "message"]) && body.success === true &&
+      boundedText(body.message, 256);
+  }
+  if (contract.ordinal === 15) {
+    return exactPlainObject(body, ["success", "logoUrl"]) && body.success === true &&
+      boundedText(body.logoUrl, 2048);
+  }
+  if (contract.ordinal === 20) {
+    return exactPlainObject(body, ["authenticated", "message"]) &&
+      body.authenticated === false && boundedText(body.message, 256);
+  }
+  return exactPlainObject(body, ["error"]) && boundedText(body.error, 512);
+}
+
+function parseExactSetCookie(
+  buffer,
+  { name, httpOnly, maxAge, empty },
+) {
+  if (
+    !(buffer instanceof Uint8Array) || buffer.byteLength < 1 ||
+    buffer.byteLength > 16_384
+  ) return null;
+  const text = Buffer.from(
+    buffer.buffer,
+    buffer.byteOffset,
+    buffer.byteLength,
+  ).toString("latin1");
+  if (/[\0\r\n]/u.test(text)) return null;
+  const segments = text.split(";");
+  const first = segments.shift();
+  if (typeof first !== "string" || !first.startsWith(`${name}=`)) return null;
+  const value = first.slice(name.length + 1);
+  if (
+    value.length > 4096 ||
+    !/^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/u.test(value) ||
+    (empty ? value !== "" : value === "")
+  ) return null;
+  const attributes = new Map();
+  for (const raw of segments) {
+    const segment = raw.trim();
+    if (segment === "") return null;
+    const equals = segment.indexOf("=");
+    const key = (equals < 0 ? segment : segment.slice(0, equals)).toLowerCase();
+    const attributeValue = equals < 0 ? null : segment.slice(equals + 1);
+    if (attributes.has(key)) return null;
+    attributes.set(key, attributeValue);
+  }
+  const expectedAttributeCount = httpOnly ? 5 : 4;
+  if (
+    attributes.size !== expectedAttributeCount ||
+    attributes.get("path") !== "/" ||
+    attributes.get("secure") !== null ||
+    attributes.get("samesite")?.toLowerCase() !== "strict" ||
+    attributes.get("max-age") !== String(maxAge) ||
+    (httpOnly ? attributes.get("httponly") !== null : attributes.has("httponly"))
+  ) return null;
+  return value;
+}
+
+function normalizedApplicationResult(
+  input,
+  response,
+  authorization,
+  bindings,
+  credentials,
+) {
+  const contract = input.contract;
+  const headers = response?.response_headers;
+  if (
+    response?.status !== contract.status || !exactApplicationSecurityHeaders(headers) ||
+    !exactApplicationBody(contract, response.body) ||
+    response.response_json !== "EXACT_BOUNDED" ||
+    !Number.isSafeInteger(response.response_bytes) || response.response_bytes < 1 ||
+    response.response_bytes > MAX_APPLICATION_JSON_RESPONSE_BYTES ||
+    !Array.isArray(headers.set_cookie)
+  ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+  const result = {
+    status: response.status,
+    header_projection: "EXACT_SECURITY_HEADERS",
+    body_shape: "EXACT_BOUNDED_JSON",
+    cookie_effect: "NONE",
+    effect: APPLICATION_AUDIT_ACTIONS.has(contract.ordinal)
+      ? { audit_action: APPLICATION_AUDIT_ACTIONS.get(contract.ordinal) }
+      : null,
+    ownership_projection: "EXACT_POSTSTATE_REQUIRED",
+  };
+  try {
+    if (contract.ordinal === 2) {
+      if (headers.set_cookie.length !== 1) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      }
+      const value = parseExactSetCookie(headers.set_cookie[0], {
+        name: SESSION_COOKIE_NAME,
+        httpOnly: true,
+        maxAge: APPLICATION_COOKIE_MAX_AGE_SECONDS,
+        empty: false,
+      });
+      if (!boundedText(value, 4096)) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      }
+      result.cookie_effect = "SESSION_SET";
+      result.session_cookie = Buffer.from(value, "utf8");
+    } else if (contract.ordinal === 4) {
+      if (headers.set_cookie.length !== 1) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      }
+      const value = parseExactSetCookie(headers.set_cookie[0], {
+        name: CSRF_COOKIE_NAME,
+        httpOnly: false,
+        maxAge: APPLICATION_COOKIE_MAX_AGE_SECONDS,
+        empty: false,
+      });
+      if (value !== response.body.csrfToken) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      }
+      result.cookie_effect = "CSRF_SET";
+      result.csrf_cookie = Buffer.from(value, "utf8");
+      result.csrf_token = Buffer.from(value, "utf8");
+    } else if (contract.ordinal === 19) {
+      const cleared = new Map();
+      for (const cookie of headers.set_cookie) {
+        const sessionValue = parseExactSetCookie(cookie, {
+          name: SESSION_COOKIE_NAME,
+          httpOnly: true,
+          maxAge: 0,
+          empty: true,
+        });
+        const csrfValue = parseExactSetCookie(cookie, {
+          name: CSRF_COOKIE_NAME,
+          httpOnly: false,
+          maxAge: 0,
+          empty: true,
+        });
+        const cookieName = sessionValue !== null
+          ? SESSION_COOKIE_NAME
+          : csrfValue !== null
+            ? CSRF_COOKIE_NAME
+            : null;
+        if (cookieName === null || cleared.has(cookieName)) {
+          throw new AdminV1OfficialLivePlatformError(
+            "OFFICIAL_APPLICATION_RESPONSE_INVALID",
+          );
+        }
+        cleared.set(cookieName, "");
+      }
+      if (
+        headers.set_cookie.length !== 2 ||
+        !cleared.has(SESSION_COOKIE_NAME) || !cleared.has(CSRF_COOKIE_NAME)
+      ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      result.cookie_effect = "SESSION_CSRF_CLEARED";
+    } else if (headers.set_cookie.length !== 0) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+    }
+    if (contract.ordinal === 9) {
+      const matches = response.body.tools.filter(
+        (row) => row?.website === routeToolBody(authorization).website,
+      );
+      if (
+        matches.length !== 1 || !Number.isSafeInteger(matches[0].id) ||
+        matches[0].id <= 0
+      ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+      bindings.route_tool_id = matches[0].id;
+    }
+    if (contract.ordinal === 14) result.effect.approval_rpc = 1;
+    if (contract.ordinal === 15) {
+      let logoUrl;
+      let supabaseUrl;
+      try {
+        logoUrl = new URL(response.body.logoUrl);
+        supabaseUrl = new URL(credentials.supabase_url);
+      } catch {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+      }
+      const prefix =
+        `/storage/v1/object/public/${authorization.execution.storage_bucket}/`;
+      const objectName = decodeURIComponent(logoUrl.pathname.slice(prefix.length));
+      if (
+        logoUrl.origin !== supabaseUrl.origin ||
+        !logoUrl.pathname.startsWith(prefix) || logoUrl.search !== "" ||
+        logoUrl.hash !== "" || !exactStorageObjectName(objectName, authorization)
+      ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+      bindings.logo_object_name = objectName;
+    }
+    if (contract.ordinal === 16) {
+      if (headers.allow !== "GET, POST, PUT, DELETE") {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_RESPONSE_INVALID");
+      }
+      result.allow_methods = headers.allow.split(", ");
+    }
+    if ([17, 18].includes(contract.ordinal)) {
+      Object.assign(result, {
+        proxy_scope: "DENY_ADMIN_API_PATH",
+        deferred_handler_executions: 0,
+        deferred_database_effects: 0,
+        deferred_rpc_effects: 0,
+        deferred_storage_effects: 0,
+      });
+    }
+    return result;
+  } finally {
+    for (const value of headers.set_cookie) value.fill(0);
+  }
+}
+
 function providerDescriptor(operation, input, authorization, bindings) {
   const team = `teamId=${encodeURIComponent(authorization.execution.preview_team_id)}`;
   const project = encodeURIComponent(authorization.execution.preview_project_id);
   const run = encodeURIComponent(authorization.run_id);
+  const branch = encodeURIComponent(authorization.execution.branch_name);
   const table = (name, query = "") => `/rest/v1/${name}${query}`;
   if (operation === "detect_automatic_preview") return {
     service: "VERCEL", method: "GET",
-    path: `/v6/deployments?${team}&projectId=${project}&meta-aifinderRunId=${run}`,
+    path: `/v6/deployments?${team}&projectId=${project}&target=preview&meta-githubCommitRef=${branch}&limit=100`,
   };
   if (operation.startsWith("create_environment_")) return {
     service: "VERCEL", method: "POST",
     path: `/v10/projects/${project}/env?${team}&upsert=false`,
     body: {
       key: input.key,
-      value: input.value,
+      value: memoryText(input.value),
       type: "encrypted",
       target: ["preview"],
       gitBranch: authorization.execution.branch_name,
@@ -243,21 +1065,20 @@ function providerDescriptor(operation, input, authorization, bindings) {
     service: "VERCEL", method: "GET",
     path: `/v13/deployments/${encodeURIComponent(bindings.deployment_id)}?${team}&withGitRepoInfo=true`,
   };
-  if (operation === "generate_oidc") return {
-    service: "VERCEL", method: "POST", path: `/v1/oidc/token?${team}`,
-    body: { projectId: authorization.execution.preview_project_id },
-  };
-  if (operation === "protected_access_handshake") return {
-    service: "PREVIEW", method: "GET",
-    path: `https://${bindings.deployment_url}/api/admin/session`,
-    headers: { authorization: `Bearer ${credentialText(input.oidc_token)}` },
-  };
+  if (operation === "generate_oidc") {
+    verifiedPreviewUrl(bindings);
+    return {
+      service: "VERCEL", method: "POST", path: `/v1/oidc/token?${team}`,
+      body: { projectId: authorization.execution.preview_project_id },
+    };
+  }
   if (operation === "inspect_owned_database_residue") return {
     service: "SUPABASE_SERVICE", method: "GET",
     path: table("submitted_tools", `?select=id&website=like.*${run}*&limit=4`),
   };
   if (operation === "create_submitted_fixture") return {
-    service: "SUPABASE_SERVICE", method: "POST", path: table("submitted_tools"),
+    service: "SUPABASE_SERVICE", method: "POST",
+    path: table("submitted_tools", "?select=id,name,status,updated_at,website"),
     headers: { prefer: "return=representation" },
     body: {
       name: `AiFinder Official ${authorization.run_id} ${input.fixture_ordinal}`,
@@ -269,21 +1090,22 @@ function providerDescriptor(operation, input, authorization, bindings) {
   };
   if (operation === "inspect_submissions_poststate") return {
     service: "SUPABASE_SERVICE", method: "GET",
-    path: table("submitted_tools", `?select=id,status,updated_at&website=like.*${run}*`),
+    path: table("submitted_tools", `?select=id,status,updated_at,website&website=like.*${run}*`),
   };
   if (operation === "inspect_tools_poststate") return {
     service: "SUPABASE_SERVICE", method: "GET",
-    path: table("tools", `?select=id,status,updated_at&website=like.*${run}*`),
+    path: table("tools", `?select=id,status,updated_at,website,deleted_at&website=like.*${run}*`),
   };
   if (operation === "inspect_audits_poststate") return {
     service: "SUPABASE_SERVICE", method: "GET",
-    path: table("admin_audit_logs", `?select=id,action,created_at&metadata->>run_id=eq.${run}`),
+    path: table(
+      "admin_audit_logs",
+      `?select=id,action,created_at,target_id,target_name,target_type,user_agent&user_agent=eq.${encodeURIComponent(runUserAgent(authorization))}&limit=10`,
+    ),
   };
-  if (operation === "application_request") return {
-    service: "PREVIEW", method: input.contract.method,
-    path: `https://${bindings.deployment_url}${input.contract.path}`,
-    headers: {},
-  };
+  if (operation === "application_request") {
+    return applicationDescriptor(input, authorization, bindings);
+  }
   if (operation === "storage_read_owned_version") return {
     service: "SUPABASE_SERVICE", method: "GET",
     path: `/storage/v1/object/info/${encodeURIComponent(authorization.execution.storage_bucket)}/${authorization.execution.storage_name.split("/").map(encodeURIComponent).join("/")}`,
@@ -323,41 +1145,119 @@ function providerDescriptor(operation, input, authorization, bindings) {
   };
   if (operation === "delete_owned_audits") return {
     service: "SUPABASE_SERVICE", method: "DELETE",
-    path: table("admin_audit_logs", `?id=in.(${input.rows.map((row) => encodeURIComponent(row.row_id)).join(",")})`),
+    path: table(
+      "admin_audit_logs",
+      `?or=(${input.rows.map((row) =>
+        `and(id.eq.${encodeURIComponent(row.row_id)},created_at.eq.${encodeURIComponent(row.version)})`
+      ).join(",")})&select=id,action,created_at,user_agent`,
+    ),
+    headers: { prefer: "return=representation" },
   };
   throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
 }
 
-function normalizedProviderResult(operation, response, bindings, input) {
+function normalizedProviderResult(
+  operation,
+  response,
+  bindings,
+  input,
+  authorization,
+  credentials,
+) {
   const body = response?.body;
   if (operation === "detect_automatic_preview") {
-    const deployments = Array.isArray(body?.deployments) ? body.deployments : [];
+    const deployments = response?.status === 200
+      ? terminalDeploymentInventory(body)
+      : null;
+    if (deployments === null) {
+      throw new AdminV1OfficialLivePlatformError(
+        "OFFICIAL_AUTOMATIC_PREVIEW_INVENTORY_UNPROVEN",
+      );
+    }
     return { count: deployments.length };
   }
-  if (operation.startsWith("create_environment_")) {
-    const record = Array.isArray(body?.created) ? body.created[0] : body;
-    return { status: response.status < 300 ? "CREATED_EXACT" : "FAILED", record_id: record?.id };
-  }
   if (operation === "create_preview") {
-    bindings.deployment_id = body?.id ?? body?.uid;
-    bindings.deployment_url = body?.url;
-    return { status: response.status < 300 ? "CREATED_EXACT" : "FAILED", deployment_id: bindings.deployment_id };
+    const identifiers = [body?.id, body?.uid]
+      .filter((value) => value !== undefined && value !== null);
+    const deploymentId = body?.id ?? body?.uid;
+    if (
+      response.status < 200 || response.status >= 300 ||
+      !boundedText(deploymentId, 256) || identifiers.length < 1 ||
+      !identifiers.every((value) => value === deploymentId) ||
+      !exactPreviewHostname(body?.url)
+    ) {
+      throw new AdminV1OfficialLivePlatformError(
+        "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN",
+      );
+    }
+    bindings.deployment_id = deploymentId;
+    bindings.deployment_url = body.url;
+    bindings.preview_identity_verified = false;
+    return {
+      status: "CREATED_EXACT",
+      deployment_id: bindings.deployment_id,
+    };
   }
   if (operation === "verify_preview_identity") {
-    return { status: response.status === 200 && (body?.readyState ?? body?.state) === "READY" ? "EXACT" : "FAILED" };
+    if (
+      response.status !== 200 ||
+      !exactReadyPreviewDeployment(body, authorization, bindings)
+    ) {
+      throw new AdminV1OfficialLivePlatformError(
+        "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN",
+      );
+    }
+    bindings.preview_identity_verified = true;
+    return {
+      status: "EXACT",
+      deployment_id: bindings.deployment_id,
+    };
   }
   if (operation === "generate_oidc") {
-    return { token: Buffer.from(body?.token ?? "", "utf8") };
-  }
-  if (operation === "protected_access_handshake") {
-    return { status: response.status < 400 ? "BOUND" : "FAILED" };
+    if (
+      response.status !== 200 || response.response_json !== "EXACT_BOUNDED" ||
+      !exactPlainObject(body, ["token"]) || !boundedText(body.token, 16_384)
+    ) {
+      throw new AdminV1OfficialLivePlatformError(
+        "OFFICIAL_PROTECTED_ACCESS_UNPROVEN",
+      );
+    }
+    return { token: Buffer.from(body.token, "utf8") };
   }
   if (operation === "inspect_owned_database_residue") {
     return { status: Array.isArray(body) && body.length === 0 ? "ABSENT" : "PRESENT" };
   }
   if (operation === "create_submitted_fixture") {
     const row = Array.isArray(body) ? body[0] : body;
-    return { status: response.status < 300 ? "CREATED_EXACT" : "FAILED", row_id: String(row?.id ?? ""), version: row?.updated_at };
+    const expectedName =
+      `AiFinder Official ${authorization.run_id} ${input.fixture_ordinal}`;
+    const result = {
+      status: response.status >= 200 && response.status < 300
+        ? "CREATED_EXACT"
+        : "FAILED",
+      row_id: String(row?.id ?? ""),
+      version: row?.updated_at,
+    };
+    if (result.status === "CREATED_EXACT") {
+      if (
+        !exactPlainObject(row, ["id", "name", "status", "updated_at", "website"]) ||
+        !Number.isSafeInteger(row.id) || row.id <= 0 ||
+        row.name !== expectedName || row.status !== "pending" ||
+        row.website !== input.website || !boundedText(result.version, 128)
+      ) {
+        throw new AdminV1OfficialLivePlatformError(
+          "OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN",
+        );
+      }
+      bindings.submissions ??= [];
+      bindings.submissions.push({
+        fixture_ordinal: input.fixture_ordinal,
+        row_id: Number.isSafeInteger(row.id) ? row.id : result.row_id,
+        version: result.version,
+        website: input.website,
+      });
+    }
+    return result;
   }
   if (operation === "storage_read_owned_version") {
     return { status: response.status === 200 ? "EXACT" : "ABSENT", version: body?.version };
@@ -379,11 +1279,71 @@ function normalizedProviderResult(operation, response, bindings, input) {
     bindings.cleanup_grant_revoked = true;
     return { status: "REVOKED_EXACT" };
   }
+  if (operation === "delete_owned_audits") {
+    if (response.status !== 200 || !Array.isArray(body) || body.length !== 9) {
+      return { status: "FAILED" };
+    }
+    const expected = new Map(input.rows.map((row) => [row.row_id, row.version]));
+    if (
+      expected.size !== 9 || body.some((row) =>
+        !row || typeof row !== "object" || Array.isArray(row) ||
+        expected.get(String(row.id)) !== row.created_at ||
+        row.user_agent !== runUserAgent(authorization)
+      ) || new Set(body.map((row) => String(row.id))).size !== 9
+    ) return { status: "FAILED" };
+    return { status: "DELETED_EXACT" };
+  }
   if (operation === "delete_storage_exact_version" || operation.startsWith("delete_") || operation === "retire_protected_access") {
     return { status: response.status < 300 || response.status === 404 ? "DELETED_EXACT" : "FAILED" };
   }
-  if (["inspect_submissions_poststate", "inspect_tools_poststate", "inspect_audits_poststate", "application_request"].includes(operation)) {
-    return body;
+  if (operation === "inspect_audits_poststate") {
+    const observation = exactAuditPoststate(body, authorization);
+    if (response.status !== 200 || observation === null) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    return {
+      status: "EXACT",
+      audits: 9,
+      logo_object_id: observation.logo_object_id,
+      rows: observation.rows,
+      ownership_readback: "EXACT",
+      unrelated_preserved: true,
+    };
+  }
+  if (operation === "application_request") {
+    return normalizedApplicationResult(
+      input,
+      response,
+      authorization,
+      bindings,
+      credentials,
+    );
+  }
+  if (operation === "inspect_submissions_poststate") {
+    const rows = exactSubmissionPoststate(body, bindings);
+    if (response.status !== 200 || rows === null) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    return {
+      status: "EXACT",
+      submitted_tools: 3,
+      rows,
+      ownership_readback: "EXACT",
+      unrelated_preserved: true,
+    };
+  }
+  if (operation === "inspect_tools_poststate") {
+    const rows = exactToolsPoststate(body, authorization, bindings);
+    if (response.status !== 200 || rows === null) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+    }
+    return {
+      status: "EXACT",
+      tools: 2,
+      rows,
+      ownership_readback: "EXACT",
+      unrelated_preserved: true,
+    };
   }
   return body;
 }
@@ -391,6 +1351,8 @@ function normalizedProviderResult(operation, response, bindings, input) {
 export function createAdminV1OfficialConcreteTransport({
   execution_context,
   fetch_impl = globalThis.fetch,
+  random_bytes = (size) => globalThis.crypto.getRandomValues(new Uint8Array(size)),
+  random_uuid = () => globalThis.crypto.randomUUID(),
   spawn_sync,
 } = {}) {
   const lowLevel = createConcreteLiveTransport({
@@ -408,8 +1370,36 @@ export function createAdminV1OfficialConcreteTransport({
     `teamId=${encodeURIComponent(authorization.execution.preview_team_id)}`;
   const projectPath = (authorization) =>
     encodeURIComponent(authorization.execution.preview_project_id);
-  const storageInfoPath = (authorization) =>
-    `/storage/v1/object/info/${encodeURIComponent(authorization.execution.storage_bucket)}/${authorization.execution.storage_name.split("/").map(encodeURIComponent).join("/")}`;
+  const storageObjectPath = (authorization, objectName) =>
+    `/storage/v1/object/${encodeURIComponent(authorization.execution.storage_bucket)}/${objectName.split("/").map(encodeURIComponent).join("/")}`;
+  const storageInfoPath = (authorization, objectName) =>
+    `/storage/v1/object/info/${encodeURIComponent(authorization.execution.storage_bucket)}/${objectName.split("/").map(encodeURIComponent).join("/")}`;
+
+  async function readStoragePresence(operation, authorization, credentials, objectName) {
+    if (!exactStorageObjectName(objectName, authorization)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    }
+    return request(operation, credentials, {
+      service: "SUPABASE_SERVICE",
+      method: "HEAD",
+      path: storageObjectPath(authorization, objectName),
+    });
+  }
+
+  async function readExactStorageInfo(operation, authorization, credentials, objectName) {
+    const response = await request(operation, credentials, {
+      service: "SUPABASE_SERVICE",
+      method: "GET",
+      path: storageInfoPath(authorization, objectName),
+    });
+    if (
+      response.status !== 200 ||
+      !exactStorageObservation(response.body, authorization, objectName)
+    ) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    }
+    return response.body;
+  }
 
   async function readDeploymentNamespace(operation, authorization, credentials) {
     const response = await request(operation, credentials, {
@@ -497,13 +1487,14 @@ export function createAdminV1OfficialConcreteTransport({
     authorization,
     credentials,
     allowedStorageReplacementVersion = null,
+    storageObjectName = authorization.execution.storage_name,
     operation = "inspect_owned_database_residue",
   }) {
     const run = encodeURIComponent(authorization.run_id);
     const descriptors = [
       `/rest/v1/submitted_tools?select=id&website=like.*${run}*&limit=4`,
       `/rest/v1/tools?select=id&website=like.*${run}*&limit=3`,
-      `/rest/v1/admin_audit_logs?select=id&metadata->>run_id=eq.${run}&limit=9`,
+      `/rest/v1/admin_audit_logs?select=id&user_agent=eq.${encodeURIComponent(runUserAgent(authorization))}&limit=10`,
     ];
     for (const path of descriptors) {
       const response = await request(operation, credentials, {
@@ -519,20 +1510,26 @@ export function createAdminV1OfficialConcreteTransport({
       }
       if (response.body.length !== 0) return { status: "PRESENT" };
     }
-    const storage = await request(operation, credentials, {
-      service: "SUPABASE_SERVICE",
-      method: "GET",
-      path: storageInfoPath(authorization),
-    });
-    if (storage.status === 404) return { status: "ABSENT" };
-    if (storage.status === 200 && exactStorageObservation(storage.body, authorization)) {
-      if (
-        allowedStorageReplacementVersion !== null &&
-        storage.body.version !== allowedStorageReplacementVersion
-      ) return { status: "ABSENT" };
-      return { status: "PRESENT" };
+    const storage = await readStoragePresence(
+      operation,
+      authorization,
+      credentials,
+      storageObjectName,
+    );
+    if ([400, 404].includes(storage.status)) return { status: "ABSENT" };
+    if (!(storage.status >= 200 && storage.status < 300)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
     }
-    throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+    if (allowedStorageReplacementVersion === null) return { status: "PRESENT" };
+    const info = await readExactStorageInfo(
+      operation,
+      authorization,
+      credentials,
+      storageObjectName,
+    );
+    return info.version === allowedStorageReplacementVersion
+      ? { status: "PRESENT" }
+      : { status: "ABSENT" };
   }
 
   async function verifyZeroDataResidual({ authorization, credentials, input }) {
@@ -541,7 +1538,7 @@ export function createAdminV1OfficialConcreteTransport({
       !input.owned || typeof input.owned !== "object" || Array.isArray(input.owned)
     ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
     const ownedRows = exactOwnedRows(input.owned, {
-      audit_rows: 8,
+      audit_rows: 9,
       submissions: 3,
       tools: 2,
     });
@@ -561,6 +1558,7 @@ export function createAdminV1OfficialConcreteTransport({
       credentials,
       allowedStorageReplacementVersion:
         input.allow_non_owned_storage_replacement ? logo.version : null,
+      storageObjectName: logo?.object_id ?? authorization.execution.storage_name,
       operation: "verify_zero_data_residual",
     });
     if (namespace.status !== "ABSENT") {
@@ -593,19 +1591,33 @@ export function createAdminV1OfficialConcreteTransport({
       }
     }
     if (logo !== null) {
-      const storage = await request("verify_zero_data_residual", credentials, {
-        service: "SUPABASE_SERVICE",
-        method: "GET",
-        path: storageInfoPath(authorization),
-      });
+      const storage = await readStoragePresence(
+        "verify_zero_data_residual",
+        authorization,
+        credentials,
+        logo.object_id,
+      );
       if (input.allow_non_owned_storage_replacement) {
-        if (
-          storage.status !== 200 ||
-          !exactStorageObservation(storage.body, authorization) ||
-          storage.body.version === logo.version
-        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
-      } else if (storage.status !== 404) {
-        if (storage.status === 200 && exactStorageObservation(storage.body, authorization)) {
+        if (!(storage.status >= 200 && storage.status < 300)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+        }
+        const info = await readExactStorageInfo(
+          "verify_zero_data_residual",
+          authorization,
+          credentials,
+          logo.object_id,
+        );
+        if (info.version === logo.version) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+        }
+      } else if (![400, 404].includes(storage.status)) {
+        if (storage.status >= 200 && storage.status < 300) {
+          await readExactStorageInfo(
+            "verify_zero_data_residual",
+            authorization,
+            credentials,
+            logo.object_id,
+          );
           throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_RESIDUAL_PRESENT");
         }
         throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
@@ -744,6 +1756,232 @@ export function createAdminV1OfficialConcreteTransport({
           credentials: textCredentials,
         });
       }
+      if (operation.startsWith("create_environment_")) {
+        const response = await request(
+          operation,
+          textCredentials,
+          providerDescriptor(operation, input, authorization, bindings),
+        );
+        const recordId = response.status >= 200 && response.status < 300
+          ? exactCreatedEnvironmentResponseId(response.body)
+          : null;
+        if (recordId === null) {
+          throw new AdminV1OfficialLivePlatformError(
+            "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+          );
+        }
+        let records;
+        try {
+          records = await readEnvironmentNamespace(
+            operation,
+            authorization,
+            textCredentials,
+          );
+        } catch {
+          throw new AdminV1OfficialLivePlatformError(
+            "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+          );
+        }
+        if (!exactCreatedEnvironmentReadback(
+          records,
+          authorization,
+          recordId,
+          input.key,
+        )) {
+          throw new AdminV1OfficialLivePlatformError(
+            "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+          );
+        }
+        return { status: "CREATED_EXACT", record_id: recordId };
+      }
+      if (operation === "protected_access_handshake") {
+        if (
+          bindings.protected_access_verified === true ||
+          bindings.protected_access_oidc_token instanceof Uint8Array
+        ) {
+          throw new AdminV1OfficialLivePlatformError(
+            "OFFICIAL_PROTECTED_ACCESS_UNPROVEN",
+          );
+        }
+        const previewUrl =
+          `https://${verifiedPreviewUrl(bindings)}/api/admin/session`;
+        let negative;
+        let positive;
+        try {
+          negative = await request(operation, textCredentials, {
+            service: "PREVIEW",
+            method: "GET",
+            path: previewUrl,
+            headers: { accept: "text/html" },
+          });
+          if (!exactVercelProtectionChallenge(negative, previewUrl)) {
+            return { status: "FAILED", physical_requests: 1 };
+          }
+          positive = await request(operation, textCredentials, {
+            service: "PREVIEW",
+            method: "GET",
+            path: previewUrl,
+            headers: {
+              accept: "application/json",
+              [TRUSTED_SOURCE_OIDC_HEADER]: credentialText(input.oidc_token),
+            },
+          });
+          if (!exactAiFinderUnauthenticatedSession(positive)) {
+            return { status: "FAILED", physical_requests: 2 };
+          }
+          bindings.protected_access_oidc_token = Buffer.from(input.oidc_token);
+          bindings.protected_access_verified = true;
+          return { status: "BOUND", physical_requests: 2 };
+        } finally {
+          zeroProjectedResponseCookies(negative);
+          zeroProjectedResponseCookies(positive);
+        }
+      }
+      if (operation === "storage_read_owned_version") {
+        const objectName = input.object_id;
+        const presence = await readStoragePresence(
+          operation,
+          authorization,
+          textCredentials,
+          objectName,
+        );
+        if ([400, 404].includes(presence.status)) return { status: "ABSENT" };
+        if (!(presence.status >= 200 && presence.status < 300)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+        }
+        const info = await readExactStorageInfo(
+          operation,
+          authorization,
+          textCredentials,
+          objectName,
+        );
+        return { status: "EXACT", version: info.version };
+      }
+      if (operation === "prepare_storage_cleanup_grant") {
+        if (
+          !bindings.logo || input.object_id !== bindings.logo.object_id ||
+          input.expected_version !== bindings.logo.expected_version ||
+          bindings.cleanup_grant_revoked === false
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        const tokenBytes = random_bytes(32);
+        const grantId = random_uuid();
+        if (
+          !(tokenBytes instanceof Uint8Array) || tokenBytes.byteLength !== 32 ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(grantId)
+        ) {
+          if (tokenBytes instanceof Uint8Array) tokenBytes.fill(0);
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        }
+        const rawToken = Buffer.from(tokenBytes).toString("hex");
+        tokenBytes.fill(0);
+        const tokenHash = sha256Hex(rawToken);
+        try {
+          const response = await request(operation, textCredentials, {
+            service: "SUPABASE_SERVICE",
+            method: "POST",
+            path: "/rest/v1/rpc/aifinder_prepare_storage_cleanup_grant",
+            body: {
+              p_bucket_id: authorization.execution.storage_bucket,
+              p_expected_etag: bindings.logo.expected_etag,
+              p_expected_mime_type: "image/png",
+              p_expected_size: bindings.logo.expected_size,
+              p_expected_version: bindings.logo.expected_version,
+              p_grant_id: grantId,
+              p_object_name: bindings.logo.object_id,
+              p_phase_id: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+              p_runtime_session_id: authorization.run_id,
+              p_token_hash: tokenHash,
+              p_ttl_seconds: 300,
+            },
+          });
+          const row = Array.isArray(response.body) ? response.body[0] : response.body;
+          if (
+            response.status !== 200 ||
+            !exactPlainObject(row, ["expected_version", "expires_at", "grant_id"]) ||
+            row.grant_id !== grantId ||
+            row.expected_version !== bindings.logo.expected_version ||
+            !boundedText(row.expires_at, 64) || !Number.isFinite(Date.parse(row.expires_at))
+          ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+          bindings.cleanup_grant_id = grantId;
+          bindings.cleanup_grant_token = Buffer.from(rawToken, "ascii");
+          bindings.cleanup_grant_token_hash = tokenHash;
+          bindings.cleanup_grant_revoked = false;
+          return { status: "PREPARED", grant_id: grantId };
+        } catch (error) {
+          if (bindings.cleanup_grant_token instanceof Uint8Array) {
+            bindings.cleanup_grant_token.fill(0);
+          }
+          throw error;
+        }
+      }
+      if (operation === "delete_storage_exact_version") {
+        if (
+          !bindings.logo || input.object_id !== bindings.logo.object_id ||
+          input.expected_version !== bindings.logo.expected_version ||
+          input.grant_id !== bindings.cleanup_grant_id ||
+          bindings.cleanup_grant_revoked !== false ||
+          !(bindings.cleanup_grant_token instanceof Uint8Array)
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        const response = await request(operation, textCredentials, {
+          service: "SUPABASE_ANON",
+          method: "DELETE",
+          path: `/storage/v1/object/${encodeURIComponent(authorization.execution.storage_bucket)}`,
+          headers: {
+            "x-aifinder-storage-cleanup-token": memoryText(
+              bindings.cleanup_grant_token,
+              128,
+            ),
+          },
+          body: { prefixes: [bindings.logo.object_id] },
+        });
+        if (response.status !== 200) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        }
+        const after = await readStoragePresence(
+          operation,
+          authorization,
+          textCredentials,
+          bindings.logo.object_id,
+        );
+        if ([400, 404].includes(after.status)) return { status: "DELETED_EXACT" };
+        if (after.status >= 200 && after.status < 300) {
+          const info = await readExactStorageInfo(
+            operation,
+            authorization,
+            textCredentials,
+            bindings.logo.object_id,
+          );
+          if (info.version !== bindings.logo.expected_version) {
+            return { status: "VERSION_MISMATCH", observed_version: info.version };
+          }
+        }
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+      }
+      if (operation === "revoke_storage_cleanup_grant") {
+        if (
+          input.grant_id !== bindings.cleanup_grant_id ||
+          bindings.cleanup_grant_revoked !== false ||
+          !(bindings.cleanup_grant_token instanceof Uint8Array)
+        ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        try {
+          const response = await request(operation, textCredentials, {
+            service: "SUPABASE_SERVICE",
+            method: "POST",
+            path: "/rest/v1/rpc/aifinder_revoke_storage_cleanup_grant",
+            body: {
+              p_grant_id: bindings.cleanup_grant_id,
+              p_token_hash: bindings.cleanup_grant_token_hash,
+            },
+          });
+          if (response.status !== 200 || response.body !== true) {
+            throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+          }
+          bindings.cleanup_grant_revoked = true;
+          return { status: "REVOKED_EXACT" };
+        } finally {
+          bindings.cleanup_grant_token.fill(0);
+        }
+      }
       if (operation === "verify_zero_data_residual") {
         return verifyZeroDataResidual({
           authorization,
@@ -758,13 +1996,75 @@ export function createAdminV1OfficialConcreteTransport({
           input,
         });
       }
+      if (operation === "retire_protected_access") {
+        try {
+          const descriptor = providerDescriptor(
+            operation,
+            input,
+            authorization,
+            bindings,
+          );
+          const response = await lowLevel.request({
+            ...descriptor,
+            credentials: textCredentials,
+            operation,
+          });
+          return normalizedProviderResult(
+            operation,
+            response,
+            bindings,
+            input,
+            authorization,
+            textCredentials,
+          );
+        } finally {
+          clearProtectedAccessBinding(bindings);
+        }
+      }
       const descriptor = providerDescriptor(operation, input, authorization, bindings);
       const response = await lowLevel.request({
         ...descriptor,
         credentials: textCredentials,
         operation,
       });
-      return normalizedProviderResult(operation, response, bindings, input);
+      const result = normalizedProviderResult(
+        operation,
+        response,
+        bindings,
+        input,
+        authorization,
+        textCredentials,
+      );
+      if (operation === "application_request" && input.contract.ordinal === 15) {
+        const objectName = bindings.logo_object_name;
+        const presence = await readStoragePresence(
+          operation,
+          authorization,
+          textCredentials,
+          objectName,
+        );
+        if (!(presence.status >= 200 && presence.status < 300)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+        }
+        const info = await readExactStorageInfo(
+          operation,
+          authorization,
+          textCredentials,
+          objectName,
+        );
+        if (!exactCreatedStorageObservation(info, authorization, objectName)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_APPLICATION_OWNERSHIP_UNPROVEN");
+        }
+        bindings.logo = {
+          expected_etag: info.metadata.eTag,
+          expected_size: info.metadata.size,
+          expected_version: info.version,
+          object_id: objectName,
+        };
+        result.effect.logo_object_id = objectName;
+        result.effect.storage_version = info.version;
+      }
+      return result;
     },
   });
 }

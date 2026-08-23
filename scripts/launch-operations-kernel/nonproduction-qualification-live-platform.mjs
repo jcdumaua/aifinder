@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_JSON_RESPONSE_BYTES = 1024 * 1024;
 const STORAGE_GRANT_TTL_SECONDS = 300;
 const PREVIEW_READY_ATTEMPTS = 8;
 const PREVIEW_READY_DELAY_MS = 15_000;
@@ -107,6 +108,62 @@ function boundedText(value, maximum = 1024) {
   return typeof value === "string" && value.length >= 1 && value.length <= maximum;
 }
 
+const SAFE_RESPONSE_HEADERS = Object.freeze([
+  ["allow", "allow"],
+  ["cache-control", "cache_control"],
+  ["content-security-policy", "content_security_policy"],
+  ["content-type", "content_type"],
+  ["cross-origin-opener-policy", "cross_origin_opener_policy"],
+  ["permissions-policy", "permissions_policy"],
+  ["referrer-policy", "referrer_policy"],
+  ["strict-transport-security", "strict_transport_security"],
+  ["x-content-type-options", "x_content_type_options"],
+  ["x-dns-prefetch-control", "x_dns_prefetch_control"],
+  ["x-frame-options", "x_frame_options"],
+]);
+
+function boundedResponseHeader(value, maximum = 4096) {
+  return value === null ||
+    (typeof value === "string" && value.length <= maximum && !/[\0\r\n]/u.test(value));
+}
+
+function projectResponseHeaders(response) {
+  const projection = Object.fromEntries(
+    SAFE_RESPONSE_HEADERS.map(([, output]) => [output, null]),
+  );
+  projection.set_cookie = [];
+  if (!response?.headers || typeof response.headers.get !== "function") {
+    return projection;
+  }
+  try {
+    for (const [header, output] of SAFE_RESPONSE_HEADERS) {
+      const value = response.headers.get(header);
+      if (!boundedResponseHeader(value)) {
+        throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+      }
+      projection[output] = value;
+    }
+    const setCookies = typeof response.headers.getSetCookie === "function"
+      ? response.headers.getSetCookie()
+      : (() => {
+          const combined = response.headers.get("set-cookie");
+          return combined === null ? [] : [combined];
+        })();
+    if (
+      !Array.isArray(setCookies) || setCookies.length > 4 ||
+      setCookies.some((value) => !boundedResponseHeader(value, 16_384))
+    ) {
+      throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+    }
+    projection.set_cookie = setCookies.map((value) => Buffer.from(value, "latin1"));
+    return projection;
+  } catch (error) {
+    for (const value of projection.set_cookie) value.fill(0);
+    if (error instanceof ConcreteLivePlatformError) throw error;
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+}
+
 function exactKeys(value, expected) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const actual = Object.keys(value).sort();
@@ -209,6 +266,70 @@ function assertNoDuplicateJsonObjectKeys(text) {
   scanValue();
   skipWhitespace();
   if (index !== text.length) throw new Error("JSON_TRAILING_BYTES");
+}
+
+async function readBoundedJsonText(response) {
+  const contentLength = response?.headers?.get?.("content-length") ?? null;
+  if (
+    contentLength !== null &&
+    (!/^(?:0|[1-9][0-9]*)$/u.test(contentLength) ||
+      Number(contentLength) > MAX_JSON_RESPONSE_BYTES)
+  ) {
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+  const reader = response?.body?.getReader?.();
+  if (reader) {
+    const chunks = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!(value instanceof Uint8Array)) {
+          throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+        }
+        size += value.byteLength;
+        if (size > MAX_JSON_RESPONSE_BYTES) {
+          value.fill(0);
+          await reader.cancel().catch(() => {});
+          throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+        }
+        chunks.push(Buffer.from(value));
+        value.fill(0);
+      }
+      const bytes = Buffer.concat(chunks, size);
+      try {
+        return {
+          bytes: size,
+          text: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+        };
+      } finally {
+        bytes.fill(0);
+        for (const chunk of chunks) chunk.fill(0);
+      }
+    } catch (error) {
+      for (const chunk of chunks) chunk.fill(0);
+      if (error instanceof ConcreteLivePlatformError) throw error;
+      throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+    }
+  }
+  if (typeof response?.text !== "function") {
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+  let text;
+  try {
+    text = await response.text();
+  } catch {
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+  if (typeof text !== "string") {
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes > MAX_JSON_RESPONSE_BYTES) {
+    throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
+  }
+  return { bytes, text };
 }
 
 function exactGitOutput(result, { allow_stderr = false } = {}) {
@@ -461,7 +582,10 @@ export function createConcreteLiveTransport({
         },
       };
       if (body !== null) {
-        if (Buffer.isBuffer(body) || body instanceof Uint8Array) {
+        if (
+          Buffer.isBuffer(body) || body instanceof Uint8Array ||
+          (typeof FormData !== "undefined" && body instanceof FormData)
+        ) {
           init.body = body;
         } else {
           init.body = canonicalJson(body);
@@ -478,6 +602,8 @@ export function createConcreteLiveTransport({
         );
       }
       let responseBody = null;
+      let responseBytes = 0;
+      let responseJson = "EMPTY";
       if (response.status !== 204 && response_kind === "BYTES") {
         if (typeof response.arrayBuffer !== "function") {
           throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
@@ -493,14 +619,20 @@ export function createConcreteLiveTransport({
           throw new ConcreteLivePlatformError("CONCRETE_NETWORK_RESPONSE_INVALID");
         }
         responseBody = bytes;
+        responseBytes = bytes.byteLength;
+        responseJson = "NOT_APPLICABLE";
       } else if (response.status !== 204) {
-        const text = await response.text();
+        const bounded = await readBoundedJsonText(response);
+        const { text } = bounded;
+        responseBytes = bounded.bytes;
         if (text.length > 0) {
           try {
             assertNoDuplicateJsonObjectKeys(text);
             responseBody = JSON.parse(text);
+            responseJson = "EXACT_BOUNDED";
           } catch {
             responseBody = text;
+            responseJson = "NON_JSON";
           }
         }
       }
@@ -509,6 +641,9 @@ export function createConcreteLiveTransport({
         body: responseBody,
         operation,
         expected_fixture,
+        response_bytes: responseBytes,
+        response_json: responseJson,
+        response_headers: projectResponseHeaders(response),
       };
     },
   });

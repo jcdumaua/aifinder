@@ -459,6 +459,172 @@ await check("system transport reads exact Storage bytes without JSON coercion", 
   assert.equal(fetchCalls[0].init.headers.accept, "image/png");
 });
 
+await check("system transport projects only bounded application response headers", async () => {
+  const values = new Map(Object.entries({
+    allow: "GET, POST, PUT, DELETE",
+    "cache-control": "no-store",
+    "content-security-policy": "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+    "content-type": "application/json",
+    "cross-origin-opener-policy": "same-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+    "x-content-type-options": "nosniff",
+    "x-dns-prefetch-control": "off",
+    "x-frame-options": "DENY",
+  }));
+  const setCookies = [
+    "aifinder_admin_session=opaque-session; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=14400",
+    "aifinder_admin_csrf_token=opaque-csrf; Path=/; Secure; SameSite=Strict; Max-Age=14400",
+  ];
+  const transport = createConcreteLiveTransport({
+    async fetch_impl() {
+      return {
+        status: 200,
+        headers: {
+          get(name) {
+            return values.get(name.toLowerCase()) ?? null;
+          },
+          getSetCookie() {
+            return [...setCookies];
+          },
+        },
+        async text() {
+          return '{"success":true}';
+        },
+      };
+    },
+  });
+  const response = await transport.request({
+    service: "PREVIEW",
+    method: "GET",
+    path: "https://synthetic-preview.invalid/api/admin/session",
+    credentials,
+    operation: "application_request",
+  });
+  assert.deepEqual(response.response_headers, {
+    allow: values.get("allow"),
+    cache_control: values.get("cache-control"),
+    content_security_policy: values.get("content-security-policy"),
+    content_type: values.get("content-type"),
+    cross_origin_opener_policy: values.get("cross-origin-opener-policy"),
+    permissions_policy: values.get("permissions-policy"),
+    referrer_policy: values.get("referrer-policy"),
+    set_cookie: setCookies.map((value) => Buffer.from(value, "latin1")),
+    strict_transport_security: values.get("strict-transport-security"),
+    x_content_type_options: values.get("x-content-type-options"),
+    x_dns_prefetch_control: values.get("x-dns-prefetch-control"),
+    x_frame_options: values.get("x-frame-options"),
+  });
+  for (const cookie of response.response_headers.set_cookie) cookie.fill(0);
+});
+
+await check("system transport rejects JSON above the exact byte ceiling", async () => {
+  const oversized = `{"error":"${"x".repeat(1024 * 1024)}"}`;
+  const transport = createConcreteLiveTransport({
+    async fetch_impl() {
+      return {
+        status: 200,
+        headers: {
+          get(name) {
+            if (name.toLowerCase() === "content-length") {
+              return String(Buffer.byteLength(oversized, "utf8"));
+            }
+            return null;
+          },
+          getSetCookie: () => [],
+        },
+        async text() {
+          return oversized;
+        },
+      };
+    },
+  });
+  await assert.rejects(
+    transport.request({
+      service: "PREVIEW",
+      method: "GET",
+      path: "https://synthetic-preview.invalid/api/admin/session",
+      credentials,
+      operation: "application_request",
+    }),
+    (error) => error?.code === "CONCRETE_NETWORK_RESPONSE_INVALID",
+  );
+});
+
+await check("system transport enforces the JSON byte ceiling without Content-Length", async () => {
+  let cancelled = false;
+  const chunks = [
+    new Uint8Array(512 * 1024),
+    new Uint8Array(512 * 1024 + 1),
+  ];
+  const transport = createConcreteLiveTransport({
+    async fetch_impl() {
+      return {
+        status: 200,
+        headers: { get: () => null, getSetCookie: () => [] },
+        body: {
+          getReader() {
+            return {
+              async read() {
+                return chunks.length === 0
+                  ? { done: true, value: undefined }
+                  : { done: false, value: chunks.shift() };
+              },
+              async cancel() {
+                cancelled = true;
+              },
+            };
+          },
+        },
+        async text() {
+          throw new Error("STREAM_PATH_REQUIRED");
+        },
+      };
+    },
+  });
+  await assert.rejects(
+    transport.request({
+      service: "PREVIEW",
+      method: "GET",
+      path: "https://synthetic-preview.invalid/api/admin/session",
+      credentials,
+      operation: "application_request",
+    }),
+    (error) => error?.code === "CONCRETE_NETWORK_RESPONSE_INVALID",
+  );
+  assert.equal(cancelled, true);
+});
+
+await check("system transport preserves bounded FormData for application upload", async () => {
+  const form = new FormData();
+  form.set("file", new Blob([SYNTHETIC_PNG_BYTES], { type: "image/png" }), "official.png");
+  let observed = false;
+  const transport = createConcreteLiveTransport({
+    async fetch_impl(_url, init) {
+      observed = true;
+      assert.equal(init.body, form);
+      assert.equal(Object.hasOwn(init.headers, "content-type"), false);
+      return {
+        status: 200,
+        headers: { get: () => null, getSetCookie: () => [] },
+        async text() {
+          return '{"success":true,"logoUrl":"https://synthetic.invalid/logo.png"}';
+        },
+      };
+    },
+  });
+  await transport.request({
+    service: "PREVIEW",
+    method: "POST",
+    path: "https://synthetic-preview.invalid/api/admin/upload-logo",
+    body: form,
+    credentials,
+    operation: "application_request",
+  });
+  assert.equal(observed, true);
+});
+
 await check("environment inspection preserves a denied response as a safe categorical class", async () => {
   const transport = createConcreteLiveTransport({
     fetch_impl: async () => ({

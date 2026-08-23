@@ -349,17 +349,40 @@ function canonicalReviewedBytes(
       "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",
     ];
+    const sharedLivePlatformPaths = [
+      "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+      "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+    ];
+    const legacySharedLivePlatformSha256ByPath = {
+      "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs":
+        "6a98516ac6bf24af0a4580b54466bd8166b7cf3edeb0369a4ae56e9411fce81b",
+      "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs":
+        "71ce34b0989be5994eb66a71c0fbfd9bc929a619805315c97dcdbb22b103ab34",
+    };
+    let sharedLivePlatformProjections = 0;
     for (const map of maps) {
       assert(map && typeof map === "object" && !Array.isArray(map));
       for (const officialPath of officialOnlyPaths) {
         assert.equal(typeof map[officialPath], "string");
         delete map[officialPath];
       }
+      for (const sharedPath of sharedLivePlatformPaths) {
+        if (Object.hasOwn(map, sharedPath)) {
+          assert.equal(
+            map[sharedPath],
+            sha256(readFileSync(absolute(sharedPath))),
+          );
+          map[sharedPath] =
+            legacySharedLivePlatformSha256ByPath[sharedPath];
+          sharedLivePlatformProjections += 1;
+        }
+      }
       map["scripts/launch-operations-kernel/manifest.mjs"] =
         "d99322d6134cb9b2b2af2672bf17005a20083ef39f0225abb187b4d5ed8dfbc1";
       map["scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs"] =
         "c7b975bdb2516beb3e4e79e4b95c238509fa0e75218f683bdb87102f84b23aad";
     }
+    assert.equal(sharedLivePlatformProjections, 3);
     let projected = `${JSON.stringify(current, null, 2)}\n`;
     const fields = [
       /("testing_tree_digest": ")[a-f0-9]{64}(")/gu,

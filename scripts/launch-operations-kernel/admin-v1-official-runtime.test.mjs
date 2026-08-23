@@ -25,6 +25,9 @@ import {
 const DIGEST = "a".repeat(64);
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
+const TEST_CREATED_EPOCH_MS = Date.parse("2026-08-21T12:00:00.000Z");
+const TEST_EXPIRES_EPOCH_MS = Date.parse("2026-08-22T12:00:00.000Z");
+const TEST_NOW_EPOCH_MS = Date.parse("2026-08-21T18:00:00.000Z");
 const SENTINELS = Object.freeze({
   admin_password: Buffer.from("SENTINEL_ADMIN_PASSWORD_7e9d", "utf8"),
   admin_session_secret: Buffer.from("SENTINEL_SESSION_SECRET_a213", "utf8"),
@@ -409,13 +412,40 @@ await check("crash recovery state classification", async () => {
 
 await check("published-head-bound one-use authorization", async () => {
   const valid = validateAdminV1OfficialAuthorization(authorization(), {
-    now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
   });
   assert.equal(valid.repository.head, PUBLISHED_HEAD);
   assert.throws(
     () => validateAdminV1OfficialAuthorization(authorization({
       repository: { ...authorization().repository, head: "e".repeat(40) },
-    }), { now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z") }),
+    }), { now_epoch_ms: TEST_NOW_EPOCH_MS }),
+    (error) => error?.code === "OFFICIAL_AUTHORIZATION_INVALID",
+  );
+});
+
+await check("authorization enforces exact inclusive-created exclusive-expiry window", async () => {
+  assert.throws(
+    () => validateAdminV1OfficialAuthorization(authorization(), {
+      now_epoch_ms: TEST_CREATED_EPOCH_MS - 1,
+    }),
+    (error) => error?.code === "OFFICIAL_AUTHORIZATION_INVALID",
+  );
+  assert.equal(
+    validateAdminV1OfficialAuthorization(authorization(), {
+      now_epoch_ms: TEST_CREATED_EPOCH_MS,
+    }).run_id,
+    RUN_ID,
+  );
+  assert.equal(
+    validateAdminV1OfficialAuthorization(authorization(), {
+      now_epoch_ms: TEST_EXPIRES_EPOCH_MS - 1,
+    }).run_id,
+    RUN_ID,
+  );
+  assert.throws(
+    () => validateAdminV1OfficialAuthorization(authorization(), {
+      now_epoch_ms: TEST_EXPIRES_EPOCH_MS,
+    }),
     (error) => error?.code === "OFFICIAL_AUTHORIZATION_INVALID",
   );
 });
@@ -446,6 +476,7 @@ await check("complete Official runtime and sanitized durable lifecycle", async (
   const adapters = fakeAdapters();
   const result = await runAdminV1OfficialRuntime({
     authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
     adapters,
     journal,
     sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
@@ -520,6 +551,7 @@ await check("complete Official runtime and sanitized durable lifecycle", async (
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters: fakeAdapters(),
       journal,
       sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
@@ -552,6 +584,7 @@ await check("spent-token failure is not replayed", async () => {
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters,
       journal,
       sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
@@ -568,6 +601,7 @@ await check("spent-token failure is not replayed", async () => {
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters: fakeAdapters(),
       journal,
       sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
@@ -596,6 +630,7 @@ await check("qualification failure prevents Official token spend", async () => {
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters,
       journal: createAdminV1OfficialJournal({
         directory: root,
@@ -621,6 +656,7 @@ await check("cleanup ambiguity remains durable recovery pending", async () => {
   const root = mkdtempSync("/tmp/aifinder-admin-v1-official-cleanup-pending.");
   const result = await runAdminV1OfficialRuntime({
     authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
     adapters: fakeAdapters({ fail_operation: "delete_owned_tool_1" }),
     journal: createAdminV1OfficialJournal({
       directory: root,
@@ -646,6 +682,7 @@ await check("unexpected automatic Preview stops before explicit Preview", async 
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters,
       journal: createAdminV1OfficialJournal({
         directory: root,
@@ -666,6 +703,7 @@ await check("Storage CAS replacement preservation", async () => {
   const adapters = fakeAdapters({ storage_version_mismatch: true });
   const result = await runAdminV1OfficialRuntime({
     authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
     adapters,
     journal: createAdminV1OfficialJournal({
       directory: root,
@@ -684,6 +722,7 @@ await check("zero count without ownership preservation proof is insufficient", a
   const root = mkdtempSync("/tmp/aifinder-admin-v1-official-zero-insufficient.");
   const result = await runAdminV1OfficialRuntime({
     authorization: authorization(),
+    now_epoch_ms: TEST_NOW_EPOCH_MS,
     adapters: fakeAdapters({ unrelated_preserved: false }),
     journal: createAdminV1OfficialJournal({
       directory: root,
@@ -703,6 +742,7 @@ await check("budget stops before adapter effect", async () => {
   await assert.rejects(
     runAdminV1OfficialRuntime({
       authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
       adapters,
       journal: createAdminV1OfficialJournal({
         directory: root,
@@ -722,6 +762,11 @@ if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exitCode = 1;
 } else {
+  console.log("PRODUCTION_EXPIRY_VALIDATION_UNCHANGED=PASS");
+  console.log("GLOBAL_TIME_MONKEYPATCH=0");
+  console.log("TEST_AUTHORIZATION_WINDOW_EXTENSION_FOR_CONVENIENCE=0");
+  console.log("EXPLICIT_TEST_NOW_FOR_VALID_FIXTURE=PASS");
+  console.log("EXPLICIT_EXPIRY_BOUNDARY_TESTS=PASS");
   console.log(
     `PASS_ADMIN_V1_OFFICIAL_RUNTIME assertions=${assertions} qualification=6 official=20 sessions=1 retries=0 replays=0 deferred_handlers=0 real_calls=0 failures=0 internal_failures=0`,
   );

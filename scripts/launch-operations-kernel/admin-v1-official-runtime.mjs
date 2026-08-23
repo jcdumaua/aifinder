@@ -798,16 +798,105 @@ function validateEffect(state, ordinal, effect) {
   }
 }
 
-function exactEffects(state) {
+function exactEffects(state, expectedAudits = 8) {
   return canonicalJson(state.effects) === canonicalJson({
     submitted_tools: 3,
     tools: 2,
-    audits: 8,
+    audits: expectedAudits,
     approval_rpc: 1,
     logo_objects: 1,
     grant_prepare: 0,
     grant_revoke: 0,
   });
+}
+
+function validatePoststateEffect(ordinal, effect, lane, expectedAuditActions) {
+  const actions = new Map([
+    [8, "tool_added"],
+    [10, "tool_updated"],
+    [11, "tool_deleted"],
+    [12, "submission_updated"],
+    [13, "submission_rejected"],
+    [14, "submission_approved"],
+    [15, "logo_uploaded"],
+    [19, "admin_logout"],
+  ]);
+  const expected = actions.get(ordinal);
+  if (expected === undefined) {
+    if (effect !== null) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+    }
+    return;
+  }
+  if (
+    effect?.audit_action !== expected ||
+    (lane === "QUALIFICATION" && ordinal !== 19)
+  ) throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+  if (ordinal === 14 && effect.approval_rpc !== 1) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+  }
+  if (ordinal === 15 && (
+    !boundedAscii(effect.logo_object_id, 256) ||
+    !boundedAscii(effect.storage_version, 128)
+  )) throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+  expectedAuditActions.push(expected);
+}
+
+function reconcilePoststateOwnership({
+  state,
+  submissions,
+  tools,
+  audits,
+  expectedAuditActions,
+}) {
+  if (
+    !Array.isArray(submissions.rows) || submissions.rows.length !== 3 ||
+    !Array.isArray(tools.rows) || tools.rows.length !== 2 ||
+    !Array.isArray(audits.rows) || audits.rows.length !== 9 ||
+    submissions.rows.some((row) =>
+      !boundedAscii(row?.row_id, 128) || !boundedAscii(row?.version, 128)
+    ) ||
+    tools.rows.some((row) =>
+      !boundedAscii(row?.row_id, 128) || !boundedAscii(row?.version, 128) ||
+      !["APPROVED_SUBMISSION", "ROUTE_TOOL"].includes(row?.role)
+    ) ||
+    audits.rows.some((row) =>
+      !boundedAscii(row?.row_id, 128) || !boundedAscii(row?.version, 128) ||
+      !boundedAscii(row?.action, 64)
+    )
+  ) throw new AdminV1OfficialRuntimeError("OFFICIAL_POSTSTATE_MISMATCH");
+  const submissionById = new Map(submissions.rows.map((row) => [row.row_id, row]));
+  if (
+    submissionById.size !== 3 ||
+    state.owned.submissions.some((row) => {
+      const observed = submissionById.get(row.row_id);
+      return !observed || observed.version === row.version;
+    })
+  ) throw new AdminV1OfficialRuntimeError("OFFICIAL_POSTSTATE_MISMATCH");
+  for (const row of state.owned.submissions) {
+    row.version = submissionById.get(row.row_id).version;
+  }
+  if (
+    new Set(tools.rows.map((row) => row.row_id)).size !== 2 ||
+    new Set(tools.rows.map((row) => row.role)).size !== 2 ||
+    new Set(audits.rows.map((row) => row.row_id)).size !== 9 ||
+    state.owned.logo === null ||
+    !boundedAscii(audits.logo_object_id, 256) ||
+    audits.logo_object_id !== state.owned.logo.object_id ||
+    canonicalJson(audits.rows.map((row) => row.action).sort()) !==
+      canonicalJson([...expectedAuditActions].sort())
+  ) throw new AdminV1OfficialRuntimeError("OFFICIAL_POSTSTATE_MISMATCH");
+  state.owned.tools = tools.rows.map((row) => ({
+    row_id: row.row_id,
+    version: row.version,
+  }));
+  state.owned.audit_rows = audits.rows.map((row) => ({
+    row_id: row.row_id,
+    version: row.version,
+  }));
+  state.effects.tools = 2;
+  state.effects.audits = 9;
+  state.effects.approval_rpc = 1;
 }
 
 export async function runAdminV1OfficialRuntime({
@@ -959,7 +1048,26 @@ export async function runAdminV1OfficialRuntime({
           zeroBuffer(response.csrf_token);
           zeroBuffer(response.csrf_cookie);
         }
-        if (lane === "OFFICIAL") validateEffect(state, spec.ordinal, response.effect);
+        if (response.ownership_projection === "EXACT_POSTSTATE_REQUIRED") {
+          poststateOwnershipRequired = true;
+          validatePoststateEffect(
+            spec.ordinal,
+            response.effect,
+            lane,
+            expectedAuditActions,
+          );
+          if (lane === "OFFICIAL" && spec.ordinal === 15) {
+            state.owned.logo = {
+              object_id: response.effect.logo_object_id,
+              version: response.effect.storage_version,
+            };
+            state.effects.logo_objects = 1;
+          }
+        } else if (poststateOwnershipRequired) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+        } else if (lane === "OFFICIAL") {
+          validateEffect(state, spec.ordinal, response.effect);
+        }
         if (spec.ordinal === 19) clearAuth(auth);
         state.evidence.push(evidence);
         if (lane === "OFFICIAL") state.last_completed_official_ordinal = sequenceOrdinal;
@@ -975,12 +1083,18 @@ export async function runAdminV1OfficialRuntime({
   let primaryError = null;
   let recoveryPending = false;
   let storageReplacementPreserved = false;
+  let poststateOwnershipRequired = false;
+  let logoOwnershipConfirmed = false;
+  const expectedAuditActions = [];
   const cleanup = async () => {
     state.lifecycle = "CLEANUP_PENDING";
     state.stage = "CLEANUP_PENDING_PUBLISHED";
     journal.publish(publicState(state));
-    clearSensitiveRecord(sensitive);
     if (state.owned.logo !== null) {
+      if (poststateOwnershipRequired && !logoOwnershipConfirmed) {
+        recoveryPending = true;
+        state.cleanup.push("STORAGE_OWNERSHIP_UNPROVEN");
+      } else {
       const observed = await invoke("storage_read_owned_version", {
         object_id: state.owned.logo.object_id,
       });
@@ -995,7 +1109,10 @@ export async function runAdminV1OfficialRuntime({
         try {
           const grant = await mutation(
             "prepare_storage_cleanup_grant",
-            { expected_version: state.owned.logo.version },
+            {
+              object_id: state.owned.logo.object_id,
+              expected_version: state.owned.logo.version,
+            },
             (response) => {
               if (!exactAdapterResponse(response, "PREPARED") ||
                 !boundedAscii(response.grant_id, 128)) {
@@ -1008,7 +1125,11 @@ export async function runAdminV1OfficialRuntime({
           state.effects.grant_prepare = 1;
           const deleted = await mutation(
             "delete_storage_exact_version",
-            { expected_version: state.owned.logo.version, grant_id: grantId },
+            {
+              object_id: state.owned.logo.object_id,
+              expected_version: state.owned.logo.version,
+              grant_id: grantId,
+            },
             (response) => response?.status,
           );
           if (deleted !== "DELETED_EXACT") recoveryPending = true;
@@ -1023,6 +1144,7 @@ export async function runAdminV1OfficialRuntime({
             else state.effects.grant_revoke = 1;
           }
         }
+      }
       }
     }
     const safeDelete = async (operation, input = {}) => {
@@ -1255,7 +1377,10 @@ export async function runAdminV1OfficialRuntime({
     }
     state.lifecycle = "OFFICIAL_RUNTIME";
     await runLedger(ADMIN_V1_OFFICIAL_LEDGER, "OFFICIAL");
-    if (state.last_completed_official_ordinal !== 20 || !exactEffects(state)) {
+    if (
+      state.last_completed_official_ordinal !== 20 ||
+      (!poststateOwnershipRequired && !exactEffects(state))
+    ) {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
     }
     const submissions = await invoke("inspect_submissions_poststate");
@@ -1264,12 +1389,26 @@ export async function runAdminV1OfficialRuntime({
     if (
       submissions?.status !== "EXACT" || submissions.submitted_tools !== 3 ||
       tools?.status !== "EXACT" || tools.tools !== 2 ||
-      audits?.status !== "EXACT" || audits.audits !== 8 ||
+      audits?.status !== "EXACT" ||
+      audits.audits !== (poststateOwnershipRequired ? 9 : 8) ||
       ![submissions, tools, audits].every((value) =>
         value.ownership_readback === "EXACT" &&
         value.unrelated_preserved === true
       )
     ) throw new AdminV1OfficialRuntimeError("OFFICIAL_POSTSTATE_MISMATCH");
+    if (poststateOwnershipRequired) {
+      reconcilePoststateOwnership({
+        state,
+        submissions,
+        tools,
+        audits,
+        expectedAuditActions,
+      });
+      logoOwnershipConfirmed = true;
+      if (!exactEffects(state, 9)) {
+        throw new AdminV1OfficialRuntimeError("OFFICIAL_EFFECT_MISMATCH");
+      }
+    }
     state.stage = "SANITIZED_POSTSTATE_PUBLISHED";
     journal.publish(publicState(state));
   } catch (error) {
