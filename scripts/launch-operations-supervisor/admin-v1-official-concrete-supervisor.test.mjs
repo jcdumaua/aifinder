@@ -41,7 +41,7 @@ const JOURNAL_DIRECTORY =
   `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${RUN_ID}`;
 const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
-const PUBLISHED_HEAD = "5e65b992e4b7a959c594e774e8b3c4ddd8567d49";
+const PUBLISHED_HEAD = "56e106dc8e20dd6a2c6f90553cc02cb297f8422f";
 const MAXIMUM_OVERLAY_FILE_BYTES = 1024 * 1024;
 const GIT_TIMEOUT_MS = 60_000;
 const CANDIDATE_OVERLAY_PATHS = Object.freeze([
@@ -50,6 +50,8 @@ const CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+  "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
   "scripts/launch-operations-kernel/candidate-manifest.json",
   "scripts/launch-operations-supervisor/supervisor-policy.json",
   "testing/static-test-safety-manifest.json",
@@ -225,7 +227,7 @@ function createSyntheticRepository() {
       const baselineTree = isolatedGit([
         "rev-parse", `${baselineCommit}^{tree}`,
       ]).trim();
-      assert.equal(new Set(CANDIDATE_OVERLAY_PATHS).size, 11);
+      assert.equal(new Set(CANDIDATE_OVERLAY_PATHS).size, 13);
       for (const relativePath of CANDIDATE_OVERLAY_PATHS) {
         const bytes = readExactOverlayBytes(sourceRoot, relativePath);
         const { target } = exactOverlayTarget(canonicalRoot, relativePath);
@@ -292,7 +294,7 @@ function createSyntheticRepository() {
     assert.equal(candidateState.baseline_commit, parent);
     assert.equal(candidateState.commit_created, true);
     assert.notEqual(candidateState.candidate_tree, candidateState.baseline_tree);
-    assert.equal(candidateState.overlay_paths, 11);
+    assert.equal(candidateState.overlay_paths, 13);
     assert.equal(isolatedGit([
       "rev-parse", `${candidateState.candidate_commit}^`,
     ]).trim(), parent);
@@ -660,7 +662,7 @@ try {
     "--format=%(refname)%00%(objectname)%00%(symref)",
   ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_CANDIDATE_OVERLAY_PATHS=11 SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_CLEAN_CANDIDATE_STATE_NO_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_CANDIDATE_OVERLAY_PATHS=13 SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_CLEAN_CANDIDATE_STATE_NO_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);

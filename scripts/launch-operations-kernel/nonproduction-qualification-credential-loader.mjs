@@ -45,6 +45,10 @@ function invalidCredentialFile() {
   throw new ConcreteCredentialLoaderError("CONCRETE_CREDENTIAL_FILE_INVALID");
 }
 
+function zeroMutableBytes(value) {
+  if (value instanceof Uint8Array) value.fill(0);
+}
+
 export function parseConcreteCredentialEnvironment(source) {
   if (
     typeof source !== "string" ||
@@ -90,8 +94,12 @@ export function classifyConcreteCredentialEnvironment(source) {
   )));
 }
 
-function readSecureCredentialFile(credentialPath) {
+function readSecureCredentialFile(credentialPath, {
+  onCredentialBytesAcquired,
+} = {}) {
   let descriptor;
+  let acquiredBytes = null;
+  let failure = null;
   try {
     descriptor = openSync(
       credentialPath,
@@ -108,13 +116,32 @@ function readSecureCredentialFile(credentialPath) {
       throw new Error("INVALID");
     }
     const bytes = readFileSync(descriptor);
-    if (bytes.byteLength !== metadata.size) throw new Error("CHANGED");
-    return bytes;
+    acquiredBytes = bytes;
+    if (typeof onCredentialBytesAcquired === "function") {
+      onCredentialBytesAcquired(bytes);
+    }
+    if (
+      !(bytes instanceof Uint8Array) ||
+      bytes.byteLength !== metadata.size
+    ) throw new Error("CHANGED");
   } catch {
-    throw new ConcreteCredentialLoaderError("CONCRETE_CREDENTIAL_SOURCE_INVALID");
+    failure = new ConcreteCredentialLoaderError(
+      "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+    );
   } finally {
-    if (descriptor !== undefined) closeSync(descriptor);
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        failure = new ConcreteCredentialLoaderError(
+          "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+        );
+      }
+    }
+    if (failure !== null) zeroMutableBytes(acquiredBytes);
   }
+  if (failure !== null) throw failure;
+  return acquiredBytes;
 }
 
 function safeCredential(value) {
@@ -162,13 +189,18 @@ export function readExistingGitHubCliToken({
     return token;
   } catch {
     throw new ConcreteCredentialLoaderError("CONCRETE_CREDENTIAL_SOURCE_INVALID");
+  } finally {
+    zeroMutableBytes(result?.stdout);
+    zeroMutableBytes(result?.stderr);
   }
 }
 
 export function readExistingVercelCliToken({
   repositoryRoot,
   readCredentialFile = readSecureCredentialFile,
+  secureCredentialFileDependencies,
 }) {
+  let bytes = null;
   try {
     if (typeof repositoryRoot !== "string" || !path.isAbsolute(repositoryRoot)) {
       throw new Error("ROOT");
@@ -180,7 +212,10 @@ export function readExistingVercelCliToken({
       "com.vercel.cli",
       "auth.json",
     );
-    const bytes = readCredentialFile(credentialPath);
+    bytes = readCredentialFile(
+      credentialPath,
+      secureCredentialFileDependencies,
+    );
     if (
       !(bytes instanceof Uint8Array) ||
       bytes.byteLength < 2 ||
@@ -196,6 +231,8 @@ export function readExistingVercelCliToken({
     return parsed.token;
   } catch {
     throw new ConcreteCredentialLoaderError("CONCRETE_CREDENTIAL_SOURCE_INVALID");
+  } finally {
+    zeroMutableBytes(bytes);
   }
 }
 
@@ -256,8 +293,12 @@ export function resolveConcreteCredentialEnvironment({
   });
 }
 
-export function readConcreteCredentialEnvironment({ repositoryRoot }) {
+export function readConcreteCredentialEnvironment({
+  repositoryRoot,
+  onCredentialBytesAcquired,
+}) {
   let descriptor;
+  let acquiredBytes = null;
   try {
     if (
       typeof repositoryRoot !== "string" ||
@@ -282,7 +323,12 @@ export function readConcreteCredentialEnvironment({ repositoryRoot }) {
       invalidCredentialFile();
     }
     const bytes = readFileSync(descriptor);
+    acquiredBytes = bytes;
+    if (typeof onCredentialBytesAcquired === "function") {
+      onCredentialBytesAcquired(bytes);
+    }
     if (
+      !(bytes instanceof Uint8Array) ||
       bytes.byteLength !== metadata.size ||
       (bytes.length >= 3 &&
         bytes[0] === 0xef &&
@@ -306,6 +352,7 @@ export function readConcreteCredentialEnvironment({ repositoryRoot }) {
       invalid_credential_sources: error?.code === "ENOENT" ? [] : ["ENV_LOCAL"],
     });
   } finally {
+    zeroMutableBytes(acquiredBytes);
     if (descriptor !== undefined) closeSync(descriptor);
   }
 }

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -35,6 +36,21 @@ let credentialReads = 0;
 let network = 0;
 let liveMutations = 0;
 
+const GREEN_MARKERS = Object.freeze([
+  "ENV_LOCAL_BYTES_ZEROED_SUCCESS",
+  "ENV_LOCAL_BYTES_ZEROED_PARSE_FAILURE",
+  "GITHUB_CLI_STDOUT_ZEROED_SUCCESS",
+  "GITHUB_CLI_STDOUT_ZEROED_COMMAND_FAILURE",
+  "GITHUB_CLI_STDOUT_ZEROED_DECODE_OR_VALIDATION_FAILURE",
+  "GITHUB_CLI_STDERR_ZEROED_SUCCESS",
+  "GITHUB_CLI_STDERR_ZEROED_FAILURE",
+  "VERCEL_AUTH_BYTES_ZEROED_SUCCESS",
+  "VERCEL_AUTH_BYTES_ZEROED_JSON_OR_TOKEN_FAILURE",
+  "SECURE_FILE_ACQUIRED_BUFFER_ZEROED_ON_INTERNAL_FAILURE",
+  "RETURNED_CREDENTIAL_SEMANTICS_UNCHANGED",
+  "CATEGORICAL_ERROR_SEMANTICS_UNCHANGED",
+]);
+
 async function check(name, operation) {
   try {
     await operation();
@@ -53,6 +69,10 @@ function fixture(source) {
 function readFixture(root) {
   credentialReads += 1;
   return loader.readConcreteCredentialEnvironment({ repositoryRoot: root });
+}
+
+function allBytesZero(bytes) {
+  return bytes instanceof Uint8Array && bytes.every((byte) => byte === 0);
 }
 
 await check("exports the exact frozen credential allowlist", async () => {
@@ -222,6 +242,48 @@ await check("credential values are absent from evidence and CCR fixtures", async
   assert.equal(publicFixtures.includes(SECRET_SENTINEL), false);
 });
 
+await check("zeroes retained env-local bytes after a successful parse", async () => {
+  const source = "GH_TOKEN=synthetic-env-local\n";
+  const root = fixture(source);
+  let retained = null;
+  try {
+    const environment = loader.readConcreteCredentialEnvironment({
+      repositoryRoot: root,
+      onCredentialBytesAcquired(bytes) {
+        retained = bytes;
+      },
+    });
+    assert.deepEqual(environment, { GH_TOKEN: "synthetic-env-local" });
+    assert.equal(allBytesZero(retained), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+await check("zeroes retained env-local bytes after parse failure", async () => {
+  const source = "GH_TOKEN\n";
+  const root = fixture(source);
+  let retained = null;
+  try {
+    assert.throws(
+      () => loader.readConcreteCredentialEnvironment({
+        repositoryRoot: root,
+        onCredentialBytesAcquired(bytes) {
+          retained = bytes;
+        },
+      }),
+      (error) => {
+        assert.equal(error?.code, "CONCRETE_CREDENTIAL_MISSING");
+        assert.deepEqual(error?.invalid_credential_sources, ["ENV_LOCAL"]);
+        return true;
+      },
+    );
+    assert.equal(allBytesZero(retained), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 await check("actual required categories do not make both GitHub aliases mandatory", async () => {
   assert.deepEqual(loader.ACTUAL_RUNTIME_CREDENTIAL_CATEGORIES, [
     { category: "GITHUB", accepted_names: ["GH_TOKEN", "GITHUB_TOKEN"] },
@@ -267,39 +329,59 @@ await check("presence classifier is value-free and fails duplicate or malformed 
   );
 });
 
-await check("synthetic GitHub CLI source returns only an in-memory token and sanitizes noise", async () => {
+await check("synthetic GitHub CLI success zeroes retained stdout and stderr", async () => {
+  const stdout = Buffer.from(`${GITHUB_SENTINEL}\n`, "utf8");
+  const stderr = Buffer.from("synthetic provider noise", "utf8");
   const token = loader.readExistingGitHubCliToken({
     repositoryRoot: "/Users/synthetic/aifinder",
     spawnCredentialCommand(executable, argumentsList, options) {
       assert.equal(executable, "/opt/homebrew/bin/gh");
       assert.deepEqual(argumentsList, ["auth", "token"]);
       assert.equal(options.shell, false);
-      return {
-        status: 0,
-        stdout: Buffer.from(`${GITHUB_SENTINEL}\n`),
-        stderr: Buffer.from("synthetic provider noise"),
-      };
+      return { status: 0, stdout, stderr };
     },
   });
   assert.equal(token, GITHUB_SENTINEL);
+  assert.equal(allBytesZero(stdout), true);
+  assert.equal(allBytesZero(stderr), true);
+});
+
+await check("synthetic GitHub CLI command failure zeroes retained stdout and stderr", async () => {
+  const stdout = Buffer.from(SECRET_SENTINEL, "utf8");
+  const stderr = Buffer.from("synthetic command failure", "utf8");
   assert.throws(
     () => loader.readExistingGitHubCliToken({
       repositoryRoot: "/Users/synthetic/aifinder",
       spawnCredentialCommand() {
-        return {
-          status: 1,
-          stdout: Buffer.alloc(0),
-          stderr: Buffer.from(SECRET_SENTINEL),
-        };
+        return { status: 1, stdout, stderr };
       },
     }),
     (error) =>
       error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID" &&
       !String(error?.message).includes(SECRET_SENTINEL),
   );
+  assert.equal(allBytesZero(stdout), true);
+  assert.equal(allBytesZero(stderr), true);
 });
 
-await check("synthetic Vercel CLI auth source returns only an in-memory token", async () => {
+await check("synthetic GitHub CLI validation failure zeroes retained stdout and stderr", async () => {
+  const stdout = Buffer.from(GITHUB_SENTINEL, "utf8");
+  const stderr = Buffer.from("synthetic validation failure", "utf8");
+  assert.throws(
+    () => loader.readExistingGitHubCliToken({
+      repositoryRoot: "/Users/synthetic/aifinder",
+      spawnCredentialCommand() {
+        return { status: 0, stdout, stderr };
+      },
+    }),
+    (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+  );
+  assert.equal(allBytesZero(stdout), true);
+  assert.equal(allBytesZero(stderr), true);
+});
+
+await check("synthetic Vercel CLI success zeroes retained auth bytes", async () => {
+  const authBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
   const token = loader.readExistingVercelCliToken({
     repositoryRoot: "/Users/synthetic/aifinder",
     readCredentialFile(credentialPath) {
@@ -307,10 +389,62 @@ await check("synthetic Vercel CLI auth source returns only an in-memory token", 
         credentialPath,
         "/Users/synthetic/Library/Application Support/com.vercel.cli/auth.json",
       );
-      return Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }));
+      return authBytes;
     },
   });
   assert.equal(token, VERCEL_SENTINEL);
+  assert.equal(allBytesZero(authBytes), true);
+});
+
+await check("synthetic Vercel CLI JSON failure zeroes retained auth bytes", async () => {
+  const authBytes = Buffer.from("{synthetic-invalid-json", "utf8");
+  assert.throws(
+    () => loader.readExistingVercelCliToken({
+      repositoryRoot: "/Users/synthetic/aifinder",
+      readCredentialFile() {
+        return authBytes;
+      },
+    }),
+    (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+  );
+  assert.equal(allBytesZero(authBytes), true);
+});
+
+await check("secure file helper zeroes an acquired buffer on internal failure", async () => {
+  const temporaryRoot = realpathSync(mkdtempSync("/tmp/aifinder-credential-loader."));
+  const repositoryRoot = path.join(temporaryRoot, "aifinder");
+  const authDirectory = path.join(
+    temporaryRoot,
+    "Library",
+    "Application Support",
+    "com.vercel.cli",
+  );
+  mkdirSync(repositoryRoot);
+  mkdirSync(authDirectory, { recursive: true });
+  writeFileSync(
+    path.join(authDirectory, "auth.json"),
+    JSON.stringify({ token: VERCEL_SENTINEL }),
+    { mode: 0o600 },
+  );
+  credentialReads += 1;
+  let acquired = null;
+  try {
+    assert.throws(
+      () => loader.readExistingVercelCliToken({
+        repositoryRoot,
+        secureCredentialFileDependencies: {
+          onCredentialBytesAcquired(bytes) {
+            acquired = bytes;
+            throw new Error("SYNTHETIC_POST_ACQUISITION_FAILURE");
+          },
+        },
+      }),
+      (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+    );
+    assert.equal(allBytesZero(acquired), true);
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 });
 
 await check("credential source resolution is deterministic and invokes only missing providers", async () => {
@@ -421,7 +555,8 @@ if (failures.length > 0) {
   );
   process.exitCode = 1;
 } else {
+  for (const marker of GREEN_MARKERS) console.log(`${marker}=PASS`);
   console.log(
-    `PASS_CONCRETE_CREDENTIAL_LOADER assertions=${assertions} synthetic_credential_reads=${credentialReads} real_credential_reads=0 network=${network} live_mutations=${liveMutations} secret_output=0 failures=0 internal_failures=0`,
+    `PASS_CONCRETE_CREDENTIAL_LOADER assertions=${assertions} synthetic_credential_reads=${credentialReads} real_credential_reads=0 REAL_CREDENTIAL_READS=0 NETWORK=${network} LIVE_MUTATIONS=${liveMutations} SECRET_OUTPUTS=0 SECRET_HASHES=0 failures=0 internal_failures=0`,
   );
 }

@@ -359,7 +359,18 @@ function canonicalReviewedBytes(
       "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs":
         "71ce34b0989be5994eb66a71c0fbfd9bc929a619805315c97dcdbb22b103ab34",
     };
+    const credentialLoaderPaths = [
+      "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+      "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+    ];
+    const legacyCredentialLoaderSha256ByPath = {
+      "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs":
+        "20be54fabc307997affd99467b9ca0d912884e41a777f6c76cf7a357552699ac",
+      "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs":
+        "a1d4a8a7ad1d062f762f2749bcd8e9ffc7847736a00498983942f502b4c58743",
+    };
     let sharedLivePlatformProjections = 0;
+    let credentialLoaderProjections = 0;
     for (const map of maps) {
       assert(map && typeof map === "object" && !Array.isArray(map));
       for (const officialPath of officialOnlyPaths) {
@@ -377,12 +388,22 @@ function canonicalReviewedBytes(
           sharedLivePlatformProjections += 1;
         }
       }
+      for (const credentialLoaderPath of credentialLoaderPaths) {
+        assert.equal(
+          map[credentialLoaderPath],
+          sha256(readFileSync(absolute(credentialLoaderPath))),
+        );
+        map[credentialLoaderPath] =
+          legacyCredentialLoaderSha256ByPath[credentialLoaderPath];
+        credentialLoaderProjections += 1;
+      }
       map["scripts/launch-operations-kernel/manifest.mjs"] =
         "d99322d6134cb9b2b2af2672bf17005a20083ef39f0225abb187b4d5ed8dfbc1";
       map["scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs"] =
         "c7b975bdb2516beb3e4e79e4b95c238509fa0e75218f683bdb87102f84b23aad";
     }
     assert.equal(sharedLivePlatformProjections, 3);
+    assert.equal(credentialLoaderProjections, 4);
     let projected = `${JSON.stringify(current, null, 2)}\n`;
     const fields = [
       /("testing_tree_digest": ")[a-f0-9]{64}(")/gu,
