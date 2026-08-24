@@ -5,6 +5,7 @@ import {
 
 const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const RUN_ID = "33333333-3333-4333-8333-333333333333";
+const FAILED_SPENT_RUN_ID = "d331e3ef-ce63-47d7-b728-94db274d306e";
 const sha = (character) => character.repeat(64);
 const SUPPORT_PATHS = [
   "testing/admin-v1-staging-runtime-orchestrator.mjs",
@@ -165,6 +166,22 @@ assert.throws(
   (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID",
 );
 
+const spentAuthorization = authorization();
+spentAuthorization.run_id = FAILED_SPENT_RUN_ID;
+spentAuthorization.execution.branch_name =
+  `aifinder-admin-v1-official-${FAILED_SPENT_RUN_ID}`;
+spentAuthorization.execution.journal_directory =
+  `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${FAILED_SPENT_RUN_ID}`;
+spentAuthorization.execution.storage_name = `admin/${FAILED_SPENT_RUN_ID}.png`;
+assert.throws(
+  () => validateOfficialAuthorizationForSupervisor(
+    spentAuthorization,
+    reviewedPolicy,
+    Date.parse("2026-08-21T12:00:00.000Z"),
+  ),
+  (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID",
+);
+
 process.stdout.write(
-  "PASS_ADMIN_V1_OFFICIAL_SUPERVISOR assertions=6 current_baseline=true exact_class=true pre_import_node_primitives_only=true failures=0 internal_failures=0\n",
+  "PASS_ADMIN_V1_OFFICIAL_SUPERVISOR assertions=7 current_baseline=true exact_class=true pre_import_node_primitives_only=true failures=0 internal_failures=0\n",
 );

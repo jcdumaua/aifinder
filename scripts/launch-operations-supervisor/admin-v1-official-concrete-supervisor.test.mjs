@@ -43,6 +43,9 @@ const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
 const MAXIMUM_OVERLAY_FILE_BYTES = 2 * 1024 * 1024;
 const GIT_TIMEOUT_MS = 60_000;
+const GIT_EXECUTABLE = process.platform === "darwin"
+  ? "/Library/Developer/CommandLineTools/usr/bin/git"
+  : "/usr/bin/git";
 const ORIGINAL_CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
@@ -159,7 +162,7 @@ function runGit(argumentsList, {
   environment = {},
   input = null,
 } = {}) {
-  const result = spawnSync("/usr/bin/git", argumentsList, {
+  const result = spawnSync(GIT_EXECUTABLE, argumentsList, {
     cwd,
     encoding: "utf8",
     env: {
@@ -816,11 +819,55 @@ try {
       environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"],
     },
   };
-  writeFileSync(AUTHORIZATION_PATH, `${canonicalJson(authorization)}\n`, {
-    flag: "wx", mode: 0o600,
-  });
+  const nonNulStatusSha256 = sha256(Buffer.from(git([
+    "status", "--porcelain=v1", "--untracked-files=all",
+  ]), "utf8"));
+  assert.notEqual(nonNulStatusSha256, repository.status_sha256);
+  const nonNulAuthorization = structuredClone(authorization);
+  nonNulAuthorization.repository.status_sha256 = nonNulStatusSha256;
+  writeFileSync(
+    AUTHORIZATION_PATH,
+    `${canonicalJson(nonNulAuthorization)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
   chmodSync(AUTHORIZATION_PATH, 0o600);
   authorizationCreated = true;
+  const preImportCounters = { imports: 0, credentials: 0 };
+  const preImportOutput = [];
+  const nonNulResult = await dispatchPreImportSupervisor(
+    ["--run-admin-v1-official", "--authorization", AUTHORIZATION_PATH],
+    {
+      repository_root: ROOT,
+      supervisor_path: SUPERVISOR_PATH,
+      policy_path: POLICY_PATH,
+      now_epoch_ms: NOW,
+      inspect_repository: () => structuredClone(repository),
+      import_runner() {
+        preImportCounters.imports += 1;
+        throw new Error("NON_NUL_AUTHORIZATION_IMPORTED_RUNNER");
+      },
+      read_credential_environment() {
+        preImportCounters.credentials += 1;
+        throw new Error("NON_NUL_AUTHORIZATION_READ_CREDENTIALS");
+      },
+      write_output(value) {
+        preImportOutput.push(structuredClone(value));
+      },
+    },
+  );
+  assert.deepEqual(nonNulResult, {
+    exit_code: 1,
+    code: "SUPERVISOR_REPOSITORY_MISMATCH",
+  });
+  assert.deepEqual(preImportCounters, { imports: 0, credentials: 0 });
+  assert.deepEqual(preImportOutput, [{
+    status: "FAIL",
+    code: "SUPERVISOR_REPOSITORY_MISMATCH",
+  }]);
+  writeFileSync(AUTHORIZATION_PATH, `${canonicalJson(authorization)}\n`, {
+    mode: 0o600,
+  });
+  chmodSync(AUTHORIZATION_PATH, 0o600);
   const sources = {
     ADMIN_PASSWORD: "AVAILABLE_ENV_LOCAL",
     ADMIN_SESSION: "AVAILABLE_ENV_LOCAL",

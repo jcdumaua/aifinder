@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import * as supervisorModule from "./nonproduction-qualification-supervisor.mjs";
 import {
   dispatchPreImportSupervisor,
   inspectPreImportRepository,
@@ -19,6 +20,28 @@ import {
 } from "./nonproduction-qualification-supervisor.mjs";
 
 const RUN_ID = "77777777-7777-4777-8777-777777777777";
+const FAILED_SPENT_RUN_ID = "d331e3ef-ce63-47d7-b728-94db274d306e";
+const FIXED_PRE_TRUST_GIT_EXECUTABLE =
+  "/Library/Developer/CommandLineTools/usr/bin/git";
+const PRE_TRUST_GIT_SANDBOX_PROFILE = [
+  "(version 1)",
+  "(allow default)",
+  "(deny network*)",
+  "(deny file-write*)",
+  '(allow file-write* (literal "/dev/null"))',
+  "(deny process-exec*)",
+  '(allow process-exec (literal "/Library/Developer/CommandLineTools/usr/bin/git"))',
+].join("");
+const PRE_TRUST_GIT_CONFIG = [
+  "-c", "core.fsmonitor=false",
+  "-c", "core.hooksPath=/dev/null",
+  "-c", "credential.helper=",
+  "-c", "credential.interactive=false",
+  "-c", "diff.external=",
+  "-c", "core.attributesFile=/dev/null",
+  "-c", "core.pager=cat",
+];
+const TARGET_REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
 const REQUIRED_HEAD = "ae614fa904e4c00d1dacec8493969fdce6fff3a3";
 const APPROVAL_SHA256 =
   "fa0968309b6c9a27c6fc90c7f065b3017c71e586ef247707536089a32534d386";
@@ -435,6 +458,177 @@ await check("pre-trust repository inspection cannot execute configured helpers",
   }
 });
 
+await check("fixed pre-trust Git executable identity fails closed", async () => {
+  assert.equal(
+    typeof supervisorModule.validatePreTrustGitExecutable,
+    "function",
+  );
+  if (process.platform === "darwin") {
+    assert.equal(
+      supervisorModule.validatePreTrustGitExecutable(),
+      FIXED_PRE_TRUST_GIT_EXECUTABLE,
+    );
+  } else {
+    assert.throws(
+      () => supervisorModule.validatePreTrustGitExecutable(),
+      (error) => error?.code === "SUPERVISOR_REPOSITORY_MISMATCH",
+    );
+  }
+  assert.throws(
+    () => supervisorModule.validatePreTrustGitExecutable("/usr/bin/git"),
+    (error) => error?.code === "SUPERVISOR_REPOSITORY_MISMATCH",
+  );
+  const fixedAncestors = new Set([
+    "/",
+    "/Library",
+    "/Library/Developer",
+    "/Library/Developer/CommandLineTools",
+    "/Library/Developer/CommandLineTools/usr",
+    "/Library/Developer/CommandLineTools/usr/bin",
+  ]);
+  const simulatedFilesystem = ({ metadata = {}, realpaths = {} } = {}) => ({
+    lstatSync(target) {
+      const isDirectory = fixedAncestors.has(target);
+      return {
+        gid: 0,
+        isDirectory: () => isDirectory,
+        isFile: () => !isDirectory,
+        isSymbolicLink: () => false,
+        mode: target === FIXED_PRE_TRUST_GIT_EXECUTABLE ? 0o100755 : 0o040755,
+        nlink: 1,
+        uid: 0,
+        ...(metadata[target] ?? {}),
+      };
+    },
+    realpathSync(target) {
+      return realpaths[target] ?? target;
+    },
+  });
+  assert.equal(
+    supervisorModule.validatePreTrustGitExecutable(
+      FIXED_PRE_TRUST_GIT_EXECUTABLE,
+      simulatedFilesystem(),
+    ),
+    FIXED_PRE_TRUST_GIT_EXECUTABLE,
+  );
+  const rejectedFilesystems = [
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { mode: 0o100777 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { mode: 0o100700 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { mode: 0o104755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { mode: 0o102755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { mode: 0o101755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { uid: 501 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { gid: 20 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { nlink: 2 } },
+    }),
+    simulatedFilesystem({
+      metadata: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { isFile: () => false } },
+    }),
+    simulatedFilesystem({
+      metadata: {
+        [FIXED_PRE_TRUST_GIT_EXECUTABLE]: { isSymbolicLink: () => true },
+      },
+    }),
+    simulatedFilesystem({
+      realpaths: { [FIXED_PRE_TRUST_GIT_EXECUTABLE]: "/usr/bin/git" },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { mode: 0o040777 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { mode: 0o040700 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { mode: 0o044755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { mode: 0o042755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { mode: 0o041755 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { uid: 501 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { gid: 20 } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { isDirectory: () => false } },
+    }),
+    simulatedFilesystem({
+      metadata: { "/Library/Developer": { isSymbolicLink: () => true } },
+    }),
+    simulatedFilesystem({
+      realpaths: { "/Library/Developer": "/private/Library/Developer" },
+    }),
+  ];
+  for (const filesystem of rejectedFilesystems) {
+    assert.throws(
+      () => supervisorModule.validatePreTrustGitExecutable(
+        FIXED_PRE_TRUST_GIT_EXECUTABLE,
+        filesystem,
+      ),
+      (error) => error?.code === "SUPERVISOR_REPOSITORY_MISMATCH",
+    );
+  }
+});
+
+await check("target Mac observer uses canonical NUL status without Git stderr", async () => {
+  if (process.platform !== "darwin") return;
+  const repository = inspectPreImportRepository(TARGET_REPOSITORY_ROOT, {
+    include_remote_main: false,
+  });
+  const statusResult = spawnSync("/usr/bin/sandbox-exec", [
+    "-p",
+    PRE_TRUST_GIT_SANDBOX_PROFILE,
+    FIXED_PRE_TRUST_GIT_EXECUTABLE,
+    "--no-replace-objects",
+    ...PRE_TRUST_GIT_CONFIG,
+    "--no-optional-locks",
+    "status", "--porcelain=v1", "--untracked-files=all", "-z",
+  ], {
+    cwd: TARGET_REPOSITORY_ROOT,
+    encoding: null,
+    env: {
+      GIT_ASKPASS: "/usr/bin/false",
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_CONFIG_SYSTEM: "/dev/null",
+      GIT_NO_REPLACE_OBJECTS: "1",
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_TERMINAL_PROMPT: "0",
+      LC_ALL: "C",
+      PATH: "/usr/bin:/bin",
+      SSH_ASKPASS: "/usr/bin/false",
+    },
+  });
+  assert.equal(statusResult.status, 0);
+  assert.equal(statusResult.stderr.byteLength, 0);
+  assert.equal(repository.root, TARGET_REPOSITORY_ROOT);
+  assert.equal(repository.status_sha256, sha256(statusResult.stdout));
+  assert.notEqual(repository.status_sha256, sha256(Buffer.from(
+    statusResult.stdout.toString("utf8").replaceAll("\0", "\n"),
+    "utf8",
+  )));
+  assert.equal("remote_main" in repository, false);
+});
+
 await check("self-test is network and credential inert", async () => {
   const counters = { imports: 0, network: 0, credentials: 0 };
   const output = [];
@@ -568,6 +762,7 @@ await check("spent run namespaces fail before candidate import", async () => {
     "8e694077-7724-46b4-88ae-1e959d7c28de",
     "716fcb1b-7999-42b4-82f8-e5e8e65b644f",
     "a397fbe1-1107-40df-86b2-83b153d8b8cc",
+    FAILED_SPENT_RUN_ID,
   ]) {
     const test = fixture();
     const counters = { imports: 0, network: 0, credentials: 0 };

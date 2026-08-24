@@ -30,6 +30,17 @@ const OPERATION_CLASS = "NONPRODUCTION_QUALIFICATION";
 const OFFICIAL_OPERATION_CLASS = "ADMIN_V1_OFFICIAL_RUNTIME_V1";
 const OFFICIAL_AUTHORIZATION_SCHEMA_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json";
+const PRE_TRUST_GIT_EXECUTABLE =
+  "/Library/Developer/CommandLineTools/usr/bin/git";
+const PRE_TRUST_GIT_ANCESTORS = Object.freeze([
+  "/",
+  "/Library",
+  "/Library/Developer",
+  "/Library/Developer/CommandLineTools",
+  "/Library/Developer/CommandLineTools/usr",
+  "/Library/Developer/CommandLineTools/usr/bin",
+]);
+const PRE_TRUST_FILESYSTEM = Object.freeze({ lstatSync, realpathSync });
 const SPENT_RUN_IDS = Object.freeze([
   "8c0d9e84-62e5-4658-9de0-c0121a302951",
   "e46a0d21-f0b4-4f7d-8a4f-e7f6e8a7eda0",
@@ -39,6 +50,7 @@ const SPENT_RUN_IDS = Object.freeze([
   "8e694077-7724-46b4-88ae-1e959d7c28de",
   "716fcb1b-7999-42b4-82f8-e5e8e65b644f",
   "a397fbe1-1107-40df-86b2-83b153d8b8cc",
+  "d331e3ef-ce63-47d7-b728-94db274d306e",
 ]);
 const CREDENTIAL_SOURCE_POLICY = Object.freeze({
   GITHUB: "AVAILABLE_EXISTING_GITHUB_CLI_SOURCE",
@@ -80,7 +92,6 @@ const PRE_TRUST_GIT_SANDBOX_PROFILE = [
   "(deny file-write*)",
   '(allow file-write* (literal "/dev/null"))',
   "(deny process-exec*)",
-  '(allow process-exec (literal "/usr/bin/git"))',
   '(allow process-exec (literal "/Library/Developer/CommandLineTools/usr/bin/git"))',
 ].join("");
 const PRE_TRUST_GIT_CONFIG = Object.freeze([
@@ -103,6 +114,41 @@ export class PreImportSupervisorError extends Error {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+export function validatePreTrustGitExecutable(
+  executablePath = PRE_TRUST_GIT_EXECUTABLE,
+  filesystem = PRE_TRUST_FILESYSTEM,
+) {
+  try {
+    if (executablePath !== PRE_TRUST_GIT_EXECUTABLE) {
+      throw new Error("PRE_TRUST_GIT_PATH");
+    }
+    for (const ancestorPath of PRE_TRUST_GIT_ANCESTORS) {
+      const metadata = filesystem.lstatSync(ancestorPath);
+      if (
+        !metadata.isDirectory() ||
+        metadata.isSymbolicLink() ||
+        metadata.uid !== 0 ||
+        metadata.gid !== 0 ||
+        (metadata.mode & 0o7777) !== 0o0755 ||
+        filesystem.realpathSync(ancestorPath) !== ancestorPath
+      ) throw new Error("PRE_TRUST_GIT_ANCESTOR_IDENTITY");
+    }
+    const metadata = filesystem.lstatSync(executablePath);
+    if (
+      !metadata.isFile() ||
+      metadata.isSymbolicLink() ||
+      metadata.nlink !== 1 ||
+      metadata.uid !== 0 ||
+      metadata.gid !== 0 ||
+      (metadata.mode & 0o7777) !== 0o0755 ||
+      filesystem.realpathSync(executablePath) !== PRE_TRUST_GIT_EXECUTABLE
+    ) throw new Error("PRE_TRUST_GIT_IDENTITY");
+  } catch {
+    throw new PreImportSupervisorError("SUPERVISOR_REPOSITORY_MISMATCH");
+  }
+  return executablePath;
 }
 
 function isSha256(value) {
@@ -727,10 +773,11 @@ function verifySupportsAndPins(repositoryRoot, policy) {
 }
 
 function gitOutput(repositoryRoot, args, { allowOne = false, binary = false } = {}) {
+  const gitExecutable = validatePreTrustGitExecutable();
   const result = spawnSync("/usr/bin/sandbox-exec", [
     "-p",
     PRE_TRUST_GIT_SANDBOX_PROFILE,
-    "/usr/bin/git",
+    gitExecutable,
     "--no-replace-objects",
     ...PRE_TRUST_GIT_CONFIG,
     "--no-optional-locks",
@@ -782,7 +829,7 @@ function oneLine(repositoryRoot, args) {
 }
 
 function inspectPublishedRemoteMain(repositoryRoot) {
-  const result = spawnSync("/usr/bin/git", [
+  const result = spawnSync(validatePreTrustGitExecutable(), [
     "--no-replace-objects",
     ...PRE_TRUST_GIT_CONFIG,
     "--no-optional-locks",
