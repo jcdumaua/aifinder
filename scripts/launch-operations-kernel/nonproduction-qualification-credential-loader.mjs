@@ -5,6 +5,7 @@ import {
   openSync,
   readFileSync,
   realpathSync,
+  statSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -24,6 +25,17 @@ export const ACTUAL_RUNTIME_CREDENTIAL_CATEGORIES = Object.freeze(
 
 const CREDENTIAL_NAME_SET = new Set(CONCRETE_CREDENTIAL_NAMES);
 const MAX_CREDENTIAL_FILE_BYTES = 128 * 1024;
+const MAX_CREDENTIAL_COMMAND_BYTES = 32 * 1024;
+const CREDENTIAL_COMMAND_TIMEOUT_MS = 20_000;
+const VERCEL_CLI_RELATIVE_PATH = path.join(".npm-global", "bin", "vercel");
+const VERCEL_CLI_TARGET_RELATIVE_PATH = path.join(
+  ".npm-global",
+  "lib",
+  "node_modules",
+  "vercel",
+  "dist",
+  "vc.js",
+);
 
 export class ConcreteCredentialLoaderError extends Error {
   constructor(code, details = {}) {
@@ -47,6 +59,18 @@ function invalidCredentialFile() {
 
 function zeroMutableBytes(value) {
   if (value instanceof Uint8Array) value.fill(0);
+}
+
+function sameCredentialFileIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.size === right.size &&
+    left.mtimeMs === right.mtimeMs &&
+    left.ctimeMs === right.ctimeMs &&
+    left.nlink === 1 &&
+    right.nlink === 1
+  );
 }
 
 export function parseConcreteCredentialEnvironment(source) {
@@ -106,9 +130,11 @@ function readSecureCredentialFile(credentialPath, {
       constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
     );
     const metadata = fstatSync(descriptor);
+    const pathnameMetadata = statSync(credentialPath);
     if (
       !metadata.isFile() ||
-      metadata.nlink !== 1 ||
+      !pathnameMetadata.isFile() ||
+      !sameCredentialFileIdentity(metadata, pathnameMetadata) ||
       metadata.size < 1 ||
       metadata.size > MAX_CREDENTIAL_FILE_BYTES ||
       realpathSync(credentialPath) !== credentialPath
@@ -122,7 +148,9 @@ function readSecureCredentialFile(credentialPath, {
     }
     if (
       !(bytes instanceof Uint8Array) ||
-      bytes.byteLength !== metadata.size
+      bytes.byteLength !== metadata.size ||
+      !sameCredentialFileIdentity(metadata, fstatSync(descriptor)) ||
+      !sameCredentialFileIdentity(metadata, statSync(credentialPath))
     ) throw new Error("CHANGED");
   } catch {
     failure = new ConcreteCredentialLoaderError(
@@ -146,6 +174,86 @@ function readSecureCredentialFile(credentialPath, {
 
 function safeCredential(value) {
   return typeof value === "string" && value.length >= 1 && value.length <= 16384;
+}
+
+function expectedVercelCliPaths(repositoryRoot) {
+  const homeDirectory = path.dirname(repositoryRoot);
+  return {
+    executablePath: path.join(homeDirectory, VERCEL_CLI_RELATIVE_PATH),
+    homeDirectory,
+    targetPath: path.join(homeDirectory, VERCEL_CLI_TARGET_RELATIVE_PATH),
+  };
+}
+
+function resolveInstalledVercelCliExecutable({ repositoryRoot }) {
+  const { executablePath, targetPath } = expectedVercelCliPaths(repositoryRoot);
+  if (
+    realpathSync(executablePath) !== targetPath ||
+    realpathSync(targetPath) !== targetPath
+  ) {
+    throw new Error("VERCEL_CLI_IDENTITY");
+  }
+  return targetPath;
+}
+
+function validateExistingVercelCliSession({
+  repositoryRoot,
+  resolveVercelCliExecutable,
+  spawnCredentialCommand,
+}) {
+  let result;
+  try {
+    const { homeDirectory, targetPath } = expectedVercelCliPaths(
+      repositoryRoot,
+    );
+    const resolvedExecutable = resolveVercelCliExecutable({ repositoryRoot });
+    if (resolvedExecutable !== targetPath) {
+      throw new Error("VERCEL_CLI_EXECUTABLE");
+    }
+    result = spawnCredentialCommand(
+      "/usr/local/bin/node",
+      [resolvedExecutable, "whoami"],
+      {
+        cwd: repositoryRoot,
+        encoding: null,
+        env: {
+          CI: "1",
+          HOME: homeDirectory,
+          NO_COLOR: "1",
+          PATH: "/usr/local/bin:/usr/bin:/bin",
+          VERCEL_TELEMETRY_DISABLED: "1",
+        },
+        maxBuffer: MAX_CREDENTIAL_COMMAND_BYTES,
+        shell: false,
+        timeout: CREDENTIAL_COMMAND_TIMEOUT_MS,
+      },
+    );
+    if (
+      result?.status !== 0 ||
+      result.signal !== null ||
+      result.error !== undefined ||
+      !(result.stdout instanceof Uint8Array) ||
+      !(result.stderr instanceof Uint8Array) ||
+      result.stdout.byteLength < 2 ||
+      result.stdout.byteLength > MAX_CREDENTIAL_COMMAND_BYTES ||
+      result.stderr.byteLength > MAX_CREDENTIAL_COMMAND_BYTES
+    ) {
+      throw new Error("VERCEL_CLI_COMMAND");
+    }
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(
+      result.stdout,
+    );
+    if (
+      !text.endsWith("\n") ||
+      text.slice(0, -1).includes("\n") ||
+      text.includes("\0")
+    ) {
+      throw new Error("VERCEL_CLI_OUTPUT");
+    }
+  } finally {
+    zeroMutableBytes(result?.stdout);
+    zeroMutableBytes(result?.stderr);
+  }
 }
 
 export function readExistingGitHubCliToken({
@@ -198,13 +306,20 @@ export function readExistingGitHubCliToken({
 export function readExistingVercelCliToken({
   repositoryRoot,
   readCredentialFile = readSecureCredentialFile,
+  resolveVercelCliExecutable = resolveInstalledVercelCliExecutable,
   secureCredentialFileDependencies,
+  spawnCredentialCommand = spawnSync,
 }) {
   let bytes = null;
   try {
     if (typeof repositoryRoot !== "string" || !path.isAbsolute(repositoryRoot)) {
       throw new Error("ROOT");
     }
+    validateExistingVercelCliSession({
+      repositoryRoot,
+      resolveVercelCliExecutable,
+      spawnCredentialCommand,
+    });
     const credentialPath = path.join(
       path.dirname(repositoryRoot),
       "Library",

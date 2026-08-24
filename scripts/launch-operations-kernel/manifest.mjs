@@ -2485,6 +2485,7 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       "  openSync,",
       "  readFileSync,",
       "  realpathSync,",
+      "  statSync,",
       '} from "node:fs";',
     ].join("\n");
     const exactOpen = [
@@ -2503,12 +2504,24 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.match(/from "node:fs"/gu)?.length === 1 &&
       source.match(/\bopenSync\s*\(/gu)?.length === 2 &&
       source.match(/\breadFileSync\s*\(/gu)?.length === 2 &&
+      source.match(/\bfstatSync\s*\(/gu)?.length === 3 &&
+      source.match(/\bstatSync\s*\(/gu)?.length === 2 &&
+      source.match(/\bsameCredentialFileIdentity\s*\(/gu)?.length === 4 &&
       source.includes("const bytes = readFileSync(descriptor);") &&
+      source.includes("function sameCredentialFileIdentity(left, right)") &&
+      source.includes("left.dev === right.dev") &&
+      source.includes("left.ino === right.ino") &&
+      source.includes("left.mtimeMs === right.mtimeMs") &&
+      source.includes("left.ctimeMs === right.ctimeMs") &&
       source.match(/constants\.O_/gu)?.length === 4 &&
       source.includes('path.join(repositoryRoot, ".env.local")') &&
       source.includes("constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)") &&
       source.includes('"/opt/homebrew/bin/gh"') &&
       source.includes('["auth", "token"]') &&
+      source.includes('"/usr/local/bin/node"') &&
+      source.includes('[resolvedExecutable, "whoami"]') &&
+      source.includes('PATH: "/usr/local/bin:/usr/bin:/bin"') &&
+      source.includes("realpathSync(executablePath) !== targetPath") &&
       source.includes("shell: false") &&
       source.includes('"com.vercel.cli"') &&
       source.includes('"auth.json"') &&

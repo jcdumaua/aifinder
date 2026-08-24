@@ -4,6 +4,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -33,6 +34,7 @@ const VERCEL_SENTINEL = "vercel-cli-secret-sentinel";
 const failures = [];
 let assertions = 0;
 let credentialReads = 0;
+let realCliInvocations = 0;
 let network = 0;
 let liveMutations = 0;
 
@@ -46,7 +48,21 @@ const GREEN_MARKERS = Object.freeze([
   "GITHUB_CLI_STDERR_ZEROED_FAILURE",
   "VERCEL_AUTH_BYTES_ZEROED_SUCCESS",
   "VERCEL_AUTH_BYTES_ZEROED_JSON_OR_TOKEN_FAILURE",
+  "VERCEL_CLI_SESSION_CHECK_PRECEDES_AUTH_READ",
+  "VERCEL_CLI_SESSION_FAILURE_PREVENTS_AUTH_READ",
+  "VERCEL_CLI_STDOUT_ZEROED_SUCCESS",
+  "VERCEL_CLI_STDERR_ZEROED_SUCCESS",
+  "VERCEL_CLI_STDOUT_ZEROED_FAILURE",
+  "VERCEL_CLI_STDERR_ZEROED_FAILURE",
+  "VERCEL_CLI_TOKEN_ABSENT_FROM_ARGS_AND_ENV",
+  "VERCEL_CLI_SHELL_FALSE_AND_BOUNDED",
+  "VERCEL_CLI_FIXED_NODE_AND_TARGET",
+  "VERCEL_AUTH_REREAD_AFTER_SESSION_REFRESH",
+  "VERCEL_ENV_LOCAL_BYPASSES_CLI_SESSION",
+  "VERCEL_CLI_UNSAFE_OR_MISSING_EXECUTABLE_FAILS_CLOSED",
+  "VERCEL_REFRESH_TOKEN_NOT_IMPLEMENTED",
   "SECURE_FILE_ACQUIRED_BUFFER_ZEROED_ON_INTERNAL_FAILURE",
+  "SECURE_FILE_PATH_DESCRIPTOR_IDENTITY_BOUND",
   "RETURNED_CREDENTIAL_SEMANTICS_UNCHANGED",
   "CATEGORICAL_ERROR_SEMANTICS_UNCHANGED",
 ]);
@@ -73,6 +89,34 @@ function readFixture(root) {
 
 function allBytesZero(bytes) {
   return bytes instanceof Uint8Array && bytes.every((byte) => byte === 0);
+}
+
+function syntheticVercelSession({
+  repositoryRoot = "/Users/synthetic/aifinder",
+  stdout = Buffer.from("synthetic-user\n", "utf8"),
+  stderr = Buffer.alloc(0),
+  status = 0,
+  signal = null,
+  error = undefined,
+  onSpawn,
+} = {}) {
+  return {
+    resolveVercelCliExecutable() {
+      return path.join(
+        path.dirname(repositoryRoot),
+        ".npm-global",
+        "lib",
+        "node_modules",
+        "vercel",
+        "dist",
+        "vc.js",
+      );
+    },
+    spawnCredentialCommand(executable, argumentsList, options) {
+      onSpawn?.(executable, argumentsList, options);
+      return { status, signal, error, stdout, stderr };
+    },
+  };
 }
 
 await check("exports the exact frozen credential allowlist", async () => {
@@ -384,6 +428,7 @@ await check("synthetic Vercel CLI success zeroes retained auth bytes", async () 
   const authBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
   const token = loader.readExistingVercelCliToken({
     repositoryRoot: "/Users/synthetic/aifinder",
+    ...syntheticVercelSession(),
     readCredentialFile(credentialPath) {
       assert.equal(
         credentialPath,
@@ -401,6 +446,7 @@ await check("synthetic Vercel CLI JSON failure zeroes retained auth bytes", asyn
   assert.throws(
     () => loader.readExistingVercelCliToken({
       repositoryRoot: "/Users/synthetic/aifinder",
+      ...syntheticVercelSession(),
       readCredentialFile() {
         return authBytes;
       },
@@ -408,6 +454,196 @@ await check("synthetic Vercel CLI JSON failure zeroes retained auth bytes", asyn
     (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
   );
   assert.equal(allBytesZero(authBytes), true);
+});
+
+await check("Vercel CLI session check completes before the fresh auth read", async () => {
+  const repositoryRoot = "/Users/synthetic/aifinder";
+  const events = [];
+  const authBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+  const token = loader.readExistingVercelCliToken({
+    repositoryRoot,
+    ...syntheticVercelSession({
+      repositoryRoot,
+      onSpawn() {
+        events.push("session-check");
+      },
+    }),
+    readCredentialFile() {
+      events.push("auth-read");
+      return authBytes;
+    },
+  });
+  assert.equal(token, VERCEL_SENTINEL);
+  assert.deepEqual(events, ["session-check", "auth-read"]);
+});
+
+await check("Vercel CLI session failure prevents any auth read", async () => {
+  const stdout = Buffer.from("synthetic failure output", "utf8");
+  const stderr = Buffer.from(SECRET_SENTINEL, "utf8");
+  let authReads = 0;
+  assert.throws(
+    () => loader.readExistingVercelCliToken({
+      repositoryRoot: "/Users/synthetic/aifinder",
+      ...syntheticVercelSession({ status: 1, stdout, stderr }),
+      readCredentialFile() {
+        authReads += 1;
+        return Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+      },
+    }),
+    (error) =>
+      error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID" &&
+      !String(error?.message).includes(SECRET_SENTINEL),
+  );
+  assert.equal(authReads, 0);
+  assert.equal(allBytesZero(stdout), true);
+  assert.equal(allBytesZero(stderr), true);
+});
+
+await check("Vercel CLI success zeroes child stdout and stderr before auth read", async () => {
+  const stdout = Buffer.from("synthetic-user\n", "utf8");
+  const stderr = Buffer.from("synthetic provider noise", "utf8");
+  let zeroedBeforeRead = false;
+  const authBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+  const token = loader.readExistingVercelCliToken({
+    repositoryRoot: "/Users/synthetic/aifinder",
+    ...syntheticVercelSession({ stdout, stderr }),
+    readCredentialFile() {
+      zeroedBeforeRead = allBytesZero(stdout) && allBytesZero(stderr);
+      return authBytes;
+    },
+  });
+  assert.equal(token, VERCEL_SENTINEL);
+  assert.equal(zeroedBeforeRead, true);
+  assert.equal(allBytesZero(stdout), true);
+  assert.equal(allBytesZero(stderr), true);
+});
+
+await check("Vercel CLI malformed results fail closed and zero child buffers", async () => {
+  for (const result of [
+    { status: null, signal: "SIGTERM", error: undefined },
+    { status: 0, signal: null, error: new Error(SECRET_SENTINEL) },
+    { status: 0, signal: null, error: undefined, stdout: Buffer.alloc(32 * 1024 + 1) },
+  ]) {
+    const stdout = result.stdout ?? Buffer.from("synthetic-user\n", "utf8");
+    const stderr = Buffer.from(SECRET_SENTINEL, "utf8");
+    let authReads = 0;
+    assert.throws(
+      () => loader.readExistingVercelCliToken({
+        repositoryRoot: "/Users/synthetic/aifinder",
+        ...syntheticVercelSession({ ...result, stdout, stderr }),
+        readCredentialFile() {
+          authReads += 1;
+          return Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+        },
+      }),
+      (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+    );
+    assert.equal(authReads, 0);
+    assert.equal(allBytesZero(stdout), true);
+    assert.equal(allBytesZero(stderr), true);
+  }
+});
+
+await check("Vercel CLI check sends no token and uses bounded shell-free execution", async () => {
+  const repositoryRoot = "/Users/synthetic/aifinder";
+  let calls = 0;
+  const authBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+  const token = loader.readExistingVercelCliToken({
+    repositoryRoot,
+    ...syntheticVercelSession({
+      repositoryRoot,
+      onSpawn(executable, argumentsList, options) {
+        calls += 1;
+        assert.equal(
+          executable,
+          "/usr/local/bin/node",
+        );
+        assert.deepEqual(argumentsList, [
+          "/Users/synthetic/.npm-global/lib/node_modules/vercel/dist/vc.js",
+          "whoami",
+        ]);
+        assert.equal(options.cwd, repositoryRoot);
+        assert.equal(options.shell, false);
+        assert.equal(options.timeout, 20_000);
+        assert.equal(options.maxBuffer, 32 * 1024);
+        assert.equal(options.encoding, null);
+        assert.equal(options.env.HOME, "/Users/synthetic");
+        assert.equal(options.env.VERCEL_TELEMETRY_DISABLED, "1");
+        assert.equal(options.env.PATH, "/usr/local/bin:/usr/bin:/bin");
+        assert.equal(Object.hasOwn(options.env, "VERCEL_TOKEN"), false);
+        assert.equal(JSON.stringify([argumentsList, options.env]).includes(VERCEL_SENTINEL), false);
+      },
+    }),
+    readCredentialFile() {
+      return authBytes;
+    },
+  });
+  assert.equal(token, VERCEL_SENTINEL);
+  assert.equal(calls, 1);
+});
+
+await check("Vercel auth is freshly reread after the session refresh opportunity", async () => {
+  let refreshed = false;
+  const staleBytes = Buffer.from(JSON.stringify({ token: "synthetic-stale-token" }), "utf8");
+  const freshBytes = Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+  const token = loader.readExistingVercelCliToken({
+    repositoryRoot: "/Users/synthetic/aifinder",
+    ...syntheticVercelSession({
+      onSpawn() {
+        refreshed = true;
+      },
+    }),
+    readCredentialFile() {
+      return refreshed ? freshBytes : staleBytes;
+    },
+  });
+  assert.equal(token, VERCEL_SENTINEL);
+  assert.equal(allBytesZero(freshBytes), true);
+  assert.equal(allBytesZero(staleBytes), false);
+  staleBytes.fill(0);
+});
+
+await check("unsafe or missing Vercel CLI executable fails closed", async () => {
+  for (const resolveVercelCliExecutable of [
+    () => "/tmp/untrusted-vercel",
+    () => {
+      throw new Error("SYNTHETIC_MISSING_EXECUTABLE");
+    },
+  ]) {
+    let spawnCalls = 0;
+    let authReads = 0;
+    assert.throws(
+      () => loader.readExistingVercelCliToken({
+        repositoryRoot: "/Users/synthetic/aifinder",
+        resolveVercelCliExecutable,
+        spawnCredentialCommand() {
+          spawnCalls += 1;
+          return {
+            status: 0,
+            signal: null,
+            stdout: Buffer.from("synthetic-user\n", "utf8"),
+            stderr: Buffer.alloc(0),
+          };
+        },
+        readCredentialFile() {
+          authReads += 1;
+          return Buffer.from(JSON.stringify({ token: VERCEL_SENTINEL }), "utf8");
+        },
+      }),
+      (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+    );
+    assert.equal(spawnCalls, 0);
+    assert.equal(authReads, 0);
+  }
+});
+
+await check("loader delegates refresh to official CLI without refreshToken logic", async () => {
+  const source = readFileSync(
+    new URL("./nonproduction-qualification-credential-loader.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.equal(source.includes("refreshToken"), false);
+  assert.equal(source.includes('"--token"'), false);
 });
 
 await check("secure file helper zeroes an acquired buffer on internal failure", async () => {
@@ -432,10 +668,55 @@ await check("secure file helper zeroes an acquired buffer on internal failure", 
     assert.throws(
       () => loader.readExistingVercelCliToken({
         repositoryRoot,
+        ...syntheticVercelSession({ repositoryRoot }),
         secureCredentialFileDependencies: {
           onCredentialBytesAcquired(bytes) {
             acquired = bytes;
             throw new Error("SYNTHETIC_POST_ACQUISITION_FAILURE");
+          },
+        },
+      }),
+      (error) => error?.code === "CONCRETE_CREDENTIAL_SOURCE_INVALID",
+    );
+    assert.equal(allBytesZero(acquired), true);
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+await check("secure auth read rejects pathname replacement after descriptor acquisition", async () => {
+  const temporaryRoot = realpathSync(mkdtempSync("/tmp/aifinder-credential-loader."));
+  const repositoryRoot = path.join(temporaryRoot, "aifinder");
+  const authDirectory = path.join(
+    temporaryRoot,
+    "Library",
+    "Application Support",
+    "com.vercel.cli",
+  );
+  const authPath = path.join(authDirectory, "auth.json");
+  const displacedPath = path.join(authDirectory, "auth.displaced.json");
+  mkdirSync(repositoryRoot);
+  mkdirSync(authDirectory, { recursive: true });
+  writeFileSync(
+    authPath,
+    JSON.stringify({ token: "synthetic-stale-token" }),
+    { mode: 0o600 },
+  );
+  let acquired = null;
+  try {
+    assert.throws(
+      () => loader.readExistingVercelCliToken({
+        repositoryRoot,
+        ...syntheticVercelSession({ repositoryRoot }),
+        secureCredentialFileDependencies: {
+          onCredentialBytesAcquired(bytes) {
+            acquired = bytes;
+            renameSync(authPath, displacedPath);
+            writeFileSync(
+              authPath,
+              JSON.stringify({ token: VERCEL_SENTINEL }),
+              { mode: 0o600 },
+            );
           },
         },
       }),
@@ -557,6 +838,6 @@ if (failures.length > 0) {
 } else {
   for (const marker of GREEN_MARKERS) console.log(`${marker}=PASS`);
   console.log(
-    `PASS_CONCRETE_CREDENTIAL_LOADER assertions=${assertions} synthetic_credential_reads=${credentialReads} real_credential_reads=0 REAL_CREDENTIAL_READS=0 NETWORK=${network} LIVE_MUTATIONS=${liveMutations} SECRET_OUTPUTS=0 SECRET_HASHES=0 failures=0 internal_failures=0`,
+    `PASS_CONCRETE_CREDENTIAL_LOADER assertions=${assertions} synthetic_credential_reads=${credentialReads} real_credential_reads=0 REAL_CREDENTIAL_READS=0 real_cli_invocations=${realCliInvocations} REAL_CLI_INVOCATIONS=${realCliInvocations} NETWORK=${network} LIVE_MUTATIONS=${liveMutations} SECRET_OUTPUTS=0 SECRET_HASHES=0 failures=0 internal_failures=0`,
   );
 }
