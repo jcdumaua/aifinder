@@ -6,6 +6,7 @@ import {
   statSync,
 } from "node:fs";
 import path from "node:path";
+import * as runtimeModule from "./admin-v1-official-runtime.mjs";
 import {
   ADMIN_V1_OFFICIAL_BUDGET_LIMITS,
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
@@ -692,6 +693,117 @@ await check("cleanup ambiguity remains durable recovery pending", async () => {
     ), "utf8")).state.lifecycle,
     "RECOVERY_PENDING",
   );
+});
+
+await check("classified environment-create failure is published before cleanup", async () => {
+  const snapshots = [];
+  let retired = null;
+  const adapters = fakeAdapters();
+  const invoke = adapters.invoke.bind(adapters);
+  adapters.invoke = async (operation, input) => {
+    if (operation === "create_environment_1") {
+      adapters.invocations.push(operation);
+      const error = new Error("RAW_ERROR_SENTINEL_DO_NOT_PERSIST");
+      error.code = "RAW_PROVIDER_ERROR_SENTINEL_DO_NOT_PERSIST";
+      error.environment_create_failure_class =
+        "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE";
+      error.http_status_class = "4XX";
+      throw error;
+    }
+    return invoke(operation, input);
+  };
+  await assert.rejects(
+    runAdminV1OfficialRuntime({
+      authorization: authorization(),
+      now_epoch_ms: TEST_NOW_EPOCH_MS,
+      adapters,
+      journal: {
+        load: () => null,
+        publish(value) {
+          snapshots.push(structuredClone(value));
+        },
+        retire(value) {
+          retired = structuredClone(value);
+        },
+      },
+      sensitive: Object.fromEntries(Object.entries(SENTINELS).map(
+        ([key, value]) => [key, Buffer.from(value)],
+      )),
+    }),
+    (error) => error?.code === "RAW_PROVIDER_ERROR_SENTINEL_DO_NOT_PERSIST",
+  );
+  const classifiedIndex = snapshots.findIndex(
+    (value) => value.stage === "FAILURE_CREATE_ENVIRONMENT_1_CLASSIFIED",
+  );
+  const cleanupIndex = snapshots.findIndex(
+    (value) => value.stage === "CLEANUP_PENDING_PUBLISHED",
+  );
+  assert(classifiedIndex >= 0);
+  assert(cleanupIndex > classifiedIndex);
+  assert.deepEqual(retired.failure, {
+    operation: "create_environment_1",
+    stage: "SETUP",
+    class: "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+    http_status_class: "4XX",
+    provider: "VERCEL",
+    retry_allowed: false,
+  });
+  assert.equal(retired.owned.environment_record_ids.length, 0);
+  assert.equal(retired.zero_residual, true);
+  const serialized = JSON.stringify({ snapshots, retired });
+  for (const sentinel of [
+    "RAW_ERROR_SENTINEL_DO_NOT_PERSIST",
+    "RAW_PROVIDER_ERROR_SENTINEL_DO_NOT_PERSIST",
+    ...Object.values(SENTINELS).map((value) => value.toString("utf8")),
+  ]) assert.equal(serialized.includes(sentinel), false);
+});
+
+await check("legacy retired sequence maps to unavailable lower-level environment class", async () => {
+  assert.equal(
+    typeof runtimeModule.classifyAdminV1OfficialEnvironmentCreateFailureEvidence,
+    "function",
+  );
+  const result = runtimeModule.classifyAdminV1OfficialEnvironmentCreateFailureEvidence({
+    sequence: 9,
+    state: {
+      lifecycle: "CLEANUP_COMPLETE",
+      stage: "CLEANUP_COMPLETE_PUBLISHED",
+      retired: true,
+      token_spent: false,
+      runtime_sessions: 0,
+      last_attempted_qualification_ordinal: 0,
+      last_completed_qualification_ordinal: 0,
+      last_attempted_official_ordinal: 0,
+      last_completed_official_ordinal: 0,
+      owned: {
+        local_temp_state: "git:synthetic",
+        remote_ref: null,
+        environment_record_ids: [],
+        deployment_id: null,
+        submissions: [],
+        tools: [],
+        audit_rows: [],
+        logo: null,
+      },
+      effects: {
+        submitted_tools: 0,
+        tools: 0,
+        audits: 0,
+        approval_rpc: 0,
+        logo_objects: 0,
+        grant_prepare: 0,
+        grant_revoke: 0,
+      },
+      evidence: [],
+      cleanup: ["CLEANUP_LOCAL_OWNED_TEMP_STATE"],
+      zero_residual: true,
+    },
+  });
+  assert.deepEqual(result, {
+    failure_class: "BRANCH_ENV_PARTIAL_FAILURE",
+    operation: "create_environment_1",
+    lower_level_class: "LEGACY_UNAVAILABLE",
+  });
 });
 
 await check("environment IDs are owned before direct readback and branch publication", async () => {

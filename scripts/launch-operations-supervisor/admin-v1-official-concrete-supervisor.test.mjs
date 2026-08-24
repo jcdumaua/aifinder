@@ -42,6 +42,8 @@ const JOURNAL_DIRECTORY =
 const POLICY_RELATIVE_PATH =
   `.git/admin-v1-official-concrete-${RUN_ID}.policy.json`;
 const MAXIMUM_OVERLAY_FILE_BYTES = 2 * 1024 * 1024;
+const NEW_CANDIDATE_OVERLAY_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs";
 const GIT_TIMEOUT_MS = 60_000;
 const GIT_EXECUTABLE = process.platform === "darwin"
   ? "/Library/Developer/CommandLineTools/usr/bin/git"
@@ -49,6 +51,8 @@ const GIT_EXECUTABLE = process.platform === "darwin"
 const ORIGINAL_CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
@@ -65,7 +69,7 @@ const ORIGINAL_CANDIDATE_OVERLAY_PATHS = Object.freeze([
 const ORCHESTRATOR_OVERLAY_PATH =
   "testing/admin-v1-staging-runtime-orchestrator.mjs";
 const ORCHESTRATOR_OVERLAY_SHA256 =
-  "0f8a35567bae55e7c875accf15745a679a8cfb263803f3aabb5c0afbefa22951";
+  "41e94c1cf60424a2268e3b53e77a21e44d27ac85e844f42e92e0480cf495c361";
 const CANDIDATE_OVERLAY_PATHS = Object.freeze([
   ...ORIGINAL_CANDIDATE_OVERLAY_PATHS,
   ORCHESTRATOR_OVERLAY_PATH,
@@ -122,11 +126,22 @@ function readExactOverlayBytes(root, relativePath) {
   return bytes;
 }
 
+function prepareExactCanonicalOverlayTarget(root, relativePath) {
+  const target = path.resolve(root, relativePath);
+  if (!existsSync(target)) {
+    assert.equal(relativePath, NEW_CANDIDATE_OVERLAY_PATH);
+    const parent = path.dirname(target);
+    assert.equal(realpathSync(parent), parent);
+    writeFileSync(target, Buffer.alloc(0), { flag: "wx", mode: 0o644 });
+  }
+  return exactOverlayTarget(root, relativePath);
+}
+
 function assertExactCandidateOverlayPaths(paths) {
-  assert.equal(paths.length, 15, "SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT");
+  assert.equal(paths.length, 17, "SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT");
   assert.equal(
     new Set(paths).size,
-    15,
+    17,
     "SYNTHETIC_OVERLAY_DUPLICATE_MEMBER_FORBIDDEN",
   );
   assert.deepEqual(
@@ -342,7 +357,10 @@ function createSyntheticRepository() {
       assertExactCandidateOverlayPaths(CANDIDATE_OVERLAY_PATHS);
       for (const relativePath of CANDIDATE_OVERLAY_PATHS) {
         const bytes = readExactOverlayBytes(sourceRoot, relativePath);
-        const { target } = exactOverlayTarget(canonicalRoot, relativePath);
+        const { target } = prepareExactCanonicalOverlayTarget(
+          canonicalRoot,
+          relativePath,
+        );
         writeFileSync(target, bytes, { mode: 0o644 });
         chmodSync(target, 0o644);
         const blob = isolatedGit([
@@ -466,7 +484,7 @@ function createSyntheticRepository() {
         sourceMaterializationState.baseline_tree,
       );
     }
-    assert.equal(sourceMaterializationState.overlay_paths, 15);
+    assert.equal(sourceMaterializationState.overlay_paths, 17);
     const dirtyCandidateBaseline = createAlteredOverlayBaseline(
       sourceMaterializationState.candidate_commit,
     );
@@ -474,7 +492,7 @@ function createSyntheticRepository() {
     assert.equal(candidateState.baseline_commit, dirtyCandidateBaseline.commit);
     assert.equal(candidateState.baseline_tree, dirtyCandidateBaseline.tree);
     assertExactlyOneSyntheticCommit(candidateState);
-    assert.equal(candidateState.overlay_paths, 15);
+    assert.equal(candidateState.overlay_paths, 17);
     assert.equal(
       sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
       ORCHESTRATOR_OVERLAY_SHA256,
@@ -500,7 +518,7 @@ function createSyntheticRepository() {
       sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
       ORCHESTRATOR_OVERLAY_SHA256,
     );
-    assert.equal(cleanPostPublicationState.overlay_paths, 15);
+    assert.equal(cleanPostPublicationState.overlay_paths, 17);
     assertPinnedOrchestratorCovered(
       CANDIDATE_OVERLAY_PATHS,
       ORCHESTRATOR_OVERLAY_SHA256,
@@ -955,7 +973,7 @@ try {
     "--format=%(refname)%00%(objectname)%00%(symref)",
   ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_DYNAMIC_SOURCE_HEAD=PASS SYNTHETIC_EXTERNAL_BASELINE_SUBSTITUTION=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_PATHS=15 SYNTHETIC_CANDIDATE_OVERLAY_ORIGINAL_14_PRESERVED=PASS SYNTHETIC_ORIGINAL_14_BASELINE_ORCHESTRATOR_EQUALITY=PASS SYNTHETIC_CANDIDATE_OVERLAY_MISSING_ORCHESTRATOR=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_UNEXPECTED_16TH=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_DUPLICATE=REJECTED SYNTHETIC_ORCHESTRATOR_SHA256=0f8a35567bae55e7c875accf15745a679a8cfb263803f3aabb5c0afbefa22951 SYNTHETIC_BASELINE_ORCHESTRATOR_EQUALITY_ALLOWED=PASS SYNTHETIC_SOURCE_MATERIALIZATION_PUBLICATION_STABLE=PASS SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_DIRTY_CANDIDATE_STATE_A_COMMIT_CREATED=true SYNTHETIC_DIRTY_CANDIDATE_STATE_A_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_COMMIT_CREATED=false SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_TREE_EQUAL=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_CANDIDATE_VERIFY=PASS SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_COMMIT_CREATED=true SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_DYNAMIC_SOURCE_HEAD=PASS SYNTHETIC_EXTERNAL_BASELINE_SUBSTITUTION=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_PATHS=17 SYNTHETIC_CANDIDATE_OVERLAY_ORIGINAL_16_PRESERVED=PASS SYNTHETIC_ORIGINAL_16_BASELINE_ORCHESTRATOR_EQUALITY=PASS SYNTHETIC_CANDIDATE_OVERLAY_MISSING_ORCHESTRATOR=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_UNEXPECTED_18TH=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_DUPLICATE=REJECTED SYNTHETIC_ORCHESTRATOR_SHA256=41e94c1cf60424a2268e3b53e77a21e44d27ac85e844f42e92e0480cf495c361 SYNTHETIC_BASELINE_ORCHESTRATOR_EQUALITY_ALLOWED=PASS SYNTHETIC_SOURCE_MATERIALIZATION_PUBLICATION_STABLE=PASS SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_DIRTY_CANDIDATE_STATE_A_COMMIT_CREATED=true SYNTHETIC_DIRTY_CANDIDATE_STATE_A_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_COMMIT_CREATED=false SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_TREE_EQUAL=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_CANDIDATE_VERIFY=PASS SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_COMMIT_CREATED=true SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);

@@ -653,9 +653,107 @@ function publicState(state) {
     owned: structuredClone(state.owned),
     effects: structuredClone(state.effects),
     evidence: structuredClone(state.evidence),
+    failure: structuredClone(state.failure),
     cleanup: structuredClone(state.cleanup),
     zero_residual: state.zero_residual,
   };
+}
+
+const ENVIRONMENT_CREATE_FAILURE_CLASSES = new Set([
+  "ENVIRONMENT_VALUE_SHAPE_INVALID",
+  "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+  "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+]);
+const ENVIRONMENT_CREATE_HTTP_STATUS_CLASSES = new Set([
+  "2XX",
+  "4XX",
+  "5XX",
+  "OTHER",
+]);
+
+function boundedEnvironmentCreateFailure(operation, error) {
+  if (
+    !["create_environment_1", "create_environment_2"].includes(operation) ||
+    !ENVIRONMENT_CREATE_FAILURE_CLASSES.has(
+      error?.environment_create_failure_class,
+    ) ||
+    !(
+      error?.http_status_class === null ||
+      ENVIRONMENT_CREATE_HTTP_STATUS_CLASSES.has(error?.http_status_class)
+    )
+  ) return null;
+  return {
+    operation,
+    stage: "SETUP",
+    class: error.environment_create_failure_class,
+    http_status_class: error.http_status_class,
+    provider: "VERCEL",
+    retry_allowed: false,
+  };
+}
+
+export function classifyAdminV1OfficialEnvironmentCreateFailureEvidence(
+  journalDocument,
+) {
+  const state = journalDocument?.state;
+  if (!state || typeof state !== "object" || Array.isArray(state)) return null;
+  const failure = state.failure;
+  if (
+    failure &&
+    typeof failure === "object" &&
+    !Array.isArray(failure) &&
+    ["create_environment_1", "create_environment_2"].includes(failure.operation) &&
+    failure.stage === "SETUP" &&
+    ENVIRONMENT_CREATE_FAILURE_CLASSES.has(failure.class) &&
+    (failure.http_status_class === null ||
+      ENVIRONMENT_CREATE_HTTP_STATUS_CLASSES.has(failure.http_status_class)) &&
+    failure.provider === "VERCEL" &&
+    failure.retry_allowed === false
+  ) {
+    return Object.freeze({
+      failure_class: "BRANCH_ENV_PARTIAL_FAILURE",
+      operation: failure.operation,
+      lower_level_class: failure.class,
+    });
+  }
+  const owned = state.owned;
+  const effects = state.effects;
+  if (
+    journalDocument.sequence === 9 &&
+    state.lifecycle === "CLEANUP_COMPLETE" &&
+    state.stage === "CLEANUP_COMPLETE_PUBLISHED" &&
+    state.retired === true &&
+    state.token_spent === false &&
+    state.runtime_sessions === 0 &&
+    state.last_attempted_qualification_ordinal === 0 &&
+    state.last_completed_qualification_ordinal === 0 &&
+    state.last_attempted_official_ordinal === 0 &&
+    state.last_completed_official_ordinal === 0 &&
+    owned && typeof owned === "object" && !Array.isArray(owned) &&
+    typeof owned.local_temp_state === "string" &&
+    owned.local_temp_state.length > 0 &&
+    owned.remote_ref === null &&
+    Array.isArray(owned.environment_record_ids) &&
+    owned.environment_record_ids.length === 0 &&
+    owned.deployment_id === null &&
+    Array.isArray(owned.submissions) && owned.submissions.length === 0 &&
+    Array.isArray(owned.tools) && owned.tools.length === 0 &&
+    Array.isArray(owned.audit_rows) && owned.audit_rows.length === 0 &&
+    owned.logo === null &&
+    effects && typeof effects === "object" && !Array.isArray(effects) &&
+    Object.values(effects).every((value) => value === 0) &&
+    Array.isArray(state.evidence) && state.evidence.length === 0 &&
+    canonicalJson(state.cleanup) === '["CLEANUP_LOCAL_OWNED_TEMP_STATE"]' &&
+    state.zero_residual === true &&
+    !Object.hasOwn(state, "failure")
+  ) {
+    return Object.freeze({
+      failure_class: "BRANCH_ENV_PARTIAL_FAILURE",
+      operation: "create_environment_1",
+      lower_level_class: "LEGACY_UNAVAILABLE",
+    });
+  }
+  return null;
 }
 
 function zeroBuffer(value) {
@@ -970,6 +1068,7 @@ export async function runAdminV1OfficialRuntime({
       grant_revoke: 0,
     },
     evidence: [],
+    failure: null,
     cleanup: [],
     zero_residual: false,
   };
@@ -1305,23 +1404,37 @@ export async function runAdminV1OfficialRuntime({
       throw new AdminV1OfficialRuntimeError("OFFICIAL_PRIOR_RESIDUE");
     }
     for (let index = 1; index <= 2; index += 1) {
-      const recordId = await mutation(
-        `create_environment_${index}`,
-        {
-          key: validated.execution.environment_keys[index - 1],
-          value: index === 1 ? sensitive.admin_password : sensitive.admin_session_secret,
-        },
-        (response) => {
-          if (!exactAdapterResponse(response, "CREATED_EXACT") ||
-            !boundedAscii(response.record_id, 128)) {
-            throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CREATE_MISMATCH");
-          }
-          return response.record_id;
-        },
-        (ownedRecordId) => {
-          state.owned.environment_record_ids.push(ownedRecordId);
-        },
-      );
+      const operation = `create_environment_${index}`;
+      let recordId;
+      try {
+        recordId = await mutation(
+          operation,
+          {
+            key: validated.execution.environment_keys[index - 1],
+            value: index === 1
+              ? sensitive.admin_password
+              : sensitive.admin_session_secret,
+          },
+          (response) => {
+            if (!exactAdapterResponse(response, "CREATED_EXACT") ||
+              !boundedAscii(response.record_id, 128)) {
+              throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CREATE_MISMATCH");
+            }
+            return response.record_id;
+          },
+          (ownedRecordId) => {
+            state.owned.environment_record_ids.push(ownedRecordId);
+          },
+        );
+      } catch (error) {
+        const failure = boundedEnvironmentCreateFailure(operation, error);
+        if (failure !== null) {
+          state.failure = failure;
+          state.stage = `FAILURE_${operation.toUpperCase()}_CLASSIFIED`;
+          journal.publish(publicState(state));
+        }
+        throw error;
+      }
       const verifiedEnvironment = await invoke(`verify_environment_${index}`, {
         key: validated.execution.environment_keys[index - 1],
         record_id: recordId,

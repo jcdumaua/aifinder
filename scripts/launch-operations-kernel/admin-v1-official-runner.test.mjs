@@ -101,7 +101,7 @@ function trust(authorization) {
   });
 }
 
-function dependencies({ candidateMismatch = false } = {}) {
+function dependencies({ candidateMismatch = false, runtimeErrorCode = null } = {}) {
   const calls = [];
   const authorization = record();
   return {
@@ -157,6 +157,11 @@ function dependencies({ candidateMismatch = false } = {}) {
     },
     runAuthorizedOfficialRuntime() {
       calls.push("runAuthorizedOfficialRuntime");
+      if (runtimeErrorCode !== null) {
+        const error = new Error("synthetic internal runtime failure");
+        error.code = runtimeErrorCode;
+        throw error;
+      }
       return {
         classification: "OFFICIAL_RUNTIME_COMPLETE",
         official_requests: 20,
@@ -208,6 +213,27 @@ const denied = await dispatchAdminV1OfficialRunner(
 assert.deepEqual(denied, { exit_code: 1, code: "OFFICIAL_CANDIDATE_MISMATCH" });
 assert.equal(mismatched.calls.includes("readOfficialCredentials"), false);
 assert.equal(mismatched.calls.includes("runAuthorizedOfficialRuntime"), false);
+
+const classifiedEnvironmentFailure = dependencies({
+  runtimeErrorCode: "OFFICIAL_ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+});
+const classifiedEnvironmentFailureResult = await dispatchAdminV1OfficialRunner(
+  [
+    "--run-admin-v1-official",
+    "--authorization",
+    `/Users/jamescarlodumaua/Downloads/admin-v1-official-${RUN_ID}.json`,
+  ],
+  classifiedEnvironmentFailure,
+  trust(record()),
+);
+assert.deepEqual(classifiedEnvironmentFailureResult, {
+  exit_code: 1,
+  code: "OFFICIAL_RUNTIME_FAILED_CLOSED",
+});
+assert.equal(
+  classifiedEnvironmentFailure.calls.at(-1),
+  "output:OFFICIAL_RUNTIME_FAILED_CLOSED",
+);
 
 const routed = dependencies();
 const routedResult = await dispatchConcreteQualificationRunner(
@@ -294,5 +320,5 @@ console.log("EMPTY_CHILD_CLEAN_REPOSITORY=PASS");
 console.log("EMPTY_CHILD_HEAD_TREE_EQUALITY=PASS");
 
 console.log(
-  "PASS_ADMIN_V1_OFFICIAL_RUNNER assertions=16 pre_effect_before_credentials=true operation_class_separate=true real_calls=0 failures=0 internal_failures=0",
+  "PASS_ADMIN_V1_OFFICIAL_RUNNER assertions=18 pre_effect_before_credentials=true operation_class_separate=true real_calls=0 failures=0 internal_failures=0",
 );

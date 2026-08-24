@@ -1184,6 +1184,123 @@ await focusedCheck("environment create captures exact ID before direct verificat
   assert.equal(probe.state.deletes, 0);
 });
 
+async function captureEnvironmentCreateFailure({
+  value = Buffer.from("synthetic-environment-value"),
+  fetch_impl,
+}) {
+  let transportCalls = 0;
+  let captured = null;
+  try {
+    await concreteTransport({
+      fetch_impl: async (...args) => {
+        transportCalls += 1;
+        return fetch_impl(...args);
+      },
+      spawn_sync: absentRef,
+    }).execute({
+      operation: "create_environment_1",
+      input: {
+        key: authorization.execution.environment_keys[0],
+        value,
+      },
+      authorization,
+      credentials,
+    });
+  } catch (error) {
+    captured = error;
+  }
+  assert(captured instanceof Error);
+  return { error: captured, transportCalls };
+}
+
+await focusedCheck("environment create classifies invalid value before transport", async () => {
+  const { error, transportCalls } = await captureEnvironmentCreateFailure({
+    value: Buffer.from("VALUE_SHAPE_SENTINEL\nINVALID"),
+    fetch_impl: async () => assert.fail("transport must not be called"),
+  });
+  assert.equal(transportCalls, 0);
+  assert.equal(
+    error.environment_create_failure_class,
+    "ENVIRONMENT_VALUE_SHAPE_INVALID",
+  );
+  assert.equal(error.http_status_class, null);
+});
+
+await focusedCheck("environment create classifies transport throw without raw text", async () => {
+  const { error, transportCalls } = await captureEnvironmentCreateFailure({
+    fetch_impl: async () => {
+      throw new Error("RAW_TRANSPORT_SENTINEL_DO_NOT_PERSIST");
+    },
+  });
+  assert.equal(transportCalls, 1);
+  assert.equal(
+    error.environment_create_failure_class,
+    "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+  );
+  assert.equal(error.http_status_class, null);
+  assert.equal(error.message.includes("RAW_TRANSPORT_SENTINEL_DO_NOT_PERSIST"), false);
+});
+
+for (const [status, statusClass] of [[400, "4XX"], [503, "5XX"]]) {
+  await focusedCheck(`environment create classifies HTTP ${status}`, async () => {
+    const { error, transportCalls } = await captureEnvironmentCreateFailure({
+      fetch_impl: async () => jsonResponse(
+        { provider_body: "RAW_PROVIDER_BODY_SENTINEL_DO_NOT_PERSIST" },
+        status,
+      ),
+    });
+    assert.equal(transportCalls, 1);
+    assert.equal(
+      error.environment_create_failure_class,
+      "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+    );
+    assert.equal(error.http_status_class, statusClass);
+    assert.equal(error.message.includes("RAW_PROVIDER_BODY_SENTINEL_DO_NOT_PERSIST"), false);
+  });
+}
+
+await focusedCheck("environment create classifies unproven 201 identity", async () => {
+  const { error, transportCalls } = await captureEnvironmentCreateFailure({
+    fetch_impl: async () => jsonResponse({
+      created: [{ id: "icfg_one" }, { id: "icfg_two" }],
+      failed: [],
+    }, 201),
+  });
+  assert.equal(transportCalls, 1);
+  assert.equal(
+    error.environment_create_failure_class,
+    "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+  );
+  assert.equal(error.http_status_class, "2XX");
+});
+
+await focusedCheck("environment create accepts documented 201 envelope", async () => {
+  let transportCalls = 0;
+  const result = await concreteTransport({
+    fetch_impl: async () => {
+      transportCalls += 1;
+      return jsonResponse({
+        created: { id: "icfg_documented" },
+        failed: [],
+      }, 201);
+    },
+    spawn_sync: absentRef,
+  }).execute({
+    operation: "create_environment_1",
+    input: {
+      key: authorization.execution.environment_keys[0],
+      value: Buffer.from("synthetic-environment-value"),
+    },
+    authorization,
+    credentials,
+  });
+  assert.equal(transportCalls, 1);
+  assert.deepEqual(result, {
+    status: "CREATED_EXACT",
+    record_id: "icfg_documented",
+  });
+});
+
 await focusedCheck("environment verification uses exact non-decrypting direct-ID readback", async () => {
   const probe = createEnvironmentReadbackProbe();
   const result = await probe.execute();

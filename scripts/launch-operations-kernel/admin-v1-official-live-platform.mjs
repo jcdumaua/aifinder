@@ -95,11 +95,42 @@ const VERCEL_PROTECTION_CHALLENGE_MARKERS = Object.freeze([
 ]);
 
 export class AdminV1OfficialLivePlatformError extends Error {
-  constructor(code) {
+  constructor(code, {
+    environment_create_failure_class = null,
+    http_status_class = null,
+  } = {}) {
     super(code);
     this.name = "AdminV1OfficialLivePlatformError";
     this.code = code;
+    this.environment_create_failure_class = environment_create_failure_class;
+    this.http_status_class = http_status_class;
   }
+}
+
+const ENVIRONMENT_CREATE_FAILURE_CLASSES = new Set([
+  "ENVIRONMENT_VALUE_SHAPE_INVALID",
+  "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+  "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+]);
+const HTTP_STATUS_CLASSES = new Set(["2XX", "4XX", "5XX", "OTHER"]);
+
+function httpStatusClass(status) {
+  if (!Number.isSafeInteger(status)) return null;
+  if (status >= 200 && status < 300) return "2XX";
+  if (status >= 400 && status < 500) return "4XX";
+  if (status >= 500 && status < 600) return "5XX";
+  return "OTHER";
+}
+
+function environmentCreateFailure(code, failureClass, statusClass = null) {
+  if (
+    !ENVIRONMENT_CREATE_FAILURE_CLASSES.has(failureClass) ||
+    !(statusClass === null || HTTP_STATUS_CLASSES.has(statusClass))
+  ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+  return new AdminV1OfficialLivePlatformError(code, {
+    environment_create_failure_class: failureClass,
+    http_status_class: statusClass,
+  });
 }
 
 function credentialText(value) {
@@ -1792,17 +1823,46 @@ export function createAdminV1OfficialConcreteTransport({
         });
       }
       if (operation.startsWith("create_environment_")) {
-        const response = await request(
-          operation,
-          textCredentials,
-          providerDescriptor(operation, input, authorization, bindings),
-        );
-        const recordId = response.status >= 200 && response.status < 300
-          ? exactCreatedEnvironmentResponseId(response.body)
-          : null;
+        let descriptor;
+        try {
+          descriptor = providerDescriptor(
+            operation,
+            input,
+            authorization,
+            bindings,
+          );
+        } catch (error) {
+          if (error?.code === "OFFICIAL_APPLICATION_INPUT_INVALID") {
+            throw environmentCreateFailure(
+              "OFFICIAL_ENVIRONMENT_VALUE_SHAPE_INVALID",
+              "ENVIRONMENT_VALUE_SHAPE_INVALID",
+            );
+          }
+          throw error;
+        }
+        let response;
+        try {
+          response = await request(operation, textCredentials, descriptor);
+        } catch {
+          throw environmentCreateFailure(
+            "OFFICIAL_ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+            "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+          );
+        }
+        const statusClass = httpStatusClass(response.status);
+        if (statusClass !== "2XX") {
+          throw environmentCreateFailure(
+            "OFFICIAL_ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+            "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
+            statusClass,
+          );
+        }
+        const recordId = exactCreatedEnvironmentResponseId(response.body);
         if (recordId === null) {
-          throw new AdminV1OfficialLivePlatformError(
+          throw environmentCreateFailure(
             "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+            "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+            "2XX",
           );
         }
         return { status: "CREATED_EXACT", record_id: recordId };
