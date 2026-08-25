@@ -225,7 +225,10 @@
             "branch", "target", "source", "state"
           ],
           "properties": {
-            "deployment_id": { "const": "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj" },
+            "deployment_id": {
+              "type": "string",
+              "pattern": "^dpl_[A-Za-z0-9]+$"
+            },
             "project_id": { "const": "prj_BPaQVKdElriAhxabhoTkg8LysQ5R" },
             "team_id": { "const": "team_9POJYxNnjIBbrQ19My8M5yG3" },
             "deployed_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },

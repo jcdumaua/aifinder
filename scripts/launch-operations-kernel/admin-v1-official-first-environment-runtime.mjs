@@ -105,6 +105,7 @@ const EXECUTION_KEYS = Object.freeze([
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
+const DEPLOYMENT_ID_PATTERN = /^dpl_[A-Za-z0-9]+$/u;
 const ENVIRONMENT_FAILURE_CLASSES = new Set([
   "ENVIRONMENT_VALUE_SHAPE_INVALID",
   "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
@@ -282,7 +283,7 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
     closure.transport_dependency_source_sha256 !==
       value.transport_source_sha256 ||
     !exactKeys(deployment, DEPLOYMENT_KEYS) ||
-    deployment.deployment_id !== "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj" ||
+    !DEPLOYMENT_ID_PATTERN.test(deployment.deployment_id ?? "") ||
     deployment.project_id !== execution.preview_project_id ||
     deployment.team_id !== execution.preview_team_id ||
     deployment.deployed_commit !== repository.head ||

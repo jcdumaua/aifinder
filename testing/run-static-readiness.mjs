@@ -116,7 +116,7 @@ const LEGACY_V1_RUNTIME_STABLE_PROJECTIONS = Object.freeze([
       "919aa7c687be1481509a1c225537245d5490b6b1f20dd39b32557e6d49b78cce",
     ]),
     projectedReviewedPins: Object.freeze([
-      "79bcd70c1ef8c6bb8c97f871773ec04d6e1774b1ad1abf47388367ebdc425f1c",
+      "cfab510d3a3fd001d3c1ac3fd4f94c8ec74492c9e6c6c8f239dbaa23480d10e4",
       "cf668b71448ebd144bfde73419050ebd492ddaceccb1e6910f6448a2d44a0ecd",
     ]),
     baselineSha256:

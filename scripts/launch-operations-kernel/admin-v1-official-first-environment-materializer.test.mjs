@@ -28,6 +28,8 @@ const HEAD = "d98d4a455021fe666101903bbe92d32ddc776c14";
 const RUN_ID = "123e4567-e89b-42d3-a456-426614174000";
 const AUTHORIZATION_ID = "223e4567-e89b-42d3-a456-426614174001";
 const NOW = Date.parse("2026-08-25T06:00:00.000Z");
+const HISTORICAL_DEPLOYMENT_ID = "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj";
+const CURRENT_DEPLOYMENT_ID = "dpl_BLAAXQGkn8RPbJrYQDwQEwW5ELLn";
 
 function request(overrides = {}) {
   return {
@@ -69,7 +71,7 @@ function request(overrides = {}) {
       remote_repository: "jcdumaua/aifinder",
     },
     deployment: {
-      deployment_id: "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj",
+      deployment_id: HISTORICAL_DEPLOYMENT_ID,
       project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
       team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
       deployed_commit: HEAD,
@@ -90,8 +92,23 @@ const second = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
   request: request(),
   now_epoch_ms: NOW,
 });
+const currentDeploymentRequest = request({
+  deployment: {
+    ...request().deployment,
+    deployment_id: CURRENT_DEPLOYMENT_ID,
+  },
+});
+const currentDeployment =
+  createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: currentDeploymentRequest,
+    now_epoch_ms: NOW,
+  });
 
 assert.equal(canonicalJson(first), canonicalJson(second));
+assert.equal(
+  currentDeployment.authorization_closure.deployment.deployment_id,
+  CURRENT_DEPLOYMENT_ID,
+);
 assert.equal(first.schema_version, 1);
 assert.equal(
   first.operation_class,
@@ -123,7 +140,123 @@ assert.deepEqual(first.authorization_closure.credential_sources, {
 });
 assert.equal(first.authorization_closure.repository_tree, request().repository.tree);
 assert.equal(first.authorization_closure.deployment.deployment_id,
-  "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj");
+  HISTORICAL_DEPLOYMENT_ID);
+assert.notEqual(
+  currentDeployment.one_use_authorization_sha256,
+  first.one_use_authorization_sha256,
+);
+assert.match(canonicalJson(currentDeployment), new RegExp(CURRENT_DEPLOYMENT_ID, "u"));
+
+const materializerSource = readFileSync(new URL(
+  "./admin-v1-official-first-environment-materializer.mjs",
+  import.meta.url,
+), "utf8");
+const runtimeSource = readFileSync(new URL(
+  "./admin-v1-official-first-environment-runtime.mjs",
+  import.meta.url,
+), "utf8");
+const authorizationSchema = JSON.parse(readFileSync(new URL(
+  "./admin-v1-official-first-environment-authorization.schema.json",
+  import.meta.url,
+), "utf8"));
+const deploymentIdSchema = authorizationSchema.properties
+  .authorization_closure.properties.deployment.properties.deployment_id;
+for (const source of [materializerSource, runtimeSource]) {
+  assert.equal(source.includes(HISTORICAL_DEPLOYMENT_ID), false);
+  assert.equal(source.includes(CURRENT_DEPLOYMENT_ID), false);
+}
+assert.deepEqual(deploymentIdSchema, {
+  type: "string",
+  pattern: "^dpl_[A-Za-z0-9]+$",
+});
+for (const forbiddenSource of [
+  `node:${"child_" + "process"}`,
+  `node:${"ht" + "tp"}`,
+  `node:${"ht" + "tps"}`,
+  `node:${"n" + "et"}`,
+  `node:${"t" + "ls"}`,
+  `${"process"}.${"env"}`,
+  `${"globalThis"}.${"fetch"}`,
+]) {
+  assert.equal(materializerSource.includes(forbiddenSource), false);
+}
+
+for (const deploymentId of ["", "dpl_", "DPL_123", "dpl_bad-value", 42]) {
+  assert.throws(
+    () => createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+      request: request({
+        deployment: {
+          ...currentDeploymentRequest.deployment,
+          deployment_id: deploymentId,
+        },
+      }),
+      now_epoch_ms: NOW,
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_MATERIALIZER_INPUT",
+  );
+}
+
+for (const deploymentOverride of [
+  { project_id: "prj_wrong" },
+  { team_id: "team_wrong" },
+  { branch: "preview" },
+  { target: "preview" },
+  { source: "manual" },
+]) {
+  assert.throws(
+    () => createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+      request: request({
+        deployment: {
+          ...currentDeploymentRequest.deployment,
+          ...deploymentOverride,
+        },
+      }),
+      now_epoch_ms: NOW,
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_MATERIALIZER_INPUT",
+  );
+}
+assert.throws(
+  () => createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: request({
+      repository: {
+        ...currentDeploymentRequest.repository,
+        remote_repository: "attacker/aifinder",
+      },
+      deployment: currentDeploymentRequest.deployment,
+    }),
+    now_epoch_ms: NOW,
+  }),
+  (error) => error?.code === "FIRST_ENVIRONMENT_MATERIALIZER_INPUT",
+);
+assert.throws(
+  () => createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: request({
+      deployment: {
+        ...currentDeploymentRequest.deployment,
+        deployed_commit: "0".repeat(40),
+      },
+    }),
+    now_epoch_ms: NOW,
+  }),
+  (error) => error?.code === "FIRST_ENVIRONMENT_MATERIALIZER_INPUT",
+);
+assert.throws(
+  () => validateAdminV1OfficialFirstEnvironmentAuthorization({
+    ...currentDeployment,
+    authorization_closure: {
+      ...currentDeployment.authorization_closure,
+      deployment: {
+        ...currentDeployment.authorization_closure.deployment,
+        deployment_id: HISTORICAL_DEPLOYMENT_ID,
+      },
+    },
+  }, {
+    now_epoch_ms: NOW,
+    allow_hermetic_test: true,
+  }),
+  (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+);
 assert.match(first.authorization_id_sha256, /^[0-9a-f]{64}$/u);
 assert.match(first.review_approval_sha256, /^[0-9a-f]{64}$/u);
 assert.match(first.one_use_authorization_sha256, /^[0-9a-f]{64}$/u);
@@ -233,5 +366,5 @@ try {
 }
 
 console.log(
-  "PASS_FIRST_ENVIRONMENT_MATERIALIZER assertions=28 live_records_created=0 credential_value_reads=0 provider_calls=0",
+  "PASS_FIRST_ENVIRONMENT_MATERIALIZER assertions=57 live_records_created=0 credential_value_reads=0 provider_calls=0",
 );
