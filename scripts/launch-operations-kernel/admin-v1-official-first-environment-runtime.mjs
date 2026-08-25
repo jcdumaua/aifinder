@@ -51,11 +51,13 @@ const AUTHORIZATION_KEYS = Object.freeze([
   "run_id",
   "repository",
   "execution",
+  "authorization_closure",
 ]);
 const REPOSITORY_KEYS = Object.freeze([
   "root",
   "branch",
   "head",
+  "tree",
   "origin_main",
   "remote_main",
   "ahead",
@@ -64,6 +66,30 @@ const REPOSITORY_KEYS = Object.freeze([
   "worktree_count",
   "status_sha256",
   "remote_repository",
+]);
+const AUTHORIZATION_CLOSURE_KEYS = Object.freeze([
+  "authorization_mode",
+  "phase_identity",
+  "reviewed_package_sha256",
+  "reviewed_package_bytes",
+  "authorization_id",
+  "gemini_approval_token_sha256",
+  "direct_james_approval_sha256",
+  "candidate_member_count",
+  "repository_tree",
+  "materializer_source_sha256",
+  "credential_loader_source_sha256",
+  "supervisor_policy_sha256",
+  "independent_semantic_pin_set_sha256",
+  "transport_dependency_source_sha256",
+  "deployment",
+  "credential_sources",
+  "capability_budget",
+  "contracts",
+]);
+const DEPLOYMENT_KEYS = Object.freeze([
+  "deployment_id", "project_id", "team_id", "deployed_commit", "branch",
+  "target", "source", "state",
 ]);
 const EXECUTION_KEYS = Object.freeze([
   "journal_directory",
@@ -127,7 +153,7 @@ function deepFreeze(value) {
 
 export function validateAdminV1OfficialFirstEnvironmentAuthorization(
   record,
-  { now_epoch_ms = Date.now() } = {},
+  { now_epoch_ms = Date.now(), allow_hermetic_test = false } = {},
 ) {
   let value;
   try {
@@ -141,12 +167,58 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
   const expires = exactTimestamp(value?.expires_at);
   const repository = value?.repository;
   const execution = value?.execution;
+  const closure = value?.authorization_closure;
+  const deployment = closure?.deployment;
+  const sources = closure?.credential_sources;
+  const budget = closure?.capability_budget;
+  const contracts = closure?.contracts;
+  let authorizationIdSha256 = null;
+  let reviewApprovalSha256 = null;
+  let oneUseAuthorizationSha256 = null;
+  try {
+    authorizationIdSha256 = sha256Hex(canonicalJson({
+      domain: "AIFINDER_FIRST_ENVIRONMENT_AUTHORIZATION_ID_V1",
+      value: {
+        authorization_id: closure?.authorization_id,
+        run_id: value?.run_id,
+      },
+    }));
+    reviewApprovalSha256 = sha256Hex(canonicalJson({
+      domain: "AIFINDER_FIRST_ENVIRONMENT_REVIEW_APPROVAL_V1",
+      value: {
+        phase_identity: closure?.phase_identity,
+        reviewed_package_sha256: closure?.reviewed_package_sha256,
+        reviewed_package_bytes: closure?.reviewed_package_bytes,
+        gemini_approval_token_sha256: closure?.gemini_approval_token_sha256,
+        direct_james_approval_sha256: closure?.direct_james_approval_sha256,
+      },
+    }));
+    oneUseAuthorizationSha256 = sha256Hex(canonicalJson({
+      domain: "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V1",
+      value: {
+        authorization_id_sha256: authorizationIdSha256,
+        review_approval_sha256: reviewApprovalSha256,
+        run_id: value?.run_id,
+        created_at: value?.created_at,
+        expires_at: value?.expires_at,
+        candidate_identity_sha256: value?.candidate_identity_sha256,
+        manifest_sha256: value?.manifest_sha256,
+        repository,
+        authorization_closure: closure,
+      },
+    }));
+  } catch {
+    // The single validation error below is the fail-closed public surface.
+  }
   if (
     !Number.isSafeInteger(now_epoch_ms) ||
     !exactKeys(value, AUTHORIZATION_KEYS) ||
     value.schema_version !== 1 ||
     value.operation_class !==
       ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS ||
+    value.authorization_id_sha256 !== authorizationIdSha256 ||
+    value.review_approval_sha256 !== reviewApprovalSha256 ||
+    value.one_use_authorization_sha256 !== oneUseAuthorizationSha256 ||
     ![
       value.authorization_id_sha256,
       value.one_use_authorization_sha256,
@@ -167,6 +239,7 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
     realpathSync(repository.root) !== repository.root ||
     repository.branch !== "main" ||
     !SHA1_PATTERN.test(repository.head ?? "") ||
+    !SHA1_PATTERN.test(repository.tree ?? "") ||
     repository.origin_main !== repository.head ||
     repository.remote_main !== repository.head ||
     repository.ahead !== 0 || repository.behind !== 0 ||
@@ -183,9 +256,74 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
     execution.preview_team_slug !== "ai-finder-s-projects" ||
     execution.environment_git_branch !== "main" ||
     execution.environment_key !== "ADMIN_PASSWORD" ||
-    execution.credential_source_name !== "ENV_LOCAL" ||
-    execution.credential_source_contract !==
-      "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION"
+    execution.credential_source_name !== "PROCESS_ENV_EXACT_KEY" ||
+    execution.credential_source_contract !== "DIRECT_PROPERTY_ACCESS_NO_ENUMERATION" ||
+    !exactKeys(closure, AUTHORIZATION_CLOSURE_KEYS) ||
+    !["LIVE", "HERMETIC_TEST_ONLY"].includes(closure.authorization_mode) ||
+    (closure.authorization_mode === "HERMETIC_TEST_ONLY" &&
+      allow_hermetic_test !== true) ||
+    !/^ADMIN_V1_[A-Z0-9_]+$/u.test(closure.phase_identity ?? "") ||
+    !isSha256(closure.reviewed_package_sha256) ||
+    !Number.isSafeInteger(closure.reviewed_package_bytes) ||
+    closure.reviewed_package_bytes < 1 ||
+    !UUID_PATTERN.test(closure.authorization_id ?? "") ||
+    !isSha256(closure.gemini_approval_token_sha256) ||
+    !isSha256(closure.direct_james_approval_sha256) ||
+    !Number.isSafeInteger(closure.candidate_member_count) ||
+    closure.candidate_member_count < 1 ||
+    closure.repository_tree !== repository.tree ||
+    ![
+      closure.materializer_source_sha256,
+      closure.credential_loader_source_sha256,
+      closure.supervisor_policy_sha256,
+      closure.independent_semantic_pin_set_sha256,
+      closure.transport_dependency_source_sha256,
+    ].every(isSha256) ||
+    closure.transport_dependency_source_sha256 !==
+      value.transport_source_sha256 ||
+    !exactKeys(deployment, DEPLOYMENT_KEYS) ||
+    deployment.deployment_id !== "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj" ||
+    deployment.project_id !== execution.preview_project_id ||
+    deployment.team_id !== execution.preview_team_id ||
+    deployment.deployed_commit !== repository.head ||
+    deployment.branch !== "main" || deployment.target !== "production" ||
+    deployment.source !== "git/github" || deployment.state !== "READY" ||
+    !exactKeys(sources, ["environment_value", "provider_auth"]) ||
+    !exactKeys(sources.environment_value, ["key_name", "source_name"]) ||
+    sources.environment_value.key_name !== "ADMIN_PASSWORD" ||
+    sources.environment_value.source_name !== "PROCESS_ENV_EXACT_KEY" ||
+    !exactKeys(sources.provider_auth, ["key_name", "source_name"]) ||
+    sources.provider_auth.key_name !== "token" ||
+    sources.provider_auth.source_name !==
+      "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE" ||
+    !exactKeys(budget, [
+      "credential_value_reads", "environment_creates", "environment_deletes",
+      "environment_identity_reads", "full_official_ledger", "git_writes",
+      "replays", "retries", "second_invocations", "storage_rpc_actions",
+      "supabase_reads", "supabase_writes",
+    ]) ||
+    canonicalJson(budget) !== canonicalJson({
+      credential_value_reads: 2,
+      environment_creates: 1,
+      environment_deletes: 1,
+      environment_identity_reads: 1,
+      full_official_ledger: 0,
+      git_writes: 0,
+      replays: 0,
+      retries: 0,
+      second_invocations: 0,
+      storage_rpc_actions: 0,
+      supabase_reads: 0,
+      supabase_writes: 0,
+    }) ||
+    !exactKeys(contracts, [
+      "authorization_spend_boundary", "cleanup", "journal", "recovery",
+    ]) ||
+    contracts.authorization_spend_boundary !== "PROCESS_START" ||
+    contracts.cleanup !== "EXACT_OWNED_ENVIRONMENT_ONLY" ||
+    contracts.journal !== "DURABLE_FAIL_CLOSED" ||
+    contracts.recovery !==
+      "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN"
   ) {
     throw new AdminV1OfficialFirstEnvironmentRuntimeError(
       "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
@@ -484,12 +622,13 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
   journal,
   load_sensitive,
   now_epoch_ms = Date.now(),
+  allow_hermetic_test = false,
 }) {
   let validated;
   try {
     validated = validateAdminV1OfficialFirstEnvironmentAuthorization(
       authorization,
-      { now_epoch_ms },
+      { now_epoch_ms, allow_hermetic_test },
     );
     if (
       !adapter || typeof adapter.createEnvironment !== "function" ||

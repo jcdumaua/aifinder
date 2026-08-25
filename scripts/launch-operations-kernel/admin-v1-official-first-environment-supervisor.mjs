@@ -11,7 +11,12 @@ import {
 } from "./admin-v1-official-first-environment-runtime.mjs";
 import {
   createAdminV1OfficialFirstEnvironmentAdapter,
+  createAdminV1OfficialFirstEnvironmentNativeTransport,
 } from "./admin-v1-official-first-environment-live-platform.mjs";
+import {
+  createAdminV1OfficialFirstEnvironmentCredentialLoader,
+  readAdminV1OfficialFirstEnvironmentVercelCliAuth,
+} from "./admin-v1-official-first-environment-credential-loader.mjs";
 import { verifyRepositoryCandidateManifest } from "./manifest.mjs";
 
 const REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
@@ -23,6 +28,12 @@ const TRANSPORT_RELATIVE_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs";
 const SCHEMA_RELATIVE_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-authorization.schema.json";
+const MATERIALIZER_RELATIVE_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs";
+const CREDENTIAL_LOADER_RELATIVE_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs";
+const SUPERVISOR_POLICY_RELATIVE_PATH =
+  "scripts/launch-operations-supervisor/supervisor-policy.json";
 const MANIFEST_RELATIVE_PATH =
   "scripts/launch-operations-kernel/candidate-manifest.json";
 const GIT_EXECUTABLE = "/Library/Developer/CommandLineTools/usr/bin/git";
@@ -41,11 +52,14 @@ const GIT_ENVIRONMENT = Object.freeze({
 
 export const ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_CONTRACT =
   Object.freeze({
-    source_name: "ENV_LOCAL",
     key_name: "ADMIN_PASSWORD",
-    loader_identity_binding:
-      "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION",
-    value_access_during_qualification: 0,
+    source_name: "PROCESS_ENV_EXACT_KEY",
+  });
+
+export const ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_PROVIDER_SOURCE_CONTRACT =
+  Object.freeze({
+    key_name: "token",
+    source_name: "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE",
   });
 
 export class AdminV1OfficialFirstEnvironmentSupervisorError extends Error {
@@ -114,6 +128,12 @@ function verifySourceBindings({ authorization, repositoryRoot, supervisorPath })
       authorization.transport_source_sha256],
     [repositoryPath(repositoryRoot, SCHEMA_RELATIVE_PATH),
       authorization.authorization_schema_sha256],
+    [repositoryPath(repositoryRoot, MATERIALIZER_RELATIVE_PATH),
+      authorization.authorization_closure.materializer_source_sha256],
+    [repositoryPath(repositoryRoot, CREDENTIAL_LOADER_RELATIVE_PATH),
+      authorization.authorization_closure.credential_loader_source_sha256],
+    [repositoryPath(repositoryRoot, SUPERVISOR_POLICY_RELATIVE_PATH),
+      authorization.authorization_closure.supervisor_policy_sha256],
   ];
   for (const [target, expected] of bindings) {
     const bytes = regularFileBytes(
@@ -127,6 +147,90 @@ function verifySourceBindings({ authorization, repositoryRoot, supervisorPath })
       );
     }
   }
+  try {
+    const policy = JSON.parse(readFileSync(
+      repositoryPath(repositoryRoot, SUPERVISOR_POLICY_RELATIVE_PATH),
+      "utf8",
+    ));
+    if (
+      policy.independent_semantic_pin_set_sha256 !==
+        authorization.authorization_closure.independent_semantic_pin_set_sha256
+    ) throw new Error("SEMANTIC_PIN");
+  } catch {
+    throw new AdminV1OfficialFirstEnvironmentSupervisorError(
+      "FIRST_ENVIRONMENT_SUPERVISOR_SOURCE_MISMATCH",
+    );
+  }
+}
+
+export function createAdminV1OfficialFirstEnvironmentNativeDependencies({
+  write_output,
+  environment = process.env,
+  read_provider_auth,
+  fetch_impl = globalThis.fetch,
+  repository_root = REPOSITORY_ROOT,
+  supervisor_path = fileURLToPath(import.meta.url),
+  now_epoch_ms = Date.now(),
+  inspect_repository,
+  verify_candidate,
+  create_journal,
+  allow_hermetic_test = false,
+} = {}) {
+  if (typeof write_output !== "function" || typeof fetch_impl !== "function") {
+    throw new AdminV1OfficialFirstEnvironmentSupervisorError(
+      "FIRST_ENVIRONMENT_SUPERVISOR_LIVE_BINDING_REQUIRED",
+    );
+  }
+  const credentialLoader =
+    createAdminV1OfficialFirstEnvironmentCredentialLoader({
+      environment,
+      read_provider_auth: read_provider_auth ?? (() =>
+        readAdminV1OfficialFirstEnvironmentVercelCliAuth({
+          repository_root,
+        })),
+    });
+  let nativeTransport = null;
+  const dependencies = {
+    repository_root,
+    supervisor_path,
+    now_epoch_ms,
+    write_output,
+    load_credential({ source_contract }) {
+      return credentialLoader.load_environment_value({ source_contract });
+    },
+    transport: Object.freeze({
+      async execute(request) {
+        if (nativeTransport === null) {
+          const providerAuth = await credentialLoader.load_provider_auth({
+            source_contract:
+              ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_PROVIDER_SOURCE_CONTRACT,
+          });
+          nativeTransport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+            provider_auth: providerAuth,
+            fetch_impl,
+          });
+        }
+        return nativeTransport.execute(request);
+      },
+    }),
+    clear_sensitive() {
+      credentialLoader.clear_sensitive();
+      nativeTransport = null;
+    },
+  };
+  if (typeof inspect_repository === "function") {
+    dependencies.inspect_repository = inspect_repository;
+  }
+  if (typeof verify_candidate === "function") {
+    dependencies.verify_candidate = verify_candidate;
+  }
+  if (typeof create_journal === "function") {
+    dependencies.create_journal = create_journal;
+  }
+  if (allow_hermetic_test === true) {
+    dependencies.allow_hermetic_test = true;
+  }
+  return Object.freeze(dependencies);
 }
 
 function gitOutput(repositoryRoot, args) {
@@ -205,6 +309,7 @@ export function inspectAdminV1OfficialFirstEnvironmentRepository(
       "symbolic-ref", "--quiet", "--short", "HEAD",
     ]),
     head,
+    tree: oneLine(repositoryRoot, ["rev-parse", "HEAD^{tree}"]),
     origin_main: originMain,
     remote_main: remoteMatch[1],
     ahead: Number(counts[0]),
@@ -337,7 +442,10 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
     const firstRead = readCanonicalPrivateAuthorization(argumentsList[2]);
     const authorization = validateAdminV1OfficialFirstEnvironmentAuthorization(
       firstRead.value,
-      { now_epoch_ms: dependencies.now_epoch_ms ?? Date.now() },
+      {
+        now_epoch_ms: dependencies.now_epoch_ms ?? Date.now(),
+        allow_hermetic_test: dependencies.allow_hermetic_test === true,
+      },
     );
     verifySourceBindings({ authorization, repositoryRoot, supervisorPath });
     const verifyCandidate = dependencies.verify_candidate ??
@@ -347,7 +455,9 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
       candidate?.verified !== true ||
       candidate.candidate_identity_sha256 !==
         authorization.candidate_identity_sha256 ||
-      candidate.manifest_sha256 !== authorization.manifest_sha256
+      candidate.manifest_sha256 !== authorization.manifest_sha256 ||
+      candidate.member_count !==
+        authorization.authorization_closure.candidate_member_count
     ) {
       throw new AdminV1OfficialFirstEnvironmentSupervisorError(
         "FIRST_ENVIRONMENT_SUPERVISOR_CANDIDATE_MISMATCH",
@@ -404,6 +514,7 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
         return { environment_value: value };
       },
       now_epoch_ms: dependencies.now_epoch_ms ?? Date.now(),
+      allow_hermetic_test: dependencies.allow_hermetic_test === true,
     });
     const output = sanitizedRuntimeOutput(result);
     dependencies.write_output(output);
@@ -415,20 +526,24 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
     const code = safeCode(error);
     dependencies.write_output?.({ status: "FAIL", code });
     return { exit_code: 1, code };
+  } finally {
+    dependencies.clear_sensitive?.();
   }
 }
 
 async function main() {
-  const result = await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
-    process.argv.slice(2),
-    {
+  const dependencies =
+    createAdminV1OfficialFirstEnvironmentNativeDependencies({
       repository_root: REPOSITORY_ROOT,
       supervisor_path: fileURLToPath(import.meta.url),
       now_epoch_ms: Date.now(),
       write_output(value) {
         console.log(canonicalJson(value));
       },
-    },
+    });
+  const result = await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+    process.argv.slice(2),
+    dependencies,
   );
   process.exitCode = result.exit_code;
 }

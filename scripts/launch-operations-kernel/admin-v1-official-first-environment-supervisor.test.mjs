@@ -13,8 +13,20 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_CONTRACT,
+  createAdminV1OfficialFirstEnvironmentNativeDependencies,
   dispatchAdminV1OfficialFirstEnvironmentSupervisor,
 } from "./admin-v1-official-first-environment-supervisor.mjs";
+import {
+  createAdminV1OfficialFirstEnvironmentAuthorizationRecord,
+} from "./admin-v1-official-first-environment-materializer.mjs";
+import {
+  createAdminV1OfficialFirstEnvironmentNativeTransport,
+} from "./admin-v1-official-first-environment-live-platform.mjs";
+
+assert.equal(
+  typeof createAdminV1OfficialFirstEnvironmentNativeDependencies,
+  "function",
+);
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const SUPERVISOR_PATH = path.join(
@@ -32,6 +44,18 @@ const TRANSPORT_PATH = path.join(
 const SCHEMA_PATH = path.join(
   import.meta.dirname,
   "admin-v1-official-first-environment-authorization.schema.json",
+);
+const MATERIALIZER_PATH = path.join(
+  import.meta.dirname,
+  "admin-v1-official-first-environment-materializer.mjs",
+);
+const CREDENTIAL_LOADER_PATH = path.join(
+  import.meta.dirname,
+  "admin-v1-official-first-environment-credential-loader.mjs",
+);
+const SUPERVISOR_POLICY_PATH = path.join(
+  ROOT,
+  "scripts/launch-operations-supervisor/supervisor-policy.json",
 );
 const MANIFEST_PATH = path.join(import.meta.dirname, "candidate-manifest.json");
 const SUPERVISOR_SOURCE = readFileSync(SUPERVISOR_PATH, "utf8");
@@ -101,50 +125,62 @@ function memoryJournal() {
 
 function authorization(overrides = {}) {
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
-  const value = {
-    schema_version: 1,
-    operation_class:
-      "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1",
-    authorization_id_sha256: "1".repeat(64),
-    one_use_authorization_sha256: "2".repeat(64),
-    review_approval_sha256: "3".repeat(64),
-    candidate_identity_sha256: manifest.candidate_identity_sha256,
-    manifest_sha256: sha256(readFileSync(MANIFEST_PATH)),
-    runtime_source_sha256: sha256(readFileSync(RUNTIME_PATH)),
-    supervisor_source_sha256: sha256(readFileSync(SUPERVISOR_PATH)),
-    transport_source_sha256: sha256(readFileSync(TRANSPORT_PATH)),
-    authorization_schema_sha256: sha256(readFileSync(SCHEMA_PATH)),
-    created_at: "2026-08-24T15:00:00.000Z",
-    expires_at: "2026-08-24T17:00:00.000Z",
-    run_id: RUN_ID,
-    repository: {
-      root: ROOT,
-      branch: "main",
-      head: HEAD,
-      origin_main: HEAD,
-      remote_main: HEAD,
-      ahead: 0,
-      behind: 0,
-      index_empty: true,
-      worktree_count: 1,
-      status_sha256: "7".repeat(64),
-      remote_repository: "jcdumaua/aifinder",
+  const supervisorPolicy = JSON.parse(readFileSync(SUPERVISOR_POLICY_PATH));
+  const transportSourceSha256 = sha256(readFileSync(TRANSPORT_PATH));
+  const value = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: {
+      authorization_mode: "HERMETIC_TEST_ONLY",
+      phase_identity:
+        "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_CREATE_ONLY_HERMETIC_TEST_V1",
+      reviewed_package_sha256: "a".repeat(64),
+      reviewed_package_bytes: 1,
+      gemini_approval_token_sha256: "b".repeat(64),
+      direct_james_approval_sha256: "c".repeat(64),
+      authorization_id: "223e4567-e89b-42d3-a456-426614174001",
+      run_id: RUN_ID,
+      created_at: "2026-08-24T15:00:00.000Z",
+      expires_at: "2026-08-24T17:00:00.000Z",
+      candidate_identity_sha256: manifest.candidate_identity_sha256,
+      manifest_sha256: sha256(readFileSync(MANIFEST_PATH)),
+      candidate_member_count: manifest.member_count,
+      runtime_source_sha256: sha256(readFileSync(RUNTIME_PATH)),
+      supervisor_source_sha256: sha256(readFileSync(SUPERVISOR_PATH)),
+      transport_source_sha256: transportSourceSha256,
+      transport_dependency_source_sha256: transportSourceSha256,
+      authorization_schema_sha256: sha256(readFileSync(SCHEMA_PATH)),
+      materializer_source_sha256: sha256(readFileSync(MATERIALIZER_PATH)),
+      credential_loader_source_sha256:
+        sha256(readFileSync(CREDENTIAL_LOADER_PATH)),
+      supervisor_policy_sha256: sha256(readFileSync(SUPERVISOR_POLICY_PATH)),
+      independent_semantic_pin_set_sha256:
+        supervisorPolicy.independent_semantic_pin_set_sha256,
+      repository: {
+        root: ROOT,
+        branch: "main",
+        head: HEAD,
+        tree: "d".repeat(40),
+        origin_main: HEAD,
+        remote_main: HEAD,
+        ahead: 0,
+        behind: 0,
+        index_empty: true,
+        worktree_count: 1,
+        status_sha256: "7".repeat(64),
+        remote_repository: "jcdumaua/aifinder",
+      },
+      deployment: {
+        deployment_id: "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj",
+        project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+        team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+        deployed_commit: HEAD,
+        branch: "main",
+        target: "production",
+        source: "git/github",
+        state: "READY",
+      },
     },
-    execution: {
-      journal_directory:
-        `/Users/jamescarlodumaua/Downloads/` +
-        `AiFinder-Admin-V1-Official-First-Environment-${RUN_ID}`,
-      preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
-      preview_project_name: "aifinder",
-      preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
-      preview_team_slug: "ai-finder-s-projects",
-      environment_git_branch: "main",
-      environment_key: "ADMIN_PASSWORD",
-      credential_source_name: "ENV_LOCAL",
-      credential_source_contract:
-        "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION",
-    },
-  };
+    now_epoch_ms: NOW,
+  });
   return {
     ...value,
     ...overrides,
@@ -203,6 +239,7 @@ function dependencies({ journal = memoryJournal(), credential = true } = {}) {
       repository_root: ROOT,
       supervisor_path: SUPERVISOR_PATH,
       now_epoch_ms: NOW,
+      allow_hermetic_test: true,
       inspect_repository: (record) => structuredClone(record.repository),
       verify_candidate(record) {
         counters.candidate += 1;
@@ -210,6 +247,8 @@ function dependencies({ journal = memoryJournal(), credential = true } = {}) {
           verified: true,
           candidate_identity_sha256: record.candidate_identity_sha256,
           manifest_sha256: record.manifest_sha256,
+          member_count:
+            record.authorization_closure.candidate_member_count,
         };
       },
       create_journal() {
@@ -391,9 +430,139 @@ try {
     true,
   );
 
+  const nativeJournal = memoryJournal();
+  const nativeOutput = [];
+  const nativeEnvironmentReads = [];
+  const nativeProviderReads = [];
+  const nativeFetches = [];
+  const nativeProviderAuth = Buffer.from("SYNTHETIC_NATIVE_VERCEL", "utf8");
+  const nativeEnvironment = new Proxy({
+    ADMIN_PASSWORD: "SYNTHETIC_NATIVE_ADMIN",
+  }, {
+    get(target, property, receiver) {
+      nativeEnvironmentReads.push(property);
+      assert.equal(property, "ADMIN_PASSWORD");
+      assert.equal(receiver === nativeEnvironment, true);
+      return target.ADMIN_PASSWORD;
+    },
+    ownKeys() {
+      throw new Error("NATIVE_ENVIRONMENT_ENUMERATION_FORBIDDEN");
+    },
+  });
+  const nativeDependencies =
+    createAdminV1OfficialFirstEnvironmentNativeDependencies({
+      repository_root: ROOT,
+      supervisor_path: SUPERVISOR_PATH,
+      now_epoch_ms: NOW,
+      allow_hermetic_test: true,
+      environment: nativeEnvironment,
+      read_provider_auth() {
+        nativeProviderReads.push("VERCEL_CLI_AUTH_JSON");
+        return nativeProviderAuth;
+      },
+      async fetch_impl(url, init) {
+        nativeFetches.push({ method: init.method, url });
+        assert.equal(url.startsWith("https://api.vercel.com/"), true);
+        assert.equal(init.redirect, "error");
+        if (init.method === "POST") {
+          assert.equal(JSON.parse(init.body).value, "SYNTHETIC_NATIVE_ADMIN");
+          return {
+            status: 200,
+            async text() {
+              return '{"id":"env-native-1"}';
+            },
+          };
+        }
+        if (init.method === "GET") {
+          return {
+            status: 200,
+            async text() {
+              return canonicalJson({
+                id: "env-native-1",
+                key: "ADMIN_PASSWORD",
+                type: "encrypted",
+                target: ["preview"],
+                gitBranch: "main",
+                projectId: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+                teamId: "team_9POJYxNnjIBbrQ19My8M5yG3",
+              });
+            },
+          };
+        }
+        assert.equal(init.method, "DELETE");
+        return { status: 204, async text() { return ""; } };
+      },
+      inspect_repository: (record) => structuredClone(record.repository),
+      verify_candidate(record) {
+        return {
+          verified: true,
+          candidate_identity_sha256: record.candidate_identity_sha256,
+          manifest_sha256: record.manifest_sha256,
+          member_count:
+            record.authorization_closure.candidate_member_count,
+        };
+      },
+      create_journal() {
+        return nativeJournal;
+      },
+      write_output(value) {
+        nativeOutput.push(structuredClone(value));
+      },
+    });
+  assert.deepEqual(Object.keys(nativeDependencies.transport), ["execute"]);
+  assert.equal(Object.hasOwn(nativeDependencies.transport, "git"), false);
+  const nativePath = writeAuthorization(
+    mkdtempSync(path.join(temporaryRoot, "native-success-")),
+    authorization(),
+  );
+  assert.deepEqual(
+    await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+      ["--run-first-environment", "--authorization", nativePath],
+      nativeDependencies,
+    ),
+    { exit_code: 0, code: "FIRST_ENVIRONMENT_SUPERVISOR_COMPLETE" },
+  );
+  assert.deepEqual(nativeEnvironmentReads, ["ADMIN_PASSWORD"]);
+  assert.deepEqual(nativeProviderReads, ["VERCEL_CLI_AUTH_JSON"]);
+  assert.deepEqual(nativeFetches.map(({ method }) => method), [
+    "POST", "GET", "DELETE",
+  ]);
+  assert.equal(nativeProviderAuth.every((value) => value === 0), true);
+  assert.equal(nativeOutput.at(-1)?.status, "PASS");
+
+  let deniedFetches = 0;
+  const deniedTransport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+    provider_auth: Buffer.from("SYNTHETIC_DENIED", "utf8"),
+    async fetch_impl() {
+      deniedFetches += 1;
+      throw new Error("FETCH_MUST_NOT_RUN");
+    },
+  });
+  assert.deepEqual(Object.keys(deniedTransport), ["execute"]);
+  await assert.rejects(
+    deniedTransport.execute({
+      operation: "create_environment",
+      descriptor: {
+        service: "PREVIEW",
+        method: "POST",
+        path: "https://attacker.invalid/",
+        body: {},
+      },
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED",
+  );
+  await assert.rejects(
+    deniedTransport.execute({
+      operation: "git",
+      descriptor: { service: "VERCEL", method: "POST", path: "/", body: {} },
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED",
+  );
+  assert.equal(deniedFetches, 0);
+
   console.log(
     "PASS_ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_SUPERVISOR " +
-      "assertions=17 failures=0 process_start_before_credential=true " +
+      "assertions=31 failures=0 process_start_before_credential=true " +
       "credential_value_reads_before_process_start=0 real_provider_calls=0 " +
       "environment_create_max=1 environment_identity_read_max=1 " +
       "environment_delete_exact_owned_max=1 git_remote_mutations=0 " +

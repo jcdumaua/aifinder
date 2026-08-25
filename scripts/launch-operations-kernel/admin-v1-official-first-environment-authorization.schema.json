@@ -20,7 +20,8 @@
     "expires_at",
     "run_id",
     "repository",
-    "execution"
+    "execution",
+    "authorization_closure"
   ],
   "properties": {
     "schema_version": { "const": 1 },
@@ -84,6 +85,7 @@
         "root",
         "branch",
         "head",
+        "tree",
         "origin_main",
         "remote_main",
         "ahead",
@@ -97,6 +99,7 @@
         "root": { "const": "/Users/jamescarlodumaua/aifinder" },
         "branch": { "const": "main" },
         "head": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "origin_main": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "remote_main": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "ahead": { "const": 0 },
@@ -135,9 +138,167 @@
         "preview_team_slug": { "const": "ai-finder-s-projects" },
         "environment_git_branch": { "const": "main" },
         "environment_key": { "const": "ADMIN_PASSWORD" },
-        "credential_source_name": { "const": "ENV_LOCAL" },
+        "credential_source_name": { "const": "PROCESS_ENV_EXACT_KEY" },
         "credential_source_contract": {
-          "const": "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION"
+          "const": "DIRECT_PROPERTY_ACCESS_NO_ENUMERATION"
+        }
+      }
+    },
+    "authorization_closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorization_mode",
+        "phase_identity",
+        "reviewed_package_sha256",
+        "reviewed_package_bytes",
+        "authorization_id",
+        "gemini_approval_token_sha256",
+        "direct_james_approval_sha256",
+        "candidate_member_count",
+        "repository_tree",
+        "materializer_source_sha256",
+        "credential_loader_source_sha256",
+        "supervisor_policy_sha256",
+        "independent_semantic_pin_set_sha256",
+        "transport_dependency_source_sha256",
+        "deployment",
+        "credential_sources",
+        "capability_budget",
+        "contracts"
+      ],
+      "properties": {
+        "authorization_mode": {
+          "enum": ["LIVE", "HERMETIC_TEST_ONLY"]
+        },
+        "phase_identity": {
+          "type": "string",
+          "pattern": "^ADMIN_V1_[A-Z0-9_]+$"
+        },
+        "reviewed_package_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reviewed_package_bytes": { "type": "integer", "minimum": 1 },
+        "authorization_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        },
+        "gemini_approval_token_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "direct_james_approval_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "candidate_member_count": { "type": "integer", "minimum": 1 },
+        "repository_tree": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "materializer_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "credential_loader_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "supervisor_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "independent_semantic_pin_set_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transport_dependency_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "deployment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deployment_id", "project_id", "team_id", "deployed_commit",
+            "branch", "target", "source", "state"
+          ],
+          "properties": {
+            "deployment_id": { "const": "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj" },
+            "project_id": { "const": "prj_BPaQVKdElriAhxabhoTkg8LysQ5R" },
+            "team_id": { "const": "team_9POJYxNnjIBbrQ19My8M5yG3" },
+            "deployed_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "branch": { "const": "main" },
+            "target": { "const": "production" },
+            "source": { "const": "git/github" },
+            "state": { "const": "READY" }
+          }
+        },
+        "credential_sources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["environment_value", "provider_auth"],
+          "properties": {
+            "environment_value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key_name", "source_name"],
+              "properties": {
+                "key_name": { "const": "ADMIN_PASSWORD" },
+                "source_name": { "const": "PROCESS_ENV_EXACT_KEY" }
+              }
+            },
+            "provider_auth": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key_name", "source_name"],
+              "properties": {
+                "key_name": { "const": "token" },
+                "source_name": { "const": "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE" }
+              }
+            }
+          }
+        },
+        "capability_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "credential_value_reads", "environment_creates",
+            "environment_deletes", "environment_identity_reads",
+            "full_official_ledger", "git_writes", "replays", "retries",
+            "second_invocations", "storage_rpc_actions", "supabase_reads",
+            "supabase_writes"
+          ],
+          "properties": {
+            "credential_value_reads": { "const": 2 },
+            "environment_creates": { "const": 1 },
+            "environment_deletes": { "const": 1 },
+            "environment_identity_reads": { "const": 1 },
+            "full_official_ledger": { "const": 0 },
+            "git_writes": { "const": 0 },
+            "replays": { "const": 0 },
+            "retries": { "const": 0 },
+            "second_invocations": { "const": 0 },
+            "storage_rpc_actions": { "const": 0 },
+            "supabase_reads": { "const": 0 },
+            "supabase_writes": { "const": 0 }
+          }
+        },
+        "contracts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "authorization_spend_boundary", "cleanup", "journal", "recovery"
+          ],
+          "properties": {
+            "authorization_spend_boundary": { "const": "PROCESS_START" },
+            "cleanup": { "const": "EXACT_OWNED_ENVIRONMENT_ONLY" },
+            "journal": { "const": "DURABLE_FAIL_CLOSED" },
+            "recovery": {
+              "const": "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN"
+            }
+          }
         }
       }
     }

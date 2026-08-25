@@ -23,6 +23,9 @@ import {
   AdminV1OfficialFirstEnvironmentPlatformError,
   createAdminV1OfficialFirstEnvironmentAdapter,
 } from "./admin-v1-official-first-environment-live-platform.mjs";
+import {
+  createAdminV1OfficialFirstEnvironmentAuthorizationRecord,
+} from "./admin-v1-official-first-environment-materializer.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const RUN_ID = "123e4567-e89b-42d3-a456-426614174000";
@@ -40,50 +43,58 @@ async function check(name, operation) {
 }
 
 function authorization(overrides = {}) {
-  const value = {
-    schema_version: 1,
-    operation_class:
-      ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS,
-    authorization_id_sha256: "1".repeat(64),
-    one_use_authorization_sha256: "2".repeat(64),
-    review_approval_sha256: "3".repeat(64),
-    candidate_identity_sha256: "4".repeat(64),
-    manifest_sha256: "5".repeat(64),
-    runtime_source_sha256: "6".repeat(64),
-    supervisor_source_sha256: "8".repeat(64),
-    transport_source_sha256: "9".repeat(64),
-    authorization_schema_sha256: "a".repeat(64),
-    created_at: "2026-08-24T15:00:00.000Z",
-    expires_at: "2026-08-24T17:00:00.000Z",
-    run_id: RUN_ID,
-    repository: {
-      root: realpathSync(ROOT),
-      branch: "main",
-      head: "a".repeat(40),
-      origin_main: "a".repeat(40),
-      remote_main: "a".repeat(40),
-      ahead: 0,
-      behind: 0,
-      index_empty: true,
-      worktree_count: 1,
-      status_sha256: "7".repeat(64),
-      remote_repository: "jcdumaua/aifinder",
+  const value = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: {
+      authorization_mode: "HERMETIC_TEST_ONLY",
+      phase_identity:
+        "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_CREATE_ONLY_HERMETIC_TEST_V1",
+      reviewed_package_sha256: "1".repeat(64),
+      reviewed_package_bytes: 1,
+      gemini_approval_token_sha256: "2".repeat(64),
+      direct_james_approval_sha256: "3".repeat(64),
+      authorization_id: "223e4567-e89b-42d3-a456-426614174001",
+      run_id: RUN_ID,
+      created_at: "2026-08-24T15:00:00.000Z",
+      expires_at: "2026-08-24T17:00:00.000Z",
+      candidate_identity_sha256: "4".repeat(64),
+      manifest_sha256: "5".repeat(64),
+      candidate_member_count: 47,
+      runtime_source_sha256: "6".repeat(64),
+      supervisor_source_sha256: "8".repeat(64),
+      transport_source_sha256: "9".repeat(64),
+      transport_dependency_source_sha256: "9".repeat(64),
+      authorization_schema_sha256: "a".repeat(64),
+      materializer_source_sha256: "b".repeat(64),
+      credential_loader_source_sha256: "c".repeat(64),
+      supervisor_policy_sha256: "d".repeat(64),
+      independent_semantic_pin_set_sha256: "e".repeat(64),
+      repository: {
+        root: realpathSync(ROOT),
+        branch: "main",
+        head: "a".repeat(40),
+        tree: "b".repeat(40),
+        origin_main: "a".repeat(40),
+        remote_main: "a".repeat(40),
+        ahead: 0,
+        behind: 0,
+        index_empty: true,
+        worktree_count: 1,
+        status_sha256: "7".repeat(64),
+        remote_repository: "jcdumaua/aifinder",
+      },
+      deployment: {
+        deployment_id: "dpl_2yCcELwLfr2LDejB6FHZaaAWKiuj",
+        project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+        team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+        deployed_commit: "a".repeat(40),
+        branch: "main",
+        target: "production",
+        source: "git/github",
+        state: "READY",
+      },
     },
-    execution: {
-      journal_directory:
-        `/Users/jamescarlodumaua/Downloads/` +
-        `AiFinder-Admin-V1-Official-First-Environment-${RUN_ID}`,
-      preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
-      preview_project_name: "aifinder",
-      preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
-      preview_team_slug: "ai-finder-s-projects",
-      environment_git_branch: "main",
-      environment_key: "ADMIN_PASSWORD",
-      credential_source_name: "ENV_LOCAL",
-      credential_source_contract:
-        "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION",
-    },
-  };
+    now_epoch_ms: NOW,
+  });
   return {
     ...value,
     ...overrides,
@@ -198,7 +209,7 @@ await check("capability surface is narrow and explicit", async () => {
 await check("authorization binds the narrow runtime exactly", async () => {
   const validated = validateAdminV1OfficialFirstEnvironmentAuthorization(
     authorization(),
-    { now_epoch_ms: NOW },
+    { now_epoch_ms: NOW, allow_hermetic_test: true },
   );
   assert.equal(validated.operation_class,
     ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS);
@@ -208,7 +219,7 @@ await check("authorization binds the narrow runtime exactly", async () => {
   assert.throws(
     () => validateAdminV1OfficialFirstEnvironmentAuthorization(
       { ...authorization(), unrelated: true },
-      { now_epoch_ms: NOW },
+      { now_epoch_ms: NOW, allow_hermetic_test: true },
     ),
     (error) =>
       error instanceof AdminV1OfficialFirstEnvironmentRuntimeError &&
@@ -217,7 +228,7 @@ await check("authorization binds the narrow runtime exactly", async () => {
   assert.throws(
     () => validateAdminV1OfficialFirstEnvironmentAuthorization(
       { ...authorization(), operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1" },
-      { now_epoch_ms: NOW },
+      { now_epoch_ms: NOW, allow_hermetic_test: true },
     ),
     (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
   );
@@ -251,6 +262,7 @@ await check("success spends once, proves identity, and cleans exact ownership", 
       return { environment_value: environmentValue };
     },
     now_epoch_ms: NOW,
+    allow_hermetic_test: true,
   });
   assert.deepEqual(adapter.calls, [
     "createEnvironment",
@@ -288,6 +300,7 @@ await check("a spent authorization cannot be replayed", async () => {
       environment_value: Buffer.from("FIRST", "utf8"),
     }),
     now_epoch_ms: NOW,
+    allow_hermetic_test: true,
   });
   const second = fakeAdapter();
   let secondValue = null;
@@ -301,6 +314,7 @@ await check("a spent authorization cannot be replayed", async () => {
         return { environment_value: secondValue };
       },
       now_epoch_ms: NOW,
+      allow_hermetic_test: true,
     }),
     (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_SPENT",
   );
@@ -323,6 +337,7 @@ await check("classified create failure is durable before cleanup", async () => {
       environment_value: Buffer.from("LOCAL", "utf8"),
     }),
     now_epoch_ms: NOW,
+    allow_hermetic_test: true,
   });
   assert.equal(result.classification, "RECOVERY_PENDING");
   assert.deepEqual(adapter.calls, ["createEnvironment"]);
@@ -356,6 +371,7 @@ await check("identity mismatch fails closed after exact owned cleanup", async ()
         environment_value: Buffer.from("LOCAL", "utf8"),
       }),
       now_epoch_ms: NOW,
+      allow_hermetic_test: true,
     }),
     (error) => error?.code === "FIRST_ENVIRONMENT_IDENTITY_UNPROVEN",
   );
@@ -379,6 +395,7 @@ await check("ambiguous cleanup remains recovery pending", async () => {
       environment_value: Buffer.from("LOCAL", "utf8"),
     }),
     now_epoch_ms: NOW,
+    allow_hermetic_test: true,
   });
   assert.equal(result.classification, "RECOVERY_PENDING");
   assert.equal(result.zero_residual_owned_state, false);
@@ -411,6 +428,7 @@ await check("credential failure retires a real secret-free journal", async () =>
           );
         },
         now_epoch_ms: NOW,
+        allow_hermetic_test: true,
       }),
       (error) =>
         error?.code === "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",

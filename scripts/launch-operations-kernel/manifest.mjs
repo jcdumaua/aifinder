@@ -71,6 +71,14 @@ const FIRST_ENVIRONMENT_SUPERVISOR_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs";
 const FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs";
+const FIRST_ENVIRONMENT_MATERIALIZER_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs";
+const FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs";
+const FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs";
+const FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs";
 const INDEPENDENT_SOURCE_REVIEW_PATH =
   "testing/static-test-safety-manifest.json";
 const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
@@ -80,7 +88,11 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   OFFICIAL_AUTHORIZATION_PATH,
   OFFICIAL_AUTHORIZATION_TEST_PATH,
   OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
+  FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH,
   FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
@@ -113,7 +125,11 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   OFFICIAL_AUTHORIZATION_PATH,
   OFFICIAL_AUTHORIZATION_TEST_PATH,
   OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
+  FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH,
   FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
@@ -147,6 +163,9 @@ const CONCRETE_PLATFORM_TEST_PATH =
 const PRIVILEGED_IMPORT_TARGETS = new Set([
   OFFICIAL_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
+  FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+  FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   CONCRETE_RUNNER_PATH,
   CONCRETE_ADAPTER_PATH,
   CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -160,13 +179,30 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   ])],
   [FIRST_ENVIRONMENT_RUNTIME_TEST_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
+    FIRST_ENVIRONMENT_PLATFORM_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   ])],
   [FIRST_ENVIRONMENT_SUPERVISOR_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
+    FIRST_ENVIRONMENT_PLATFORM_PATH,
+    FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   ])],
   [FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH, new Set([
     FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     FIRST_ENVIRONMENT_RUNTIME_PATH,
+    FIRST_ENVIRONMENT_PLATFORM_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+    FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   ])],
   [CONCRETE_RUNNER_PATH, new Set([
     OFFICIAL_RUNTIME_PATH,
@@ -236,6 +272,18 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_CHECKPOINT_TEST_PATH, new Set([CONCRETE_CHECKPOINT_PATH])],
 ]);
 const REVIEWED_NODE_MODULES_BY_PATH = new Map([
+  [FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH, new Set([
+    "node:fs", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH, new Set([
+    "node:assert/strict", "node:fs", "node:os", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_PATH, new Set([
+    "node:fs", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH, new Set([
+    "node:assert/strict", "node:crypto", "node:fs", "node:os", "node:path",
+  ])],
   [FIRST_ENVIRONMENT_RUNTIME_PATH, new Set([
     "node:fs", "node:os", "node:path",
   ])],
@@ -1853,6 +1901,9 @@ function sourceSyntaxFacts(relativePath, source) {
     "scripts/launch-operations-kernel/source-policy.test.mjs",
   ]);
   const exactReviewedProcessUse = (processNode, memberNode, directMember) => {
+    if (directMember === "env") {
+      return relativePath === FIRST_ENVIRONMENT_SUPERVISOR_PATH;
+    }
     if (directMember === "argv") {
       return processArgumentPaths.has(relativePath);
     }
@@ -2497,6 +2548,20 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !source.includes("globalThis.fetch")
     );
   }
+  if (relativePath === FIRST_ENVIRONMENT_PLATFORM_PATH) {
+    return (
+      !capabilities.child_process &&
+      !capabilities.filesystem_mutation &&
+      capabilities.network &&
+      !capabilities.environment &&
+      !broadGit &&
+      source.includes("createAdminV1OfficialFirstEnvironmentNativeTransport") &&
+      source.includes('`https://api.vercel.com${request.descriptor.path}`') &&
+      source.includes("FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED") &&
+      source.includes("NATIVE_OPERATION_CONTRACT") &&
+      !/(supabase|storage_rpc|github\.com)/iu.test(source)
+    );
+  }
   if (relativePath === FIRST_ENVIRONMENT_RUNTIME_TEST_PATH) {
     return (
       !capabilities.child_process &&
@@ -2513,12 +2578,60 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("retries=0 replays=0")
     );
   }
+  if (relativePath === FIRST_ENVIRONMENT_MATERIALIZER_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("FIRST_ENVIRONMENT_MATERIALIZER_INPUT") &&
+      source.includes("constants.O_EXCL") &&
+      source.includes("constants.O_NOFOLLOW") &&
+      source.includes("mode: \"0600\"") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH) {
+    return !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("live_records_created=0") &&
+      source.includes("credential_value_reads=0") &&
+      source.includes("provider_calls=0");
+  }
+  if (relativePath === FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("PROCESS_ENV_EXACT_KEY") &&
+      source.includes("AVAILABLE_EXISTING_VERCEL_CLI_SOURCE") &&
+      source.includes("constants.O_RDONLY") &&
+      source.includes("constants.O_NOFOLLOW") &&
+      source.includes('"com.vercel.cli"') &&
+      source.includes('"auth.json"') &&
+      !source.includes("writeFile") &&
+      !source.includes("appendFile") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH) {
+    return !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("enumeration=0") &&
+      source.includes("provider_calls=0");
+  }
   if (relativePath === FIRST_ENVIRONMENT_SUPERVISOR_PATH) {
     return (
       capabilities.child_process &&
       !capabilities.filesystem_mutation &&
-      !capabilities.network &&
-      !capabilities.environment &&
+      capabilities.network &&
+      capabilities.environment &&
       !broadGit &&
       source.includes('argumentsList[0] !== "--run-first-environment"') &&
       source.includes('argumentsList[0] === "--self-test"') &&
@@ -2528,8 +2641,9 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("createAdminV1OfficialFirstEnvironmentAdapter") &&
       source.includes("runAdminV1OfficialFirstEnvironmentRuntime") &&
       source.includes("load_sensitive") &&
-      !source.includes("process.env") &&
-      !source.includes("globalThis.fetch") &&
+      source.includes("environment = process.env") &&
+      source.includes("fetch_impl = globalThis.fetch") &&
+      source.includes("createAdminV1OfficialFirstEnvironmentNativeDependencies") &&
       !source.includes("ADMIN_V1_OFFICIAL_RUNTIME_V1")
     );
   }
@@ -2892,6 +3006,8 @@ export function validateLocalOnlySources(
       OFFICIAL_RUNTIME_PATH,
       FIRST_ENVIRONMENT_RUNTIME_PATH,
       FIRST_ENVIRONMENT_PLATFORM_PATH,
+      FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+      FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
       CONCRETE_RUNNER_PATH,
       CONCRETE_ADAPTER_PATH,
       CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -2899,7 +3015,10 @@ export function validateLocalOnlySources(
       CONCRETE_CHECKPOINT_PATH,
       FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     ].includes(relativePath)) liveCapabilityFiles += 1;
-    if (relativePath === CONCRETE_CREDENTIAL_LOADER_PATH) {
+    if ([
+      CONCRETE_CREDENTIAL_LOADER_PATH,
+      FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
+    ].includes(relativePath)) {
       credentialAccessFiles += 1;
     }
     if (relativePath === CONCRETE_CHECKPOINT_PATH && capabilities.filesystem_mutation) {
@@ -2918,8 +3037,8 @@ export function validateLocalOnlySources(
   if (
     hasConcreteSurface &&
     (liveEntrypoints !== 2 ||
-      liveCapabilityFiles !== 9 ||
-      credentialAccessFiles !== 1 ||
+      liveCapabilityFiles !== 11 ||
+      credentialAccessFiles !== 2 ||
       checkpointWriterFiles !== 3)
   ) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
@@ -3101,8 +3220,8 @@ export function verifyRepositoryCandidateManifest({
       legacy_imports: 0,
       live_routes: 2,
       live_entrypoints: 2,
-      live_capability_files: 9,
-      credential_access_files: 1,
+      live_capability_files: 11,
+      credential_access_files: 2,
       checkpoint_writer_files: 3,
     };
     activationSourcePolicy = { verified: true };

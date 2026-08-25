@@ -222,6 +222,150 @@ function descriptor(operation, input, authorization) {
   );
 }
 
+const NATIVE_OPERATION_CONTRACT = Object.freeze({
+  create_environment: Object.freeze({ method: "POST", maximum: 1 }),
+  verify_environment_identity: Object.freeze({ method: "GET", maximum: 1 }),
+  delete_environment: Object.freeze({ method: "DELETE", maximum: 1 }),
+});
+
+function exactNativeDescriptor(operation, value) {
+  const contract = NATIVE_OPERATION_CONTRACT[operation];
+  if (
+    !contract || !exactKeys(value, ["service", "method", "path", "body"]) &&
+      !exactKeys(value, ["service", "method", "path"]) ||
+    value.service !== "VERCEL" || value.method !== contract.method ||
+    !boundedText(value.path, 1024) || !value.path.startsWith("/") ||
+    value.path.startsWith("//") || value.path.includes("\0") ||
+    value.path.includes("#")
+  ) return false;
+  const project = "prj_BPaQVKdElriAhxabhoTkg8LysQ5R";
+  const team = "teamId=team_9POJYxNnjIBbrQ19My8M5yG3";
+  if (operation === "create_environment") {
+    return value.path === `/v10/projects/${project}/env?${team}&upsert=false` &&
+      exactKeys(value.body, ["gitBranch", "key", "target", "type", "value"]) &&
+      value.body.key === "ADMIN_PASSWORD" &&
+      boundedText(value.body.value, 16_384) && !/[\0\r\n]/u.test(value.body.value) &&
+      value.body.type === "encrypted" &&
+      canonicalJson(value.body.target) === '["preview"]' &&
+      value.body.gitBranch === "main";
+  }
+  if (Object.hasOwn(value, "body")) return false;
+  const prefix = `/v9/projects/${project}/env/`;
+  const suffix = operation === "verify_environment_identity"
+    ? `?decrypt=false&${team}`
+    : `?${team}`;
+  if (!value.path.startsWith(prefix) || !value.path.endsWith(suffix)) return false;
+  const encodedId = value.path.slice(prefix.length, -suffix.length);
+  if (
+    encodedId.length < 1 || encodedId.length > 768 || encodedId.includes("/") ||
+    encodedId.includes("?") || encodedId.includes("&") ||
+    encodedId.includes("=")
+  ) return false;
+  try {
+    const decoded = decodeURIComponent(encodedId);
+    return boundedText(decoded, 256) && encodeURIComponent(decoded) === encodedId;
+  } catch {
+    return false;
+  }
+}
+
+export function createAdminV1OfficialFirstEnvironmentNativeTransport({
+  provider_auth,
+  fetch_impl = globalThis.fetch,
+}) {
+  if (
+    !(provider_auth instanceof Uint8Array) || provider_auth.byteLength < 1 ||
+    provider_auth.byteLength > 16_384 || typeof fetch_impl !== "function"
+  ) {
+    throw new AdminV1OfficialFirstEnvironmentPlatformError(
+      "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_INPUT",
+    );
+  }
+  const counts = new Map(Object.keys(NATIVE_OPERATION_CONTRACT).map((key) =>
+    [key, 0]
+  ));
+  return Object.freeze({
+    async execute(request) {
+      if (
+        !exactKeys(request, ["operation", "descriptor"]) ||
+        !exactNativeDescriptor(request.operation, request.descriptor)
+      ) {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED",
+        );
+      }
+      const next = (counts.get(request.operation) ?? 0) + 1;
+      if (next > NATIVE_OPERATION_CONTRACT[request.operation].maximum) {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_BUDGET",
+        );
+      }
+      counts.set(request.operation, next);
+      const token = Buffer.from(
+        provider_auth.buffer,
+        provider_auth.byteOffset,
+        provider_auth.byteLength,
+      ).toString("utf8");
+      if (!boundedText(token, 16_384) || /[\0\r\n]/u.test(token)) {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_INPUT",
+        );
+      }
+      const init = {
+        method: request.descriptor.method,
+        redirect: "error",
+        signal: AbortSignal.timeout(20_000),
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+        },
+      };
+      if (Object.hasOwn(request.descriptor, "body")) {
+        init.body = canonicalJson(request.descriptor.body);
+        init.headers["content-type"] = "application/json";
+      }
+      let response;
+      try {
+        response = await fetch_impl(
+          `https://api.vercel.com${request.descriptor.path}`,
+          init,
+        );
+      } catch {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_TRANSPORT_OR_HTTP_FAILURE",
+        );
+      }
+      if (
+        !Number.isSafeInteger(response?.status) || response.status < 100 ||
+        response.status > 599 || typeof response.text !== "function"
+      ) {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_RESPONSE",
+        );
+      }
+      if (response.status === 204) return { status: 204, body: null };
+      const text = await response.text();
+      if (
+        typeof text !== "string" || Buffer.byteLength(text, "utf8") > 64 * 1024 ||
+        text.includes("\0")
+      ) {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_RESPONSE",
+        );
+      }
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        throw new AdminV1OfficialFirstEnvironmentPlatformError(
+          "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_RESPONSE",
+        );
+      }
+      return { status: response.status, body };
+    },
+  });
+}
+
 export function createAdminV1OfficialFirstEnvironmentAdapter({
   authorization,
   transport,

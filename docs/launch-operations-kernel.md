@@ -101,3 +101,34 @@ The legacy orchestrator's local self-test may admit these untracked candidate pa
 2. The canonical manifest is generated only after every candidate byte stabilizes and discovers the complete two-root inventory.
 3. Every handoff-required concrete, legacy, broad-static, syntax, strict-JSON, identity, and diff gate runs on those exact final bytes.
 4. Protected drafts and retained legacy artifacts are re-proved unchanged before packaging, without staging, committing, pushing, networking, credential access, or live execution.
+## First-environment execution-closure materialization and native binding
+
+The first-environment create-only supervisor has a production authorization
+materializer at
+`scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs`.
+It accepts explicit non-secret review, repository, candidate, deployment,
+source-identity, credential-source-name, capability-budget, cleanup, journal,
+and spend bindings. It derives three domain-separated SHA-256 identities over
+canonical JSON: the authorization-ID binding, review-approval binding, and
+one-use authorization closure. Hermetic records are rejected by the live
+validator unless a test-only flag is supplied. Live materialization is also
+disabled by default and requires an explicit future live gate.
+
+Authorization records are canonical newline-terminated JSON written with
+no-clobber and no-follow semantics to an existing canonical directory. The
+writer enforces a regular single-link `0600` file and never overwrites an
+existing authorization record.
+
+The native supervisor binding reads `ADMIN_PASSWORD` only through direct
+property access to the supplied process-environment object. It does not read
+`.env.local` or enumerate environment variables. Vercel provider auth is read
+only from the existing canonical Vercel CLI `auth.json` source using an
+inode-bound, no-follow, bounded read. Both sources are acquired only after the
+non-secret authorization, source, candidate, repository, and process-start
+gates. Mutable provider bytes are cleared after the single supervisor session.
+
+The native transport exposes only `execute` and accepts exactly the fixed
+Vercel environment-create, non-decrypting identity-read, and exact-owned-delete
+descriptors. Each operation has a maximum of one call. The origin is fixed to
+`https://api.vercel.com`; arbitrary services, URLs, methods, Git, Supabase,
+Storage/RPC, database, deployment-control, retries, and replay are denied.
