@@ -347,6 +347,8 @@ function canonicalReviewedBytes(
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
@@ -404,6 +406,8 @@ function canonicalReviewedBytes(
         "d99322d6134cb9b2b2af2672bf17005a20083ef39f0225abb187b4d5ed8dfbc1";
       map["scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs"] =
         "c7b975bdb2516beb3e4e79e4b95c238509fa0e75218f683bdb87102f84b23aad";
+      map["scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs"] =
+        "df713b9b0cf524be731f89431dc2f19f6ca04d36e5e35ca3daa5302a928e7fd4";
     }
     assert.equal(sharedLivePlatformProjections, 3);
     assert.equal(credentialLoaderProjections, 4);

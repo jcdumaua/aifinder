@@ -13,6 +13,9 @@
     "candidate_identity_sha256",
     "manifest_sha256",
     "runtime_source_sha256",
+    "supervisor_source_sha256",
+    "transport_source_sha256",
+    "authorization_schema_sha256",
     "created_at",
     "expires_at",
     "run_id",
@@ -45,6 +48,18 @@
       "pattern": "^[0-9a-f]{64}$"
     },
     "runtime_source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "supervisor_source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "transport_source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "authorization_schema_sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
@@ -105,7 +120,9 @@
         "preview_team_id",
         "preview_team_slug",
         "environment_git_branch",
-        "environment_key"
+        "environment_key",
+        "credential_source_name",
+        "credential_source_contract"
       ],
       "properties": {
         "journal_directory": {
@@ -117,7 +134,11 @@
         "preview_team_id": { "const": "team_9POJYxNnjIBbrQ19My8M5yG3" },
         "preview_team_slug": { "const": "ai-finder-s-projects" },
         "environment_git_branch": { "const": "main" },
-        "environment_key": { "const": "ADMIN_PASSWORD" }
+        "environment_key": { "const": "ADMIN_PASSWORD" },
+        "credential_source_name": { "const": "ENV_LOCAL" },
+        "credential_source_contract": {
+          "const": "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION"
+        }
       }
     }
   }

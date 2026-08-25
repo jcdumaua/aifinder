@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { lstatSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
+import {
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Ajv from "ajv";
@@ -44,6 +50,9 @@ function authorization(overrides = {}) {
     candidate_identity_sha256: "4".repeat(64),
     manifest_sha256: "5".repeat(64),
     runtime_source_sha256: "6".repeat(64),
+    supervisor_source_sha256: "8".repeat(64),
+    transport_source_sha256: "9".repeat(64),
+    authorization_schema_sha256: "a".repeat(64),
     created_at: "2026-08-24T15:00:00.000Z",
     expires_at: "2026-08-24T17:00:00.000Z",
     run_id: RUN_ID,
@@ -70,6 +79,9 @@ function authorization(overrides = {}) {
       preview_team_slug: "ai-finder-s-projects",
       environment_git_branch: "main",
       environment_key: "ADMIN_PASSWORD",
+      credential_source_name: "ENV_LOCAL",
+      credential_source_contract:
+        "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION",
     },
   };
   return {
@@ -234,7 +246,10 @@ await check("success spends once, proves identity, and cleans exact ownership", 
     authorization: authorization(),
     adapter,
     journal,
-    sensitive: { environment_value: environmentValue },
+    async load_sensitive() {
+      assert.equal(journal.load()?.value?.state?.token_spent, true);
+      return { environment_value: environmentValue };
+    },
     now_epoch_ms: NOW,
   });
   assert.deepEqual(adapter.calls, [
@@ -269,23 +284,28 @@ await check("a spent authorization cannot be replayed", async () => {
     authorization: authorization(),
     adapter: fakeAdapter(),
     journal,
-    sensitive: { environment_value: Buffer.from("FIRST", "utf8") },
+    load_sensitive: async () => ({
+      environment_value: Buffer.from("FIRST", "utf8"),
+    }),
     now_epoch_ms: NOW,
   });
   const second = fakeAdapter();
-  const secondValue = Buffer.from("SECOND", "utf8");
+  let secondValue = null;
   await assert.rejects(
     runAdminV1OfficialFirstEnvironmentRuntime({
       authorization: authorization(),
       adapter: second,
       journal,
-      sensitive: { environment_value: secondValue },
+      load_sensitive: async () => {
+        secondValue = Buffer.from("SECOND", "utf8");
+        return { environment_value: secondValue };
+      },
       now_epoch_ms: NOW,
     }),
     (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_SPENT",
   );
   assert.deepEqual(second.calls, []);
-  assert(secondValue.every((byte) => byte === 0));
+  assert.equal(secondValue, null);
 });
 
 await check("classified create failure is durable before cleanup", async () => {
@@ -299,7 +319,9 @@ await check("classified create failure is durable before cleanup", async () => {
     authorization: authorization(),
     adapter,
     journal,
-    sensitive: { environment_value: Buffer.from("LOCAL", "utf8") },
+    load_sensitive: async () => ({
+      environment_value: Buffer.from("LOCAL", "utf8"),
+    }),
     now_epoch_ms: NOW,
   });
   assert.equal(result.classification, "RECOVERY_PENDING");
@@ -330,7 +352,9 @@ await check("identity mismatch fails closed after exact owned cleanup", async ()
       authorization: authorization(),
       adapter,
       journal,
-      sensitive: { environment_value: Buffer.from("LOCAL", "utf8") },
+      load_sensitive: async () => ({
+        environment_value: Buffer.from("LOCAL", "utf8"),
+      }),
       now_epoch_ms: NOW,
     }),
     (error) => error?.code === "FIRST_ENVIRONMENT_IDENTITY_UNPROVEN",
@@ -351,13 +375,52 @@ await check("ambiguous cleanup remains recovery pending", async () => {
     authorization: authorization(),
     adapter,
     journal,
-    sensitive: { environment_value: Buffer.from("LOCAL", "utf8") },
+    load_sensitive: async () => ({
+      environment_value: Buffer.from("LOCAL", "utf8"),
+    }),
     now_epoch_ms: NOW,
   });
   assert.equal(result.classification, "RECOVERY_PENDING");
   assert.equal(result.zero_residual_owned_state, false);
   assert.equal(journal.load().retired, false);
   assert.equal(journal.load().value.state.lifecycle, "RECOVERY_PENDING");
+});
+
+await check("credential failure retires a real secret-free journal", async () => {
+  const directory = mkdtempSync(path.join(
+    tmpdir(),
+    "aifinder-admin-v1-official-first-environment-",
+  ));
+  try {
+    const journal = createAdminV1OfficialFirstEnvironmentJournal({
+      directory,
+      identity: {
+        authorization_id_sha256: "1".repeat(64),
+        run_id: RUN_ID,
+      },
+    });
+    const adapter = fakeAdapter();
+    await assert.rejects(
+      runAdminV1OfficialFirstEnvironmentRuntime({
+        authorization: authorization(),
+        adapter,
+        journal,
+        load_sensitive: async () => {
+          throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+            "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",
+          );
+        },
+        now_epoch_ms: NOW,
+      }),
+      (error) =>
+        error?.code === "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",
+    );
+    assert.deepEqual(adapter.calls, []);
+    assert.equal(journal.load().retired, true);
+    assert.equal(journal.load().value.state.zero_residual, true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 await check("filesystem journal is canonical, private, and secret-free", async () => {

@@ -185,12 +185,12 @@ await check("exact concrete live capability surfaces are isolated", async () => 
   const sources = candidateSources;
   assert.deepEqual(validateCandidateSources(sources), {
     verified: true,
-    source_count: 39,
+    source_count: 41,
     forbidden_capabilities: 0,
     legacy_imports: 0,
-    live_routes: 1,
-    live_entrypoints: 1,
-    live_capability_files: 8,
+    live_routes: 2,
+    live_entrypoints: 2,
+    live_capability_files: 9,
     credential_access_files: 1,
     checkpoint_writer_files: 3,
   });
@@ -1992,8 +1992,8 @@ await check("actual candidate source policy", async () => {
   });
   assert.equal(result.source_policy_verified, true);
   assert.equal(result.legacy_imports, 0);
-  assert.equal(result.live_routes, 1);
-  assert.equal(result.live_entrypoints, 1);
+  assert.equal(result.live_routes, 2);
+  assert.equal(result.live_entrypoints, 2);
 });
 
 await check("legacy and live CLI modes denied", async () => {
@@ -2028,6 +2028,6 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `PASS_LAUNCH_OPERATIONS_SOURCE_POLICY assertions=${assertions} mutations=169 network=0 live_routes=1 legacy_imports=0 failures=0 internal_failures=0`,
+    `PASS_LAUNCH_OPERATIONS_SOURCE_POLICY assertions=${assertions} mutations=169 network=0 live_routes=2 legacy_imports=0 failures=0 internal_failures=0`,
   );
 }

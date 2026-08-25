@@ -67,6 +67,10 @@ const FIRST_ENVIRONMENT_PLATFORM_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs";
 const FIRST_ENVIRONMENT_RUNTIME_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs";
+const FIRST_ENVIRONMENT_SUPERVISOR_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs";
+const FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs";
 const INDEPENDENT_SOURCE_REVIEW_PATH =
   "testing/static-test-safety-manifest.json";
 const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
@@ -79,6 +83,8 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_PLATFORM_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
+  FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+  FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -110,6 +116,8 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_PLATFORM_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
+  FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+  FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -144,12 +152,20 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
   CONCRETE_CREDENTIAL_LOADER_PATH,
   CONCRETE_PLATFORM_PATH,
   CONCRETE_CHECKPOINT_PATH,
+  FIRST_ENVIRONMENT_SUPERVISOR_PATH,
 ]);
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [FIRST_ENVIRONMENT_PLATFORM_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
   [FIRST_ENVIRONMENT_RUNTIME_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_SUPERVISOR_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
   [CONCRETE_RUNNER_PATH, new Set([
@@ -225,6 +241,13 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ])],
   [FIRST_ENVIRONMENT_RUNTIME_TEST_PATH, new Set([
     "node:assert/strict", "node:fs", "node:os", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_SUPERVISOR_PATH, new Set([
+    "node:child_process", "node:crypto", "node:fs", "node:path", "node:url",
+  ])],
+  [FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH, new Set([
+    "node:assert/strict", "node:child_process", "node:crypto", "node:fs",
+    "node:os", "node:path",
   ])],
   [OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH, new Set([
     "node:assert/strict", "node:fs", "node:path",
@@ -1805,11 +1828,15 @@ function sourceSyntaxFacts(relativePath, source) {
   const processArgumentPaths = new Set([
     "scripts/launch-operations-kernel/cli.mjs",
     CONCRETE_RUNNER_PATH,
+    FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+    FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
   ]);
   const processExitCodePaths = new Set([
     "scripts/launch-operations-kernel/activation-bridge.test.mjs",
     "scripts/launch-operations-kernel/activation-e2e.test.mjs",
     FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
+    FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+    FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
     OFFICIAL_RUNTIME_TEST_PATH,
     "scripts/launch-operations-kernel/cli.mjs",
     "scripts/launch-operations-kernel/kernel.test.mjs",
@@ -2486,6 +2513,38 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("retries=0 replays=0")
     );
   }
+  if (relativePath === FIRST_ENVIRONMENT_SUPERVISOR_PATH) {
+    return (
+      capabilities.child_process &&
+      !capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      !broadGit &&
+      source.includes('argumentsList[0] !== "--run-first-environment"') &&
+      source.includes('argumentsList[0] === "--self-test"') &&
+      source.includes("FIRST_ENVIRONMENT_SUPERVISOR_LIVE_BINDING_REQUIRED") &&
+      source.includes("verifyRepositoryCandidateManifest") &&
+      source.includes("validateAdminV1OfficialFirstEnvironmentAuthorization") &&
+      source.includes("createAdminV1OfficialFirstEnvironmentAdapter") &&
+      source.includes("runAdminV1OfficialFirstEnvironmentRuntime") &&
+      source.includes("load_sensitive") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch") &&
+      !source.includes("ADMIN_V1_OFFICIAL_RUNTIME_V1")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH) {
+    return (
+      capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("process_start_before_credential=true") &&
+      source.includes("credential_value_reads_before_process_start=0") &&
+      source.includes("real_provider_calls=0") &&
+      source.includes("full_official_ledger=0")
+    );
+  }
   if (relativePath === OFFICIAL_RUNTIME_TEST_PATH) {
     return (
       !capabilities.child_process &&
@@ -2825,7 +2884,10 @@ export function validateLocalOnlySources(
         : `CAPABILITY:${canonicalJson(capabilities)}`;
       throw error;
     }
-    if (relativePath === CONCRETE_RUNNER_PATH) liveEntrypoints += 1;
+    if ([
+      CONCRETE_RUNNER_PATH,
+      FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+    ].includes(relativePath)) liveEntrypoints += 1;
     if ([
       OFFICIAL_RUNTIME_PATH,
       FIRST_ENVIRONMENT_RUNTIME_PATH,
@@ -2835,6 +2897,7 @@ export function validateLocalOnlySources(
       CONCRETE_CREDENTIAL_LOADER_PATH,
       CONCRETE_PLATFORM_PATH,
       CONCRETE_CHECKPOINT_PATH,
+      FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     ].includes(relativePath)) liveCapabilityFiles += 1;
     if (relativePath === CONCRETE_CREDENTIAL_LOADER_PATH) {
       credentialAccessFiles += 1;
@@ -2854,8 +2917,8 @@ export function validateLocalOnlySources(
   }
   if (
     hasConcreteSurface &&
-    (liveEntrypoints !== 1 ||
-      liveCapabilityFiles !== 8 ||
+    (liveEntrypoints !== 2 ||
+      liveCapabilityFiles !== 9 ||
       credentialAccessFiles !== 1 ||
       checkpointWriterFiles !== 3)
   ) {
@@ -3036,9 +3099,9 @@ export function verifyRepositoryCandidateManifest({
     sourcePolicy = {
       verified: true,
       legacy_imports: 0,
-      live_routes: 1,
-      live_entrypoints: 1,
-      live_capability_files: 8,
+      live_routes: 2,
+      live_entrypoints: 2,
+      live_capability_files: 9,
       credential_access_files: 1,
       checkpoint_writer_files: 3,
     };

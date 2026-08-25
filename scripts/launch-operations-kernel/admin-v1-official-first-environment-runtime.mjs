@@ -43,6 +43,9 @@ const AUTHORIZATION_KEYS = Object.freeze([
   "candidate_identity_sha256",
   "manifest_sha256",
   "runtime_source_sha256",
+  "supervisor_source_sha256",
+  "transport_source_sha256",
+  "authorization_schema_sha256",
   "created_at",
   "expires_at",
   "run_id",
@@ -70,6 +73,8 @@ const EXECUTION_KEYS = Object.freeze([
   "preview_team_slug",
   "environment_git_branch",
   "environment_key",
+  "credential_source_name",
+  "credential_source_contract",
 ]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -149,6 +154,9 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
       value.candidate_identity_sha256,
       value.manifest_sha256,
       value.runtime_source_sha256,
+      value.supervisor_source_sha256,
+      value.transport_source_sha256,
+      value.authorization_schema_sha256,
     ].every(isSha256) ||
     created === null || expires === null || created >= expires ||
     now_epoch_ms < created || now_epoch_ms >= expires ||
@@ -174,7 +182,10 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
     execution.preview_team_id !== "team_9POJYxNnjIBbrQ19My8M5yG3" ||
     execution.preview_team_slug !== "ai-finder-s-projects" ||
     execution.environment_git_branch !== "main" ||
-    execution.environment_key !== "ADMIN_PASSWORD"
+    execution.environment_key !== "ADMIN_PASSWORD" ||
+    execution.credential_source_name !== "ENV_LOCAL" ||
+    execution.credential_source_contract !==
+      "INJECTED_EXACT_LOADER_IDENTITY_REQUIRED_BY_LIVE_AUTHORIZATION"
   ) {
     throw new AdminV1OfficialFirstEnvironmentRuntimeError(
       "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
@@ -471,7 +482,7 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
   authorization,
   adapter,
   journal,
-  sensitive,
+  load_sensitive,
   now_epoch_ms = Date.now(),
 }) {
   let validated;
@@ -487,27 +498,23 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       !journal || typeof journal.load !== "function" ||
       typeof journal.publish !== "function" ||
       typeof journal.retire !== "function" ||
-      !sensitive || !(sensitive.environment_value instanceof Uint8Array) ||
-      sensitive.environment_value.byteLength < 1
+      typeof load_sensitive !== "function"
     ) {
       throw new AdminV1OfficialFirstEnvironmentRuntimeError(
         "FIRST_ENVIRONMENT_RUNTIME_INPUT",
       );
     }
   } catch (error) {
-    clearSensitive(sensitive);
     throw error;
   }
 
   const existing = journal.load();
   if (existing?.retired === true || existing?.value?.state?.token_spent === true) {
-    clearSensitive(sensitive);
     throw new AdminV1OfficialFirstEnvironmentRuntimeError(
       "FIRST_ENVIRONMENT_AUTHORIZATION_SPENT",
     );
   }
   if (existing !== null) {
-    clearSensitive(sensitive);
     throw new AdminV1OfficialFirstEnvironmentRuntimeError(
       "FIRST_ENVIRONMENT_RECOVERY_REQUIRED",
     );
@@ -544,10 +551,38 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
 
   let primaryError = null;
   let recoveryPending = false;
+  let providerEffectStarted = false;
+  let sensitive = null;
   try {
+    try {
+      sensitive = await load_sensitive();
+      if (
+        !exactKeys(sensitive, ["environment_value"]) ||
+        !(sensitive.environment_value instanceof Uint8Array) ||
+        sensitive.environment_value.byteLength < 1
+      ) {
+        throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+          "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",
+        );
+      }
+    } catch (error) {
+      state.failure = {
+        operation: "load_credential_source",
+        stage: "EXECUTION",
+        class: "CREDENTIAL_SOURCE_UNAVAILABLE",
+        provider: "LOCAL",
+        retry_allowed: false,
+      };
+      state.stage = "FAILURE_CREDENTIAL_SOURCE_CLASSIFIED";
+      journal.publish(publicState(state));
+      throw error;
+    }
+    state.stage = "CREDENTIAL_SOURCE_ACQUIRED";
+    journal.publish(publicState(state));
     state.stage = "INTENT_CREATE_ENVIRONMENT";
     journal.publish(publicState(state));
     take("environment_creates");
+    providerEffectStarted = true;
     let created;
     try {
       created = await adapter.createEnvironment({
@@ -613,7 +648,13 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
     state.lifecycle = "CLEANUP_PENDING";
     state.stage = "CLEANUP_PENDING_PUBLISHED";
     journal.publish(publicState(state));
-    if (state.owned_environment_record_id === null) {
+    if (
+      state.owned_environment_record_id === null &&
+      providerEffectStarted === false
+    ) {
+      state.cleanup.push("NO_PROVIDER_EFFECT_STARTED");
+      state.zero_residual = true;
+    } else if (state.owned_environment_record_id === null) {
       recoveryPending = true;
       state.cleanup.push("ENVIRONMENT_OWNERSHIP_UNPROVEN");
     } else {
