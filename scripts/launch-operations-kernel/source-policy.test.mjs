@@ -185,14 +185,14 @@ await check("exact concrete live capability surfaces are isolated", async () => 
   const sources = candidateSources;
   assert.deepEqual(validateCandidateSources(sources), {
     verified: true,
-    source_count: 35,
+    source_count: 39,
     forbidden_capabilities: 0,
     legacy_imports: 0,
     live_routes: 1,
     live_entrypoints: 1,
-    live_capability_files: 6,
+    live_capability_files: 8,
     credential_access_files: 1,
-    checkpoint_writer_files: 2,
+    checkpoint_writer_files: 3,
   });
   assert.equal(
     sources.get(relativePaths[0]).includes(

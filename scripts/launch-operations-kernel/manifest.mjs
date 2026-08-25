@@ -61,6 +61,12 @@ const OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs";
 const OFFICIAL_CONCRETE_BRIDGE_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs";
+const FIRST_ENVIRONMENT_RUNTIME_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs";
+const FIRST_ENVIRONMENT_PLATFORM_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs";
+const FIRST_ENVIRONMENT_RUNTIME_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs";
 const INDEPENDENT_SOURCE_REVIEW_PATH =
   "testing/static-test-safety-manifest.json";
 const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
@@ -70,6 +76,9 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   OFFICIAL_AUTHORIZATION_PATH,
   OFFICIAL_AUTHORIZATION_TEST_PATH,
   OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_RUNTIME_PATH,
+  FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -98,6 +107,9 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   OFFICIAL_AUTHORIZATION_PATH,
   OFFICIAL_AUTHORIZATION_TEST_PATH,
   OFFICIAL_CONCRETE_BRIDGE_TEST_PATH,
+  FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_RUNTIME_PATH,
+  FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -126,6 +138,7 @@ const CONCRETE_PLATFORM_TEST_PATH =
   "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs";
 const PRIVILEGED_IMPORT_TARGETS = new Set([
   OFFICIAL_RUNTIME_PATH,
+  FIRST_ENVIRONMENT_RUNTIME_PATH,
   CONCRETE_RUNNER_PATH,
   CONCRETE_ADAPTER_PATH,
   CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -133,6 +146,12 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
   CONCRETE_CHECKPOINT_PATH,
 ]);
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
+  [FIRST_ENVIRONMENT_PLATFORM_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_RUNTIME_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
   [CONCRETE_RUNNER_PATH, new Set([
     OFFICIAL_RUNTIME_PATH,
     OFFICIAL_LIVE_PLATFORM_PATH,
@@ -201,6 +220,12 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   [CONCRETE_CHECKPOINT_TEST_PATH, new Set([CONCRETE_CHECKPOINT_PATH])],
 ]);
 const REVIEWED_NODE_MODULES_BY_PATH = new Map([
+  [FIRST_ENVIRONMENT_RUNTIME_PATH, new Set([
+    "node:fs", "node:os", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_RUNTIME_TEST_PATH, new Set([
+    "node:assert/strict", "node:fs", "node:os", "node:path",
+  ])],
   [OFFICIAL_ACTIVATION_BRIDGE_TEST_PATH, new Set([
     "node:assert/strict", "node:fs", "node:path",
   ])],
@@ -1784,6 +1809,7 @@ function sourceSyntaxFacts(relativePath, source) {
   const processExitCodePaths = new Set([
     "scripts/launch-operations-kernel/activation-bridge.test.mjs",
     "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+    FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
     OFFICIAL_RUNTIME_TEST_PATH,
     "scripts/launch-operations-kernel/cli.mjs",
     "scripts/launch-operations-kernel/kernel.test.mjs",
@@ -2340,9 +2366,10 @@ function sourceCapabilities(
   const reviewedPackage = (name) =>
     (relativePath === "scripts/launch-operations-kernel/manifest.mjs" &&
       name === "typescript") ||
-    (relativePath ===
-        "scripts/launch-operations-kernel/activation-bridge.test.mjs" &&
-      name === "ajv");
+    (name === "ajv" && [
+      "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+      FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
+    ].includes(relativePath));
   const unreviewedPackage = moduleNames.some((name) =>
     !name.startsWith(".") &&
     !name.startsWith("node:") &&
@@ -2419,6 +2446,44 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("admin-v1-official-runtime-retired.json") &&
       !source.includes("process.env") &&
       !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_RUNTIME_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      !broadGit &&
+      source.includes(
+        '"ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1"',
+      ) &&
+      source.includes("FIRST_ENVIRONMENT_AUTHORIZATION_SPENT") &&
+      source.includes("FIRST_ENVIRONMENT_BUDGET_EXHAUSTED") &&
+      source.includes('classification: "RECOVERY_PENDING"') &&
+      source.includes(
+        '"admin-v1-official-first-environment-runtime-journal.json"',
+      ) &&
+      source.includes('flag: "wx"') &&
+      source.includes("mode: 0o600") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_RUNTIME_TEST_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("mkdtempSync(path.join(") &&
+      source.includes("environment_create_max=1") &&
+      source.includes("git_remote_mutations=0") &&
+      source.includes("database_supabase_reads=0") &&
+      source.includes("database_supabase_writes=0") &&
+      source.includes("storage_rpc_operations=0") &&
+      source.includes("full_official_ledger=0") &&
+      source.includes("retries=0 replays=0")
     );
   }
   if (relativePath === OFFICIAL_RUNTIME_TEST_PATH) {
@@ -2763,6 +2828,8 @@ export function validateLocalOnlySources(
     if (relativePath === CONCRETE_RUNNER_PATH) liveEntrypoints += 1;
     if ([
       OFFICIAL_RUNTIME_PATH,
+      FIRST_ENVIRONMENT_RUNTIME_PATH,
+      FIRST_ENVIRONMENT_PLATFORM_PATH,
       CONCRETE_RUNNER_PATH,
       CONCRETE_ADAPTER_PATH,
       CONCRETE_CREDENTIAL_LOADER_PATH,
@@ -2778,13 +2845,19 @@ export function validateLocalOnlySources(
     if (relativePath === OFFICIAL_RUNTIME_PATH && capabilities.filesystem_mutation) {
       checkpointWriterFiles += 1;
     }
+    if (
+      relativePath === FIRST_ENVIRONMENT_RUNTIME_PATH &&
+      capabilities.filesystem_mutation
+    ) {
+      checkpointWriterFiles += 1;
+    }
   }
   if (
     hasConcreteSurface &&
     (liveEntrypoints !== 1 ||
-      liveCapabilityFiles !== 6 ||
+      liveCapabilityFiles !== 8 ||
       credentialAccessFiles !== 1 ||
-      checkpointWriterFiles !== 2)
+      checkpointWriterFiles !== 3)
   ) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
@@ -2965,9 +3038,9 @@ export function verifyRepositoryCandidateManifest({
       legacy_imports: 0,
       live_routes: 1,
       live_entrypoints: 1,
-      live_capability_files: 6,
+      live_capability_files: 8,
       credential_access_files: 1,
-      checkpoint_writer_files: 2,
+      checkpoint_writer_files: 3,
     };
     activationSourcePolicy = { verified: true };
   }

@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aifinder.invalid/schemas/admin-v1-official-first-environment-authorization-v1.json",
+  "title": "AiFinder Admin V1 Official first-environment-create-only one-use authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "operation_class",
+    "authorization_id_sha256",
+    "one_use_authorization_sha256",
+    "review_approval_sha256",
+    "candidate_identity_sha256",
+    "manifest_sha256",
+    "runtime_source_sha256",
+    "created_at",
+    "expires_at",
+    "run_id",
+    "repository",
+    "execution"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "operation_class": {
+      "const": "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1"
+    },
+    "authorization_id_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "one_use_authorization_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "review_approval_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "candidate_identity_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runtime_source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 24,
+      "maxLength": 32
+    },
+    "expires_at": {
+      "type": "string",
+      "minLength": 24,
+      "maxLength": 32
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "branch",
+        "head",
+        "origin_main",
+        "remote_main",
+        "ahead",
+        "behind",
+        "index_empty",
+        "worktree_count",
+        "status_sha256",
+        "remote_repository"
+      ],
+      "properties": {
+        "root": { "const": "/Users/jamescarlodumaua/aifinder" },
+        "branch": { "const": "main" },
+        "head": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "origin_main": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "remote_main": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "ahead": { "const": 0 },
+        "behind": { "const": 0 },
+        "index_empty": { "const": true },
+        "worktree_count": { "const": 1 },
+        "status_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "remote_repository": { "const": "jcdumaua/aifinder" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "journal_directory",
+        "preview_project_id",
+        "preview_project_name",
+        "preview_team_id",
+        "preview_team_slug",
+        "environment_git_branch",
+        "environment_key"
+      ],
+      "properties": {
+        "journal_directory": {
+          "type": "string",
+          "pattern": "^/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-First-Environment-[0-9a-f-]{36}$"
+        },
+        "preview_project_id": { "const": "prj_BPaQVKdElriAhxabhoTkg8LysQ5R" },
+        "preview_project_name": { "const": "aifinder" },
+        "preview_team_id": { "const": "team_9POJYxNnjIBbrQ19My8M5yG3" },
+        "preview_team_slug": { "const": "ai-finder-s-projects" },
+        "environment_git_branch": { "const": "main" },
+        "environment_key": { "const": "ADMIN_PASSWORD" }
+      }
+    }
+  }
+}
