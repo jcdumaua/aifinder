@@ -72,6 +72,8 @@ const FIRST_ENVIRONMENT_CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs",
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs",
@@ -151,6 +153,8 @@ function prepareExactCanonicalOverlayTarget(root, relativePath) {
       NEW_CANDIDATE_OVERLAY_PATH,
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs",
@@ -164,10 +168,10 @@ function prepareExactCanonicalOverlayTarget(root, relativePath) {
 }
 
 function assertExactCandidateOverlayPaths(paths) {
-  assert.equal(paths.length, 32, "SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT");
+  assert.equal(paths.length, 34, "SYNTHETIC_OVERLAY_EXACT_MEMBER_COUNT");
   assert.equal(
     new Set(paths).size,
-    32,
+    34,
     "SYNTHETIC_OVERLAY_DUPLICATE_MEMBER_FORBIDDEN",
   );
   assert.deepEqual(
@@ -513,7 +517,7 @@ function createSyntheticRepository() {
         sourceMaterializationState.baseline_tree,
       );
     }
-    assert.equal(sourceMaterializationState.overlay_paths, 32);
+    assert.equal(sourceMaterializationState.overlay_paths, 34);
     const dirtyCandidateBaseline = createAlteredOverlayBaseline(
       sourceMaterializationState.candidate_commit,
     );
@@ -521,7 +525,7 @@ function createSyntheticRepository() {
     assert.equal(candidateState.baseline_commit, dirtyCandidateBaseline.commit);
     assert.equal(candidateState.baseline_tree, dirtyCandidateBaseline.tree);
     assertExactlyOneSyntheticCommit(candidateState);
-    assert.equal(candidateState.overlay_paths, 32);
+    assert.equal(candidateState.overlay_paths, 34);
     assert.equal(
       sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
       ORCHESTRATOR_OVERLAY_SHA256,
@@ -547,7 +551,7 @@ function createSyntheticRepository() {
       sha256(readExactOverlayBytes(canonicalRoot, ORCHESTRATOR_OVERLAY_PATH)),
       ORCHESTRATOR_OVERLAY_SHA256,
     );
-    assert.equal(cleanPostPublicationState.overlay_paths, 32);
+    assert.equal(cleanPostPublicationState.overlay_paths, 34);
     assertPinnedOrchestratorCovered(
       CANDIDATE_OVERLAY_PATHS,
       ORCHESTRATOR_OVERLAY_SHA256,
@@ -1002,7 +1006,7 @@ try {
     "--format=%(refname)%00%(objectname)%00%(symref)",
   ])), sourceRefsShaBefore);
   console.log(
-    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_DYNAMIC_SOURCE_HEAD=PASS SYNTHETIC_EXTERNAL_BASELINE_SUBSTITUTION=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_PATHS=32 SYNTHETIC_CANDIDATE_OVERLAY_ORIGINAL_16_PRESERVED=PASS SYNTHETIC_FIRST_ENVIRONMENT_OVERLAY_PATHS=15 SYNTHETIC_ORIGINAL_16_BASELINE_ORCHESTRATOR_EQUALITY=PASS SYNTHETIC_CANDIDATE_OVERLAY_MISSING_ORCHESTRATOR=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_UNEXPECTED_33RD=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_DUPLICATE=REJECTED SYNTHETIC_ORCHESTRATOR_SHA256=11c290813e2cfcc914377f4bdb6433d2b17135b410448a8910e83393123bfd9e SYNTHETIC_BASELINE_ORCHESTRATOR_EQUALITY_ALLOWED=PASS SYNTHETIC_SOURCE_MATERIALIZATION_PUBLICATION_STABLE=PASS SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_DIRTY_CANDIDATE_STATE_A_COMMIT_CREATED=true SYNTHETIC_DIRTY_CANDIDATE_STATE_A_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_COMMIT_CREATED=false SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_TREE_EQUAL=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_CANDIDATE_VERIFY=PASS SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_COMMIT_CREATED=true SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
+    "PASS_ADMIN_V1_OFFICIAL_CONCRETE_SUPERVISOR SYNTHETIC_DYNAMIC_SOURCE_HEAD=PASS SYNTHETIC_EXTERNAL_BASELINE_SUBSTITUTION=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_PATHS=34 SYNTHETIC_CANDIDATE_OVERLAY_ORIGINAL_16_PRESERVED=PASS SYNTHETIC_FIRST_ENVIRONMENT_OVERLAY_PATHS=17 SYNTHETIC_ORIGINAL_16_BASELINE_ORCHESTRATOR_EQUALITY=PASS SYNTHETIC_CANDIDATE_OVERLAY_MISSING_ORCHESTRATOR=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_UNEXPECTED_35TH=REJECTED SYNTHETIC_CANDIDATE_OVERLAY_DUPLICATE=REJECTED SYNTHETIC_ORCHESTRATOR_SHA256=11c290813e2cfcc914377f4bdb6433d2b17135b410448a8910e83393123bfd9e SYNTHETIC_BASELINE_ORCHESTRATOR_EQUALITY_ALLOWED=PASS SYNTHETIC_SOURCE_MATERIALIZATION_PUBLICATION_STABLE=PASS SYNTHETIC_CANDIDATE_OVERLAY_EXACT_ALLOWLIST=PASS SYNTHETIC_CANDIDATE_OVERLAY_PROTECTED_DRAFTS=0 SYNTHETIC_DIRTY_CANDIDATE_STATE_A_COMMIT_CREATED=true SYNTHETIC_DIRTY_CANDIDATE_STATE_A_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_COMMIT_CREATED=false SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_TREE_EQUAL=PASS SYNTHETIC_CLEAN_POSTPUBLICATION_STATE_B_CANDIDATE_VERIFY=PASS SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_COMMIT_CREATED=true SYNTHETIC_NEGATIVE_CLEAN_TO_DIRTY_EXACTLY_ONE_COMMIT=PASS SYNTHETIC_CANDIDATE_STATE_TREE=EXACT SYNTHETIC_CANDIDATE_STATE_COMMIT_ISOLATED=PASS SYNTHETIC_CANDIDATE_MANIFEST_VERIFY=PASS SYNTHETIC_MAIN_ORIGIN_MAIN_EQUAL=PASS CONCRETE_SUPERVISOR_RESULT=OFFICIAL_RUNTIME_COMPLETE QUALIFICATION_REQUESTS=6 OFFICIAL_REQUESTS=20 RUNTIME_SESSIONS=1 RUNTIME_RETRIES=0 RUNTIME_REPLAYS=0 CREDENTIAL_READS=1 ADAPTER_EFFECTS_GT_26=true SOURCE_OBJECT_WRITES=0 SOURCE_INDEX_WRITES=0 SOURCE_REF_WRITES=0 PROTECTED_DRAFT_CONTENT_READS_V6=0 REAL_EXTERNAL_ACTIONS=0 real_supervisor=true real_factory=true real_state_machine=true low_level_fakes=true isolated_index=true isolated_objects=true",
   );
 } finally {
   if (authorizationCreated) unlinkSync(AUTHORIZATION_PATH);

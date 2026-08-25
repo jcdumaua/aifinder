@@ -75,6 +75,10 @@ const FIRST_ENVIRONMENT_MATERIALIZER_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs";
 const FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs";
+const FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs";
+const FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs";
 const FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs";
 const FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH =
@@ -91,6 +95,8 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH,
   FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH,
   FIRST_ENVIRONMENT_MATERIALIZER_PATH,
   FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
@@ -128,6 +134,8 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   FIRST_ENVIRONMENT_CREDENTIAL_LOADER_TEST_PATH,
   FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH,
   FIRST_ENVIRONMENT_MATERIALIZER_PATH,
   FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
@@ -164,6 +172,7 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
   OFFICIAL_RUNTIME_PATH,
   FIRST_ENVIRONMENT_RUNTIME_PATH,
   FIRST_ENVIRONMENT_PLATFORM_PATH,
+  FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
   FIRST_ENVIRONMENT_MATERIALIZER_PATH,
   FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
   CONCRETE_RUNNER_PATH,
@@ -183,6 +192,16 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
     FIRST_ENVIRONMENT_MATERIALIZER_PATH,
   ])],
   [FIRST_ENVIRONMENT_MATERIALIZER_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH, new Set([
+    FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_PATH,
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH, new Set([
+    FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_PATH,
     FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
   [FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH, new Set([
@@ -280,6 +299,12 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ])],
   [FIRST_ENVIRONMENT_MATERIALIZER_PATH, new Set([
     "node:fs", "node:path",
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH, new Set([
+    "node:crypto", "node:fs", "node:os", "node:path", "node:url",
+  ])],
+  [FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH, new Set([
+    "node:assert/strict", "node:crypto", "node:fs", "node:os", "node:path",
   ])],
   [FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH, new Set([
     "node:assert/strict", "node:crypto", "node:fs", "node:os", "node:path",
@@ -1876,6 +1901,7 @@ function sourceSyntaxFacts(relativePath, source) {
   const processArgumentPaths = new Set([
     "scripts/launch-operations-kernel/cli.mjs",
     CONCRETE_RUNNER_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
     FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
   ]);
@@ -1883,6 +1909,7 @@ function sourceSyntaxFacts(relativePath, source) {
     "scripts/launch-operations-kernel/activation-bridge.test.mjs",
     "scripts/launch-operations-kernel/activation-e2e.test.mjs",
     FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
+    FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
     FIRST_ENVIRONMENT_SUPERVISOR_PATH,
     FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
     OFFICIAL_RUNTIME_TEST_PATH,
@@ -2592,6 +2619,36 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !source.includes("globalThis.fetch")
     );
   }
+  if (relativePath === FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH) {
+    return (
+      !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      !broadGit &&
+      source.includes('argumentsList[0] !== "--materialize"') &&
+      source.includes('argumentsList[0] === "--self-test"') &&
+      source.includes("constants.O_RDONLY") &&
+      source.includes("constants.O_NOFOLLOW") &&
+      source.includes("direct_james_approval_sha256") &&
+      source.includes("--allow-live") &&
+      source.includes("createAdminV1OfficialFirstEnvironmentAuthorizationRecord") &&
+      source.includes("writeAdminV1OfficialFirstEnvironmentAuthorizationRecord") &&
+      !source.includes("process.env") &&
+      !source.includes("globalThis.fetch")
+    );
+  }
+  if (relativePath === FIRST_ENVIRONMENT_MATERIALIZER_CLI_TEST_PATH) {
+    return !capabilities.child_process &&
+      capabilities.filesystem_mutation &&
+      !capabilities.network &&
+      !capabilities.environment &&
+      source.includes("synthetic_records_created=1") &&
+      source.includes("live_records_created=0") &&
+      source.includes("credential_value_reads=0") &&
+      source.includes("provider_calls=0") &&
+      source.includes("network_calls=0");
+  }
   if (relativePath === FIRST_ENVIRONMENT_MATERIALIZER_TEST_PATH) {
     return !capabilities.child_process &&
       capabilities.filesystem_mutation &&
@@ -3001,11 +3058,13 @@ export function validateLocalOnlySources(
     if ([
       CONCRETE_RUNNER_PATH,
       FIRST_ENVIRONMENT_SUPERVISOR_PATH,
+      FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
     ].includes(relativePath)) liveEntrypoints += 1;
     if ([
       OFFICIAL_RUNTIME_PATH,
       FIRST_ENVIRONMENT_RUNTIME_PATH,
       FIRST_ENVIRONMENT_PLATFORM_PATH,
+      FIRST_ENVIRONMENT_MATERIALIZER_CLI_PATH,
       FIRST_ENVIRONMENT_MATERIALIZER_PATH,
       FIRST_ENVIRONMENT_CREDENTIAL_LOADER_PATH,
       CONCRETE_RUNNER_PATH,
@@ -3036,8 +3095,8 @@ export function validateLocalOnlySources(
   }
   if (
     hasConcreteSurface &&
-    (liveEntrypoints !== 2 ||
-      liveCapabilityFiles !== 11 ||
+    (liveEntrypoints !== 3 ||
+      liveCapabilityFiles !== 12 ||
       credentialAccessFiles !== 2 ||
       checkpointWriterFiles !== 3)
   ) {

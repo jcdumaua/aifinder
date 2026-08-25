@@ -344,6 +344,8 @@ function canonicalReviewedBytes(
       "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs",
+      "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs",
       "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs",

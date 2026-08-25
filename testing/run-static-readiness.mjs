@@ -301,7 +301,7 @@ const V1_RUNTIME_CHILDREN = [
   {
     path: "testing/admin-v1-staging-runtime-source-policy.test.mjs",
     argv: [],
-    sha256: "140817434f3f5b1571c45393f87e03f461a6b9e57bf3690b241c326d3faf2606",
+    sha256: "d9dfc486a1c0061d82fce0d98c77b509d4ed55260ae4a70c992c8ed875710707",
     imports: [
       "./admin-v1-staging-runtime-core.mjs",
       "node:assert/strict",
