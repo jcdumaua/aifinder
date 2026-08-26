@@ -115,7 +115,7 @@ function dependencies({ candidateMismatch = false, runtimeErrorCode = null } = {
         activation_source_policy_verified: true,
         membership_exact: true,
         legacy_imports: 0,
-        live_entrypoints: 2,
+        live_entrypoints: 4,
         candidate_identity_sha256: candidateMismatch
           ? "f".repeat(64)
           : authorization.candidate_identity_sha256,

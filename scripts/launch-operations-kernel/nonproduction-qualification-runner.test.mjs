@@ -287,7 +287,7 @@ function harness(overrides = {}) {
         member_count: 24,
         membership_exact: true,
         legacy_imports: 0,
-        live_entrypoints: 2,
+        live_entrypoints: 4,
       };
     },
     async inspectRepository() {
@@ -814,7 +814,7 @@ for (const [name, mutateDependency, code] of [
         member_count: 24,
         membership_exact: true,
         legacy_imports: 0,
-        live_entrypoints: 2,
+        live_entrypoints: 4,
       });
     },
     "CONCRETE_CANDIDATE_MISMATCH",
@@ -831,7 +831,7 @@ for (const [name, mutateDependency, code] of [
         member_count: 24,
         membership_exact: true,
         legacy_imports: 0,
-        live_entrypoints: 2,
+        live_entrypoints: 4,
       });
     },
     "CONCRETE_CANDIDATE_MISMATCH",
@@ -848,7 +848,7 @@ for (const [name, mutateDependency, code] of [
         member_count: 24,
         membership_exact: false,
         legacy_imports: 0,
-        live_entrypoints: 2,
+        live_entrypoints: 4,
       });
     },
     "CONCRETE_CANDIDATE_MISMATCH",

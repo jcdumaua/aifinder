@@ -127,7 +127,7 @@ await check("reviewed-identity attestation never weakens byte closure", async ()
   assert.equal(report.verified, true);
   assert.equal(report.source_policy_verified, true);
   assert.equal(report.activation_source_policy_verified, true);
-  assert.equal(report.live_entrypoints, 2);
+  assert.equal(report.live_entrypoints, 4);
   assert.throws(
     () =>
       verifyRepositoryCandidateManifest({

@@ -177,7 +177,7 @@ export async function verifyConcretePreEffectAuthorization({
     candidate.activation_source_policy_verified !== true ||
     candidate.membership_exact !== true ||
     candidate.legacy_imports !== 0 ||
-    candidate.live_entrypoints !== 2 ||
+    candidate.live_entrypoints !== 4 ||
     candidate.candidate_identity_sha256 !==
       authorization.candidate_identity_sha256 ||
     candidate.manifest_sha256 !== authorization.manifest_sha256 ||
@@ -430,7 +430,7 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
     candidate.activation_source_policy_verified !== true ||
     candidate.membership_exact !== true ||
     candidate.legacy_imports !== 0 ||
-    candidate.live_entrypoints !== 2 ||
+    candidate.live_entrypoints !== 4 ||
     candidate.candidate_identity_sha256 !==
       authorization.candidate_identity_sha256 ||
     candidate.manifest_sha256 !== authorization.manifest_sha256
