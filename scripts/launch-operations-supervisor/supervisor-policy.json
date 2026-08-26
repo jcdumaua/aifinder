@@ -11,16 +11,16 @@
     "success_retention_policy": "RETAIN_EXACTLY_ONE_PREVIEW"
   },
   "candidate": {
-    "candidate_identity_sha256": "7b234f9f28f609a3528dc06557db98f682e825cac461345670b3bb14a3824b70",
+    "candidate_identity_sha256": "32c8c2a07b2a651d9a29f5e3f1ee65e467b932870526081cdd1e66383a2565a3",
     "manifest_path": "scripts/launch-operations-kernel/candidate-manifest.json",
-    "manifest_sha256": "72e3217c37a9b1121b6c97f12cf5d85a6d4a2b65187ba9e23c46315693f3ede7",
+    "manifest_sha256": "408cbec694e1e74f8556b5d1eba71a799e36f6d74247fde495a74739bcdd67fd",
     "member_count": 55
   },
   "compatibility_support_sha256": {
-    "testing/admin-v1-staging-runtime-orchestrator.mjs": "b53f4148b20571d62245b3046f617cfb38bfc537c3bd4990b804d093019c66a2",
+    "testing/admin-v1-staging-runtime-orchestrator.mjs": "6dc4af92ad71aae76e827469c336a480269bf8652d3a51984a41ebae5b858d60",
     "testing/admin-v1-staging-runtime-source-policy.test.mjs": "d9dfc486a1c0061d82fce0d98c77b509d4ed55260ae4a70c992c8ed875710707",
-    "testing/run-static-readiness.mjs": "7143d7169e4285812a32833fbac498570419fd4459e0025082c31834b0dc6d7e",
-    "testing/static-test-safety-manifest.json": "cb721eb404a085b29a08c1ca52cd42080bcf1132ff77fcb8bf1fa3430c75d7df"
+    "testing/run-static-readiness.mjs": "d398787e5b9ca2368e303d48f23508a5a8314c328d9bd28d8e630ede8ebd5bff",
+    "testing/static-test-safety-manifest.json": "23d5fb279d63b980042e7888060059fee37c0271dc054dd2f05278a5fdf0e27a"
   },
   "credential_source_policy": {
     "ADMIN_PASSWORD": "AVAILABLE_ENV_LOCAL",
@@ -31,15 +31,15 @@
     "SUPABASE_URL": "AVAILABLE_ENV_LOCAL",
     "VERCEL": "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE"
   },
-  "independent_semantic_pin_set_sha256": "dfc213cb57e71eeae066909884ff6f9fb04eb1ccdcb7fae64944ad99bec4bcb8",
+  "independent_semantic_pin_set_sha256": "8a679dcf2cc55688816d01ff9593978f2024e900ffed30e588fb344f7dae1119",
   "independent_semantic_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
     "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs": "867b1bc692948adee15fd8a0dd5a2fbd79abf8258257bb799816fc9f4d1c5192",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs": "33b0f5d7e519cac1b41fec4c33fc799b6626e3950a0e1e41eca53538675ef53c",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "9e64571a5da8409b1a00b1cdd84425e0945a77f673cdf544459c59037406da43",
     "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "8d478698190a894be0f1bf5ec9417dcd8a017d89174a08f81aa8a0874d61e8e3",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "2d39ff7c654982e639a90932b619d594791674fd172f253c8ada726dfb87ef03",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6c96135c364e9892c86dfbb8d2a8c11c3ad5cc5fd1499f098cc2b68ae7f05ef9",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "d3fcfb29e3e2abf546b0bb72a39a8f70dabdedbbb615c3e118eb1c1d647468b3",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "ac5e061309ec43e2c44c33b1e28a7acbcb50b24667288cbfdb1475a996358718",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "3a22a4354dbe161ae964f73f69713f8ce1ec276776acef2fb1a5d7cdf85c876a",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "81b2f9360c8c8bee413783eeccab8cb2fad7bdd132f1c5af3ed394aa8c215b3a",

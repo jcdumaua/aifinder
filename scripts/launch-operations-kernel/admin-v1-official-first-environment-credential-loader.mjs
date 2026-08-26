@@ -6,6 +6,16 @@ const PROVIDER_SOURCE = Object.freeze({
   key_name: "token",
   source_name: "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE",
 });
+const ALLOWED_VERCEL_AUTH_KEYS = new Set([
+  "// Docs",
+  "// Note",
+  "expiresAt",
+  "refreshToken",
+  "token",
+  "userId",
+]);
+const MAX_CREDENTIAL_CHARACTERS = 16_384;
+const MAX_METADATA_CHARACTERS = 4_096;
 
 export class AdminV1OfficialFirstEnvironmentCredentialLoaderError
   extends Error {
@@ -30,10 +40,59 @@ function unavailable() {
 }
 
 function exactCredentialBuffer(value) {
-  if (!Buffer.isBuffer(value) || value.length < 1 || value.length > 16_384) {
+  if (
+    !Buffer.isBuffer(value) || value.length < 1 ||
+    value.length > MAX_CREDENTIAL_CHARACTERS
+  ) {
     unavailable();
   }
   return value;
+}
+
+function validCredentialString(value) {
+  return typeof value === "string" && value.length >= 1 &&
+    value.length <= MAX_CREDENTIAL_CHARACTERS && !/[\0\r\n]/u.test(value);
+}
+
+function validMetadataString(value, { nonempty, rejectLineBreaks }) {
+  return typeof value === "string" && (!nonempty || value.length >= 1) &&
+    value.length <= MAX_METADATA_CHARACTERS && !value.includes("\0") &&
+    (!rejectLineBreaks || !/[\r\n]/u.test(value));
+}
+
+function validateVercelAuth(parsed) {
+  if (
+    !parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
+    Object.getPrototypeOf(parsed) !== Object.prototype
+  ) unavailable();
+  const keys = Object.keys(parsed);
+  if (keys.some((key) => !ALLOWED_VERCEL_AUTH_KEYS.has(key))) unavailable();
+  if (!validCredentialString(parsed.token)) unavailable();
+  if (
+    Object.hasOwn(parsed, "refreshToken") &&
+    !validCredentialString(parsed.refreshToken)
+  ) unavailable();
+  if (
+    Object.hasOwn(parsed, "expiresAt") &&
+    (!Number.isSafeInteger(parsed.expiresAt) ||
+      parsed.expiresAt <= Math.floor(Date.now() / 1000))
+  ) unavailable();
+  if (
+    Object.hasOwn(parsed, "userId") &&
+    !validMetadataString(parsed.userId, {
+      nonempty: true,
+      rejectLineBreaks: true,
+    })
+  ) unavailable();
+  for (const key of ["// Note", "// Docs"]) {
+    if (
+      Object.hasOwn(parsed, key) &&
+      !validMetadataString(parsed[key], {
+        nonempty: false,
+        rejectLineBreaks: false,
+      })
+    ) unavailable();
+  }
 }
 
 function sameIdentity(left, right) {
@@ -83,12 +142,7 @@ export function readAdminV1OfficialFirstEnvironmentVercelCliAuth({
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     if (text.startsWith("\ufeff") || text.includes("\0")) unavailable();
     const parsed = JSON.parse(text);
-    if (
-      !parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
-      Object.keys(parsed).length !== 1 ||
-      typeof parsed.token !== "string" || parsed.token.length < 1 ||
-      parsed.token.length > 16_384 || /[\0\r\n]/u.test(parsed.token)
-    ) unavailable();
+    validateVercelAuth(parsed);
     return Buffer.from(parsed.token, "utf8");
   } catch (error) {
     if (
@@ -119,8 +173,7 @@ export function createAdminV1OfficialFirstEnvironmentCredentialLoader({
       }
       const value = environment.ADMIN_PASSWORD;
       if (
-        typeof value !== "string" || value.length < 1 || value.length > 16_384 ||
-        value.includes("\0") || value.includes("\r") || value.includes("\n")
+        !validCredentialString(value)
       ) unavailable();
       return Buffer.from(value, "utf8");
     },

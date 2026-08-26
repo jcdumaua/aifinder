@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "846a511c625d1fa9198102391444eca384acdb19692aa5318ceaf4b5067d8bfb",
+  "testing_tree_digest": "2aaa4fc0ba3fb5f698ea1cbfbaadddd56a0a90034cbf674b935de36a3b9dace2",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -10,8 +10,8 @@
     "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs": "33b0f5d7e519cac1b41fec4c33fc799b6626e3950a0e1e41eca53538675ef53c",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "9e64571a5da8409b1a00b1cdd84425e0945a77f673cdf544459c59037406da43",
     "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "8d478698190a894be0f1bf5ec9417dcd8a017d89174a08f81aa8a0874d61e8e3",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "2d39ff7c654982e639a90932b619d594791674fd172f253c8ada726dfb87ef03",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6c96135c364e9892c86dfbb8d2a8c11c3ad5cc5fd1499f098cc2b68ae7f05ef9",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "d3fcfb29e3e2abf546b0bb72a39a8f70dabdedbbb615c3e118eb1c1d647468b3",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "ac5e061309ec43e2c44c33b1e28a7acbcb50b24667288cbfdb1475a996358718",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "3a22a4354dbe161ae964f73f69713f8ce1ec276776acef2fb1a5d7cdf85c876a",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "81b2f9360c8c8bee413783eeccab8cb2fad7bdd132f1c5af3ed394aa8c215b3a",
@@ -51,8 +51,8 @@
     "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs": "33b0f5d7e519cac1b41fec4c33fc799b6626e3950a0e1e41eca53538675ef53c",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "9e64571a5da8409b1a00b1cdd84425e0945a77f673cdf544459c59037406da43",
     "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "8d478698190a894be0f1bf5ec9417dcd8a017d89174a08f81aa8a0874d61e8e3",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "2d39ff7c654982e639a90932b619d594791674fd172f253c8ada726dfb87ef03",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6c96135c364e9892c86dfbb8d2a8c11c3ad5cc5fd1499f098cc2b68ae7f05ef9",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "d3fcfb29e3e2abf546b0bb72a39a8f70dabdedbbb615c3e118eb1c1d647468b3",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "ac5e061309ec43e2c44c33b1e28a7acbcb50b24667288cbfdb1475a996358718",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "3a22a4354dbe161ae964f73f69713f8ce1ec276776acef2fb1a5d7cdf85c876a",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "81b2f9360c8c8bee413783eeccab8cb2fad7bdd132f1c5af3ed394aa8c215b3a",
@@ -88,19 +88,19 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "054670365e2047ad723a5c183f411285fe89446b79ff1d68d4963cbd7439e9eb"
+    "sha256": "8d0d8f0f421f9ff1db0191f75a72883f71fb7ed7ee10916bcad982dc304e2db0"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "7e8653978806139f4a344e1f375e616e947881c11645389df64d5dcbb7db94bd"
+    "sha256": "6aafb4282a8420b23c0dab989801973ed3f658052317b52553a9cf7feba1c546"
   },
   "phase_c2_2_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "ce3d8121faf7f8c23999e0c3e56fee513017d126dd3d5747cffc1498087072c6"
+    "sha256": "42ea64f5b5f4325debccd1efdd7668888d720cded86276faf7dd460e66b2849c"
   },
   "entries": [
     {
@@ -1511,18 +1511,18 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "8eb6a842fe4bf993fe597d1898e451ebcd9fa862e28abe0514fe80850eaf0f26"
+    "sha256": "1d147a66d6728056d2ddc3d56625deddc81efa78bc45adb549df53730078a458"
   },
   "phase_33na_v1_staging_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 15,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "b214a19eeb23d0d574eab901346240c8e41db4c43ec6ee73f462325f4b1f8880"
+    "sha256": "43e16780574b4605a28cea2111495fef491ca1bd1adf0a712674ea24a01a5bf0"
   },
   "phase_34fa_v1_runtime_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "94bfb12a8b7ddd301c78e76b3813ca799ba5bb6297794a8e80433fedd5ceca28"
+    "sha256": "899f736d6b4739c8dce0b78921616c687870d199309f114b55a4935cfe9503aa"
   }
 }

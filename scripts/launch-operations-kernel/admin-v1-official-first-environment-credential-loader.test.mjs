@@ -109,14 +109,96 @@ try {
   mkdirSync(repositoryRoot);
   mkdirSync(credentialDirectory, { recursive: true });
   const credentialPath = path.join(credentialDirectory, "auth.json");
-  writeFileSync(credentialPath, '{"token":"synthetic-native-vercel"}\n', {
-    mode: 0o600,
-  });
+  const writeAuth = (value) => writeFileSync(
+    credentialPath,
+    `${JSON.stringify(value)}\n`,
+    { mode: 0o600 },
+  );
+  const readNative = () =>
+    readAdminV1OfficialFirstEnvironmentVercelCliAuth({
+      repository_root: repositoryRoot,
+    });
+  const expectUnavailable = (value) => {
+    writeAuth(value);
+    assert.throws(
+      readNative,
+      (error) =>
+        error?.code === "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",
+    );
+  };
+
+  writeAuth({ token: "synthetic-native-vercel" });
   const nativeValue = readAdminV1OfficialFirstEnvironmentVercelCliAuth({
     repository_root: repositoryRoot,
   });
   assert.equal(nativeValue.toString("utf8"), "synthetic-native-vercel");
   nativeValue.fill(0);
+
+  const currentToken = "synthetic-current-vercel";
+  const syntheticRefreshToken = "synthetic-refresh-never-returned";
+  const futureExpiry = Math.floor(Date.now() / 1000) + 3_600;
+  const currentAuth = {
+    "// Docs": "synthetic documentation metadata",
+    "// Note": "synthetic note metadata",
+    expiresAt: futureExpiry,
+    refreshToken: syntheticRefreshToken,
+    token: currentToken,
+    userId: "synthetic-user-id",
+  };
+  writeAuth(currentAuth);
+  const currentValue = readNative();
+  assert.equal(currentValue.toString("utf8"), currentToken);
+  assert.equal(
+    currentValue.includes(Buffer.from(syntheticRefreshToken, "utf8")),
+    false,
+  );
+  currentValue.fill(0);
+
+  let nativeProviderReads = 0;
+  writeAuth(currentAuth);
+  const nativeLoader = createAdminV1OfficialFirstEnvironmentCredentialLoader({
+    environment: Object.freeze({ ADMIN_PASSWORD: "synthetic-admin" }),
+    read_provider_auth() {
+      nativeProviderReads += 1;
+      return readNative();
+    },
+  });
+  const loadedCurrentValue = await nativeLoader.load_provider_auth({
+    source_contract: {
+      key_name: "token",
+      source_name: "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE",
+    },
+  });
+  assert.equal(loadedCurrentValue.toString("utf8"), currentToken);
+  assert.equal(nativeProviderReads, 1);
+  nativeLoader.clear_sensitive();
+  assert.equal(loadedCurrentValue.every((value) => value === 0), true);
+
+  expectUnavailable({
+    ...currentAuth,
+    expiresAt: Math.floor(Date.now() / 1000) - 1,
+  });
+  expectUnavailable({ ...currentAuth, unexpected: "denied" });
+  const { token: _missingToken, ...missingToken } = currentAuth;
+  expectUnavailable(missingToken);
+  expectUnavailable({ ...currentAuth, token: 42 });
+  expectUnavailable({ ...currentAuth, token: "" });
+  expectUnavailable({ ...currentAuth, token: "synthetic\ninvalid" });
+  expectUnavailable({ ...currentAuth, refreshToken: 42 });
+  expectUnavailable({ ...currentAuth, refreshToken: "" });
+  expectUnavailable({ ...currentAuth, refreshToken: "x".repeat(16_385) });
+  expectUnavailable({ ...currentAuth, expiresAt: "tomorrow" });
+  expectUnavailable({ ...currentAuth, expiresAt: futureExpiry + 0.5 });
+  expectUnavailable({
+    ...currentAuth,
+    expiresAt: Number.MAX_SAFE_INTEGER + 1,
+  });
+  expectUnavailable({ ...currentAuth, userId: "" });
+  expectUnavailable({ ...currentAuth, userId: "synthetic\0invalid" });
+  expectUnavailable({ ...currentAuth, userId: "x".repeat(4_097) });
+  expectUnavailable({ ...currentAuth, "// Note": 42 });
+  expectUnavailable({ ...currentAuth, "// Docs": "synthetic\0invalid" });
+  expectUnavailable({ ...currentAuth, "// Note": "x".repeat(4_097) });
 
   const replacementPath = path.join(credentialDirectory, "replacement.json");
   writeFileSync(replacementPath, '{"token":"synthetic-alias-vercel"}\n', {
@@ -135,5 +217,5 @@ try {
 }
 
 console.log(
-  "PASS_FIRST_ENVIRONMENT_CREDENTIAL_LOADER assertions=13 environment_value_reads=1 provider_auth_reads=2 enumeration=0 provider_calls=0",
+  "PASS_FIRST_ENVIRONMENT_CREDENTIAL_LOADER assertions=36 environment_value_reads=1 provider_auth_reads=2 synthetic_native_provider_reads=1 enumeration=0 provider_calls=0",
 );
