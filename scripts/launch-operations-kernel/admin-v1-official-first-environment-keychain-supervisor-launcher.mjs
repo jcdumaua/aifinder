@@ -317,9 +317,16 @@ export function dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLaunche
       lookup.error !== undefined || lookup.signal !== null || lookup.status !== 0
     ) fail("FIRST_ENVIRONMENT_KEYCHAIN_LOOKUP_FAILED");
     secretBytes = Buffer.from(keychainStdout);
+    const credentialBytes =
+      secretBytes.byteLength > 0 &&
+        secretBytes[secretBytes.byteLength - 1] === 0x0a
+        ? secretBytes.subarray(0, secretBytes.byteLength - 1)
+        : secretBytes;
     let secret;
     try {
-      secret = new TextDecoder("utf-8", { fatal: true }).decode(secretBytes);
+      secret = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+        credentialBytes,
+      );
     } catch {
       fail("FIRST_ENVIRONMENT_KEYCHAIN_CREDENTIAL_INVALID");
     }
@@ -355,8 +362,8 @@ export function dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLaunche
       fail("FIRST_ENVIRONMENT_KEYCHAIN_SUPERVISOR_START_FAILED");
     }
     if (
-      supervisorStdout.includes(secretBytes) ||
-      supervisorStderr.includes(secretBytes)
+      supervisorStdout.includes(credentialBytes) ||
+      supervisorStderr.includes(credentialBytes)
     ) fail("FIRST_ENVIRONMENT_KEYCHAIN_OUTPUT_REDACTED");
     writeStdout(supervisorStdout);
     writeStderr(supervisorStderr);

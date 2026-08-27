@@ -886,9 +886,9 @@ const POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
 ]);
 const REVIEWED_PRELIVE_AGGREGATE_SHA256 =
-  "4f71fe8c9affe829163e2728b19920b5a2c0975d22ad29a3e0688a9a2994ba8f";
+  "8e490569e6ad3dc19cc9ea877d1be5143c2fa3ee0e13a4bacef72667c65a58a1";
 const REVIEWED_STABLE_SURFACE_SHA256 =
-  "7ac99ee179ea797c57926269c1b89320f1f09c6b18fbeca1a837aeb21f5a59d3";
+  "92a06222ff35c3491556d438ebd510bc990f780171e7dcfe0946f8edb10a0244";
 const PROTECTED_DRAFT_PATHS = Object.freeze([
   "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh",
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-generator-candidate.py",

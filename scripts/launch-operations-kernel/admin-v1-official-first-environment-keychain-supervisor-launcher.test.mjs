@@ -27,7 +27,7 @@ const NODE_EXECUTABLE = "/usr/local/bin/node";
 const SYNTHETIC_SECRET = "SYNTHETIC_KEYCHAIN_ADMIN_VALUE";
 
 function syntheticDependencies({
-  secret = Buffer.from(SYNTHETIC_SECRET, "utf8"),
+  secret = Buffer.from(`${SYNTHETIC_SECRET}\n`, "utf8"),
   keychainStatus = 0,
   keychainStderr = Buffer.alloc(0),
   supervisorStatus = 0,
@@ -181,6 +181,54 @@ try {
   );
   assert.equal(Buffer.concat(success.stderr).byteLength, 0);
 
+  const unframedSuccess = syntheticDependencies({
+    secret: Buffer.from(SYNTHETIC_SECRET, "utf8"),
+  });
+  assert.deepEqual(
+    dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+      arguments_list: [
+        "--run-first-environment",
+        "--authorization",
+        authorizationPath,
+      ],
+      dependencies: unframedSuccess.dependencies,
+    }),
+    {
+      code: "FIRST_ENVIRONMENT_KEYCHAIN_SUPERVISOR_COMPLETE",
+      exit_code: 0,
+    },
+  );
+  assert.equal(unframedSuccess.calls.length, 2);
+  assert.equal(
+    unframedSuccess.calls[1].adminPasswordAtSpawn,
+    SYNTHETIC_SECRET,
+  );
+
+  const bomFramedSecret = Buffer.concat([
+    Buffer.from([0xef, 0xbb, 0xbf]),
+    Buffer.from(`${SYNTHETIC_SECRET}\n`, "utf8"),
+  ]);
+  const bomFramedSuccess = syntheticDependencies({ secret: bomFramedSecret });
+  assert.deepEqual(
+    dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+      arguments_list: [
+        "--run-first-environment",
+        "--authorization",
+        authorizationPath,
+      ],
+      dependencies: bomFramedSuccess.dependencies,
+    }),
+    {
+      code: "FIRST_ENVIRONMENT_KEYCHAIN_SUPERVISOR_COMPLETE",
+      exit_code: 0,
+    },
+  );
+  assert.equal(bomFramedSuccess.calls.length, 2);
+  assert.equal(
+    bomFramedSuccess.calls[1].adminPasswordAtSpawn,
+    `\ufeff${SYNTHETIC_SECRET}`,
+  );
+
   for (const secret of [
     Buffer.alloc(0),
     Buffer.from("A\0B", "utf8"),
@@ -210,6 +258,29 @@ try {
         false,
       );
     }
+  }
+
+  for (const secret of [
+    Buffer.from(`${SYNTHETIC_SECRET}\n\n`, "utf8"),
+    Buffer.from(`${SYNTHETIC_SECRET}\r\n`, "utf8"),
+    Buffer.from(`SYNTHETIC\nKEYCHAIN\n`, "utf8"),
+    Buffer.from("\n", "utf8"),
+  ]) {
+    const invalidFraming = syntheticDependencies({ secret });
+    const result =
+      dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+        arguments_list: [
+          "--run-first-environment",
+          "--authorization",
+          authorizationPath,
+        ],
+        dependencies: invalidFraming.dependencies,
+      });
+    assert.deepEqual(result, {
+      code: "FIRST_ENVIRONMENT_KEYCHAIN_CREDENTIAL_INVALID",
+      exit_code: 1,
+    });
+    assert.equal(invalidFraming.calls.length, 1);
   }
 
   const lookupFailure = syntheticDependencies({
