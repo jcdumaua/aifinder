@@ -107,7 +107,8 @@ The first-environment create-only supervisor has a production authorization
 materializer at
 `scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs`.
 It accepts explicit non-secret review, repository, candidate, deployment,
-source-identity, credential-source-name, capability-budget, cleanup, journal,
+source-identity, credential-source-name, capability-budget, expected-residual,
+journal,
 and spend bindings. It derives three domain-separated SHA-256 identities over
 canonical JSON: the authorization-ID binding, review-approval binding, and
 one-use authorization closure. Hermetic records are rejected by the live
@@ -125,10 +126,17 @@ property access to the supplied process-environment object. It does not read
 only from the existing canonical Vercel CLI `auth.json` source using an
 inode-bound, no-follow, bounded read. Both sources are acquired only after the
 non-secret authorization, source, candidate, repository, and process-start
-gates. Mutable provider bytes are cleared after the single supervisor session.
+gates, and both are acquired before the one-use authorization is spent.
+Mutable provider bytes are cleared after the single supervisor session.
 
-The native transport exposes only `execute` and accepts exactly the fixed
-Vercel environment-create, non-decrypting identity-read, and exact-owned-delete
-descriptors. Each operation has a maximum of one call. The origin is fixed to
+The native transport exposes only `execute` and accepts exactly one fixed
+Vercel environment-create descriptor: `POST`, branch `main`, target `preview`,
+encrypted `ADMIN_PASSWORD`, and `upsert=false`. It exposes no identity-read,
+update, or delete capability. The one-use authorization is spent durably
+immediately before that single create request. Exact success is terminal with
+one expected created-resource residue; known no-effect provider failures retire
+as categorical failures, while transport, server, or unexpected-response
+ambiguity remains active and fail-closed. The origin is fixed to
 `https://api.vercel.com`; arbitrary services, URLs, methods, Git, Supabase,
-Storage/RPC, database, deployment-control, retries, and replay are denied.
+Storage/RPC, database, deployment-control, retries, replay, cleanup, and
+post-create inspection are denied.

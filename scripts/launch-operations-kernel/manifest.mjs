@@ -2589,11 +2589,17 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !capabilities.environment &&
       !broadGit &&
       source.includes(
-        '"ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1"',
+        '"ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1"',
       ) &&
       source.includes("FIRST_ENVIRONMENT_AUTHORIZATION_SPENT") &&
       source.includes("FIRST_ENVIRONMENT_BUDGET_EXHAUSTED") &&
-      source.includes('classification: "RECOVERY_PENDING"') &&
+      source.includes(
+        'state.resource_state = "EXPECTED_CREATED_RESOURCE_PRESENT"',
+      ) &&
+      source.includes("FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT") &&
+      !source.includes("adapter.readEnvironment") &&
+      !source.includes("adapter.updateEnvironment") &&
+      !source.includes("adapter.deleteEnvironment") &&
       source.includes(
         '"admin-v1-official-first-environment-runtime-journal.json"',
       ) &&
@@ -2613,7 +2619,16 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("createAdminV1OfficialFirstEnvironmentNativeTransport") &&
       source.includes('`https://api.vercel.com${request.descriptor.path}`') &&
       source.includes("FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED") &&
-      source.includes("NATIVE_OPERATION_CONTRACT") &&
+      source.includes('operation: "create_environment"') &&
+      source.includes('method: "POST"') &&
+      source.includes(
+        '"teamId=team_9POJYxNnjIBbrQ19My8M5yG3&upsert=false"',
+      ) &&
+      source.includes("FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT") &&
+      !source.includes('method: "GET"') &&
+      !source.includes('method: "PUT"') &&
+      !source.includes('method: "PATCH"') &&
+      !source.includes('method: "DELETE"') &&
       !/(supabase|storage_rpc|github\.com)/iu.test(source)
     );
   }
@@ -2625,6 +2640,10 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !capabilities.environment &&
       source.includes("mkdtempSync(path.join(") &&
       source.includes("environment_create_max=1") &&
+      source.includes("environment_read_max=0") &&
+      source.includes("environment_update_max=0") &&
+      source.includes("environment_delete_max=0") &&
+      source.includes("expected_residual=true") &&
       source.includes("git_remote_mutations=0") &&
       source.includes("database_supabase_reads=0") &&
       source.includes("database_supabase_writes=0") &&
@@ -2766,6 +2785,7 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("createAdminV1OfficialFirstEnvironmentAdapter") &&
       source.includes("runAdminV1OfficialFirstEnvironmentRuntime") &&
       source.includes("load_sensitive") &&
+      source.includes("prepare_provider_auth") &&
       source.includes("environment = process.env") &&
       source.includes("fetch_impl = globalThis.fetch") &&
       source.includes("createAdminV1OfficialFirstEnvironmentNativeDependencies") &&
@@ -2779,8 +2799,12 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !capabilities.network &&
       !capabilities.environment &&
       source.includes("process_start_before_credential=true") &&
-      source.includes("credential_value_reads_before_process_start=0") &&
+      source.includes("credential_value_reads_before_spend=2") &&
       source.includes("real_provider_calls=0") &&
+      source.includes("environment_identity_read_max=0") &&
+      source.includes("environment_update_max=0") &&
+      source.includes("environment_delete_max=0") &&
+      source.includes("expected_residual=true") &&
       source.includes("full_official_ledger=0")
     );
   }

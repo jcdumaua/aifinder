@@ -11,16 +11,16 @@
     "success_retention_policy": "RETAIN_EXACTLY_ONE_PREVIEW"
   },
   "candidate": {
-    "candidate_identity_sha256": "07fd7ff3adab9a2245e4984247a147a58b79e05ab430a08ef90efe584e4a3b5e",
+    "candidate_identity_sha256": "213357ec5922b9ddd455f12111deea125455f9edec08c9bda55e264db7c83778",
     "manifest_path": "scripts/launch-operations-kernel/candidate-manifest.json",
-    "manifest_sha256": "5bb7129b11ffbd4f5bcc86d8a16a593325135242d578d2b1365e2f1e50eab0c5",
+    "manifest_sha256": "209ff0b5414aa2aa5e1f39afa76873f8160e1ca50554f2a52bbc2c7c7f383757",
     "member_count": 55
   },
   "compatibility_support_sha256": {
     "testing/admin-v1-staging-runtime-orchestrator.mjs": "90ce47fb1e757a726f216d9b79ff1b9eb8c6ecafaa228e876901a048271d0a4c",
     "testing/admin-v1-staging-runtime-source-policy.test.mjs": "d9dfc486a1c0061d82fce0d98c77b509d4ed55260ae4a70c992c8ed875710707",
     "testing/run-static-readiness.mjs": "99ba9a823bb410f81806ae9e550adc82f06c8554ecc17cbb94a0df7b24d90c1a",
-    "testing/static-test-safety-manifest.json": "dfd0e67d00e32649a1d7ec9e836338217578a2540f0b9b4ee6b3a063debf6b93"
+    "testing/static-test-safety-manifest.json": "082c73e7fbfe556bd4edebcc5e019a36b0cddf60b35c9eee5c0c3383aa872b5e"
   },
   "credential_source_policy": {
     "ADMIN_PASSWORD": "AVAILABLE_ENV_LOCAL",
@@ -31,7 +31,7 @@
     "SUPABASE_URL": "AVAILABLE_ENV_LOCAL",
     "VERCEL": "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE"
   },
-  "independent_semantic_pin_set_sha256": "931e7d05872ae3f30caf9d21e535e541fe9b012ce73b5ee8bb1b29c51e817a30",
+  "independent_semantic_pin_set_sha256": "98bf9cd0e5ac2040881e651039a6ca89534c8a88830ee40ba63cfbc2bd0286db",
   "independent_semantic_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
     "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs": "867b1bc692948adee15fd8a0dd5a2fbd79abf8258257bb799816fc9f4d1c5192",
@@ -42,15 +42,15 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "20e98cb9ce9bbe2e1f18bc8f9973f20c18c86e239a835d0c853fadb31d75c23d",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "c22778fd363d481303a18bb12ecaef40058f967beb40241ed28488cc9566ba1b",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "81b2f9360c8c8bee413783eeccab8cb2fad7bdd132f1c5af3ed394aa8c215b3a",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs": "528bffb29cf5e06b593a9fbe9bf04a0434138443101fb6dce6f83b494c317b84",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "00129f882188ad592b2330f931847f6f26846d623a869b4d4b8cd6ba56e41455",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs": "b668d327d918e0daf53589a7a813cdaa967c6cb176ca54546c6044045d0fa8cd",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "f940e80e91b299601764312964920601fefc3f788a02dd35c32d8aeb8be63e13",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "8ef96ab4cd50c3cd646b7e52de7fbb31dc2dafaf53020868788ab47656a0a734",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "a6ef358e35e0f4647843f642bebb3f14e8c5ae2513655f62272a132888c6da5d",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "8bf7952d4365c4804890ab7b64279b31331565e5b06d8cc89d4c09724535bf4f",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "41936c0f6de704d360566e8dc3f03f5622ffdc0f8f8f3a880017edd523af3acc",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "57d72d597d6c61b0938d577f4bda5b25c3ba89135f1456965b06b7e6e6e61bc9",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs": "5a0b8bf3814a385e2ee090b0996da8bad062a228af0168d297bd06878f93abb6",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "d58c166bbafe05ed9f5cac480c233e1be02669f99092b85554d5aca665332cb7",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs": "4c278148de0627f8540ec800a1af3abb7cf0890be6243b57c0e5df91473305ec",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "9b82dcecef8d9402a8ccda6ab44fc6f78c9f33ca0199a9bc1e9cbe90835a4edf",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "0a86dc5e965018c4174833526e633a319b48772cd3c0d9efa563b38fb548ed94",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "d337625bcd4228f08ff9a5256ce24094b634cc175a215a94edee83c3968eaee3",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "453f2755bb05a4c289c9d1ef6fb9e08f30363aa08de86cc9cc00f6c145b7f959",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "cc575ae2f7a90293b852a47b36e81b75095954ee14e4542eaaabf45074290a41",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "6babc3398af89655c59e3bb786381e56360f1dacb669f30dfc4ffef3268bf272",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "00dbb2944e5be69e19845796ca5e8ace45b60c587a13db8d2e72c33a358292c6",
     "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "60bca29de6211d57a68d88b610403057abd1e8e14970d96935f2a14ecc14b08f",
@@ -61,7 +61,7 @@
     "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs": "a6d091656834a9eb1550486cb911930dd7b537c93a85d9c7e3a0e921d0cf3ce9",
     "scripts/launch-operations-kernel/kernel.mjs": "cbed5da0fbf02a2133a9aa1979befe4728579aba5c01d80a3a32a0ed316c6586",
     "scripts/launch-operations-kernel/legacy-classifier.mjs": "a3aafff55529f8decdfbb65634c88b5fed3cf902e1e2edfae11103b6fdb56504",
-    "scripts/launch-operations-kernel/manifest.mjs": "a6fe40c2bcaf5f1173d2cee8e7c689206847cd9ab2f94235562a1cc53953b5c8",
+    "scripts/launch-operations-kernel/manifest.mjs": "d6bc23d05af925f9eb8297d8db7db2e6b0a5bd5ede036538330d1dc23c58f3be",
     "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs": "f0629a454973268bed0f92bb75c587d9e1b4a4f07c13923ea8820a40fdbd284f",
     "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs": "762b1c9eacb7ef9839b58341c982abb09002ff9dd0dd1afc0d38a70af5e75537",
     "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs": "7ce7efd3c14752d219855c60345b7c54b5800dd0f2d92e51707cf280991169b9",

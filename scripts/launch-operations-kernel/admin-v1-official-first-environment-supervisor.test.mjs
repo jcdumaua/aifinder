@@ -131,7 +131,7 @@ function authorization(overrides = {}) {
     request: {
       authorization_mode: "HERMETIC_TEST_ONLY",
       phase_identity:
-        "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_CREATE_ONLY_HERMETIC_TEST_V1",
+        "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_HERMETIC_TEST_V1",
       reviewed_package_sha256: "a".repeat(64),
       reviewed_package_bytes: 1,
       gemini_approval_token_sha256: "b".repeat(64),
@@ -200,25 +200,8 @@ function transport(counters) {
   return {
     async execute(request) {
       counters.transport += 1;
-      if (request.operation === "create_environment") {
-        return { status: 200, body: { id: "env-owned-1" } };
-      }
-      if (request.operation === "verify_environment_identity") {
-        return {
-          status: 200,
-          body: {
-            id: "env-owned-1",
-            key: "ADMIN_PASSWORD",
-            type: "encrypted",
-            target: ["preview"],
-            gitBranch: "main",
-            projectId: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
-            teamId: "team_9POJYxNnjIBbrQ19My8M5yG3",
-          },
-        };
-      }
-      assert.equal(request.operation, "delete_environment");
-      return { status: 204, body: null };
+      assert.equal(request.operation, "create_environment");
+      return { status: 200, body: { id: "env-owned-1" } };
     },
   };
 }
@@ -228,6 +211,7 @@ function dependencies({ journal = memoryJournal(), credential = true } = {}) {
     candidate: 0,
     journal_creates: 0,
     credential: 0,
+    provider_auth: 0,
     transport: 0,
   };
   const output = [];
@@ -255,13 +239,17 @@ function dependencies({ journal = memoryJournal(), credential = true } = {}) {
         counters.journal_creates += 1;
         return journal;
       },
+      async prepare_provider_auth() {
+        counters.provider_auth += 1;
+        assert.equal(journal.load()?.value?.state?.token_spent, false);
+      },
       async load_credential({ source_contract }) {
         counters.credential += 1;
         assert.deepEqual(
           source_contract,
           ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_CONTRACT,
         );
-        assert.equal(journal.load()?.value?.state?.token_spent, true);
+        assert.equal(journal.load()?.value?.state?.token_spent, false);
         assert.equal(journal.load()?.value?.state?.runtime_sessions, 1);
         if (!credential) throw new Error("SYNTHETIC_CREDENTIAL_UNAVAILABLE");
         return Buffer.from("LOCAL_TEST_SENTINEL", "utf8");
@@ -313,6 +301,7 @@ try {
     candidate: 0,
     journal_creates: 0,
     credential: 0,
+    provider_auth: 0,
     transport: 0,
   });
 
@@ -332,6 +321,7 @@ try {
     candidate: 0,
     journal_creates: 0,
     credential: 0,
+    provider_auth: 0,
     transport: 0,
   });
 
@@ -355,6 +345,7 @@ try {
     candidate: 0,
     journal_creates: 0,
     credential: 0,
+    provider_auth: 0,
     transport: 0,
   });
 
@@ -368,24 +359,29 @@ try {
       ["--run-first-environment", "--authorization", successPath],
       success.values,
     ),
-    { exit_code: 0, code: "FIRST_ENVIRONMENT_SUPERVISOR_COMPLETE" },
+    { exit_code: 0, code: "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED" },
   );
   assert.deepEqual(success.counters, {
     candidate: 1,
     journal_creates: 1,
     credential: 1,
-    transport: 3,
+    provider_auth: 1,
+    transport: 1,
   });
   assert.deepEqual(success.output, [{
     status: "PASS",
-    code: "FIRST_ENVIRONMENT_SUPERVISOR_COMPLETE",
+    code: "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED",
     environment_creates: 1,
-    environment_identity_reads: 1,
-    environment_deletes: 1,
+    environment_identity_reads: 0,
+    environment_updates: 0,
+    environment_deletes: 0,
     runtime_sessions: 1,
     runtime_retries: 0,
     runtime_replays: 0,
-    zero_residual_owned_state: true,
+    resource_state: "EXPECTED_CREATED_RESOURCE_PRESENT",
+    owned_environment_record_id_present: true,
+    expected_residual: true,
+    zero_residual: false,
   }]);
 
   const replay = await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
@@ -400,7 +396,8 @@ try {
     candidate: 2,
     journal_creates: 2,
     credential: 1,
-    transport: 3,
+    provider_auth: 1,
+    transport: 1,
   });
 
   const credentialFailurePath = writeAuthorization(
@@ -415,19 +412,24 @@ try {
     ),
     {
       exit_code: 1,
-      code: "FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_UNAVAILABLE",
+      code: "FAIL_CREDENTIAL_SOURCE_UNAVAILABLE",
     },
   );
   assert.deepEqual(credentialFailure.counters, {
     candidate: 1,
     journal_creates: 1,
     credential: 1,
+    provider_auth: 1,
     transport: 0,
   });
   assert.equal(credentialFailure.journal.load().retired, true);
   assert.equal(
     credentialFailure.journal.load().value.state.zero_residual,
     true,
+  );
+  assert.equal(
+    credentialFailure.journal.load().value.state.token_spent,
+    false,
   );
 
   const nativeJournal = memoryJournal();
@@ -464,33 +466,14 @@ try {
         nativeFetches.push({ method: init.method, url });
         assert.equal(url.startsWith("https://api.vercel.com/"), true);
         assert.equal(init.redirect, "error");
-        if (init.method === "POST") {
-          assert.equal(JSON.parse(init.body).value, "SYNTHETIC_NATIVE_ADMIN");
-          return {
-            status: 200,
-            async text() {
-              return '{"id":"env-native-1"}';
-            },
-          };
-        }
-        if (init.method === "GET") {
-          return {
-            status: 200,
-            async text() {
-              return canonicalJson({
-                id: "env-native-1",
-                key: "ADMIN_PASSWORD",
-                type: "encrypted",
-                target: ["preview"],
-                gitBranch: "main",
-                projectId: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
-                teamId: "team_9POJYxNnjIBbrQ19My8M5yG3",
-              });
-            },
-          };
-        }
-        assert.equal(init.method, "DELETE");
-        return { status: 204, async text() { return ""; } };
+        assert.equal(init.method, "POST");
+        assert.equal(JSON.parse(init.body).value, "SYNTHETIC_NATIVE_ADMIN");
+        return {
+          status: 200,
+          async text() {
+            return '{"id":"env-native-1"}';
+          },
+        };
       },
       inspect_repository: (record) => structuredClone(record.repository),
       verify_candidate(record) {
@@ -520,13 +503,11 @@ try {
       ["--run-first-environment", "--authorization", nativePath],
       nativeDependencies,
     ),
-    { exit_code: 0, code: "FIRST_ENVIRONMENT_SUPERVISOR_COMPLETE" },
+    { exit_code: 0, code: "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED" },
   );
   assert.deepEqual(nativeEnvironmentReads, ["ADMIN_PASSWORD"]);
   assert.deepEqual(nativeProviderReads, ["VERCEL_CLI_AUTH_JSON"]);
-  assert.deepEqual(nativeFetches.map(({ method }) => method), [
-    "POST", "GET", "DELETE",
-  ]);
+  assert.deepEqual(nativeFetches.map(({ method }) => method), ["POST"]);
   assert.equal(nativeProviderAuth.every((value) => value === 0), true);
   assert.equal(nativeOutput.at(-1)?.status, "PASS");
 
@@ -563,9 +544,10 @@ try {
   console.log(
     "PASS_ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_SUPERVISOR " +
       "assertions=31 failures=0 process_start_before_credential=true " +
-      "credential_value_reads_before_process_start=0 real_provider_calls=0 " +
-      "environment_create_max=1 environment_identity_read_max=1 " +
-      "environment_delete_exact_owned_max=1 git_remote_mutations=0 " +
+      "credential_value_reads_before_spend=2 real_provider_calls=0 " +
+      "environment_create_max=1 environment_identity_read_max=0 " +
+      "environment_update_max=0 environment_delete_max=0 expected_residual=true " +
+      "git_remote_mutations=0 " +
       "database_supabase_reads=0 database_supabase_writes=0 " +
       "storage_rpc_operations=0 full_official_ledger=0 retries=0 replays=0",
   );

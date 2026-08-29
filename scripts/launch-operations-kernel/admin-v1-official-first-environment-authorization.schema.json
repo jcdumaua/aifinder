@@ -26,7 +26,7 @@
   "properties": {
     "schema_version": { "const": 1 },
     "operation_class": {
-      "const": "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1"
+      "const": "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1"
     },
     "authorization_id_sha256": {
       "type": "string",
@@ -269,6 +269,7 @@
           "required": [
             "credential_value_reads", "environment_creates",
             "environment_deletes", "environment_identity_reads",
+            "environment_updates",
             "full_official_ledger", "git_writes", "replays", "retries",
             "second_invocations", "storage_rpc_actions", "supabase_reads",
             "supabase_writes"
@@ -276,8 +277,9 @@
           "properties": {
             "credential_value_reads": { "const": 2 },
             "environment_creates": { "const": 1 },
-            "environment_deletes": { "const": 1 },
-            "environment_identity_reads": { "const": 1 },
+            "environment_deletes": { "const": 0 },
+            "environment_identity_reads": { "const": 0 },
+            "environment_updates": { "const": 0 },
             "full_official_ledger": { "const": 0 },
             "git_writes": { "const": 0 },
             "replays": { "const": 0 },
@@ -292,14 +294,19 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "authorization_spend_boundary", "cleanup", "journal", "recovery"
+            "authorization_spend_boundary", "journal", "recovery",
+            "successful_create_residue"
           ],
           "properties": {
-            "authorization_spend_boundary": { "const": "PROCESS_START" },
-            "cleanup": { "const": "EXACT_OWNED_ENVIRONMENT_ONLY" },
+            "authorization_spend_boundary": {
+              "const": "IMMEDIATELY_BEFORE_FIRST_PROVIDER_CREATE_REQUEST"
+            },
             "journal": { "const": "DURABLE_FAIL_CLOSED" },
             "recovery": {
-              "const": "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN"
+              "const": "ACTIVE_UNKNOWN_STATE_ON_AMBIGUOUS_POST_SPEND_RESULT"
+            },
+            "successful_create_residue": {
+              "const": "EXPECTED_OWNED_RESOURCE"
             }
           }
         }

@@ -14,7 +14,7 @@ import {
 } from "./admin-v1-official-first-environment-runtime.mjs";
 
 const OPERATION_CLASS =
-  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1";
+  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
@@ -188,8 +188,9 @@ export function createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     capability_budget: {
       credential_value_reads: 2,
       environment_creates: 1,
-      environment_deletes: 1,
-      environment_identity_reads: 1,
+      environment_deletes: 0,
+      environment_identity_reads: 0,
+      environment_updates: 0,
       full_official_ledger: 0,
       git_writes: 0,
       replays: 0,
@@ -200,10 +201,11 @@ export function createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
       supabase_writes: 0,
     },
     contracts: {
-      authorization_spend_boundary: "PROCESS_START",
-      cleanup: "EXACT_OWNED_ENVIRONMENT_ONLY",
+      authorization_spend_boundary:
+        "IMMEDIATELY_BEFORE_FIRST_PROVIDER_CREATE_REQUEST",
       journal: "DURABLE_FAIL_CLOSED",
-      recovery: "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN",
+      recovery: "ACTIVE_UNKNOWN_STATE_ON_AMBIGUOUS_POST_SPEND_RESULT",
+      successful_create_residue: "EXPECTED_OWNED_RESOURCE",
     },
   };
   const authorizationIdSha256 = digest(

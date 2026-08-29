@@ -112,13 +112,14 @@ assert.equal(
 assert.equal(first.schema_version, 1);
 assert.equal(
   first.operation_class,
-  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1",
+  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1",
 );
 assert.deepEqual(first.authorization_closure.capability_budget, {
   credential_value_reads: 2,
   environment_creates: 1,
-  environment_deletes: 1,
-  environment_identity_reads: 1,
+  environment_deletes: 0,
+  environment_identity_reads: 0,
+  environment_updates: 0,
   full_official_ledger: 0,
   git_writes: 0,
   replays: 0,
@@ -127,6 +128,13 @@ assert.deepEqual(first.authorization_closure.capability_budget, {
   storage_rpc_actions: 0,
   supabase_reads: 0,
   supabase_writes: 0,
+});
+assert.deepEqual(first.authorization_closure.contracts, {
+  authorization_spend_boundary:
+    "IMMEDIATELY_BEFORE_FIRST_PROVIDER_CREATE_REQUEST",
+  journal: "DURABLE_FAIL_CLOSED",
+  recovery: "ACTIVE_UNKNOWN_STATE_ON_AMBIGUOUS_POST_SPEND_RESULT",
+  successful_create_residue: "EXPECTED_OWNED_RESOURCE",
 });
 assert.deepEqual(first.authorization_closure.credential_sources, {
   environment_value: {

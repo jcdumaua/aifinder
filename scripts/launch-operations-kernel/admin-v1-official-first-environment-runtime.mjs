@@ -17,13 +17,14 @@ import path from "node:path";
 import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
 
 export const ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS =
-  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREATE_ONLY_RUNTIME_V1";
+  "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1";
 
 export const ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CAPABILITY_BUDGET =
   Object.freeze({
     environment_creates: 1,
-    environment_identity_reads: 1,
-    environment_deletes: 1,
+    environment_identity_reads: 0,
+    environment_updates: 0,
+    environment_deletes: 0,
     runtime_sessions: 1,
     runtime_retries: 0,
     runtime_replays: 0,
@@ -106,10 +107,15 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
 const DEPLOYMENT_ID_PATTERN = /^dpl_[A-Za-z0-9]+$/u;
-const ENVIRONMENT_FAILURE_CLASSES = new Set([
-  "ENVIRONMENT_VALUE_SHAPE_INVALID",
-  "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE",
-  "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
+const CREATE_FAILURE_CLASSIFICATIONS = new Set([
+  "FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT",
+  "FAIL_PROVIDER_AUTHENTICATION_UNAVAILABLE",
+  "FAIL_PROVIDER_PERMISSION_DENIED",
+  "FAIL_INVALID_CREATE_REQUEST",
+  "FAIL_PROVIDER_RATE_LIMITED",
+  "FAIL_PROVIDER_FAILURE",
+  "FAIL_CREATE_TRANSPORT",
+  "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE",
 ]);
 const HTTP_STATUS_CLASSES = new Set(["2XX", "4XX", "5XX", "OTHER"]);
 
@@ -299,15 +305,17 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
       "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE" ||
     !exactKeys(budget, [
       "credential_value_reads", "environment_creates", "environment_deletes",
-      "environment_identity_reads", "full_official_ledger", "git_writes",
+      "environment_identity_reads", "environment_updates",
+      "full_official_ledger", "git_writes",
       "replays", "retries", "second_invocations", "storage_rpc_actions",
       "supabase_reads", "supabase_writes",
     ]) ||
     canonicalJson(budget) !== canonicalJson({
       credential_value_reads: 2,
       environment_creates: 1,
-      environment_deletes: 1,
-      environment_identity_reads: 1,
+      environment_deletes: 0,
+      environment_identity_reads: 0,
+      environment_updates: 0,
       full_official_ledger: 0,
       git_writes: 0,
       replays: 0,
@@ -318,13 +326,15 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
       supabase_writes: 0,
     }) ||
     !exactKeys(contracts, [
-      "authorization_spend_boundary", "cleanup", "journal", "recovery",
+      "authorization_spend_boundary", "journal", "recovery",
+      "successful_create_residue",
     ]) ||
-    contracts.authorization_spend_boundary !== "PROCESS_START" ||
-    contracts.cleanup !== "EXACT_OWNED_ENVIRONMENT_ONLY" ||
+    contracts.authorization_spend_boundary !==
+      "IMMEDIATELY_BEFORE_FIRST_PROVIDER_CREATE_REQUEST" ||
     contracts.journal !== "DURABLE_FAIL_CLOSED" ||
     contracts.recovery !==
-      "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN"
+      "ACTIVE_UNKNOWN_STATE_ON_AMBIGUOUS_POST_SPEND_RESULT" ||
+    contracts.successful_create_residue !== "EXPECTED_OWNED_RESOURCE"
   ) {
     throw new AdminV1OfficialFirstEnvironmentRuntimeError(
       "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
@@ -534,10 +544,25 @@ export function createAdminV1OfficialFirstEnvironmentJournal({
       return persistTo(activePath, state);
     },
     retire(state) {
-      if (
-        state?.lifecycle !== "CLEANUP_COMPLETE" ||
-        state?.zero_residual !== true
-      ) {
+      const exactSuccess =
+        state?.lifecycle === "TERMINAL_SUCCESS" &&
+        state?.terminal_classification ===
+          "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED" &&
+        state?.resource_state === "EXPECTED_CREATED_RESOURCE_PRESENT" &&
+        boundedAscii(state?.owned_environment_record_id, 256) &&
+        state?.expected_residual === true && state?.zero_residual === false &&
+        state?.provider_creates === 1 && state?.provider_reads === 0 &&
+        state?.provider_updates === 0 && state?.provider_deletes === 0;
+      const exactNoEffect =
+        state?.lifecycle === "TERMINAL_NO_EFFECT_FAILURE" &&
+        typeof state?.terminal_classification === "string" &&
+        state.terminal_classification.startsWith("FAIL_") &&
+        state?.resource_state === "PROVEN_NO_PROVIDER_EFFECT" &&
+        state?.owned_environment_record_id === null &&
+        state?.expected_residual === false && state?.zero_residual === true &&
+        state?.provider_creates === 0 && state?.provider_reads === 0 &&
+        state?.provider_updates === 0 && state?.provider_deletes === 0;
+      if (!exactSuccess && !exactNoEffect) {
         throw new AdminV1OfficialFirstEnvironmentRuntimeError(
           "FIRST_ENVIRONMENT_RETIREMENT_DENIED",
         );
@@ -572,25 +597,33 @@ function publicState(state) {
     runtime_sessions: state.runtime_sessions,
     runtime_retries: 0,
     runtime_replays: 0,
+    terminal_classification: state.terminal_classification,
+    resource_state: state.resource_state,
     owned_environment_record_id: state.owned_environment_record_id,
-    identity_verified: state.identity_verified,
     failure: structuredClone(state.failure),
-    cleanup: structuredClone(state.cleanup),
+    expected_residual: state.expected_residual,
     zero_residual: state.zero_residual,
+    provider_creates: state.provider_creates,
+    provider_reads: 0,
+    provider_updates: 0,
+    provider_deletes: 0,
   };
 }
 
 function boundedFailure(error) {
-  const failureClass = error?.environment_create_failure_class;
+  const classification = error?.classification;
+  const providerCode = error?.provider_code ?? null;
   const statusClass = error?.http_status_class ?? null;
   if (
-    !ENVIRONMENT_FAILURE_CLASSES.has(failureClass) ||
+    !CREATE_FAILURE_CLASSIFICATIONS.has(classification) ||
+    !(providerCode === null || boundedAscii(providerCode, 128)) ||
     !(statusClass === null || HTTP_STATUS_CLASSES.has(statusClass))
   ) return null;
   return {
     operation: "create_environment",
     stage: "EXECUTION",
-    class: failureClass,
+    classification,
+    provider_code: providerCode,
     http_status_class: statusClass,
     provider: "VERCEL",
     retry_allowed: false,
@@ -605,15 +638,16 @@ export function classifyAdminV1OfficialFirstEnvironmentFailureEvidence(
     !failure || typeof failure !== "object" || Array.isArray(failure) ||
     failure.operation !== "create_environment" ||
     failure.stage !== "EXECUTION" ||
-    !ENVIRONMENT_FAILURE_CLASSES.has(failure.class) ||
+    !CREATE_FAILURE_CLASSIFICATIONS.has(failure.classification) ||
+    !(failure.provider_code === null || boundedAscii(failure.provider_code, 128)) ||
     !(failure.http_status_class === null ||
       HTTP_STATUS_CLASSES.has(failure.http_status_class)) ||
     failure.provider !== "VERCEL" || failure.retry_allowed !== false
   ) return null;
   return Object.freeze({
-    failure_class: "BRANCH_ENV_PARTIAL_FAILURE",
+    failure_class: "BRANCH_ENV_CREATE_ONLY_FAILURE",
     operation: "create_environment",
-    lower_level_class: failure.class,
+    classification: failure.classification,
   });
 }
 
@@ -625,27 +659,22 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
   now_epoch_ms = Date.now(),
   allow_hermetic_test = false,
 }) {
-  let validated;
-  try {
-    validated = validateAdminV1OfficialFirstEnvironmentAuthorization(
-      authorization,
-      { now_epoch_ms, allow_hermetic_test },
+  const validated = validateAdminV1OfficialFirstEnvironmentAuthorization(
+    authorization,
+    { now_epoch_ms, allow_hermetic_test },
+  );
+  if (
+    !adapter || !exactKeys(adapter, ["calls", "createEnvironment"]) &&
+      !exactKeys(adapter, ["createEnvironment"]) ||
+    typeof adapter.createEnvironment !== "function" ||
+    !journal || typeof journal.load !== "function" ||
+    typeof journal.publish !== "function" ||
+    typeof journal.retire !== "function" ||
+    typeof load_sensitive !== "function"
+  ) {
+    throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+      "FIRST_ENVIRONMENT_RUNTIME_INPUT",
     );
-    if (
-      !adapter || typeof adapter.createEnvironment !== "function" ||
-      typeof adapter.verifyEnvironmentIdentity !== "function" ||
-      typeof adapter.deleteEnvironment !== "function" ||
-      !journal || typeof journal.load !== "function" ||
-      typeof journal.publish !== "function" ||
-      typeof journal.retire !== "function" ||
-      typeof load_sensitive !== "function"
-    ) {
-      throw new AdminV1OfficialFirstEnvironmentRuntimeError(
-        "FIRST_ENVIRONMENT_RUNTIME_INPUT",
-      );
-    }
-  } catch (error) {
-    throw error;
   }
 
   const existing = journal.load();
@@ -675,23 +704,18 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
     stage: "AUTHORIZATION_VERIFIED",
     token_spent: false,
     runtime_sessions: 0,
+    terminal_classification: null,
+    resource_state: "NO_PROVIDER_EFFECT_STARTED",
     owned_environment_record_id: null,
-    identity_verified: false,
     failure: null,
-    cleanup: [],
-    zero_residual: false,
+    expected_residual: false,
+    zero_residual: true,
+    provider_creates: 0,
   };
   journal.publish(publicState(state));
   take("runtime_sessions");
-  state.token_spent = true;
   state.runtime_sessions = 1;
-  state.lifecycle = "EXECUTION_STARTED";
-  state.stage = "AUTHORIZATION_SPENT";
   journal.publish(publicState(state));
-
-  let primaryError = null;
-  let recoveryPending = false;
-  let providerEffectStarted = false;
   let sensitive = null;
   try {
     try {
@@ -708,21 +732,39 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
     } catch (error) {
       state.failure = {
         operation: "load_credential_source",
-        stage: "EXECUTION",
-        class: "CREDENTIAL_SOURCE_UNAVAILABLE",
+        stage: "PRE_EFFECT",
+        classification: "FAIL_CREDENTIAL_SOURCE_UNAVAILABLE",
         provider: "LOCAL",
         retry_allowed: false,
       };
-      state.stage = "FAILURE_CREDENTIAL_SOURCE_CLASSIFIED";
+      state.lifecycle = "TERMINAL_NO_EFFECT_FAILURE";
+      state.stage = "CREDENTIAL_SOURCE_UNAVAILABLE";
+      state.terminal_classification = "FAIL_CREDENTIAL_SOURCE_UNAVAILABLE";
+      state.resource_state = "PROVEN_NO_PROVIDER_EFFECT";
       journal.publish(publicState(state));
-      throw error;
+      journal.retire(publicState(state));
+      return Object.freeze({
+        classification: state.terminal_classification,
+        token_spent: false,
+        runtime_sessions: 1,
+        runtime_retries: 0,
+        runtime_replays: 0,
+        resource_state: state.resource_state,
+        owned_environment_record_id: null,
+        expected_residual: false,
+        zero_residual: true,
+        budgets: Object.freeze(structuredClone(budgets)),
+      });
     }
     state.stage = "CREDENTIAL_SOURCE_ACQUIRED";
     journal.publish(publicState(state));
     state.stage = "INTENT_CREATE_ENVIRONMENT";
     journal.publish(publicState(state));
     take("environment_creates");
-    providerEffectStarted = true;
+    state.token_spent = true;
+    state.lifecycle = "EXECUTION_STARTED";
+    state.stage = "AUTHORIZATION_SPENT";
+    journal.publish(publicState(state));
     let created;
     try {
       created = await adapter.createEnvironment({
@@ -731,120 +773,108 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       });
     } catch (error) {
       const failure = boundedFailure(error);
-      if (failure !== null) {
-        state.failure = failure;
-        state.stage = "FAILURE_CREATE_ENVIRONMENT_CLASSIFIED";
+      const classification = failure?.classification ??
+        "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE";
+      state.failure = failure ?? {
+        operation: "create_environment",
+        stage: "EXECUTION",
+        classification,
+        provider_code: null,
+        http_status_class: null,
+        provider: "VERCEL",
+        retry_allowed: false,
+      };
+      state.terminal_classification = classification;
+      const provenNoEffect = new Set([
+        "FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT",
+        "FAIL_PROVIDER_AUTHENTICATION_UNAVAILABLE",
+        "FAIL_PROVIDER_PERMISSION_DENIED",
+        "FAIL_INVALID_CREATE_REQUEST",
+        "FAIL_PROVIDER_RATE_LIMITED",
+      ]).has(classification);
+      if (provenNoEffect) {
+        state.lifecycle = "TERMINAL_NO_EFFECT_FAILURE";
+        state.stage = "PROVIDER_NO_EFFECT_FAILURE_CLASSIFIED";
+        state.resource_state = "PROVEN_NO_PROVIDER_EFFECT";
+        journal.publish(publicState(state));
+        journal.retire(publicState(state));
+      } else {
+        state.lifecycle = "ACTIVE_UNKNOWN_STATE";
+        state.stage = "AMBIGUOUS_POST_SPEND_RESULT";
+        state.resource_state = "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE";
+        state.zero_residual = false;
         journal.publish(publicState(state));
       }
-      throw error;
+      return Object.freeze({
+        classification,
+        token_spent: true,
+        runtime_sessions: 1,
+        runtime_retries: 0,
+        runtime_replays: 0,
+        resource_state: state.resource_state,
+        owned_environment_record_id: null,
+        expected_residual: false,
+        zero_residual: state.zero_residual,
+        budgets: Object.freeze(structuredClone(budgets)),
+      });
     }
     if (
       created?.status !== "CREATED_EXACT" ||
       !boundedAscii(created.record_id, 256)
     ) {
-      const error = new AdminV1OfficialFirstEnvironmentRuntimeError(
-        "FIRST_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
-      );
-      error.environment_create_failure_class =
-        "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN";
-      error.http_status_class = null;
-      state.failure = boundedFailure(error);
-      state.stage = "FAILURE_CREATE_ENVIRONMENT_CLASSIFIED";
+      state.failure = {
+        operation: "create_environment",
+        stage: "EXECUTION",
+        classification: "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE",
+        provider_code: null,
+        http_status_class: null,
+        provider: "VERCEL",
+        retry_allowed: false,
+      };
+      state.terminal_classification =
+        "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE";
+      state.lifecycle = "ACTIVE_UNKNOWN_STATE";
+      state.stage = "AMBIGUOUS_POST_SPEND_RESULT";
+      state.resource_state = "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE";
+      state.zero_residual = false;
       journal.publish(publicState(state));
-      throw error;
+      return Object.freeze({
+        classification: state.terminal_classification,
+        token_spent: true,
+        runtime_sessions: 1,
+        runtime_retries: 0,
+        runtime_replays: 0,
+        resource_state: state.resource_state,
+        owned_environment_record_id: null,
+        expected_residual: false,
+        zero_residual: false,
+        budgets: Object.freeze(structuredClone(budgets)),
+      });
     }
     state.owned_environment_record_id = created.record_id;
-    state.stage = "COMPLETE_CREATE_ENVIRONMENT";
+    state.provider_creates = 1;
+    state.terminal_classification =
+      "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED";
+    state.lifecycle = "TERMINAL_SUCCESS";
+    state.stage = "EXPECTED_CREATED_RESOURCE_PRESENT";
+    state.resource_state = "EXPECTED_CREATED_RESOURCE_PRESENT";
+    state.expected_residual = true;
+    state.zero_residual = false;
     journal.publish(publicState(state));
-
-    take("environment_identity_reads");
-    const verified = await adapter.verifyEnvironmentIdentity({
-      key: validated.execution.environment_key,
-      record_id: created.record_id,
-    });
-    if (
-      verified?.status !== "EXACT" ||
-      verified.record_id !== created.record_id
-    ) {
-      const error = new AdminV1OfficialFirstEnvironmentRuntimeError(
-        "FIRST_ENVIRONMENT_IDENTITY_UNPROVEN",
-      );
-      error.environment_create_failure_class =
-        "ENVIRONMENT_CREATE_IDENTITY_UNPROVEN";
-      error.http_status_class = null;
-      state.failure = boundedFailure(error);
-      state.stage = "FAILURE_CREATE_ENVIRONMENT_CLASSIFIED";
-      journal.publish(publicState(state));
-      throw error;
-    }
-    state.identity_verified = true;
-    state.stage = "ENVIRONMENT_IDENTITY_VERIFIED";
-    journal.publish(publicState(state));
-  } catch (error) {
-    primaryError = error;
-  }
-
-  try {
-    state.lifecycle = "CLEANUP_PENDING";
-    state.stage = "CLEANUP_PENDING_PUBLISHED";
-    journal.publish(publicState(state));
-    if (
-      state.owned_environment_record_id === null &&
-      providerEffectStarted === false
-    ) {
-      state.cleanup.push("NO_PROVIDER_EFFECT_STARTED");
-      state.zero_residual = true;
-    } else if (state.owned_environment_record_id === null) {
-      recoveryPending = true;
-      state.cleanup.push("ENVIRONMENT_OWNERSHIP_UNPROVEN");
-    } else {
-      take("environment_deletes");
-      const deleted = await adapter.deleteEnvironment({
-        record_id: state.owned_environment_record_id,
-      });
-      if (
-        deleted?.status !== "DELETED_EXACT" ||
-        deleted.record_id !== state.owned_environment_record_id
-      ) {
-        recoveryPending = true;
-      } else {
-        state.cleanup.push("DELETE_ENVIRONMENT");
-        state.zero_residual = true;
-      }
-    }
-  } catch {
-    recoveryPending = true;
-  } finally {
-    clearSensitive(sensitive);
-  }
-
-  if (recoveryPending) {
-    state.lifecycle = "RECOVERY_PENDING";
-    state.stage = "CLEANUP_UNPROVEN";
-    journal.publish(publicState(state));
+    journal.retire(publicState(state));
     return Object.freeze({
-      classification: "RECOVERY_PENDING",
+      classification: state.terminal_classification,
       token_spent: true,
       runtime_sessions: 1,
       runtime_retries: 0,
       runtime_replays: 0,
-      zero_residual_owned_state: false,
+      resource_state: state.resource_state,
+      owned_environment_record_id: state.owned_environment_record_id,
+      expected_residual: true,
+      zero_residual: false,
       budgets: Object.freeze(structuredClone(budgets)),
     });
+  } finally {
+    clearSensitive(sensitive);
   }
-
-  state.lifecycle = "CLEANUP_COMPLETE";
-  state.stage = "CLEANUP_COMPLETE_PUBLISHED";
-  journal.publish(publicState(state));
-  journal.retire(publicState(state));
-  if (primaryError !== null) throw primaryError;
-  return Object.freeze({
-    classification: "FIRST_ENVIRONMENT_CREATE_ONLY_COMPLETE",
-    token_spent: true,
-    runtime_sessions: 1,
-    runtime_retries: 0,
-    runtime_replays: 0,
-    zero_residual_owned_state: true,
-    budgets: Object.freeze(structuredClone(budgets)),
-  });
 }

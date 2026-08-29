@@ -62,6 +62,7 @@ const CAPABILITY_BUDGET_KEYS = Object.freeze([
   "environment_creates",
   "environment_deletes",
   "environment_identity_reads",
+  "environment_updates",
   "full_official_ledger",
   "git_writes",
   "replays",
@@ -72,7 +73,8 @@ const CAPABILITY_BUDGET_KEYS = Object.freeze([
   "supabase_writes",
 ]);
 const CONTRACT_KEYS = Object.freeze([
-  "authorization_spend_boundary", "cleanup", "journal", "recovery",
+  "authorization_spend_boundary", "journal", "recovery",
+  "successful_create_residue",
 ]);
 const FORBIDDEN_CREDENTIAL_FIELD_NAMES = new Set([
   "credentialvalue",
@@ -262,8 +264,9 @@ function validateObservationContract(request) {
     canonicalJson(request.capability_budget) !== canonicalJson({
       credential_value_reads: 2,
       environment_creates: 1,
-      environment_deletes: 1,
-      environment_identity_reads: 1,
+      environment_deletes: 0,
+      environment_identity_reads: 0,
+      environment_updates: 0,
       full_official_ledger: 0,
       git_writes: 0,
       replays: 0,
@@ -275,10 +278,11 @@ function validateObservationContract(request) {
     }) ||
     !exactKeys(request.contracts, CONTRACT_KEYS) ||
     canonicalJson(request.contracts) !== canonicalJson({
-      authorization_spend_boundary: "PROCESS_START",
-      cleanup: "EXACT_OWNED_ENVIRONMENT_ONLY",
+      authorization_spend_boundary:
+        "IMMEDIATELY_BEFORE_FIRST_PROVIDER_CREATE_REQUEST",
       journal: "DURABLE_FAIL_CLOSED",
-      recovery: "RECOVERY_PENDING_WHEN_OWNERSHIP_OR_CLEANUP_UNPROVEN",
+      recovery: "ACTIVE_UNKNOWN_STATE_ON_AMBIGUOUS_POST_SPEND_RESULT",
+      successful_create_residue: "EXPECTED_OWNED_RESOURCE",
     })
   ) fail("FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID");
 }

@@ -190,6 +190,17 @@ export function createAdminV1OfficialFirstEnvironmentNativeDependencies({
         })),
     });
   let nativeTransport = null;
+  const prepareProviderAuth = async () => {
+    if (nativeTransport !== null) return;
+    const providerAuth = await credentialLoader.load_provider_auth({
+      source_contract:
+        ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_PROVIDER_SOURCE_CONTRACT,
+    });
+    nativeTransport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+      provider_auth: providerAuth,
+      fetch_impl,
+    });
+  };
   const dependencies = {
     repository_root,
     supervisor_path,
@@ -198,17 +209,13 @@ export function createAdminV1OfficialFirstEnvironmentNativeDependencies({
     load_credential({ source_contract }) {
       return credentialLoader.load_environment_value({ source_contract });
     },
+    prepare_provider_auth: prepareProviderAuth,
     transport: Object.freeze({
       async execute(request) {
         if (nativeTransport === null) {
-          const providerAuth = await credentialLoader.load_provider_auth({
-            source_contract:
-              ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_PROVIDER_SOURCE_CONTRACT,
-          });
-          nativeTransport = createAdminV1OfficialFirstEnvironmentNativeTransport({
-            provider_auth: providerAuth,
-            fetch_impl,
-          });
+          throw new AdminV1OfficialFirstEnvironmentSupervisorError(
+            "FIRST_ENVIRONMENT_PROVIDER_AUTH_SOURCE_UNAVAILABLE",
+          );
         }
         return nativeTransport.execute(request);
       },
@@ -358,26 +365,24 @@ function safeCode(error) {
 }
 
 function sanitizedRuntimeOutput(result) {
-  if (result.classification === "RECOVERY_PENDING") {
-    return {
-      status: "FAIL",
-      code: "FIRST_ENVIRONMENT_RECOVERY_PENDING",
-      runtime_sessions: 1,
-      runtime_retries: 0,
-      runtime_replays: 0,
-      zero_residual_owned_state: false,
-    };
-  }
   return {
-    status: "PASS",
-    code: "FIRST_ENVIRONMENT_SUPERVISOR_COMPLETE",
+    status: result.classification ===
+        "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED"
+      ? "PASS"
+      : "FAIL",
+    code: result.classification,
     environment_creates: result.budgets.environment_creates,
     environment_identity_reads: result.budgets.environment_identity_reads,
+    environment_updates: result.budgets.environment_updates,
     environment_deletes: result.budgets.environment_deletes,
     runtime_sessions: result.runtime_sessions,
     runtime_retries: 0,
     runtime_replays: 0,
-    zero_residual_owned_state: result.zero_residual_owned_state,
+    resource_state: result.resource_state,
+    owned_environment_record_id_present:
+      typeof result.owned_environment_record_id === "string",
+    expected_residual: result.expected_residual,
+    zero_residual: result.zero_residual,
   };
 }
 
@@ -419,6 +424,7 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
   if (
     typeof dependencies.write_output !== "function" ||
     typeof dependencies.load_credential !== "function" ||
+    typeof dependencies.prepare_provider_auth !== "function" ||
     typeof dependencies.transport?.execute !== "function"
   ) {
     dependencies.write_output?.({
@@ -497,6 +503,7 @@ export async function dispatchAdminV1OfficialFirstEnvironmentSupervisor(
       load_sensitive: async () => {
         let value;
         try {
+          await dependencies.prepare_provider_auth();
           value = await dependencies.load_credential({
             source_contract:
               ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CREDENTIAL_SOURCE_CONTRACT,
