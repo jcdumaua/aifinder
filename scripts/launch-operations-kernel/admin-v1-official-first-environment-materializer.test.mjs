@@ -50,7 +50,7 @@ function request(overrides = {}) {
     runtime_source_sha256: sha("6"),
     supervisor_source_sha256: sha("7"),
     transport_source_sha256: sha("8"),
-    transport_dependency_source_sha256: sha("8"),
+    transport_dependency_source_sha256: sha("9"),
     authorization_schema_sha256: sha("a"),
     materializer_source_sha256: sha("b"),
     credential_loader_source_sha256: sha("c"),
@@ -149,6 +149,11 @@ assert.deepEqual(first.authorization_closure.credential_sources, {
 assert.equal(first.authorization_closure.repository_tree, request().repository.tree);
 assert.equal(first.authorization_closure.deployment.deployment_id,
   HISTORICAL_DEPLOYMENT_ID);
+assert.equal(first.transport_source_sha256, sha("8"));
+assert.equal(first.authorization_closure.transport_dependency_source_sha256,
+  sha("9"));
+assert.notEqual(first.transport_source_sha256,
+  first.authorization_closure.transport_dependency_source_sha256);
 assert.notEqual(
   currentDeployment.one_use_authorization_sha256,
   first.one_use_authorization_sha256,
@@ -188,6 +193,18 @@ for (const forbiddenSource of [
 ]) {
   assert.equal(materializerSource.includes(forbiddenSource), false);
 }
+assert.equal(
+  materializerSource.includes(
+    "transport_dependency_source_sha256:\n      request.transport_dependency_source_sha256",
+  ),
+  true,
+);
+assert.equal(
+  materializerSource.includes(
+    "transport_dependency_source_sha256:\n      request.transport_source_sha256",
+  ),
+  false,
+);
 
 for (const deploymentId of ["", "dpl_", "DPL_123", "dpl_bad-value", 42]) {
   assert.throws(

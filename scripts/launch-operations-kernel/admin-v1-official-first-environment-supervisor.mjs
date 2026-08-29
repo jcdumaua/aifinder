@@ -26,6 +26,8 @@ const RUNTIME_RELATIVE_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs";
 const TRANSPORT_RELATIVE_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs";
+const TRANSPORT_DEPENDENCY_RELATIVE_PATH =
+  "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs";
 const SCHEMA_RELATIVE_PATH =
   "scripts/launch-operations-kernel/admin-v1-official-first-environment-authorization.schema.json";
 const MATERIALIZER_RELATIVE_PATH =
@@ -126,6 +128,8 @@ function verifySourceBindings({ authorization, repositoryRoot, supervisorPath })
       authorization.runtime_source_sha256],
     [repositoryPath(repositoryRoot, TRANSPORT_RELATIVE_PATH),
       authorization.transport_source_sha256],
+    [repositoryPath(repositoryRoot, TRANSPORT_DEPENDENCY_RELATIVE_PATH),
+      authorization.authorization_closure.transport_dependency_source_sha256],
     [repositoryPath(repositoryRoot, SCHEMA_RELATIVE_PATH),
       authorization.authorization_schema_sha256],
     [repositoryPath(repositoryRoot, MATERIALIZER_RELATIVE_PATH),

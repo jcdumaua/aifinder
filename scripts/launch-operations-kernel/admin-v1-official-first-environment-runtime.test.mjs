@@ -35,7 +35,7 @@ async function check(name, operation) {
   }
 }
 
-function authorization() {
+function authorization(requestOverrides = {}) {
   return createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     request: {
       authorization_mode: "HERMETIC_TEST_ONLY",
@@ -46,7 +46,7 @@ function authorization() {
       created_at: "2026-08-24T15:00:00.000Z", expires_at: "2026-08-24T17:00:00.000Z",
       candidate_identity_sha256: "4".repeat(64), manifest_sha256: "5".repeat(64), candidate_member_count: 55,
       runtime_source_sha256: "6".repeat(64), supervisor_source_sha256: "8".repeat(64),
-      transport_source_sha256: "9".repeat(64), transport_dependency_source_sha256: "9".repeat(64),
+      transport_source_sha256: "9".repeat(64), transport_dependency_source_sha256: "f".repeat(64),
       authorization_schema_sha256: "a".repeat(64), materializer_source_sha256: "b".repeat(64),
       credential_loader_source_sha256: "c".repeat(64), supervisor_policy_sha256: "d".repeat(64),
       independent_semantic_pin_set_sha256: "e".repeat(64),
@@ -60,6 +60,7 @@ function authorization() {
         team_id: "team_9POJYxNnjIBbrQ19My8M5yG3", deployed_commit: "a".repeat(40), branch: "main",
         target: "production", source: "git/github", state: "READY",
       },
+      ...requestOverrides,
     },
     now_epoch_ms: NOW,
   });
@@ -148,6 +149,61 @@ await check("authorization and schema bind true create-only", async () => {
     "admin-v1-official-first-environment-authorization.schema.json"), "utf8"));
   const validate = new Ajv({ allErrors: true, schemaId: "auto" }).compile(schema);
   assert.equal(validate(value), true, JSON.stringify(validate.errors));
+  assert.equal(value.transport_source_sha256, "9".repeat(64));
+  assert.equal(
+    value.authorization_closure.transport_dependency_source_sha256,
+    "f".repeat(64),
+  );
+  assert.notEqual(
+    value.transport_source_sha256,
+    value.authorization_closure.transport_dependency_source_sha256,
+  );
+});
+
+await check("transport identities are structurally required but not collapsed", async () => {
+  const value = authorization();
+  assert.doesNotThrow(() =>
+    validateAdminV1OfficialFirstEnvironmentAuthorization(value, {
+      now_epoch_ms: NOW,
+      allow_hermetic_test: true,
+    })
+  );
+  const missing = structuredClone(value);
+  delete missing.authorization_closure.transport_dependency_source_sha256;
+  assert.throws(
+    () => validateAdminV1OfficialFirstEnvironmentAuthorization(missing, {
+      now_epoch_ms: NOW,
+      allow_hermetic_test: true,
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+  );
+  const malformed = structuredClone(value);
+  malformed.authorization_closure.transport_dependency_source_sha256 = "bad";
+  assert.throws(
+    () => validateAdminV1OfficialFirstEnvironmentAuthorization(malformed, {
+      now_epoch_ms: NOW,
+      allow_hermetic_test: true,
+    }),
+    (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+  );
+  const runtimeSource = readFileSync(new URL(
+    "./admin-v1-official-first-environment-runtime.mjs",
+    import.meta.url,
+  ), "utf8");
+  assert.equal(
+    runtimeSource.includes(
+      "closure.transport_dependency_source_sha256 !==\n      value.transport_source_sha256",
+    ),
+    false,
+  );
+  assert.equal(
+    runtimeSource.includes('"transport_dependency_source_sha256",'),
+    true,
+  );
+  assert.equal(
+    runtimeSource.includes("closure.transport_dependency_source_sha256,"),
+    true,
+  );
 });
 
 await check("success spends immediately before create and leaves expected residue", async () => {

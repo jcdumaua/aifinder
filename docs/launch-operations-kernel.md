@@ -120,6 +120,30 @@ no-clobber and no-follow semantics to an existing canonical directory. The
 writer enforces a regular single-link `0600` file and never overwrites an
 existing authorization record.
 
+Future first-environment authorization materialization is governed by two
+separate filesystem contracts. Directory identity and isolation require the
+exact canonical workspace under its approved safe parent, freshness when the
+gate requires it, a real non-symlink owner-controlled `0700` directory, stable
+device/inode/owner/mode across bounded preflight, exact allowed entry sets, and
+absence of the authorization target before exclusive creation. A directory's
+numeric link count is not a portable security invariant. Approval, request, and
+authorization artifacts instead use the regular-file single-link contract:
+canonical real paths, regular non-symlink owner-controlled `0600` files,
+`st_nlink=1`, no-follow reads where implemented, stable
+device/inode/owner/mode/size, and exclusive authorization output creation.
+
+Every mandatory future materialization precondition is a hard gate. A false,
+unresolved, ambiguous, or internally inconsistent result permits zero
+materializer process starts; only an exact true result may reach the separately
+authorized one-process boundary. This preserves the Important historical
+incident `WORKSPACE_LINK_COUNT_PRECONDITION_NOT_ENFORCED`: the materializer
+should have been blocked at preflight, and no unauthorized external effect
+occurred.
+
+<!-- FIRST_ENVIRONMENT_FUTURE_MATERIALIZATION_PREFLIGHT_V1
+{"authority_conformance_incident":"WORKSPACE_LINK_COUNT_PRECONDITION_NOT_ENFORCED","directory_identity_and_isolation":{"canonical_workspace_path":true,"exact_approved_parent_root":true,"exact_entry_sets_per_stage":true,"expected_owner":true,"freshness_when_required":true,"mode":"0700","non_symlink":true,"real_directory":true,"safe_parent_root_relationship":true,"stable_identity_fields":["dev","ino","uid","mode"],"target_authorization_absent_before_exclusive_create":true,"workspace_nlink_fixed_value_required":false},"external_unauthorized_effects":0,"incident_severity":"IMPORTANT","mandatory_preflight":{"allowed_states_for_process_start":["true"],"false_ambiguous_inconsistent_or_unresolved_starts":0,"materializer_process_starts_max_after_pass":1,"materializer_start_should_have_been_blocked_at_precondition":true},"regular_file_single_link_requirement":{"artifacts":["approval","request","authorization"],"canonical_real_path":true,"expected_owner":true,"mode":"0600","nlink":1,"no_follow":true,"non_symlink":true,"output_exclusive_create":true,"regular_file":true,"stable_identity_fields":["dev","ino","uid","mode","size"]}}
+-->
+
 The native supervisor binding reads `ADMIN_PASSWORD` only through direct
 property access to the supplied process-environment object. It does not read
 `.env.local` or enumerate environment variables. Vercel provider auth is read

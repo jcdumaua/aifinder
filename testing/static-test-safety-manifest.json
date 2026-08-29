@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "823f6781e0d17237843e4423fcdeb7eb6ef2a49a8d6c458a54876101ad260da0",
+  "testing_tree_digest": "1d116932b73c324313d8c6422e1e2dc1d1aba4beeab38afb6e05ce4555a574ae",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -16,13 +16,13 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "c22778fd363d481303a18bb12ecaef40058f967beb40241ed28488cc9566ba1b",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "57d72d597d6c61b0938d577f4bda5b25c3ba89135f1456965b06b7e6e6e61bc9",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs": "5a0b8bf3814a385e2ee090b0996da8bad062a228af0168d297bd06878f93abb6",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "d58c166bbafe05ed9f5cac480c233e1be02669f99092b85554d5aca665332cb7",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "2ad3446d58df3eb3ebfc0af2313365b268a5cd5c5abcf4280aee779772f5bfb7",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs": "4c278148de0627f8540ec800a1af3abb7cf0890be6243b57c0e5df91473305ec",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "9b82dcecef8d9402a8ccda6ab44fc6f78c9f33ca0199a9bc1e9cbe90835a4edf",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "0a86dc5e965018c4174833526e633a319b48772cd3c0d9efa563b38fb548ed94",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "d337625bcd4228f08ff9a5256ce24094b634cc175a215a94edee83c3968eaee3",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "453f2755bb05a4c289c9d1ef6fb9e08f30363aa08de86cc9cc00f6c145b7f959",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "cc575ae2f7a90293b852a47b36e81b75095954ee14e4542eaaabf45074290a41",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "cab1e689f8a99238822c00be783cc5e3006d0260daeb6ac75a5faeb3ae4f2759",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "b71ccf94f7eeb9fbec1bee12397586132a90941cb8cfe8f75e9657c69c7810df",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "144fee4a038bacc2f8c97cbfb063cb49ccb01ded466f399105d2496d019d2f1c",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "0196e51f1acbca17486f68f79eef2437caebc106b6801d896a7e521d2a70f912",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "ee75a27a61bb6d7f2e34e1b15c8a101d70813968783729b617771ad2a89411ba",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "6babc3398af89655c59e3bb786381e56360f1dacb669f30dfc4ffef3268bf272",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "00dbb2944e5be69e19845796ca5e8ace45b60c587a13db8d2e72c33a358292c6",
     "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "60bca29de6211d57a68d88b610403057abd1e8e14970d96935f2a14ecc14b08f",
@@ -57,13 +57,13 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs": "c22778fd363d481303a18bb12ecaef40058f967beb40241ed28488cc9566ba1b",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs": "57d72d597d6c61b0938d577f4bda5b25c3ba89135f1456965b06b7e6e6e61bc9",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs": "5a0b8bf3814a385e2ee090b0996da8bad062a228af0168d297bd06878f93abb6",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "d58c166bbafe05ed9f5cac480c233e1be02669f99092b85554d5aca665332cb7",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs": "2ad3446d58df3eb3ebfc0af2313365b268a5cd5c5abcf4280aee779772f5bfb7",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs": "4c278148de0627f8540ec800a1af3abb7cf0890be6243b57c0e5df91473305ec",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "9b82dcecef8d9402a8ccda6ab44fc6f78c9f33ca0199a9bc1e9cbe90835a4edf",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "0a86dc5e965018c4174833526e633a319b48772cd3c0d9efa563b38fb548ed94",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "d337625bcd4228f08ff9a5256ce24094b634cc175a215a94edee83c3968eaee3",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "453f2755bb05a4c289c9d1ef6fb9e08f30363aa08de86cc9cc00f6c145b7f959",
-    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "cc575ae2f7a90293b852a47b36e81b75095954ee14e4542eaaabf45074290a41",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs": "cab1e689f8a99238822c00be783cc5e3006d0260daeb6ac75a5faeb3ae4f2759",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs": "b71ccf94f7eeb9fbec1bee12397586132a90941cb8cfe8f75e9657c69c7810df",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs": "144fee4a038bacc2f8c97cbfb063cb49ccb01ded466f399105d2496d019d2f1c",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "0196e51f1acbca17486f68f79eef2437caebc106b6801d896a7e521d2a70f912",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "ee75a27a61bb6d7f2e34e1b15c8a101d70813968783729b617771ad2a89411ba",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "6babc3398af89655c59e3bb786381e56360f1dacb669f30dfc4ffef3268bf272",
     "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "00dbb2944e5be69e19845796ca5e8ace45b60c587a13db8d2e72c33a358292c6",
     "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "60bca29de6211d57a68d88b610403057abd1e8e14970d96935f2a14ecc14b08f",
@@ -88,19 +88,19 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 9,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "3a1a8f30898b418de8fc8bb159f32daa6ef501d173a2bbf0724662bce79c93c0"
+    "sha256": "6fc0860c9fef22d9a464359a9f2625519654d0986319e8c02911f12d35d39591"
   },
   "phase_c2_1_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "dc920bad3cdb5f0b34a5899f69cfbce8a60253e94374d475ebe3d72d3f8eb208"
+    "sha256": "6dd47d34e5851799632a9372710e7e70c30b46da9c9f9ecd0ee073ee43611c0a"
   },
   "phase_c2_2_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "d67a1d9898b1693762c627af86c62dd5be761c8dbc3d371d8ad29ab017e5aa35"
+    "sha256": "20e29aac281c6054de8f7debf1f44045c417b886622140feb12b799aff46e501"
   },
   "entries": [
     {
@@ -1511,18 +1511,18 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 7,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "bf85aa35bb699c34ab8e421db7533cfc6a9220f127fc057f34af4d5e98ced1cf"
+    "sha256": "b3df94fea5e4487ffdfed947be2ffe7a2544165486652427dc3628b97d1d94f1"
   },
   "phase_33na_v1_staging_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 15,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "ab2137483d78b88bb4a17e0a74eb597cb9f4301736279b54900d329fefc5e952"
+    "sha256": "445cbb437f2f7fa5b8630e84ce31603d800a41912d6872909961f1c4a394c347"
   },
   "phase_34fa_v1_runtime_execution_surface_digest": {
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "1fc4d667d12612a6bc9f90800bd4d27ae123f04acb2a9db78765182931625655"
+    "sha256": "71c06f6b7570d040229e1f0e8aa0403fa6d19031e1fc52955889f4da3b2708f0"
   }
 }

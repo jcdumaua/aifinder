@@ -286,8 +286,6 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
       closure.independent_semantic_pin_set_sha256,
       closure.transport_dependency_source_sha256,
     ].every(isSha256) ||
-    closure.transport_dependency_source_sha256 !==
-      value.transport_source_sha256 ||
     !exactKeys(deployment, DEPLOYMENT_KEYS) ||
     !DEPLOYMENT_ID_PATTERN.test(deployment.deployment_id ?? "") ||
     deployment.project_id !== execution.preview_project_id ||

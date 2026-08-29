@@ -47,7 +47,7 @@ function observation(overrides = {}) {
     runtime_source_sha256: sha("6"),
     supervisor_source_sha256: sha("7"),
     transport_source_sha256: sha("8"),
-    transport_dependency_source_sha256: sha("8"),
+    transport_dependency_source_sha256: sha("9"),
     authorization_schema_sha256: sha("a"),
     materializer_source_sha256: sha("b"),
     credential_loader_source_sha256: sha("c"),
@@ -183,6 +183,16 @@ try {
   assert.equal(result.credential_value_reads, 0);
   assert.equal(result.provider_calls, 0);
   assert.equal(result.network_calls, 0);
+  const positiveRecord = JSON.parse(readFileSync(result.output_path, "utf8"));
+  assert.equal(positiveRecord.transport_source_sha256, sha("8"));
+  assert.equal(
+    positiveRecord.authorization_closure.transport_dependency_source_sha256,
+    sha("9"),
+  );
+  assert.notEqual(
+    positiveRecord.transport_source_sha256,
+    positiveRecord.authorization_closure.transport_dependency_source_sha256,
+  );
 
   const malformed = makeFixture();
   roots.push(malformed.root);
@@ -257,6 +267,113 @@ try {
   assertCode(
     () => dispatch(hardLink),
     "FIRST_ENVIRONMENT_NATIVE_APPROVAL_FILE_INVALID",
+  );
+
+  const requestHardLink = makeFixture();
+  roots.push(requestHardLink.root);
+  linkSync(
+    requestHardLink.requestPath,
+    path.join(requestHardLink.directory, "request-link.json"),
+  );
+  assertCode(
+    () => dispatch(requestHardLink),
+    "FIRST_ENVIRONMENT_NATIVE_REQUEST_FILE_INVALID",
+  );
+
+  const broadApprovalMode = makeFixture();
+  roots.push(broadApprovalMode.root);
+  chmodSync(broadApprovalMode.approvalPath, 0o644);
+  assertCode(
+    () => dispatch(broadApprovalMode),
+    "FIRST_ENVIRONMENT_NATIVE_APPROVAL_FILE_INVALID",
+  );
+
+  const broadWorkspaceMode = makeFixture();
+  roots.push(broadWorkspaceMode.root);
+  chmodSync(broadWorkspaceMode.directory, 0o755);
+  assertCode(
+    () => dispatch(broadWorkspaceMode),
+    "FIRST_ENVIRONMENT_NATIVE_OUTPUT_DIRECTORY_INVALID",
+  );
+
+  const symlinkWorkspaceRoot = realpathSync(mkdtempSync(path.join(
+    tmpdir(),
+    "aifinder-first-environment-symlink-workspace-root-",
+  )));
+  roots.push(symlinkWorkspaceRoot);
+  chmodSync(symlinkWorkspaceRoot, 0o700);
+  const symlinkWorkspaceReal = path.join(symlinkWorkspaceRoot, "real-workspace");
+  mkdirSync(symlinkWorkspaceReal, { mode: 0o700 });
+  chmodSync(symlinkWorkspaceReal, 0o700);
+  const symlinkWorkspaceDirectory = path.join(
+    symlinkWorkspaceRoot,
+    "AiFinder-Admin-V1-Official-First-Environment-Authorization-Symlink",
+  );
+  symlinkSync(symlinkWorkspaceReal, symlinkWorkspaceDirectory);
+  const symlinkWorkspace = {
+    root: symlinkWorkspaceRoot,
+    directory: symlinkWorkspaceDirectory,
+    requestPath: path.join(symlinkWorkspaceDirectory, "request.json"),
+    approvalPath: path.join(symlinkWorkspaceDirectory, "approval.txt"),
+  };
+  writePrivate(
+    path.join(symlinkWorkspaceReal, "request.json"),
+    `${canonicalJson(observation())}\n`,
+  );
+  writePrivate(
+    path.join(symlinkWorkspaceReal, "approval.txt"),
+    APPROVAL_TEXT,
+  );
+  assertCode(
+    () => dispatch(symlinkWorkspace),
+    "FIRST_ENVIRONMENT_NATIVE_REQUEST_FILE_INVALID",
+  );
+
+  const wrongRoot = makeFixture();
+  roots.push(wrongRoot.root);
+  const otherRoot = realpathSync(mkdtempSync(path.join(
+    tmpdir(),
+    "aifinder-first-environment-wrong-output-root-",
+  )));
+  roots.push(otherRoot);
+  chmodSync(otherRoot, 0o700);
+  assertCode(
+    () => dispatch(wrongRoot, deterministicDependencies(otherRoot)),
+    "FIRST_ENVIRONMENT_NATIVE_OUTPUT_DIRECTORY_INVALID",
+  );
+
+  const outputSymlink = makeFixture();
+  roots.push(outputSymlink.root);
+  const outputSymlinkTarget = path.join(
+    outputSymlink.directory,
+    `authorization-${SYNTHETIC_IDS[0]}.json`,
+  );
+  const outputSymlinkBacking = path.join(
+    outputSymlink.directory,
+    "authorization-symlink-backing.json",
+  );
+  writePrivate(outputSymlinkBacking, "{}\n");
+  symlinkSync(outputSymlinkBacking, outputSymlinkTarget);
+  assertCode(
+    () => dispatch(outputSymlink),
+    "FIRST_ENVIRONMENT_MATERIALIZER_WRITE_FAILED",
+  );
+
+  const outputHardLink = makeFixture();
+  roots.push(outputHardLink.root);
+  const outputHardLinkTarget = path.join(
+    outputHardLink.directory,
+    `authorization-${SYNTHETIC_IDS[0]}.json`,
+  );
+  const outputHardLinkBacking = path.join(
+    outputHardLink.directory,
+    "authorization-hard-link-backing.json",
+  );
+  writePrivate(outputHardLinkBacking, "{}\n");
+  linkSync(outputHardLinkBacking, outputHardLinkTarget);
+  assertCode(
+    () => dispatch(outputHardLink),
+    "FIRST_ENVIRONMENT_MATERIALIZER_WRITE_FAILED",
   );
 
   const malformedDeployment = makeFixture({
@@ -346,10 +463,70 @@ try {
   assert.equal(source.includes("Function("), false);
   assert.equal(source.includes("createAdminV1OfficialFirstEnvironmentAuthorizationRecord"), true);
   assert.equal(source.includes("writeAdminV1OfficialFirstEnvironmentAuthorizationRecord"), true);
+  assert.equal(source.includes("metadata.nlink === 1"), true);
+  assert.equal(source.includes("!metadata.isSymbolicLink()"), true);
+  assert.equal(source.includes("root.uid !== uid || metadata.uid !== uid"), true);
+  assert.equal(source.includes("(metadata.mode & 0o777) !== 0o700"), true);
+  assert.equal(source.includes("path.dirname(directory) !== allowedOutputRoot"), true);
+  const documentation = readFileSync(new URL(
+    "../../docs/launch-operations-kernel.md",
+    import.meta.url,
+  ), "utf8");
+  const contractMatch = documentation.match(
+    /<!-- FIRST_ENVIRONMENT_FUTURE_MATERIALIZATION_PREFLIGHT_V1\n([\s\S]*?)\n-->/u,
+  );
+  assert.notEqual(contractMatch, null);
+  const contract = JSON.parse(contractMatch[1]);
+  assert.deepEqual(contract, {
+    authority_conformance_incident:
+      "WORKSPACE_LINK_COUNT_PRECONDITION_NOT_ENFORCED",
+    directory_identity_and_isolation: {
+      canonical_workspace_path: true,
+      exact_approved_parent_root: true,
+      exact_entry_sets_per_stage: true,
+      expected_owner: true,
+      freshness_when_required: true,
+      mode: "0700",
+      non_symlink: true,
+      real_directory: true,
+      safe_parent_root_relationship: true,
+      stable_identity_fields: ["dev", "ino", "uid", "mode"],
+      target_authorization_absent_before_exclusive_create: true,
+      workspace_nlink_fixed_value_required: false,
+    },
+    external_unauthorized_effects: 0,
+    incident_severity: "IMPORTANT",
+    mandatory_preflight: {
+      allowed_states_for_process_start: ["true"],
+      false_ambiguous_inconsistent_or_unresolved_starts: 0,
+      materializer_process_starts_max_after_pass: 1,
+      materializer_start_should_have_been_blocked_at_precondition: true,
+    },
+    regular_file_single_link_requirement: {
+      artifacts: ["approval", "request", "authorization"],
+      canonical_real_path: true,
+      expected_owner: true,
+      mode: "0600",
+      nlink: 1,
+      no_follow: true,
+      non_symlink: true,
+      output_exclusive_create: true,
+      regular_file: true,
+      stable_identity_fields: ["dev", "ino", "uid", "mode", "size"],
+    },
+  });
+  for (const state of ["false", "unresolved", "ambiguous", "inconsistent"]) {
+    const starts = contract.mandatory_preflight
+      .allowed_states_for_process_start.includes(state)
+      ? contract.mandatory_preflight.materializer_process_starts_max_after_pass
+      : contract.mandatory_preflight
+        .false_ambiguous_inconsistent_or_unresolved_starts;
+    assert.equal(starts, 0);
+  }
 } finally {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
 }
 
 console.log(
-  "PASS_FIRST_ENVIRONMENT_NATIVE_MATERIALIZER_CLI assertions=45 synthetic_records_created=1 live_records_created=0 credential_value_reads=0 provider_calls=0 network_calls=0",
+  "PASS_FIRST_ENVIRONMENT_NATIVE_MATERIALIZER_CLI assertions=66 synthetic_records_created=1 live_records_created=0 credential_value_reads=0 provider_calls=0 network_calls=0",
 );

@@ -41,6 +41,10 @@ const TRANSPORT_PATH = path.join(
   import.meta.dirname,
   "admin-v1-official-first-environment-live-platform.mjs",
 );
+const TRANSPORT_DEPENDENCY_PATH = path.join(
+  import.meta.dirname,
+  "admin-v1-official-live-platform.mjs",
+);
 const SCHEMA_PATH = path.join(
   import.meta.dirname,
   "admin-v1-official-first-environment-authorization.schema.json",
@@ -123,10 +127,13 @@ function memoryJournal() {
   };
 }
 
-function authorization(overrides = {}) {
+function authorization(overrides = {}, requestOverrides = {}) {
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
   const supervisorPolicy = JSON.parse(readFileSync(SUPERVISOR_POLICY_PATH));
   const transportSourceSha256 = sha256(readFileSync(TRANSPORT_PATH));
+  const transportDependencySourceSha256 = sha256(
+    readFileSync(TRANSPORT_DEPENDENCY_PATH),
+  );
   const value = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     request: {
       authorization_mode: "HERMETIC_TEST_ONLY",
@@ -146,7 +153,7 @@ function authorization(overrides = {}) {
       runtime_source_sha256: sha256(readFileSync(RUNTIME_PATH)),
       supervisor_source_sha256: sha256(readFileSync(SUPERVISOR_PATH)),
       transport_source_sha256: transportSourceSha256,
-      transport_dependency_source_sha256: transportSourceSha256,
+      transport_dependency_source_sha256: transportDependencySourceSha256,
       authorization_schema_sha256: sha256(readFileSync(SCHEMA_PATH)),
       materializer_source_sha256: sha256(readFileSync(MATERIALIZER_PATH)),
       credential_loader_source_sha256:
@@ -178,6 +185,7 @@ function authorization(overrides = {}) {
         source: "git/github",
         state: "READY",
       },
+      ...requestOverrides,
     },
     now_epoch_ms: NOW,
   });
@@ -272,6 +280,24 @@ try {
       "dependencies.inspect_repository\n      ? dependencies.inspect_repository(authorization)\n      : inspectAdminV1OfficialFirstEnvironmentRepository(repositoryRoot)",
     ),
   );
+  assert.equal(
+    SUPERVISOR_SOURCE.includes(
+      'const TRANSPORT_RELATIVE_PATH =\n  "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs";',
+    ),
+    true,
+  );
+  assert.equal(
+    SUPERVISOR_SOURCE.includes(
+      'const TRANSPORT_DEPENDENCY_RELATIVE_PATH =\n  "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs";',
+    ),
+    true,
+  );
+  assert.equal(
+    SUPERVISOR_SOURCE.includes(
+      "authorization.authorization_closure.transport_dependency_source_sha256",
+    ),
+    true,
+  );
   const selfTest = spawnSync(process.argv[0], [SUPERVISOR_PATH, "--self-test"], {
     cwd: ROOT,
     encoding: "utf8",
@@ -324,6 +350,40 @@ try {
     provider_auth: 0,
     transport: 0,
   });
+
+  for (const [name, requestOverrides] of [
+    ["swapped", {
+      transport_source_sha256: sha256(readFileSync(TRANSPORT_DEPENDENCY_PATH)),
+      transport_dependency_source_sha256: sha256(readFileSync(TRANSPORT_PATH)),
+    }],
+    ["unreviewed transport", {
+      transport_source_sha256: "0".repeat(64),
+    }],
+    ["unreviewed dependency", {
+      transport_dependency_source_sha256: "0".repeat(64),
+    }],
+  ]) {
+    const fixtureDirectory = mkdtempSync(path.join(temporaryRoot, `${name}-`));
+    const fixturePath = writeAuthorization(
+      fixtureDirectory,
+      authorization({}, requestOverrides),
+    );
+    const fixtureDependencies = dependencies();
+    assert.deepEqual(
+      await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+        ["--run-first-environment", "--authorization", fixturePath],
+        fixtureDependencies.values,
+      ),
+      { exit_code: 1, code: "FIRST_ENVIRONMENT_SUPERVISOR_SOURCE_MISMATCH" },
+    );
+    assert.deepEqual(fixtureDependencies.counters, {
+      candidate: 0,
+      journal_creates: 0,
+      credential: 0,
+      provider_auth: 0,
+      transport: 0,
+    });
+  }
 
   const missingBindingsPath = writeAuthorization(
     mkdtempSync(path.join(temporaryRoot, "missing-bindings-")),
