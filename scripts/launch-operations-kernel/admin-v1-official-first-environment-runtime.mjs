@@ -118,6 +118,40 @@ const CREATE_FAILURE_CLASSIFICATIONS = new Set([
   "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE",
 ]);
 const HTTP_STATUS_CLASSES = new Set(["2XX", "4XX", "5XX", "OTHER"]);
+const DISPOSITION_EVIDENCE_KEYS = Object.freeze([
+  "authorization_sha256",
+  "active_journal_sha256",
+  "identity_journal_sha256",
+  "first_reconciliation_ccr_sha256",
+  "second_reconciliation_ccr_sha256",
+  "cumulative_classification",
+  "first_observed_at",
+  "second_observed_at",
+  "observations",
+  "processes",
+  "credential_reads",
+  "provider_gets",
+  "exact_matches",
+  "mutations",
+]);
+const AMBIGUOUS_DISPOSITION_STATE_KEYS = Object.freeze([
+  "lifecycle",
+  "stage",
+  "token_spent",
+  "runtime_sessions",
+  "runtime_retries",
+  "runtime_replays",
+  "terminal_classification",
+  "resource_state",
+  "owned_environment_record_id",
+  "failure",
+  "expected_residual",
+  "zero_residual",
+  "provider_creates",
+  "provider_reads",
+  "provider_updates",
+  "provider_deletes",
+]);
 
 export class AdminV1OfficialFirstEnvironmentRuntimeError extends Error {
   constructor(code) {
@@ -150,6 +184,65 @@ function exactTimestamp(value) {
   return Number.isFinite(epoch) && new Date(epoch).toISOString() === value
     ? epoch
     : null;
+}
+
+function exactSpentAmbiguousDispositionState(state) {
+  const failure = state?.failure;
+  return exactKeys(state, AMBIGUOUS_DISPOSITION_STATE_KEYS) &&
+    state.lifecycle === "ACTIVE_UNKNOWN_STATE" &&
+    state.stage === "AMBIGUOUS_POST_SPEND_RESULT" &&
+    state.token_spent === true && state.runtime_sessions === 1 &&
+    state.runtime_retries === 0 && state.runtime_replays === 0 &&
+    state.terminal_classification ===
+      "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE" &&
+    state.resource_state === "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE" &&
+    state.owned_environment_record_id === null &&
+    state.expected_residual === false && state.zero_residual === false &&
+    state.provider_creates === 0 && state.provider_reads === 0 &&
+    state.provider_updates === 0 && state.provider_deletes === 0 &&
+    exactKeys(failure, [
+      "operation",
+      "stage",
+      "classification",
+      "provider_code",
+      "http_status_class",
+      "provider",
+      "retry_allowed",
+    ]) &&
+    failure.operation === "create_environment" &&
+    failure.stage === "EXECUTION" &&
+    failure.classification ===
+      "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE" &&
+    (failure.provider_code === null || boundedAscii(failure.provider_code, 128)) &&
+    (failure.http_status_class === null ||
+      HTTP_STATUS_CLASSES.has(failure.http_status_class)) &&
+    failure.provider === "VERCEL" && failure.retry_allowed === false;
+}
+
+function exactTwoZeroObservationEvidence(
+  evidence,
+  { activeJournalSha256, identityJournalSha256 },
+) {
+  if (!exactKeys(evidence, DISPOSITION_EVIDENCE_KEYS)) return false;
+  const firstObserved = exactTimestamp(evidence.first_observed_at);
+  const secondObserved = exactTimestamp(evidence.second_observed_at);
+  const hashes = [
+    evidence.authorization_sha256,
+    evidence.active_journal_sha256,
+    evidence.identity_journal_sha256,
+    evidence.first_reconciliation_ccr_sha256,
+    evidence.second_reconciliation_ccr_sha256,
+  ];
+  return hashes.every(isSha256) && new Set(hashes).size === hashes.length &&
+    evidence.active_journal_sha256 === activeJournalSha256 &&
+    evidence.identity_journal_sha256 === identityJournalSha256 &&
+    evidence.cumulative_classification ===
+      "RECONCILED_TWO_TIME_SEPARATED_ZERO_MATCH_OBSERVATIONS" &&
+    firstObserved !== null && secondObserved !== null &&
+    secondObserved > firstObserved && secondObserved - firstObserved >= 300_000 &&
+    evidence.observations === 2 && evidence.processes === 2 &&
+    evidence.credential_reads === 2 && evidence.provider_gets === 2 &&
+    evidence.exact_matches === 0 && evidence.mutations === 0;
 }
 
 function deepFreeze(value) {
@@ -566,6 +659,41 @@ export function createAdminV1OfficialFirstEnvironmentJournal({
         );
       }
       const sha256 = persistTo(retiredPath, { ...state, retired: true });
+      if (existsSync(activePath)) unlinkSync(activePath);
+      fsyncPath(canonicalDirectory);
+      return sha256;
+    },
+    retireReconciledNoOwnedResource(evidence) {
+      const current = load();
+      if (
+        current === null || current.retired === true ||
+        current.value.sequence !== 6 ||
+        !exactSpentAmbiguousDispositionState(current.value.state) ||
+        !exactTwoZeroObservationEvidence(evidence, {
+          activeJournalSha256: current.sha256,
+          identityJournalSha256: persistedIdentity.sha256,
+        }) ||
+        !existsSync(activePath) ||
+        strictJournalObject(activePath).sha256 !== current.sha256
+      ) {
+        throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+          "FIRST_ENVIRONMENT_DISPOSITION_DENIED",
+        );
+      }
+      const dispositionState = {
+        ...structuredClone(current.value.state),
+        lifecycle: "TERMINAL_GOVERNED_DISPOSITION",
+        stage: "TWO_TIME_SEPARATED_ZERO_MATCH_DISPOSITION",
+        terminal_classification:
+          "DISPOSITION_TWO_ZERO_OBSERVATIONS_NO_OWNED_RESOURCE_IDENTIFIED",
+        resource_state:
+          "NO_OWNED_RESOURCE_IDENTIFIED_REMOTE_ABSENCE_NOT_PROVEN",
+        disposition_evidence: structuredClone(evidence),
+      };
+      const sha256 = persistTo(retiredPath, {
+        ...dispositionState,
+        retired: true,
+      });
       if (existsSync(activePath)) unlinkSync(activePath);
       fsyncPath(canonicalDirectory);
       return sha256;

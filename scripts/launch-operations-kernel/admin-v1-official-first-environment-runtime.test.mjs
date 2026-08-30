@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
-import { lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Ajv from "ajv";
+import { sha256Hex } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CAPABILITY_BUDGET,
   ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS,
@@ -78,6 +88,97 @@ function memoryJournal() {
     return "8".repeat(64);
   };
   return { snapshots, load: () => current, publish: (state) => save(state, false), retire: (state) => save(state, true) };
+}
+
+const AMBIGUOUS_FAILURE = Object.freeze({
+  operation: "create_environment",
+  stage: "EXECUTION",
+  classification: "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE",
+  provider_code: null,
+  http_status_class: null,
+  provider: "VERCEL",
+  retry_allowed: false,
+});
+
+function ambiguousDispositionState(overrides = {}) {
+  return {
+    lifecycle: "ACTIVE_UNKNOWN_STATE",
+    stage: "AMBIGUOUS_POST_SPEND_RESULT",
+    token_spent: true,
+    runtime_sessions: 1,
+    runtime_retries: 0,
+    runtime_replays: 0,
+    terminal_classification: "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE",
+    resource_state: "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE",
+    owned_environment_record_id: null,
+    failure: structuredClone(AMBIGUOUS_FAILURE),
+    expected_residual: false,
+    zero_residual: false,
+    provider_creates: 0,
+    provider_reads: 0,
+    provider_updates: 0,
+    provider_deletes: 0,
+    ...overrides,
+  };
+}
+
+function sha256File(filePath) {
+  return sha256Hex(readFileSync(filePath));
+}
+
+function dispositionFixture({ stateOverrides = {}, writes = 6 } = {}) {
+  const directory = mkdtempSync(path.join(
+    tmpdir(),
+    "aifinder-admin-v1-official-first-environment-",
+  ));
+  const identity = {
+    authorization_id_sha256: "1".repeat(64),
+    run_id: RUN_ID,
+  };
+  const journal = createAdminV1OfficialFirstEnvironmentJournal({
+    directory,
+    identity,
+  });
+  const state = ambiguousDispositionState(stateOverrides);
+  let activeJournalSha256 = null;
+  for (let index = 0; index < writes; index += 1) {
+    activeJournalSha256 = journal.publish(state);
+  }
+  const identityPath = path.join(
+    directory,
+    "admin-v1-official-first-environment-runtime-identity.json",
+  );
+  const evidence = {
+    authorization_sha256: "a".repeat(64),
+    active_journal_sha256: activeJournalSha256,
+    identity_journal_sha256: sha256File(identityPath),
+    first_reconciliation_ccr_sha256: "b".repeat(64),
+    second_reconciliation_ccr_sha256: "c".repeat(64),
+    cumulative_classification:
+      "RECONCILED_TWO_TIME_SEPARATED_ZERO_MATCH_OBSERVATIONS",
+    first_observed_at: "2026-08-30T03:08:27.868Z",
+    second_observed_at: "2026-08-30T03:16:12.000Z",
+    observations: 2,
+    processes: 2,
+    credential_reads: 2,
+    provider_gets: 2,
+    exact_matches: 0,
+    mutations: 0,
+  };
+  return {
+    directory,
+    journal,
+    state,
+    evidence,
+    activePath: path.join(
+      directory,
+      "admin-v1-official-first-environment-runtime-journal.json",
+    ),
+    retiredPath: path.join(
+      directory,
+      "admin-v1-official-first-environment-runtime-retired.json",
+    ),
+  };
 }
 
 function createOnlyAdapter({ journal, error = null } = {}) {
@@ -428,6 +529,154 @@ await check("ambiguous post-spend state remains active", async () => {
   assert.equal(result.resource_state, "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE");
   assert.deepEqual(adapter.calls, ["createEnvironment"]);
   assert.equal(journal.load().retired, false);
+});
+
+await check("two zero observations permit only bounded governed disposition", async () => {
+  const fixture = dispositionFixture();
+  try {
+    assert.throws(
+      () => fixture.journal.retire(fixture.state),
+      (error) => error?.code === "FIRST_ENVIRONMENT_RETIREMENT_DENIED",
+    );
+
+    const invalidEvidence = [
+      { ...fixture.evidence, unexpected: true },
+      { ...fixture.evidence, authorization_sha256: "bad" },
+      { ...fixture.evidence, active_journal_sha256: "d".repeat(64) },
+      { ...fixture.evidence, identity_journal_sha256: "d".repeat(64) },
+      {
+        ...fixture.evidence,
+        second_reconciliation_ccr_sha256:
+          fixture.evidence.first_reconciliation_ccr_sha256,
+      },
+      { ...fixture.evidence, observations: 3 },
+      { ...fixture.evidence, processes: 1 },
+      { ...fixture.evidence, credential_reads: 1 },
+      { ...fixture.evidence, provider_gets: 1 },
+      { ...fixture.evidence, exact_matches: 1 },
+      { ...fixture.evidence, mutations: 1 },
+      {
+        ...fixture.evidence,
+        second_observed_at: "2026-08-30T03:10:27.867Z",
+      },
+      {
+        ...fixture.evidence,
+        second_observed_at: fixture.evidence.first_observed_at,
+      },
+      {
+        ...fixture.evidence,
+        message: "SYNTHETIC_SECRET_DO_NOT_PERSIST",
+      },
+    ];
+    for (const evidence of invalidEvidence) {
+      assert.throws(
+        () => fixture.journal.retireReconciledNoOwnedResource(evidence),
+        (error) => error?.code === "FIRST_ENVIRONMENT_DISPOSITION_DENIED",
+      );
+      assert.equal(existsSync(fixture.retiredPath), false);
+      assert.equal(existsSync(fixture.activePath), true);
+    }
+
+    const sha256 = fixture.journal.retireReconciledNoOwnedResource(
+      fixture.evidence,
+    );
+    assert.match(sha256, /^[0-9a-f]{64}$/u);
+    assert.equal(existsSync(fixture.activePath), false);
+    assert.equal(existsSync(fixture.retiredPath), true);
+    assert.deepEqual(readdirSync(fixture.directory).sort(), [
+      "admin-v1-official-first-environment-runtime-identity.json",
+      "admin-v1-official-first-environment-runtime-retired.json",
+    ]);
+    const retired = fixture.journal.load();
+    assert.equal(retired.retired, true);
+    assert.equal(retired.value.sequence, 7);
+    assert.deepEqual(retired.value.state, {
+      ...fixture.state,
+      lifecycle: "TERMINAL_GOVERNED_DISPOSITION",
+      stage: "TWO_TIME_SEPARATED_ZERO_MATCH_DISPOSITION",
+      terminal_classification:
+        "DISPOSITION_TWO_ZERO_OBSERVATIONS_NO_OWNED_RESOURCE_IDENTIFIED",
+      resource_state:
+        "NO_OWNED_RESOURCE_IDENTIFIED_REMOTE_ABSENCE_NOT_PROVEN",
+      disposition_evidence: fixture.evidence,
+      retired: true,
+    });
+    assert.deepEqual(retired.value.state.failure, AMBIGUOUS_FAILURE);
+    assert.equal(retired.value.state.token_spent, true);
+    assert.equal(retired.value.state.expected_residual, false);
+    assert.equal(retired.value.state.zero_residual, false);
+    assert.equal(retired.value.state.owned_environment_record_id, null);
+    assert.deepEqual([
+      retired.value.state.runtime_sessions,
+      retired.value.state.runtime_retries,
+      retired.value.state.runtime_replays,
+      retired.value.state.provider_creates,
+      retired.value.state.provider_reads,
+      retired.value.state.provider_updates,
+      retired.value.state.provider_deletes,
+    ], [1, 0, 0, 0, 0, 0, 0]);
+    assert.equal(
+      JSON.stringify(retired.value).includes("SYNTHETIC_SECRET_DO_NOT_PERSIST"),
+      false,
+    );
+  } finally {
+    rmSync(fixture.directory, { recursive: true, force: true });
+  }
+
+  for (const setup of [
+    { stateOverrides: { lifecycle: "EXECUTION_STARTED" } },
+    { stateOverrides: { runtime_retries: 1 } },
+    { stateOverrides: { runtime_replays: 1 } },
+    { stateOverrides: { provider_creates: 1 } },
+    { stateOverrides: { provider_reads: 1 } },
+    { writes: 5 },
+  ]) {
+    const denied = dispositionFixture(setup);
+    try {
+      assert.throws(
+        () => denied.journal.retireReconciledNoOwnedResource(denied.evidence),
+        (error) => error?.code === "FIRST_ENVIRONMENT_DISPOSITION_DENIED",
+      );
+      assert.equal(existsSync(denied.retiredPath), false);
+      assert.equal(existsSync(denied.activePath), true);
+    } finally {
+      rmSync(denied.directory, { recursive: true, force: true });
+    }
+  }
+
+  const identityMismatch = dispositionFixture();
+  try {
+    const document = JSON.parse(readFileSync(identityMismatch.activePath, "utf8"));
+    document.identity.authorization_id_sha256 = "d".repeat(64);
+    writeFileSync(identityMismatch.activePath, `${JSON.stringify(document)}\n`);
+    assert.throws(
+      () => identityMismatch.journal.retireReconciledNoOwnedResource(
+        identityMismatch.evidence,
+      ),
+      (error) => error?.code === "FIRST_ENVIRONMENT_JOURNAL_IDENTITY",
+    );
+    assert.equal(existsSync(identityMismatch.retiredPath), false);
+  } finally {
+    rmSync(identityMismatch.directory, { recursive: true, force: true });
+  }
+
+  const alreadyRetired = dispositionFixture();
+  try {
+    alreadyRetired.journal.retire({
+      ...alreadyRetired.state,
+      lifecycle: "TERMINAL_NO_EFFECT_FAILURE",
+      resource_state: "PROVEN_NO_PROVIDER_EFFECT",
+      zero_residual: true,
+    });
+    assert.throws(
+      () => alreadyRetired.journal.retireReconciledNoOwnedResource(
+        alreadyRetired.evidence,
+      ),
+      (error) => error?.code === "FIRST_ENVIRONMENT_DISPOSITION_DENIED",
+    );
+  } finally {
+    rmSync(alreadyRetired.directory, { recursive: true, force: true });
+  }
 });
 
 await check("native transport admits one exact POST only", async () => {
