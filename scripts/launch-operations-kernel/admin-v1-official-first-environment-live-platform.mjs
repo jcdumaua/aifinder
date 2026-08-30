@@ -75,15 +75,19 @@ function failure(classification, { providerCode = null, status = null } = {}) {
   );
 }
 
-function boundedTransportResponse(response) {
-  if (!exactKeys(response, ["status", "body"]) ||
-    !Number.isSafeInteger(response.status) || response.status < 100 ||
-    response.status > 599) return false;
+function boundedTransportStatus(response) {
+  return exactKeys(response, ["status", "body"]) &&
+    Number.isSafeInteger(response.status) && response.status >= 100 &&
+    response.status <= 599;
+}
+
+function boundedTransportBody(body) {
   let size = 0;
   const visit = (value, key = "") => {
-    if (/(raw|authorization|cookie|token|secret|message)/iu.test(key)) {
+    if (/(raw|authorization|cookie|token|secret)/iu.test(key)) {
       return false;
     }
+    if (/message/iu.test(key)) return true;
     if (value === null || typeof value === "boolean") return true;
     if (typeof value === "number") return Number.isFinite(value);
     if (typeof value === "string") {
@@ -95,12 +99,13 @@ function boundedTransportResponse(response) {
     }
     if (!value || typeof value !== "object" ||
       Object.getPrototypeOf(value) !== Object.prototype) return false;
-    return Object.entries(value).every(([childKey, child]) => {
+    return Object.keys(value).every((childKey) => {
       size += Buffer.byteLength(childKey, "utf8");
-      return size <= 64 * 1024 && visit(child, childKey);
+      return size <= 64 * 1024 &&
+        (/message/iu.test(childKey) || visit(value[childKey], childKey));
     });
   };
-  return visit(response.body);
+  return visit(body);
 }
 
 function exactCreatedEnvironmentResponseId(body) {
@@ -121,9 +126,14 @@ function exactCreatedEnvironmentResponseId(body) {
 }
 
 function providerCode(body) {
-  if (!body || typeof body !== "object" || Array.isArray(body) ||
-    !Object.hasOwn(body, "code")) return null;
-  return boundedAscii(body.code, 128) ? body.code : null;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  if (Object.hasOwn(body, "code")) {
+    return boundedAscii(body.code, 128) ? body.code : null;
+  }
+  const nested = body.error;
+  if (!nested || typeof nested !== "object" || Array.isArray(nested) ||
+    !Object.hasOwn(nested, "code")) return null;
+  return boundedAscii(nested.code, 128) ? nested.code : null;
 }
 
 function descriptor(input, authorization) {
@@ -277,8 +287,13 @@ export function createAdminV1OfficialFirstEnvironmentAdapter({
         }
         throw failure("FAIL_CREATE_TRANSPORT");
       }
-      if (!boundedTransportResponse(response)) {
+      if (!boundedTransportStatus(response)) {
         throw failure("FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE");
+      }
+      if (!boundedTransportBody(response.body)) {
+        throw failure("FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE", {
+          status: response.status,
+        });
       }
       const statusClass = httpStatusClass(response.status);
       if (statusClass === "2XX") {
@@ -316,10 +331,16 @@ export function createAdminV1OfficialFirstEnvironmentAdapter({
         });
       }
       if (response.status === 429) {
-        throw failure("FAIL_PROVIDER_RATE_LIMITED", { status: response.status });
+        throw failure("FAIL_PROVIDER_RATE_LIMITED", {
+          providerCode: code,
+          status: response.status,
+        });
       }
       if (statusClass === "5XX") {
-        throw failure("FAIL_PROVIDER_FAILURE", { status: response.status });
+        throw failure("FAIL_PROVIDER_FAILURE", {
+          providerCode: code,
+          status: response.status,
+        });
       }
       throw failure("FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE", {
         providerCode: code,

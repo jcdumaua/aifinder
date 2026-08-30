@@ -112,6 +112,22 @@ function adapterForResponse(responseOrError) {
   return { adapter, attempts: () => attempts };
 }
 
+async function platformFailureFor(response) {
+  const { adapter, attempts } = adapterForResponse(response);
+  let caught = null;
+  try {
+    await adapter.createEnvironment({
+      key: "ADMIN_PASSWORD",
+      value: Buffer.from("LOCAL_TEST_SENTINEL"),
+    });
+  } catch (error) {
+    caught = error;
+  }
+  assert(caught instanceof AdminV1OfficialFirstEnvironmentPlatformError);
+  assert.equal(attempts(), 1);
+  return caught;
+}
+
 await check("capability surface is true create-only", async () => {
   assert.equal(ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS,
     "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1");
@@ -281,6 +297,95 @@ for (const [providerCode, status, classification] of providerCases) {
     assert.equal(attempts(), 1);
   });
 }
+
+await check("nested INVALID_KEY with message retains bounded evidence", async () => {
+  const message = "SYNTHETIC_PROVIDER_MESSAGE_DO_NOT_EXPOSE";
+  const error = await platformFailureFor({
+    status: 400,
+    body: { error: { code: "INVALID_KEY", message } },
+  });
+  const evidence = {
+    classification: error.classification,
+    provider_code: error.provider_code,
+    http_status_class: error.http_status_class,
+  };
+  if (evidence.classification !== "FAIL_INVALID_CREATE_REQUEST" ||
+    evidence.provider_code !== "INVALID_KEY" ||
+    evidence.http_status_class !== "4XX") {
+    throw new Error(
+      `EXPECTED_NESTED_INVALID_KEY_EVIDENCE_GOT_${evidence.classification}_${evidence.provider_code}_${evidence.http_status_class}`,
+    );
+  }
+  for (const captured of [error.message, error.code, JSON.stringify(error),
+    JSON.stringify(evidence)]) {
+    assert.equal(captured.includes(message), false);
+  }
+});
+
+const nestedProviderCases = [
+  ["NOT_AUTHORIZED", 401, "FAIL_PROVIDER_AUTHENTICATION_UNAVAILABLE", "4XX"],
+  ["FORBIDDEN", 403, "FAIL_PROVIDER_PERMISSION_DENIED", "4XX"],
+  ["ENV_ALREADY_EXISTS", 409, "FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT", "4XX"],
+  ["RATE_LIMITED", 429, "FAIL_PROVIDER_RATE_LIMITED", "4XX"],
+  ["INTERNAL_ERROR", 503, "FAIL_PROVIDER_FAILURE", "5XX"],
+  ["UNKNOWN_NESTED_CODE", 418, "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE", "4XX"],
+];
+for (const [providerCode, status, classification, statusClass] of nestedProviderCases) {
+  await check(`nested provider code classifies ${classification}`, async () => {
+    const message = `SYNTHETIC_MESSAGE_${providerCode}`;
+    const error = await platformFailureFor({
+      status,
+      body: { error: { code: providerCode, message } },
+    });
+    assert.equal(error.classification, classification);
+    assert.equal(error.provider_code, providerCode);
+    assert.equal(error.http_status_class, statusClass);
+    assert.equal(JSON.stringify(error).includes(message), false);
+    assert.equal(error.message.includes(message), false);
+  });
+}
+
+await check("malformed 2XX retains status without message evidence", async () => {
+  const message = "SYNTHETIC_MALFORMED_SUCCESS_MESSAGE_DO_NOT_EXPOSE";
+  const error = await platformFailureFor({ status: 200, body: { message } });
+  assert.equal(error.classification,
+    "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE");
+  assert.equal(error.provider_code, null);
+  assert.equal(error.http_status_class, "2XX");
+  assert.equal(JSON.stringify(error).includes(message), false);
+  assert.equal(error.message.includes(message), false);
+});
+
+await check("nested message is absent from runtime and journal-safe evidence", async () => {
+  const message = "SYNTHETIC_RUNTIME_MESSAGE_DO_NOT_EXPOSE";
+  const { adapter, attempts } = adapterForResponse({
+    status: 400,
+    body: { error: { code: "INVALID_KEY", message } },
+  });
+  const journal = memoryJournal();
+  const result = await runAdminV1OfficialFirstEnvironmentRuntime({
+    authorization: authorization(),
+    adapter,
+    journal,
+    load_sensitive: async () => ({ environment_value: Buffer.from("LOCAL") }),
+    now_epoch_ms: NOW,
+    allow_hermetic_test: true,
+  });
+  assert.equal(attempts(), 1);
+  assert.equal(result.classification, "FAIL_INVALID_CREATE_REQUEST");
+  assert.equal(journal.load().retired, true);
+  assert.deepEqual(journal.load().value.state.failure, {
+    operation: "create_environment",
+    stage: "EXECUTION",
+    classification: "FAIL_INVALID_CREATE_REQUEST",
+    provider_code: "INVALID_KEY",
+    http_status_class: "4XX",
+    provider: "VERCEL",
+    retry_allowed: false,
+  });
+  assert.equal(JSON.stringify({ result, snapshots: journal.snapshots }).includes(message),
+    false);
+});
 
 await check("success shapes are exact", async () => {
   for (const body of [{ id: "env-owned-1" }, { created: [{ id: "env-owned-1" }], failed: [] }]) {
