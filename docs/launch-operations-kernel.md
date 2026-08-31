@@ -155,7 +155,8 @@ Mutable provider bytes are cleared after the single supervisor session.
 
 The native transport exposes only `execute` and accepts exactly one fixed
 Vercel environment-create descriptor: `POST`, branch `main`, target `preview`,
-encrypted `ADMIN_PASSWORD`, and `upsert=false`. It exposes no identity-read,
+sensitive `ADMIN_PASSWORD`, and an omitted `upsert` query for create-only
+semantics. It exposes no identity-read,
 update, or delete capability. The one-use authorization is spent durably
 immediately before that single create request. Exact success is terminal with
 one expected created-resource residue; known no-effect provider failures retire

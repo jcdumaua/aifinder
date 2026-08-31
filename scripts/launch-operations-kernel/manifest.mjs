@@ -2622,8 +2622,11 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes('operation: "create_environment"') &&
       source.includes('method: "POST"') &&
       source.includes(
-        '"teamId=team_9POJYxNnjIBbrQ19My8M5yG3&upsert=false"',
+        '"teamId=team_9POJYxNnjIBbrQ19My8M5yG3"',
       ) &&
+      source.includes('type: "sensitive"') &&
+      !source.includes("upsert=false") &&
+      !source.includes('type: "encrypted"') &&
       source.includes("FAIL_TARGET_ALREADY_EXISTS_OR_CREATE_ONLY_CONFLICT") &&
       !source.includes('method: "GET"') &&
       !source.includes('method: "PUT"') &&

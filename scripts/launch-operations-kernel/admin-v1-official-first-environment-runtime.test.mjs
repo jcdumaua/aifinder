@@ -691,9 +691,10 @@ await check("native transport admits one exact POST only", async () => {
   const adapter = createAdminV1OfficialFirstEnvironmentAdapter({ authorization: authorization(), transport: native });
   assert.deepEqual(Object.keys(adapter), ["createEnvironment"]);
   await adapter.createEnvironment({ key: "ADMIN_PASSWORD", value: Buffer.from("LOCAL_TEST_SENTINEL") });
-  assert.deepEqual(requests.map(({ url, method }) => ({ url, method })), [{
-    url: "https://api.vercel.com/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env?teamId=team_9POJYxNnjIBbrQ19My8M5yG3&upsert=false",
+  assert.deepEqual(requests, [{
+    url: "https://api.vercel.com/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env?teamId=team_9POJYxNnjIBbrQ19My8M5yG3",
     method: "POST",
+    body: '{"gitBranch":"main","key":"ADMIN_PASSWORD","target":["preview"],"type":"sensitive","value":"LOCAL_TEST_SENTINEL"}',
   }]);
   await assert.rejects(adapter.createEnvironment({ key: "ADMIN_PASSWORD", value: Buffer.from("SECOND") }),
     (error) => error?.code === "FIRST_ENVIRONMENT_CREATE_BUDGET_EXHAUSTED");
