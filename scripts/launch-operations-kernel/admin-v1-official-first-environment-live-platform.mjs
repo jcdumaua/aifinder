@@ -159,8 +159,7 @@ function descriptor(input, authorization) {
         input.value.byteLength,
       ).toString("utf8"),
       type: "sensitive",
-      target: ["preview"],
-      gitBranch: "main",
+      target: ["production"],
     },
   };
 }
@@ -171,11 +170,10 @@ function exactNativeDescriptor(value) {
     value.path ===
       "/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env?" +
         "teamId=team_9POJYxNnjIBbrQ19My8M5yG3" &&
-    exactKeys(value.body, ["gitBranch", "key", "target", "type", "value"]) &&
+    exactKeys(value.body, ["key", "target", "type", "value"]) &&
     value.body.key === "ADMIN_PASSWORD" && boundedAscii(value.body.value, 16_384) &&
     !/[\0\r\n]/u.test(value.body.value) && value.body.type === "sensitive" &&
-    canonicalJson(value.body.target) === '["preview"]' &&
-    value.body.gitBranch === "main";
+    canonicalJson(value.body.target) === '["production"]';
 }
 
 export function createAdminV1OfficialFirstEnvironmentNativeTransport({

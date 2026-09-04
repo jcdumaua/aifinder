@@ -694,8 +694,21 @@ await check("native transport admits one exact POST only", async () => {
   assert.deepEqual(requests, [{
     url: "https://api.vercel.com/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env?teamId=team_9POJYxNnjIBbrQ19My8M5yG3",
     method: "POST",
-    body: '{"gitBranch":"main","key":"ADMIN_PASSWORD","target":["preview"],"type":"sensitive","value":"LOCAL_TEST_SENTINEL"}',
+    body: '{"key":"ADMIN_PASSWORD","target":["production"],"type":"sensitive","value":"LOCAL_TEST_SENTINEL"}',
   }]);
+  const requestUrl = new URL(requests[0].url);
+  assert.equal(requestUrl.pathname,
+    "/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env");
+  assert.deepEqual([...requestUrl.searchParams], [[
+    "teamId", "team_9POJYxNnjIBbrQ19My8M5yG3",
+  ]]);
+  assert.equal(requestUrl.searchParams.has("upsert"), false);
+  const requestBody = JSON.parse(requests[0].body);
+  assert.deepEqual(Object.keys(requestBody).sort(), ["key", "target", "type", "value"]);
+  assert.deepEqual(requestBody.target, ["production"]);
+  assert.equal(Object.hasOwn(requestBody, "gitBranch"), false);
+  assert.equal(Object.hasOwn(requestBody, "customEnvironmentIds"), false);
+  assert.equal(Object.hasOwn(requestBody, "comment"), false);
   await assert.rejects(adapter.createEnvironment({ key: "ADMIN_PASSWORD", value: Buffer.from("SECOND") }),
     (error) => error?.code === "FIRST_ENVIRONMENT_CREATE_BUDGET_EXHAUSTED");
   assert.equal(requests.length, 1);
