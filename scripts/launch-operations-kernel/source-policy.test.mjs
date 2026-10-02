@@ -106,6 +106,155 @@ async function check(name, operation) {
   }
 }
 
+// BEGIN A20R4_TRANSPORT_POLICY_TESTS
+const transportRunnerPath =
+  "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs";
+const transportBegin = "// BEGIN A20_FIXED_FD_BROKER_CLIENT";
+const transportEnd = "// END A20_FIXED_FD_BROKER_CLIENT";
+const transportCurrentRunner = candidateSources.get(transportRunnerPath);
+const transportBeginOffset = transportCurrentRunner.indexOf(transportBegin);
+const transportEndOffset = transportCurrentRunner.indexOf(transportEnd) +
+  transportEnd.length;
+const transportReviewedRegion = transportCurrentRunner.slice(
+  transportBeginOffset,
+  transportEndOffset,
+);
+// Removing the separately attested import only in this classifier fixture
+// isolates the existing exact-region exemption.
+const transportIsolatedRunner = transportCurrentRunner.replace(
+  'import * as brokerNativeFs from "node:fs";\n',
+  "",
+);
+function validateTransportSources(sources) {
+  const semantic = new Map(independentlyReviewedSemanticSourceSha256ByPath);
+  const unresolved = new Map(independentlyReviewedSourceSha256ByPath);
+  for (const bindings of [semantic, unresolved]) {
+    for (const relativePath of bindings.keys()) {
+      bindings.set(relativePath, createHash("sha256")
+        .update(sources.get(relativePath)).digest("hex"));
+    }
+  }
+  return validateLocalOnlySources(sources, {
+    reviewedSemanticSourceSha256ByPath: semantic,
+    reviewedSourceSha256ByPath: unresolved,
+  });
+}
+function validateTransportRunner(source) {
+  const sources = new Map(candidateSources);
+  sources.set(transportRunnerPath, source);
+  return validateTransportSources(sources);
+}
+await check("A20R4 current integrated runner must pass exact region attestation", async () => {
+  assert.equal(validateTransportRunner(transportCurrentRunner).verified, true);
+});
+await check("A20R4 exact transport region passes with unrelated import capability isolated", async () => {
+  assert.equal(Buffer.byteLength(transportReviewedRegion, "utf8"), 9484);
+  assert.equal(createHash("sha256").update(transportReviewedRegion).digest("hex"),
+    "cc59d35e48ebabea06e734125753df15fea72be05f23d77eb4910fd4a43c27c2");
+  assert.equal(validateTransportRunner(transportIsolatedRunner).verified, true);
+});
+for (const [name, mutate] of [
+  ["missing BEGIN", (source) => source.replace(transportBegin, "// absent BEGIN")],
+  ["missing END", (source) => source.replace(transportEnd, "// absent END")],
+  ["duplicate BEGIN", (source) => source.replace(transportBegin, `${transportBegin}\n${transportBegin}`)],
+  ["duplicate END", (source) => source.replace(transportEnd, `${transportEnd}\n${transportEnd}`)],
+  ["reversed markers", (source) => source.replace(transportBegin, "// A20R4_TEMP_MARKER")
+    .replace(transportEnd, transportBegin).replace("// A20R4_TEMP_MARKER", transportEnd)],
+  ["altered FD number", (source) => source.replace('REQUEST_FD !== "3"', 'REQUEST_FD !== "5"')],
+  ["altered broker control name", (source) => source.replace(
+    "const mode = env.AIFINDER_GIT_BROKER_MODE;", "const mode = env.AIFINDER_OTHER_MODE;")],
+  ["altered framed-write body", (source) => source.replace(
+    "fs.writeSync(fd, bytes, offset, bytes.length - offset, null)",
+    "fs.writeSync(5, bytes, offset, bytes.length - offset, null)")],
+  ["environment outside region", (source) => source + "\nconst outsideEnv = process.env.AIFINDER_GIT_BROKER_MODE;\n"],
+  ["writeSync outside region", (source) => source + "\nwriteSync(3, Buffer.from('outside'));\n"],
+  ["hrtime outside region", (source) => source + "\nconst outsideTime = process.hrtime.bigint();\n"],
+  ["network remains prohibited", (source) => source + "\nfetch('https://example.invalid');\n"],
+  ["runtime construction remains prohibited", (source) => source + "\nnew Function('return 1');\n"],
+  ["broad Git remains prohibited", (source) => source + '\nconst outsideGit = ["add", "."];\n'],
+  ["elevated mode remains prohibited", (source) => source + '\nconst outsideMode = "--production";\n'],
+  ["external filesystem namespace import remains prohibited", (source) =>
+    'import * as outsideFs from "node:fs";\n' + source],
+]) {
+  await check(`A20R4 ${name} rejects`, async () => {
+    const mutated = mutate(transportIsolatedRunner);
+    assert.notEqual(mutated, transportIsolatedRunner);
+    assert.throws(() => validateTransportRunner(mutated),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  });
+}
+for (const offset of [0, transportBegin.length, Math.floor(transportReviewedRegion.length / 2),
+  transportReviewedRegion.length - transportEnd.length - 1, transportReviewedRegion.length - 1]) {
+  await check(`A20R4 one-byte region alteration at ${offset} rejects`, async () => {
+    const replacement = transportReviewedRegion.charAt(offset) === "x" ? "y" : "x";
+    const mutatedRegion = transportReviewedRegion.slice(0, offset) + replacement +
+      transportReviewedRegion.slice(offset + 1);
+    const mutated = transportIsolatedRunner.replace(transportReviewedRegion, mutatedRegion);
+    assert.notEqual(mutated, transportIsolatedRunner);
+    assert.throws(() => validateTransportRunner(mutated),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  });
+}
+await check("A20R4 copied exact region in another path receives no exemption", async () => {
+  assert.throws(() => validateLocalOnlySources(new Map([
+    ["scripts/copied-transport.mjs", transportReviewedRegion],
+  ])), (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+});
+// END A20R4_TRANSPORT_POLICY_TESTS
+
+// BEGIN A20R5_IMPORT_ATTESTATION_TESTS
+const transportExactImport = 'import * as brokerNativeFs from "node:fs";';
+await check("A20R5 actual runner passes exact brokerNativeFs import attestation", async () => {
+  assert.equal(validateTransportRunner(transportCurrentRunner).verified, true);
+});
+for (const [name, mutate] of [
+  ["renamed namespace binding", (source) => source.replace(transportExactImport,
+    'import * as renamedFs from "node:fs";')],
+  ["alternate module specifier", (source) => source.replace(transportExactImport,
+    'import * as brokerNativeFs from "fs";')],
+  ["duplicate exact namespace declaration", (source) => transportExactImport + "\n" + source],
+  ["second unrelated filesystem namespace", (source) =>
+    'import * as outsideFs from "node:fs";\n' + source],
+  ["external binding use", (source) => source + "\nvoid brokerNativeFs;\n"],
+  ["external binding assignment", (source) => source + "\nbrokerNativeFs = {};\n"],
+  ["external destructuring", (source) => source + "\nconst { readSync: escapedRead } = brokerNativeFs;\n"],
+  ["external alias escape", (source) => source + "\nconst escapedFs = brokerNativeFs;\n"],
+  ["external shadow rebinding", (source) => source +
+    "\nfunction outsideBinding(brokerNativeFs) { return brokerNativeFs; }\n"],
+  ["named mutation import remains forbidden", (source) =>
+    'import { writeFileSync as outsideWrite } from "node:fs";\n' + source],
+  ["combined default and namespace import", (source) => source.replace(transportExactImport,
+    'import defaultFs, * as brokerNativeFs from "node:fs";')],
+  ["changed frozen region SHA", (source) => source.replace(
+    '"A20_GIT_GRANT_V1"', '"A20_GIT_GRANT_V2"')],
+  ["changed frozen region length", (source) => source.replace(transportBegin, transportBegin + " ")],
+  ["missing BEGIN marker", (source) => source.replace(transportBegin, "// absent BEGIN")],
+  ["missing END marker", (source) => source.replace(transportEnd, "// absent END")],
+  ["duplicate BEGIN marker", (source) => source.replace(transportBegin, `${transportBegin}\n${transportBegin}`)],
+  ["duplicate END marker", (source) => source.replace(transportEnd, `${transportEnd}\n${transportEnd}`)],
+  ["reversed region markers", (source) => source.replace(transportBegin, "// A20R5_TEMP_MARKER")
+    .replace(transportEnd, transportBegin).replace("// A20R5_TEMP_MARKER", transportEnd)],
+  ["external writeSync", (source) => source + "\nwriteSync(3, Buffer.from('outside'));\n"],
+  ["external environment", (source) => source + "\nconst outsideEnv = process.env.AIFINDER_GIT_BROKER_MODE;\n"],
+  ["external hrtime", (source) => source + "\nconst outsideTime = process.hrtime.bigint();\n"],
+  ["network remains forbidden", (source) => source + "\nfetch('https://example.invalid');\n"],
+  ["runtime construction remains forbidden", (source) => source + "\nnew Function('return 1');\n"],
+  ["external re-export escape", (source) => source + "\nexport { brokerNativeFs };\n"],
+]) {
+  await check(`A20R5 ${name} rejects`, async () => {
+    const mutated = mutate(transportCurrentRunner);
+    assert.notEqual(mutated, transportCurrentRunner);
+    assert.throws(() => validateTransportRunner(mutated),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  });
+}
+await check("A20R5 copied exact import and region in another path receives no attestation", async () => {
+  assert.throws(() => validateLocalOnlySources(new Map([
+    ["scripts/copied-native-fs.mjs", transportExactImport + "\n" + transportReviewedRegion],
+  ])), (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+});
+// END A20R5_IMPORT_ATTESTATION_TESTS
+
 await check("safe source accepted", async () => {
   const result = validateLocalOnlySources(
     new Map([
@@ -185,7 +334,7 @@ await check("exact concrete live capability surfaces are isolated", async () => 
   const sources = candidateSources;
   assert.deepEqual(validateCandidateSources(sources), {
     verified: true,
-    source_count: 49,
+    source_count: 50,
     forbidden_capabilities: 0,
     legacy_imports: 0,
     live_routes: 4,
@@ -2019,6 +2168,37 @@ await check("legacy and live CLI modes denied", async () => {
     "static-readiness",
     "verify-candidate",
   ]);
+});
+
+await check("CF18 expiry and read-only authorization guards survive explicit resealing", async () => {
+  const prefix = "scripts/launch-operations-kernel/admin-v1-official-first-environment-";
+  for (const [suffix, before, after] of [
+    ["runtime.mjs", "if (now >= expires)", "if (now > expires)"],
+    ["runtime.mjs", "now_epoch_ms : Date.now()", "now_epoch_ms : 0"],
+    ["runtime.mjs", "sensitive = await load_sensitive();\n      guard();", "sensitive = await load_sensitive();"],
+    ["runtime.mjs", 'state.stage = "AUTHORIZATION_SPENT";\n    await journal.publish(publicState(state));\n    guard();',
+      'state.stage = "AUTHORIZATION_SPENT";\n    await journal.publish(publicState(state));'],
+    ["live-platform.mjs", "guard();\n      let response;", "let response;"],
+    ["live-platform.mjs", "guard();\n      let response;", "guard();\n      await Promise.resolve();\n      let response;"],
+    ["supervisor.mjs", "await dependencies.prepare_provider_auth(authorization);\n          guard();",
+      "await dependencies.prepare_provider_auth(authorization);"],
+    ["keychain-supervisor-launcher.mjs", "guard();\n    spendInvocation(parsed, dependencies);",
+      "spendInvocation(parsed, dependencies);"],
+    ["keychain-supervisor-launcher.mjs", "guard();\n    const child = spawnProcess(",
+      "const child = spawnProcess("],
+    ["keychain-supervisor-launcher.mjs", "constants.O_RDONLY | constants.O_NOFOLLOW",
+      "constants.O_WRONLY | constants.O_NOFOLLOW"],
+  ]) {
+    const relativePath = prefix + suffix;
+    const sources = new Map(candidateSources);
+    const original = sources.get(relativePath);
+    assert.equal(original.split(before).length, 2);
+    sources.set(relativePath, original.replace(before, after));
+    assert.throws(
+      () => validateExplicitSemanticResealedCandidateSources(sources, [relativePath]),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY",
+    );
+  }
 });
 
 if (failures.length > 0) {

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   GovernanceError,
+  fileIdentity,
   canonicalRegularFileMode,
   categoricalFailure,
   compareExactPathSets,
@@ -12,6 +13,8 @@ import {
   testingTreeDigest,
   testingTreeIdentityRow,
 } from "./static-governance-utils.mjs";
+
+import { validateParserContract } from "../scripts/c08-child-receipts.mjs";
 
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
 const SCHEMA_PATH =
@@ -438,6 +441,18 @@ function validateManifest() {
     fail("MANIFEST_C2_1_EXPECTATIONS_MISSING");
   }
 
+  const parserIdentity = fileIdentity("scripts/c08-child-receipts.mjs");
+  const observedParser = { bytes: parserIdentity.bytes, sha256: parserIdentity.sha256 };
+  assert(validateParserContract(manifest.c08_child_receipt_contract, observedParser), "C08_PARSER_CONTRACT");
+  const contract = manifest.c08_child_receipt_contract;
+  for (const key of Object.keys(contract)) {
+    const missing = { ...contract };
+    delete missing[key];
+    assert(!validateParserContract(missing, observedParser), "C08_PARSER_MISSING_REJECT");
+  }
+  assert(!validateParserContract({ ...contract, unexpected: true }, observedParser), "C08_PARSER_EXTRA_REJECT");
+  assert(!validateParserContract({ ...contract, bytes: true }, observedParser), "C08_PARSER_TYPE_REJECT");
+  assert(!validateParserContract({ ...contract, sha256: "0".repeat(64) }, observedParser), "C08_PARSER_IDENTITY_REJECT");
   assert(manifest.manifest_version === 1, "MANIFEST_VERSION");
   assert(manifest.repository_baseline === BASELINE, "MANIFEST_BASELINE");
   assert(Array.isArray(manifest.entries), "MANIFEST_ENTRIES");

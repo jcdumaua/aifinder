@@ -22,7 +22,7 @@ const FIXED_MANIFEST_PATH =
 const MANIFEST_MODULE_PATH =
   "scripts/launch-operations-kernel/manifest.mjs";
 const CANDIDATE_VERSION =
-  "admin-v1-official-runtime-post-publication-activation-bridge-v1";
+  "CURRENT_CANDIDATE_57_PRESERVED_FOUR_ROUTE_V1";
 const COMPLETION_MARKER =
   "ADMIN_V1_OFFICIAL_RUNTIME_POST_PUBLICATION_ACTIVATION_BRIDGE_CANDIDATE_V1";
 const CONCRETE_RUNNER_PATH =
@@ -109,6 +109,7 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
+  "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -150,6 +151,7 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
+  "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -192,6 +194,9 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
 ]);
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
+  [FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
   [FIRST_ENVIRONMENT_PLATFORM_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
@@ -222,6 +227,7 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   ])],
   [FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_TEST_PATH, new Set([
     FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH,
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
   [FIRST_ENVIRONMENT_SUPERVISOR_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
@@ -567,7 +573,10 @@ function classifyMember(relativePath) {
   if (relativePath.endsWith(".test.mjs")) {
     return { role: "TEST", surface: "verification" };
   }
-  if (relativePath.endsWith(".schema.json")) {
+  if (
+    relativePath === "scripts/launch-operations-kernel/admin-v1-official-isolation.d.mts" ||
+    relativePath.endsWith(".schema.json")
+  ) {
     return { role: "SCHEMA", surface: "evidence" };
   }
   if (relativePath.endsWith("legacy-freeze.json")) {
@@ -932,6 +941,30 @@ function canonicalLocalModuleTarget(relativePath, moduleSpecifier) {
 
 function sourceSyntaxFacts(relativePath, source) {
   const ts = loadTypescriptDependency();
+  const transportBegin = "// BEGIN A20_FIXED_FD_BROKER_CLIENT";
+  const transportEnd = "// END A20_FIXED_FD_BROKER_CLIENT";
+  const transportStart = source.indexOf(transportBegin);
+  const transportEndMarker = source.indexOf(transportEnd);
+  const transportFinish = transportEndMarker + transportEnd.length;
+  const transportRegion = source.slice(transportStart, transportFinish);
+  // ASCII membership makes this exact character count an exact UTF-8 byte count.
+  const reviewedTransportRange = relativePath === CONCRETE_RUNNER_PATH &&
+    transportStart >= 0 && transportEndMarker > transportStart &&
+    source.lastIndexOf(transportBegin) === transportStart &&
+    source.lastIndexOf(transportEnd) === transportEndMarker &&
+    transportRegion.length === 9484 && /^[\x00-\x7f]*$/u.test(transportRegion) &&
+    sha256Hex(transportRegion) ===
+      "cc59d35e48ebabea06e734125753df15fea72be05f23d77eb4910fd4a43c27c2"
+    ? { start: transportStart, finish: transportFinish }
+    : null;
+  const reviewedTransportNode = (node) => reviewedTransportRange !== null &&
+    node.pos >= reviewedTransportRange.start &&
+    node.end <= reviewedTransportRange.finish;
+  const reviewedIsolationDescriptorGuard =
+    relativePath ===
+      "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs" &&
+    sha256Hex(source) ===
+      "9d286bd0ebcd1ede65e50847c1616e612bb8afa3638793725f3cd16a0d341a31";
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -944,6 +977,37 @@ function sourceSyntaxFacts(relativePath, source) {
   )) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
+  const brokerNativeFsIdentifiers = [];
+  const exactBrokerNativeFsImports = [];
+  function collectBrokerNativeFsIdentifiers(node) {
+    if (ts.isIdentifier(node) && node.text === "brokerNativeFs") {
+      brokerNativeFsIdentifiers.push(node);
+    }
+    ts.forEachChild(node, collectBrokerNativeFsIdentifiers);
+  }
+  for (const statement of sourceFile.statements) {
+    collectBrokerNativeFsIdentifiers(statement);
+    if (!ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteralLike(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "node:fs") continue;
+    const clause = statement.importClause;
+    const bindings = clause?.namedBindings;
+    if (clause !== undefined && clause.isTypeOnly === false &&
+      clause.name === undefined && bindings !== undefined &&
+      ts.isNamespaceImport(bindings) && bindings.name.text === "brokerNativeFs" &&
+      statement.attributes === undefined && statement.modifiers === undefined) {
+      exactBrokerNativeFsImports.push({ declaration: statement, binding: bindings.name });
+    }
+  }
+  // The fixed region contains exactly three defaults using this binding.
+  // Every other identifier occurrence invalidates the single import attestation;
+  // all nodes still undergo the ordinary capability walk below.
+  const reviewedBrokerNativeFsImport = reviewedTransportRange !== null &&
+    exactBrokerNativeFsImports.length === 1 && brokerNativeFsIdentifiers.length === 4 &&
+    brokerNativeFsIdentifiers.every((node) =>
+      node === exactBrokerNativeFsImports[0].binding || reviewedTransportNode(node))
+    ? exactBrokerNativeFsImports[0].declaration
+    : null;
   const moduleSpecifiers = [];
   let computedDynamicImport = false;
   let runtimeCodeConstruction = false;
@@ -1617,6 +1681,7 @@ function sourceSyntaxFacts(relativePath, source) {
           "collectConstantDeclarations",
           "collectIdentityAttestation",
           "collectModuleLoaderDeclarations",
+          "inspectAuthorizationFs",
           "visit",
         ]);
         const isDeclaration =
@@ -2080,7 +2145,9 @@ function sourceSyntaxFacts(relativePath, source) {
           ? memberName(parent)
           : null;
       if (directMember === "env") {
-        environment = true;
+        if (!reviewedTransportNode(parent)) environment = true;
+      } else if (directMember === "hrtime" && reviewedTransportNode(parent)) {
+        // The exact region uses only bounded monotonic deadline bookkeeping.
       } else if (
         directMember === null ||
         !exactReviewedProcessUse(node, parent, directMember)
@@ -2102,13 +2169,16 @@ function sourceSyntaxFacts(relativePath, source) {
     ) {
       runtimeCodeConstruction = true;
     }
-    if (ts.isIdentifier(node) && node.text === "Reflect") {
+    if (ts.isIdentifier(node) && node.text === "Reflect" &&
+        !reviewedIsolationDescriptorGuard) {
       runtimeCodeConstruction = true;
     }
     if (
       (ts.isPropertyAccessExpression(node) ||
         ts.isElementAccessExpression(node)) &&
-      runtimeConstructionMembers.has(memberName(node))
+      runtimeConstructionMembers.has(memberName(node)) &&
+      !(reviewedIsolationDescriptorGuard &&
+        memberName(node) === "getOwnPropertyDescriptors")
     ) {
       runtimeCodeConstruction = true;
     }
@@ -2168,7 +2238,7 @@ function sourceSyntaxFacts(relativePath, source) {
           clause === undefined ||
           clause.name !== undefined ||
           bindings === undefined ||
-          ts.isNamespaceImport(bindings)
+          (ts.isNamespaceImport(bindings) && node !== reviewedBrokerNativeFsImport)
         ) {
           filesystemMutation = true;
         } else if (ts.isNamedImports(bindings)) {
@@ -2228,7 +2298,8 @@ function sourceSyntaxFacts(relativePath, source) {
           : ts.isElementAccessExpression(node.expression)
             ? constantStringValue(node.expression.argumentExpression)
           : null;
-      if (calledName !== null && fsMutationSet.has(calledName)) {
+      if (calledName !== null && fsMutationSet.has(calledName) &&
+          !(calledName === "writeSync" && reviewedTransportNode(node))) {
         filesystemMutation = true;
       }
       if (
@@ -2263,7 +2334,8 @@ function sourceSyntaxFacts(relativePath, source) {
       ts.isPropertyAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "process" &&
-      node.name.text === "env"
+      node.name.text === "env" &&
+      !reviewedTransportNode(node)
     ) {
       environment = true;
     }
@@ -2271,7 +2343,8 @@ function sourceSyntaxFacts(relativePath, source) {
       ts.isElementAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "process" &&
-      constantStringValue(node.argumentExpression) === "env"
+      constantStringValue(node.argumentExpression) === "env" &&
+      !reviewedTransportNode(node)
     ) {
       environment = true;
     }
@@ -2390,6 +2463,36 @@ function sourceSyntaxFacts(relativePath, source) {
     return true;
   };
   visit(sourceFile);
+  if (relativePath === FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH) {
+    const allowed = new Set([
+      "closeSync", "constants", "fstatSync", "lstatSync",
+      "openSync", "readFileSync", "realpathSync",
+    ]);
+    let valid = true;
+    let opens = 0;
+    let openReferences = 0;
+    const inspectAuthorizationFs = (node) => {
+      if (ts.isImportDeclaration(node) && node.moduleSpecifier.text === "node:fs") {
+        const clause = node.importClause;
+        const bindings = clause?.namedBindings;
+        if (clause?.name || !bindings || !ts.isNamedImports(bindings) ||
+          bindings.elements.some((entry) =>
+            entry.propertyName || !allowed.has(entry.name.text))) valid = false;
+      }
+      if (ts.isIdentifier(node) && node.text === "openSync") openReferences += 1;
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        node.expression.text === "openSync") {
+        opens += 1;
+        if (node.arguments.length !== 2 ||
+          node.arguments[0].getText(sourceFile) !== "target" ||
+          node.arguments[1].getText(sourceFile) !==
+            "constants.O_RDONLY | constants.O_NOFOLLOW") valid = false;
+      }
+      ts.forEachChild(node, inspectAuthorizationFs);
+    };
+    inspectAuthorizationFs(sourceFile);
+    if (!valid || opens !== 1 || openReferences !== 2) runtimeCodeConstruction = true;
+  }
   if (computedDynamicImport) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
@@ -2600,6 +2703,12 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !source.includes("adapter.readEnvironment") &&
       !source.includes("adapter.updateEnvironment") &&
       !source.includes("adapter.deleteEnvironment") &&
+      source.includes("createAdminV1OfficialFirstEnvironmentExpiryGuard") &&
+      source.includes("now_epoch_ms : Date.now()") &&
+      source.includes("if (now >= expires)") &&
+      source.includes("FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE") &&
+      source.includes("sensitive = await load_sensitive();\n      guard();") &&
+      source.includes('state.stage = "AUTHORIZATION_SPENT";\n    await journal.publish(publicState(state));\n    guard();') &&
       source.includes(
         '"admin-v1-official-first-environment-runtime-journal.json"',
       ) &&
@@ -2619,6 +2728,8 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("createAdminV1OfficialFirstEnvironmentNativeTransport") &&
       source.includes('`https://api.vercel.com${request.descriptor.path}`') &&
       source.includes("FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED") &&
+      source.includes("allow_hermetic_test === true && fetch_impl === globalThis.fetch") &&
+      source.includes("guard();\n      let response;\n      try {\n        response = await fetch_impl(url, options);") &&
       source.includes('operation: "create_environment"') &&
       source.includes('method: "POST"') &&
       source.includes(
@@ -2736,7 +2847,10 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
   if (relativePath === FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH) {
     return (
       capabilities.child_process &&
-      !capabilities.filesystem_mutation &&
+      capabilities.filesystem_mutation &&
+      source.includes("readAuthorizationInterval(parsed.authorizationPath, parsed.mode)") &&
+      source.includes("guard();\n    spendInvocation(parsed, dependencies);") &&
+      source.includes("guard();\n    const child = spawnProcess(") &&
       !capabilities.network &&
       capabilities.environment &&
       !broadGit &&
@@ -2792,6 +2906,9 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("environment = process.env") &&
       source.includes("fetch_impl = globalThis.fetch") &&
       source.includes("createAdminV1OfficialFirstEnvironmentNativeDependencies") &&
+      source.includes("const candidate = await verifyCandidate(authorization);\n    guard();") &&
+      source.includes("inspectAdminV1OfficialFirstEnvironmentRepository(repositoryRoot));\n    guard();") &&
+      source.includes("await dependencies.prepare_provider_auth(authorization);\n          guard();") &&
       !source.includes("ADMIN_V1_OFFICIAL_RUNTIME_V1")
     );
   }

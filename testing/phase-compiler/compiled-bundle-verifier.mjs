@@ -21,6 +21,8 @@ const INSPECTION_CLAIM_BOUNDARIES = Object.freeze([
   'NO_ROUTE_SUCCESS_CLAIM',
   'NO_LAUNCH_READINESS_CLAIM',
 ]);
+const PYTHON_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python' : '/usr/bin/python3';
+
 const BOUND_DIRECTORY_READ_PROGRAM = String.raw`import json
 import os
 import stat
@@ -114,7 +116,7 @@ function sameFileState(left, right) {
 
 async function boundDirectoryOperation(binding, args, maximumOutputBytes) {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn('/usr/bin/python3', ['-I', '-S', '-c', BOUND_DIRECTORY_READ_PROGRAM, ...args], {
+    const child = spawn(PYTHON_EXECUTABLE, ['-I', '-S', '-c', BOUND_DIRECTORY_READ_PROGRAM, ...args], {
       cwd: '/',
       env: { LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin' },
       shell: false,
@@ -143,7 +145,7 @@ async function boundDirectoryOperation(binding, args, maximumOutputBytes) {
         finish(new DiagnosticError('INPUT_TOO_LARGE', { sanitized_evidence: { reason: 'descriptor-relative verifier output exceeded bound' } }));
       }
     });
-    child.on('error', () => finish(new DiagnosticError('COMPILER_CAPABILITY_UNAVAILABLE', { sanitized_evidence: { reason: 'fixed /usr/bin/python3 verifier helper is unavailable' } })));
+    child.on('error', () => finish(new DiagnosticError('COMPILER_CAPABILITY_UNAVAILABLE', { sanitized_evidence: { reason: 'fixed selected Python verifier helper is unavailable' } })));
     child.on('close', (code) => {
       if (code === 0) finish(null, Buffer.concat(stdout));
       else if (code === 72) finish(new DiagnosticError('COMPILER_CAPABILITY_UNAVAILABLE', { sanitized_evidence: { reason: 'descriptor-relative verifier capability is unavailable' } }));

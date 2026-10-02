@@ -36,8 +36,10 @@ const AUDIT_CCR_SHA256 =
   "0c79f09bfa19c6908d70c1fbc081560b5bd34bf74669d47e50c5b2f4015ad0a6";
 const AUDIT_LEDGER_SHA256 =
   "c003049db73d60d8c15006792f1f56b2d3dcd560a07ab23e3e60814b3b4cf6f7";
-const PROXY_SHA256 =
+const HISTORICAL_PROXY_SHA256 =
   "d032aaff869000464d7b320191e1ed9f5c9d7c519e8a058c4673750a6a8117bb";
+const CURRENT_ADMIN_V1_PROXY_SHA256 =
+  "5f6266ec740197a0b299ef1c7b09b74c35a301bc238d0ca49f777e0ee0b7029b";
 const PHASE29_SUCCESSOR_MUTABLE_IDENTITIES = {
   "app/layout.tsx": {
     sha256: "0e41d168fb89e774a7f79d295e47679ce148dfa12c74c20d24e3490c06145ead",
@@ -842,7 +844,25 @@ check("HEADERS.EXACT_RULE_GRAPH", () => {
     mappedHeaders.initializer.getText() !== "staticPerimeterHeaders"
   ) throw new Error("header rule does not bind the exact header array");
 });
-check("HEADERS.PROXY_UNCHANGED", () => equal(sha256(bytes(paths.proxy)), PROXY_SHA256, "proxy identity"));
+check("HEADERS.PROXY_UNCHANGED", () => {
+  const proxyBytes = bytes(paths.proxy);
+  const currentProxy = proxyBytes.toString("utf8");
+  equal(sha256(proxyBytes), CURRENT_ADMIN_V1_PROXY_SHA256, "current proxy identity");
+  for (const marker of [
+    'from "./lib/admin-v1-launch-scope"',
+    "classifyAdminV1Path(pathname, request.method)",
+    'classification === "DENY_ADMIN_API_PATH"',
+    'classification === "DENY_ADMIN_API_METHOD"',
+    'allowedAdminV1Methods(pathname).join(", ")',
+    '"/api/admin/:path*"',
+    '"X-Frame-Options", "DENY"',
+    '"Content-Security-Policy"',
+    '"Cache-Control": "no-store"',
+    "status: 404",
+    "status: 405",
+    "hasActiveAdminSessionCookie(request)",
+  ]) includes(currentProxy, marker, "current proxy security and launch-scope semantics");
+});
 
 check("GOVERNANCE.ACTIVATION_JSON_UNIQUE_KEYS", () => {
   activation = parseJsonRejectingDuplicateKeys(text(paths.activation));

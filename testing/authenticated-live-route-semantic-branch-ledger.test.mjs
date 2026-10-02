@@ -3,6 +3,31 @@ import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { analyzeRoute as analyzeCurrentRoute } from "./authenticated-live-route-semantic-analyzer.mjs";
+
+const CURRENT_DECISION_ROUTE_PATH =
+  "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts";
+const HISTORICAL_DECISION_ROUTE_IDENTITY = Object.freeze({
+  sha256: "e5c59f39dd7395525728cbc282505832da6b1f822f862f0cd56015a445dc02fd",
+  git_blob: "0bd8380181c0ca81d4dfa31bb059e61d88b084b1",
+  bytes: 7565,
+  lf_lines: 284,
+});
+const CURRENT_DECISION_ROUTE_IDENTITY = Object.freeze({
+  sha256: "eeb58cba6ae0392bbca56cd4bfda49b2c8663cf43e3ddc4681b02b708b6e18d8",
+  git_blob: "6c8ee8a3ff5b119a318be45ba9fc2a3110f40187",
+  bytes: 7558,
+  lf_lines: 284,
+});
+const COMPATIBILITY_COVERAGE = Object.freeze({
+  current_source_ast_routes: 28,
+  historical_source_ast_routes: 27,
+  historical_record_only_routes: 1,
+  historical_decision_route_source: "UNVERIFIED_NOT_RUN",
+});
+function routeIdentityTuple(value) {
+  return [value.sha256, value.git_blob, value.bytes, value.lf_lines];
+}
 
 const LEDGER_PATH =
   "testing/authenticated-live-route-semantic-branch-ledger.json";
@@ -920,9 +945,104 @@ assert.deepEqual(
   ROUTE_PATHS,
 );
 
-const oracleRoutes = ROUTE_PATHS.map((routePath) =>
-  oracleRoute(routePath, FILE_BYTES.get(routePath), evidenceByPath.get(routePath))
+// Historical records and current source are separate proof lanes.
+assert.equal(
+  sha256(ledgerBytes),
+  "d668f5955dd0f7b3c079625711fa873576869039f26263267f1a4821da6090e3",
+);
+function currentOracleEvidence(routePath) {
+  const historical = evidenceByPath.get(routePath);
+  assert(historical);
+  const historicalIdentity = {
+    sha256: historical.sha256,
+    git_blob: historical.git_object_identity,
+    bytes: historical.bytes,
+    lf_lines: historical.lf_lines,
+  };
+  let currentIdentity = historicalIdentity;
+  if (routePath === CURRENT_DECISION_ROUTE_PATH) {
+    assert.deepEqual(
+      routeIdentityTuple(historicalIdentity),
+      routeIdentityTuple(HISTORICAL_DECISION_ROUTE_IDENTITY),
+    );
+    currentIdentity = CURRENT_DECISION_ROUTE_IDENTITY;
+  }
+  const bytes = FILE_BYTES.get(routePath);
+  assert.deepEqual(
+    [sha256(bytes), gitBlob(bytes), bytes.length,
+      [...bytes].filter((byte) => byte === 0x0a).length],
+    routeIdentityTuple(currentIdentity),
+  );
+  return {
+    ...historical,
+    ...currentIdentity,
+    git_object_identity: currentIdentity.git_blob,
+  };
+}
+const currentOracleRoutes = ROUTE_PATHS.map((routePath) =>
+  oracleRoute(routePath, FILE_BYTES.get(routePath), currentOracleEvidence(routePath))
 ).sort((left, right) => compareText(left.route.route_path, right.route.route_path));
+function historicalRecordOnlyOracle(routePath) {
+  assert.equal(routePath, CURRENT_DECISION_ROUTE_PATH);
+  const route = ledger.routes.find((entry) => entry.route_path === routePath);
+  assert.deepEqual(
+    routeIdentityTuple(route),
+    routeIdentityTuple(HISTORICAL_DECISION_ROUTE_IDENTITY),
+  );
+  return {
+    route,
+    methods: ledger.methods.filter((entry) => entry.route_path === routePath),
+    nodes: ledger.nodes.filter((entry) => entry.route_path === routePath),
+    outcomes: ledger.outcomes.filter((entry) => entry.route_path === routePath),
+    boundaries: ledger.import_boundaries.filter((entry) => entry.route_path === routePath),
+  };
+}
+const oracleRoutes = currentOracleRoutes.map((entry) =>
+  entry.route.route_path === CURRENT_DECISION_ROUTE_PATH
+    ? historicalRecordOnlyOracle(entry.route.route_path)
+    : entry
+);
+function assertCurrentOracleAgreement() {
+  assert.equal(currentOracleRoutes.length, 28);
+  assert.equal(
+    oracleRoutes.filter((entry) => entry.route.route_path !== CURRENT_DECISION_ROUTE_PATH).length,
+    27,
+  );
+  assert.equal(COMPATIBILITY_COVERAGE.historical_decision_route_source, "UNVERIFIED_NOT_RUN");
+  for (const entry of currentOracleRoutes) {
+    const routePath = entry.route.route_path;
+    const evidence = currentOracleEvidence(routePath);
+    const vector = evidence.source_visible_branch_groups;
+    const current = analyzeCurrentRoute({
+      path: routePath,
+      bytes: FILE_BYTES.get(routePath),
+      expectedIdentity: {
+        sha256: evidence.sha256,
+        git_blob: evidence.git_object_identity,
+        bytes: evidence.bytes,
+        lf_lines: evidence.lf_lines,
+        exported_methods: evidence.exported_methods,
+        if_count: vector.if_statements,
+        catch_bound_count: vector.catch_clauses_with_binding,
+        catch_optional_count: vector.catch_clauses_optional_binding,
+        catch_total: vector.catch_clauses_total,
+        decision_total: vector.decision_catch_total,
+      },
+      helperPaths: HELPER_PATHS,
+    });
+    assert.deepEqual(routeIdentityTuple(current), routeIdentityTuple(entry.route));
+    assert.deepEqual(current.methods, entry.methods);
+    assert.deepEqual(current.nodes, entry.nodes);
+    assert.deepEqual(current.outcomes, entry.outcomes);
+    assert.deepEqual(current.import_boundaries, entry.boundaries);
+  }
+  const oldNodes = ledger.nodes.filter((entry) => entry.route_path === CURRENT_DECISION_ROUTE_PATH);
+  const newNodes = currentOracleRoutes.find((entry) =>
+    entry.route.route_path === CURRENT_DECISION_ROUTE_PATH).nodes;
+  assert.equal(oldNodes.length, 12);
+  assert.equal(newNodes.length, 12);
+  assert.notDeepEqual(newNodes.map((entry) => entry.node_id), oldNodes.map((entry) => entry.node_id));
+}
 const expectedRoutes = oracleRoutes.map((entry) => entry.route);
 const expectedMethods = oracleRoutes
   .flatMap((entry) => entry.methods)
@@ -1322,7 +1442,8 @@ const assertions = [
   ["L05_METHOD_SET_AND_IDENTITIES", () => {
     assert.deepEqual(ledger.methods, expectedMethods);
   }],
-  ["L06_INDEPENDENT_NODE_SET", () => {
+  ["L06_CURRENT_INDEPENDENT_NODE_SET_AND_HISTORICAL_RECORD_CONSISTENCY", () => {
+    assertCurrentOracleAgreement();
     assert.deepEqual(ledger.nodes, expectedNodes);
   }],
   ["L07_OUTCOME_SET_775", () => {
@@ -1378,7 +1499,7 @@ const assertions = [
       12,
     );
   }],
-  ["L11_INDEPENDENT_OWNERSHIP", () => {
+  ["L11_HISTORICAL_27_ROUTE_OWNERSHIP_AND_RECORD_ONLY_CONSISTENCY", () => {
     assert.deepEqual(
       ledger.nodes.map((node) => [
         node.node_id,
@@ -1659,7 +1780,7 @@ function firstMutationFailure(candidate) {
       (node, index) => node.node_id !== expectedNodes[index].node_id,
     )
   ) {
-    const sorted = [...candidate.nodes].sort(
+    const sorted = [...expectedNodes].sort(
       (left, right) =>
         compareText(left.route_path, right.route_path) ||
         left.start_utf16 - right.start_utf16 ||
@@ -1819,6 +1940,6 @@ if (fail > 0) {
 } else {
   assert.equal(runMutations(), 24);
   process.stdout.write(
-    "PASS_AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER assertions=24 mutations=24 routes=28 methods=37 nodes=409 ifs=366 catches_with_binding=31 catches_optional=12 catches=43 observed=15 unobserved=13 cases=23 positions=27 launch_blocking=28 runtime_qualified=0 imported_opaque_methods=15 route_local_methods=22 manual_nodes=409 manual_outcomes=775 c2_2=0 c2_3=0 c2_4=0 raw_values=0 failures=0 internal_failures=0\n",
+    "PASS_AUTHENTICATED_LIVE_ROUTE_SEMANTIC_BRANCH_LEDGER assertions=24 mutations=24 routes=28 methods=37 nodes=409 ifs=366 catches_with_binding=31 catches_optional=12 catches=43 observed=15 unobserved=13 cases=23 positions=27 launch_blocking=28 runtime_qualified=0 imported_opaque_methods=15 route_local_methods=22 manual_nodes=409 manual_outcomes=775 c2_2=0 c2_3=0 c2_4=0 raw_values=0 source_lane=CURRENT_SOURCE_STATIC_ONLY current_source_ast_routes=28 historical_source_ast_routes=27 historical_record_only_routes=1 historical_changed_route=UNVERIFIED_NOT_RUN failures=0 internal_failures=0\n",
   );
 }

@@ -58,6 +58,8 @@ import { validatePhaseCompilation, validateSemantic } from './semantic-validator
 
 const execFile = promisify(execFileCallback);
 const directory = fileURLToPath(new URL('.', import.meta.url));
+const GIT_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/usr/bin/git' : '/usr/bin/git';
+
 const controlledRedIndex = process.argv.indexOf('--controlled-red');
 const INSPECTION_RED_STAGES = new Set([
   'inspection-schema',
@@ -210,7 +212,7 @@ async function expectDiagnostic(code, operation) {
 }
 
 async function git(repo, argv) {
-  const result = await execFile('/usr/bin/git', ['-c', 'core.hooksPath=/dev/null', '-C', repo, ...argv], {
+  const result = await execFile(GIT_EXECUTABLE, ['-c', 'core.hooksPath=/dev/null', '-c', 'maintenance.autoDetach=false', '-C', repo, ...argv], {
     encoding: 'utf8',
     env: {
       GIT_CONFIG_GLOBAL: '/dev/null',

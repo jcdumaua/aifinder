@@ -1,5 +1,8 @@
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
+  validateOfficialProvisioningReceipt,
+} from "./admin-v1-official-isolation.mjs";
+import {
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
@@ -2157,10 +2160,91 @@ function safeString(value) {
     !value.includes("\0");
 }
 
+function exactIsolatedKeys(value, names) {
+  if (!value || Object.getPrototypeOf(value) !== Object.prototype) return false;
+  const actual = Object.keys(value);
+  return actual.length === names.length &&
+    Object.getOwnPropertySymbols(value).length === 0 &&
+    names.every((name) => Object.hasOwn(value, name));
+}
+
+function loadIsolatedOfficialCredentials({
+  authorization, credential_bundle, credential_source_policy, now_epoch_ms,
+}) {
+  const sensitive = {};
+  try {
+    if (canonicalJson(credential_source_policy) !==
+      canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY) ||
+      !exactIsolatedKeys(credential_bundle, [
+        "schema_version", "run_id", "provisioning_receipt",
+        "provenance_receipt", "values",
+      ]) || credential_bundle.schema_version !== 1 ||
+      credential_bundle.run_id !== authorization?.run_id) throw new Error("BUNDLE");
+    const binding = validateOfficialProvisioningReceipt(
+      authorization, credential_bundle.provisioning_receipt, now_epoch_ms,
+    );
+    const provenance = credential_bundle.provenance_receipt;
+    if (!exactIsolatedKeys(provenance, [
+      "schemaVersion", "runId", "projectRef", "origin", "path", "source",
+    ]) || provenance.schemaVersion !== 1 ||
+      provenance.runId !== authorization.run_id ||
+      provenance.projectRef !== binding.project_ref ||
+      provenance.origin !== binding.origin ||
+      provenance.path !== binding.credential_bundle_path ||
+      provenance.source !== "OWNER_BOUND_ISOLATED_BUNDLE_V1" ||
+      sha256Hex(canonicalJson(provenance)) !==
+        binding.credential_bundle_provenance_sha256) throw new Error("PROVENANCE");
+    const names = [
+      "admin_password", "admin_session_secret", "github_token",
+      "supabase_anon_key", "supabase_service_role_key", "supabase_url",
+      "vercel_token",
+    ];
+    if (!exactIsolatedKeys(credential_bundle.values, names)) {
+      throw new Error("CATEGORIES");
+    }
+    for (const name of names) {
+      const rawCredentialBytes = credential_bundle.values[name];
+      if (!(rawCredentialBytes instanceof Uint8Array) ||
+        rawCredentialBytes.byteLength < 1 ||
+        rawCredentialBytes.byteLength > 16_384) throw new Error("VALUE");
+      const decoded = new TextDecoder("utf-8", { fatal: true }).decode(rawCredentialBytes);
+      if (!safeString(decoded) ||
+        (name === "supabase_url" && decoded !== binding.origin)) {
+        throw new Error("VALUE");
+      }
+      sensitive[name] = Buffer.from(rawCredentialBytes);
+    }
+    Object.defineProperty(sensitive, CREDENTIAL_ENVIRONMENT_OBSERVATION, {
+      configurable: false,
+      enumerable: false,
+      value: Object.freeze({
+        credential_source_policy: structuredClone(credential_source_policy),
+        bundle_run_id: authorization.run_id,
+        bundle_provenance_sha256: binding.credential_bundle_provenance_sha256,
+        names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES],
+        node_env: "production",
+      }),
+      writable: false,
+    });
+    return Object.freeze(sensitive);
+  } catch {
+    zeroRecord(sensitive);
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_CREDENTIAL_MISSING");
+  }
+}
+
 export function loadAdminV1OfficialCredentials({
   environment,
+  authorization,
+  credential_bundle,
   credential_source_policy,
+  now_epoch_ms = Date.now(),
 }) {
+  if (authorization?.schema_version === 2) {
+    return loadIsolatedOfficialCredentials({
+      authorization, credential_bundle, credential_source_policy, now_epoch_ms,
+    });
+  }
   const sensitive = {};
   try {
     if (

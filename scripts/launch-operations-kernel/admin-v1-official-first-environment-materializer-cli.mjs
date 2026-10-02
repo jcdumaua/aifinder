@@ -30,7 +30,7 @@ const REQUEST_KEYS = Object.freeze([
   "phase_identity",
   "reviewed_package_sha256",
   "reviewed_package_bytes",
-  "gemini_approval_token_sha256",
+  "work_audit_sha256",
   "direct_james_approval_sha256",
   "requested_validity_seconds",
   "candidate_identity_sha256",
@@ -240,7 +240,7 @@ function validateObservationContract(request) {
   }
   if (
     !exactKeys(request, REQUEST_KEYS) ||
-    request.request_schema_version !== 1 ||
+    request.request_schema_version !== 2 ||
     !Number.isSafeInteger(request.requested_validity_seconds) ||
     request.requested_validity_seconds < 1 ||
     request.requested_validity_seconds > 24 * 60 * 60 ||
@@ -308,7 +308,7 @@ function materializerRequest(request, { authorizationId, runId, nowEpochMs }) {
     phase_identity: request.phase_identity,
     reviewed_package_sha256: request.reviewed_package_sha256,
     reviewed_package_bytes: request.reviewed_package_bytes,
-    gemini_approval_token_sha256: request.gemini_approval_token_sha256,
+    work_audit_sha256: request.work_audit_sha256,
     direct_james_approval_sha256: request.direct_james_approval_sha256,
     authorization_id: authorizationId,
     run_id: runId,

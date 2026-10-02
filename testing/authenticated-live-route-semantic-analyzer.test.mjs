@@ -213,6 +213,15 @@ function fixtureInput(source = EXPORT_FIXTURE) {
 }
 
 let cachedRealContext = null;
+function currentRouteContract(routePath, historical) {
+  const current = analyzer.currentRouteIdentity(routePath, {
+    ...historical, git_blob: historical.git_object_identity,
+  });
+  return { ...historical, sha256: current.sha256,
+    git_object_identity: current.git_blob, bytes: current.bytes,
+    lf_lines: current.lf_lines };
+}
+
 function loadRealContext() {
   if (cachedRealContext) return cachedRealContext;
   const beforeNegative = READ_COUNTS.size;
@@ -233,7 +242,7 @@ function loadRealContext() {
     partialEvidence.routes.map((route) => [route.baseline_path, route]),
   );
   const routeInputs = ROUTE_PATHS.map((routePath) => {
-    const contract = routeByPath.get(routePath);
+    const contract = currentRouteContract(routePath, routeByPath.get(routePath));
     return {
       path: routePath,
       bytes: readExactC2(routePath),
@@ -281,7 +290,7 @@ function expectFailure(callback, code) {
 
 function buildRealLedger() {
   const context = loadRealContext();
-  return analyzer.buildLedger({
+  const ledger = analyzer.buildLedger({
     routeInputs: context.routeInputs,
     partialEvidence: context.partialEvidence,
     governanceFacts: {
@@ -296,6 +305,26 @@ function buildRealLedger() {
       gap_code: "AUTHENTICATED_LIVE_ROUTE_BRANCH_EXECUTION_EVIDENCE_REQUIRED",
     },
   });
+  return {
+    ...ledger,
+    phase: "CURRENT_SOURCE_STATIC_ONLY",
+    repository_baseline: null,
+    source_lane: "CURRENT_SOURCE_STATIC_ONLY",
+    source_contract: {
+      route_contract_digest: sha256(JSON.stringify(ledger.routes.map((route) => [
+        route.route_path, route.sha256, route.git_blob, route.bytes, route.lf_lines,
+      ]))),
+      request_position_contract_digest:
+        ledger.source_contract.request_position_contract_digest,
+      request_positions: "HISTORICAL_OBSERVATIONS_ONLY",
+    },
+    historical_provenance: {
+      repository_baseline: ledger.repository_baseline,
+      source_contract: ledger.source_contract,
+      changed_route_source_coverage: "UNVERIFIED_NOT_RUN",
+      request_positions: "HISTORICAL_OBSERVATIONS_ONLY",
+    },
+  };
 }
 
 function cloneJson(value) {
@@ -319,7 +348,8 @@ function validateAnalyzerLedger(candidate, partialEvidence) {
     !ROUTE_PATHS.every((routePath) => routePaths.includes(routePath))
   ) validationFailure("C2_1_ROUTE_SCOPE");
   for (const route of candidate.routes) {
-    const expected = expectedRoutes.get(route.route_path);
+    const historical = expectedRoutes.get(route.route_path);
+    const expected = historical && currentRouteContract(route.route_path, historical);
     if (!expected) validationFailure("C2_1_ROUTE_SCOPE");
     if (
       route.sha256 !== expected.sha256 ||
@@ -433,9 +463,12 @@ function runMutationProofs(ledger, partialEvidence) {
 const assertions = [
   ["A01_MODULE_EXPORTS", () => {
     assert.deepEqual(Object.keys(analyzer).sort(), [
+      "CURRENT_DECISION_ROUTE_PATH",
       "analyzeRoute",
+      "buildCurrentSourceView",
       "buildLedger",
       "canonicalJson",
+      "currentRouteIdentity",
     ]);
     assert.equal(typeof analyzer.analyzeRoute, "function");
     assert.equal(typeof analyzer.buildLedger, "function");
@@ -722,6 +755,7 @@ const assertions = [
       "algorithm_contract",
       "artifact_purpose",
       "governance",
+      "historical_provenance",
       "import_boundaries",
       "methods",
       "nodes",
@@ -732,8 +766,13 @@ const assertions = [
       "routes",
       "schema_version",
       "source_contract",
+      "source_lane",
       "summary",
     ]);
+    assert.equal(ledger.source_lane, "CURRENT_SOURCE_STATIC_ONLY");
+    assert.equal(ledger.repository_baseline, null);
+    assert.equal(ledger.historical_provenance.changed_route_source_coverage,
+      "UNVERIFIED_NOT_RUN");
     assert.deepEqual(
       [
         ledger.summary.routes,

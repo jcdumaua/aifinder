@@ -1,8 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { lstatSync, realpathSync } from "node:fs";
+import {
+  closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync,
+} from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { canonicalJson } from "./canonical.mjs";
+import {
+  createAdminV1OfficialFirstEnvironmentExpiryGuard,
+} from "./admin-v1-official-first-environment-runtime.mjs";
 
 const REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
 const NODE_EXECUTABLE = "/usr/local/bin/node";
@@ -15,6 +20,7 @@ const MAX_SUPERVISOR_OUTPUT_BYTES = 64 * 1024;
 const PROCESS_TIMEOUT_MS = 15 * 60 * 1000;
 const HERMETIC_DEPENDENCY_KEYS = Object.freeze([
   "allow_hermetic_test",
+  "clock",
   "environment",
   "platform",
   "spawn_process",
@@ -39,6 +45,10 @@ const KEYCHAIN_ARGUMENTS = Object.freeze([
 ]);
 
 const SAFE_FAILURE_CODES = new Set([
+  "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED",
+  "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+  "FIRST_ENVIRONMENT_CLOCK_INVALID",
+  "FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE",
   "FIRST_ENVIRONMENT_KEYCHAIN_ARGUMENTS_DENIED",
   "FIRST_ENVIRONMENT_KEYCHAIN_AUTHORIZATION_INVALID",
   "FIRST_ENVIRONMENT_KEYCHAIN_CREDENTIAL_INVALID",
@@ -125,6 +135,46 @@ function validateRegularPath(target, {
     ) throw new Error("IDENTITY");
   } catch {
     fail(code);
+  }
+}
+
+function readAuthorizationInterval(target, mode) {
+  let descriptor;
+  let bytes;
+  try {
+    validateRegularPath(target, {
+      code: "FIRST_ENVIRONMENT_KEYCHAIN_AUTHORIZATION_INVALID", mode: 0o600,
+    });
+    const before = lstatSync(target, { bigint: true });
+    if (before.size < 1n || before.size > 65536n) throw new Error("SIZE");
+    descriptor = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (opened.dev !== before.dev || opened.ino !== before.ino ||
+      opened.size !== before.size || opened.mode !== before.mode ||
+      opened.nlink !== 1n || opened.uid !== before.uid) throw new Error("IDENTITY");
+    bytes = readFileSync(descriptor);
+    const after = lstatSync(target, { bigint: true });
+    const completed = fstatSync(descriptor, { bigint: true });
+    for (const metadata of [after, completed]) {
+      for (const key of ["dev", "ino", "size", "mode", "uid", "nlink", "mtimeNs", "ctimeNs"]) {
+        if (metadata[key] !== before[key]) throw new Error("CHANGED");
+      }
+    }
+    if (realpathSync(target) !== target || BigInt(bytes.byteLength) !== before.size) {
+      throw new Error("CHANGED");
+    }
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const value = JSON.parse(text);
+    if (text !== `${canonicalJson(value)}\n` ||
+      value?.authorization_closure?.authorization_mode !== mode) {
+      throw new Error("CANONICAL");
+    }
+    return value;
+  } catch {
+    fail("FIRST_ENVIRONMENT_KEYCHAIN_AUTHORIZATION_INVALID");
+  } finally {
+    if (bytes) bytes.fill(0);
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 
@@ -241,6 +291,7 @@ export function dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLaunche
     parsed.mode === "HERMETIC_TEST_ONLY" &&
     (!exactKeys(dependencies, HERMETIC_DEPENDENCY_KEYS) ||
       dependencies.allow_hermetic_test !== true ||
+      typeof dependencies.clock !== "function" ||
       (dependencies.platform !== "darwin" && dependencies.platform !== "linux") ||
       !dependencies.environment ||
       typeof dependencies.environment !== "object" ||
@@ -296,6 +347,12 @@ export function dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLaunche
       code: "FIRST_ENVIRONMENT_KEYCHAIN_AUTHORIZATION_INVALID",
       mode: 0o600,
     });
+    const authorization = readAuthorizationInterval(parsed.authorizationPath, parsed.mode);
+    const guard = createAdminV1OfficialFirstEnvironmentExpiryGuard(
+      authorization, parsed.mode === "LIVE" ? {} :
+        { clock: dependencies.clock, allow_hermetic_test: true },
+    );
+    guard();
     spendInvocation(parsed, dependencies);
 
     const lookup = spawnProcess(
@@ -336,6 +393,7 @@ export function dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLaunche
     ) fail("FIRST_ENVIRONMENT_KEYCHAIN_CREDENTIAL_INVALID");
 
     childEnvironment = { ...parentEnvironment, ADMIN_PASSWORD: secret };
+    guard();
     const child = spawnProcess(
       NODE_EXECUTABLE,
       [

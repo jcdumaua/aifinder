@@ -2,11 +2,13 @@ import {
   closeSync,
   constants,
   existsSync,
+  fstatSync,
   fsyncSync,
   lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   realpathSync,
   renameSync,
   unlinkSync,
@@ -14,6 +16,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
+import { validateOfficialIsolationAuthorization } from "./admin-v1-official-isolation.mjs";
 
 export const ADMIN_V1_OFFICIAL_OPERATION_CLASS =
   "ADMIN_V1_OFFICIAL_RUNTIME_V1";
@@ -261,6 +264,89 @@ export class AdminV1OfficialRuntimeError extends Error {
     super(code);
     this.name = "AdminV1OfficialRuntimeError";
     this.code = code;
+  }
+}
+
+function sameIsolatedFile(left, right) {
+  return ["dev", "ino", "mode", "uid", "gid", "nlink", "size", "mtimeMs", "ctimeMs"]
+    .every((key) => left[key] === right[key]);
+}
+
+export function readAdminV1OfficialIsolatedBundle({ authorization, now_epoch_ms }) {
+  const binding = validateOfficialIsolationAuthorization(
+    authorization, now_epoch_ms,
+  );
+  const root = authorization.execution.journal_directory;
+  const pathname = binding.credential_bundle_path;
+  let descriptor;
+  let acquired;
+  const mutable = [];
+  try {
+    const repository = lstatSync(authorization.repository.root);
+    const directory = lstatSync(root);
+    if (!repository.isDirectory() || repository.isSymbolicLink() ||
+      !directory.isDirectory() || directory.isSymbolicLink() ||
+      directory.uid !== repository.uid || directory.nlink < 1 ||
+      (directory.mode & 0o777) !== 0o700 || realpathSync(root) !== root) {
+      throw new Error("ROOT_IDENTITY");
+    }
+    const before = lstatSync(pathname);
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 ||
+      before.uid !== repository.uid || (before.mode & 0o777) !== 0o600 ||
+      before.size < 1 || before.size > 128 * 1024 ||
+      realpathSync(pathname) !== pathname || !Number.isInteger(constants.O_NOFOLLOW)) {
+      throw new Error("BUNDLE_IDENTITY");
+    }
+    descriptor = openSync(pathname, constants.O_RDONLY | constants.O_NOFOLLOW);
+    if (!sameIsolatedFile(before, fstatSync(descriptor))) {
+      throw new Error("BUNDLE_CHANGED");
+    }
+    acquired = Buffer.alloc(before.size + 1);
+    let length = 0;
+    while (length < acquired.byteLength) {
+      const count = readSync(descriptor, acquired, length,
+        acquired.byteLength - length, null);
+      if (count === 0) break;
+      length += count;
+    }
+    if (length !== before.size ||
+      !sameIsolatedFile(before, fstatSync(descriptor)) ||
+      !sameIsolatedFile(before, lstatSync(pathname))) {
+      throw new Error("BUNDLE_CHANGED");
+    }
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(
+      acquired.subarray(0, length),
+    );
+    const bundle = JSON.parse(decoded);
+    if (!bundle || Object.getPrototypeOf(bundle) !== Object.prototype ||
+      Object.keys(bundle).sort().join(",") !==
+        "provenance_receipt,provisioning_receipt,run_id,schema_version,values" ||
+      decoded !== `${canonicalJson(bundle)}\n` ||
+      !bundle.values || Object.getPrototypeOf(bundle.values) !== Object.prototype) {
+      throw new Error("BUNDLE_FORMAT");
+    }
+    const names = ["admin_password", "admin_session_secret", "github_token",
+      "supabase_anon_key", "supabase_service_role_key", "supabase_url",
+      "vercel_token"];
+    if (Object.keys(bundle.values).sort().join(",") !==
+      [...names].sort().join(",")) throw new Error("BUNDLE_CATEGORIES");
+    for (const name of names) {
+      const encodedCredential = bundle.values[name];
+      if (typeof encodedCredential !== "string" || encodedCredential.length < 1 ||
+        encodedCredential.length > 16_384 || encodedCredential.includes("\0")) {
+        throw new Error("BUNDLE_VALUE");
+      }
+      const bytes = Buffer.from(encodedCredential, "utf8");
+      mutable.push(bytes);
+      bundle.values[name] = bytes;
+    }
+    return bundle;
+  } catch {
+    for (const byteArray of mutable) byteArray.fill(0);
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_ISOLATED_BUNDLE_INVALID");
+  } finally {
+    if (acquired) acquired.fill(0);
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
 

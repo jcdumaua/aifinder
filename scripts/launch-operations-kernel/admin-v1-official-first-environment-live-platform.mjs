@@ -1,5 +1,10 @@
 import { canonicalJson } from "./canonical.mjs";
-import { ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS } from "./admin-v1-official-first-environment-runtime.mjs";
+import {
+  ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS,
+  createAdminV1OfficialFirstEnvironmentExpiryGuard,
+  isAdminV1OfficialFirstEnvironmentExpiryFailure,
+  validateAdminV1OfficialFirstEnvironmentAuthorization,
+} from "./admin-v1-official-first-environment-runtime.mjs";
 
 export const ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_MAP = Object.freeze([
   Object.freeze({
@@ -177,9 +182,24 @@ function exactNativeDescriptor(value) {
 }
 
 export function createAdminV1OfficialFirstEnvironmentNativeTransport({
+  authorization,
   provider_auth,
   fetch_impl = globalThis.fetch,
+  now_epoch_ms,
+  clock,
+  allow_hermetic_test = false,
 }) {
+  if (allow_hermetic_test === true && fetch_impl === globalThis.fetch) {
+    throw new AdminV1OfficialFirstEnvironmentPlatformError(
+      "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_INPUT",
+    );
+  }
+  const guard = createAdminV1OfficialFirstEnvironmentExpiryGuard(
+    authorization, { now_epoch_ms, clock, allow_hermetic_test },
+  );
+  validateAdminV1OfficialFirstEnvironmentAuthorization(
+    authorization, { now_epoch_ms: guard(), allow_hermetic_test },
+  );
   if (!(provider_auth instanceof Uint8Array) || provider_auth.byteLength < 1 ||
     provider_auth.byteLength > 16_384 || typeof fetch_impl !== "function") {
     throw new AdminV1OfficialFirstEnvironmentPlatformError(
@@ -212,22 +232,23 @@ export function createAdminV1OfficialFirstEnvironmentNativeTransport({
           "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_INPUT",
         );
       }
+      const url = `https://api.vercel.com${request.descriptor.path}`;
+      const options = {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(20_000),
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: canonicalJson(request.descriptor.body),
+      };
+      // No awaited work or request construction may separate this check and fetch.
+      guard();
       let response;
       try {
-        response = await fetch_impl(
-          `https://api.vercel.com${request.descriptor.path}`,
-          {
-            method: "POST",
-            redirect: "error",
-            signal: AbortSignal.timeout(20_000),
-            headers: {
-              accept: "application/json",
-              authorization: `Bearer ${token}`,
-              "content-type": "application/json",
-            },
-            body: canonicalJson(request.descriptor.body),
-          },
-        );
+        response = await fetch_impl(url, options);
       } catch {
         throw new AdminV1OfficialFirstEnvironmentPlatformError(
           "FIRST_ENVIRONMENT_CREATE_TRANSPORT",
@@ -280,7 +301,8 @@ export function createAdminV1OfficialFirstEnvironmentAdapter({
           descriptor: structuredClone(requestDescriptor),
         }));
       } catch (error) {
-        if (error?.code === "FIRST_ENVIRONMENT_CREATE_BUDGET_EXHAUSTED") {
+        if (error?.code === "FIRST_ENVIRONMENT_CREATE_BUDGET_EXHAUSTED" ||
+          isAdminV1OfficialFirstEnvironmentExpiryFailure(error)) {
           throw error;
         }
         throw failure("FAIL_CREATE_TRANSPORT");

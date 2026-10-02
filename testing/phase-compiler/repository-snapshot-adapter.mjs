@@ -14,6 +14,8 @@ import { DiagnosticError } from './error-catalog.mjs';
 import { parsePhaseSpec } from './phase-spec.mjs';
 import { assertSchema, assertSupportedSchema } from './schema-validator.mjs';
 
+const PYTHON_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python' : '/usr/bin/python3';
+
 const GIT_ENVIRONMENT = Object.freeze({
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_NOSYSTEM: '1',
@@ -31,7 +33,7 @@ const BOUND_GIT_PROGRAM = String.raw`import os
 import sys
 
 REPOSITORY_FD = 3
-GIT_EXECUTABLE = "/usr/bin/git"
+GIT_EXECUTABLE = "/Library/Developer/CommandLineTools/usr/bin/git" if sys.platform == "darwin" else "/usr/bin/git"
 GIT_ENVIRONMENT = {
     "GIT_CONFIG_GLOBAL": "/dev/null",
     "GIT_CONFIG_NOSYSTEM": "1",
@@ -45,7 +47,7 @@ try:
     os.fchdir(REPOSITORY_FD)
     os.set_inheritable(REPOSITORY_FD, False)
     os.close(REPOSITORY_FD)
-    os.execve(GIT_EXECUTABLE, [GIT_EXECUTABLE, *sys.argv[1:]], GIT_ENVIRONMENT)
+    os.execve(GIT_EXECUTABLE, [GIT_EXECUTABLE, "-c", "maintenance.autoDetach=false", *sys.argv[1:]], GIT_ENVIRONMENT)
 except NotImplementedError:
     sys.exit(72)
 except OSError:
@@ -184,7 +186,7 @@ async function runGit(repository, argv, { binary = false, hooks } = {}) {
   let operationError;
   try {
     stdout = await new Promise((resolvePromise, rejectPromise) => {
-      const child = spawn('/usr/bin/python3', [
+      const child = spawn(PYTHON_EXECUTABLE, [
         '-I',
         '-S',
         '-c',
@@ -629,7 +631,7 @@ export async function writeExclusiveSnapshot(outPath, bytes, { beforeOpen, after
     await assertParentBinding();
     const identity = bufferIdentity(bytes);
     const runBoundOperation = (action, extraArguments = [], input = Buffer.alloc(0)) => new Promise((resolvePromise, rejectPromise) => {
-      const child = spawn('/usr/bin/python3', ['-I', '-S', '-c', BOUND_SNAPSHOT_WRITE_PROGRAM, action, basename(outPath), String(identity.bytes), identity.sha256, ...extraArguments], {
+      const child = spawn(PYTHON_EXECUTABLE, ['-I', '-S', '-c', BOUND_SNAPSHOT_WRITE_PROGRAM, action, basename(outPath), String(identity.bytes), identity.sha256, ...extraArguments], {
         cwd: '/', env: { LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin' }, shell: false,
         stdio: ['pipe', 'pipe', 'pipe', parentHandle.fd], windowsHide: true,
       });

@@ -635,8 +635,11 @@ function governanceMutationResults() {
       candidate.entries[indexes[0]].gap_code_or_null = "MIXED_GAP";
     }),
     mutate((candidate, _registry, indexes) => {
-      candidate.entries[indexes[0]].coverage_state =
-        "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
+      const entry = candidate.entries[indexes[0]];
+      entry.coverage_state =
+        entry.coverage_state === "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED"
+          ? "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED"
+          : "V1_ADMIN_STAGING_AUTHENTICATED_RUNTIME_VALIDATED";
     }),
     mutate((_candidate, candidateRegistry) => {
       candidateRegistry.workstreams.find(

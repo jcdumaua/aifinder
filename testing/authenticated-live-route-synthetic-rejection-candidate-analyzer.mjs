@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
+import * as currentSemanticAnalyzer from "./authenticated-live-route-semantic-analyzer.mjs";
 
 const QUALIFICATION_STATES = Object.freeze([
   "DEFERRED_CATCH_OUTCOME",
@@ -529,7 +530,9 @@ export function qualifyOutcome({
   }).overlay;
 }
 
-function requireExactSourceContract(c2_1_ledger, governanceFacts) {
+function requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedger) {
+  const sourceContract = c2_1_ledger?.source_lane === "CURRENT_SOURCE_STATIC_ONLY"
+    ? historicalLedger?.source_contract : c2_1_ledger?.source_contract;
   if (
     c2_1_ledger?.summary?.routes !== 28 ||
     c2_1_ledger.summary.methods !== 37 ||
@@ -553,9 +556,9 @@ function requireExactSourceContract(c2_1_ledger, governanceFacts) {
       "6e15cd4bc24025892fe7d3985709e48ba56cb2198ea04fe21ec99b08ab2fe172" ||
     governanceFacts.node_set_digest !==
       "e93014829e190d478ee8d057289a12bc2703f990b795c3bbf5fdade838dd87d8" ||
-    c2_1_ledger.source_contract.route_contract_digest !==
+    sourceContract?.route_contract_digest !==
       governanceFacts.route_contract_digest ||
-    c2_1_ledger.source_contract.request_position_contract_digest !==
+    sourceContract?.request_position_contract_digest !==
       governanceFacts.request_position_digest
   ) fail("C2_2_SOURCE_LEDGER_IDENTITY");
 }
@@ -683,11 +686,16 @@ export function qualifyCandidateOverlay({
   routeInputs,
   c2_1_ledger,
   governanceFacts,
+  historicalLedger,
 } = {}) {
   if (!c2_1_ledger || !governanceFacts) fail("C2_2_SOURCE_LEDGER_CONTRACT");
-  requireExactSourceContract(c2_1_ledger, governanceFacts);
+  requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedger);
   const { nodeById, methodById, split } = requireNodeOutcomeContract(c2_1_ledger);
   const { routePaths, parsedByPath } = routeContext(routeInputs, c2_1_ledger);
+  const currentLane = c2_1_ledger.source_lane === "CURRENT_SOURCE_STATIC_ONLY";
+  if (currentLane && canonicalJson(c2_1_ledger) !== canonicalJson(
+    currentSemanticAnalyzer.buildCurrentSourceView({ historicalLedger, routeInputs }),
+  )) fail("C2_2_CURRENT_SOURCE_VIEW_IDENTITY");
   const routeByPath = new Map(
     c2_1_ledger.routes.map((route) => [route.route_path, route]),
   );
@@ -764,7 +772,7 @@ export function qualifyCandidateOverlay({
     count: entry.count,
   }));
   const candidateOutcomes = candidates.length;
-  return {
+  const result = {
     schema_version: "AIFINDER_C2_2_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_V1",
     phase: "33IA-33IZ",
     artifact_purpose:
@@ -861,4 +869,22 @@ export function qualifyCandidateOverlay({
       overlay_digest: completeOverlayDigest,
     },
   };
+  if (currentLane) {
+    result.source_lane = "CURRENT_SOURCE_STATIC_ONLY";
+    result.phase = "CURRENT_SOURCE_STATIC_ONLY";
+    result.historical_provenance = {
+      repository_baseline: result.repository_baseline,
+      source_contract: result.source_contract,
+      source_coverage: c2_1_ledger.historical_source_coverage,
+    };
+    result.repository_baseline = null;
+    result.source_contract = {
+      current_semantic_view_digest: digest(canonicalJson(c2_1_ledger)),
+      route_contract_digest: c2_1_ledger.source_contract.route_contract_digest,
+      node_set_digest: digest(canonicalJson(c2_1_ledger.nodes)),
+      route_paths: routePaths, route_identities_verified: routePaths.length,
+      runtime_evidence: "NOT_RUN",
+    };
+  }
+  return result;
 }

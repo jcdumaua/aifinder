@@ -1105,3 +1105,135 @@ export function buildLedger({
     },
   };
 }
+
+
+// Current source is qualified separately from the frozen C2_1 record.
+export const CURRENT_DECISION_ROUTE_PATH =
+  "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts";
+const HISTORICAL_DECISION_IDENTITY = Object.freeze({
+  sha256: "e5c59f39dd7395525728cbc282505832da6b1f822f862f0cd56015a445dc02fd",
+  git_blob: "0bd8380181c0ca81d4dfa31bb059e61d88b084b1",
+  bytes: 7565, lf_lines: 284,
+});
+const CURRENT_DECISION_IDENTITY = Object.freeze({
+  sha256: "eeb58cba6ae0392bbca56cd4bfda49b2c8663cf43e3ddc4681b02b708b6e18d8",
+  git_blob: "6c8ee8a3ff5b119a318be45ba9fc2a3110f40187",
+  bytes: 7558, lf_lines: 284,
+});
+const IDENTITY_FIELDS = Object.freeze(["sha256", "git_blob", "bytes", "lf_lines"]);
+
+export function currentRouteIdentity(routePath, historicalIdentity) {
+  if (!historicalIdentity || typeof routePath !== "string") {
+    fail("C2_1_CURRENT_ROUTE_CONTRACT");
+  }
+  if (routePath !== CURRENT_DECISION_ROUTE_PATH) return { ...historicalIdentity };
+  if (IDENTITY_FIELDS.some((key) =>
+    historicalIdentity[key] !== HISTORICAL_DECISION_IDENTITY[key])) {
+    fail("C2_1_HISTORICAL_ROUTE_CONTRACT");
+  }
+  return { ...historicalIdentity, ...CURRENT_DECISION_IDENTITY };
+}
+
+export function buildCurrentSourceView({ historicalLedger, routeInputs } = {}) {
+  // This is the frozen record's existing independent canonical digest.
+  if (!historicalLedger || sha256Bytes(Buffer.from(JSON.stringify(
+    recursivelySorted(historicalLedger),
+  ))) !== "6e15cd4bc24025892fe7d3985709e48ba56cb2198ea04fe21ec99b08ab2fe172") {
+    fail("C2_1_HISTORICAL_LEDGER_IDENTITY");
+  }
+  if (!Array.isArray(routeInputs) || routeInputs.length !== 28 ||
+      new Set(routeInputs.map((input) => input.path)).size !== 28) {
+    fail("C2_1_ROUTE_SCOPE");
+  }
+  const byPath = new Map(routeInputs.map((input) => [input.path, input]));
+  const helperPaths = [...new Set(historicalLedger.import_boundaries
+    .filter((entry) => entry.boundary_kind === "LOCAL_UNREAD")
+    .map((entry) => entry.resolved_target_or_external))];
+  const analyses = historicalLedger.routes.map((route) => {
+    const input = byPath.get(route.route_path);
+    if (!input) fail("C2_1_ROUTE_SCOPE");
+    const expectedIdentity = currentRouteIdentity(route.route_path, {
+      sha256: route.sha256, git_blob: route.git_blob,
+      bytes: route.bytes, lf_lines: route.lf_lines,
+      exported_methods: historicalLedger.methods
+        .filter((method) => method.route_path === route.route_path)
+        .map((method) => method.http_method),
+      if_count: route.if_count,
+      catch_bound_count: route.catch_bound_count,
+      catch_optional_count: route.catch_optional_count,
+      catch_total: route.catch_total,
+      decision_total: route.node_ids.length,
+    });
+    if (IDENTITY_FIELDS.some((key) =>
+      input.expectedIdentity?.[key] !== expectedIdentity[key])) {
+      fail("C2_1_CURRENT_ROUTE_CONTRACT");
+    }
+    return analyzeRoute({
+      path: input.path, bytes: input.bytes, expectedIdentity, helperPaths,
+    });
+  });
+  const current = JSON.parse(JSON.stringify(historicalLedger));
+  current.methods = analyses.flatMap((entry) => entry.methods).sort((a, b) =>
+    a.route_path.localeCompare(b.route_path) ||
+    HTTP_METHODS.indexOf(a.http_method) - HTTP_METHODS.indexOf(b.http_method) ||
+    a.method_id.localeCompare(b.method_id));
+  current.nodes = analyses.flatMap((entry) => entry.nodes).sort((a, b) =>
+    a.route_path.localeCompare(b.route_path) ||
+    a.start_utf16 - b.start_utf16 || a.end_utf16 - b.end_utf16 ||
+    (a.kind === b.kind ? 0 : a.kind === "IF" ? -1 : 1));
+  const outcomes = new Map(analyses.flatMap((entry) => entry.outcomes)
+    .map((entry) => [entry.outcome_id, entry]));
+  current.outcomes = current.nodes.flatMap((entry) =>
+    entry.outcome_ids.map((id) => {
+      const outcome = outcomes.get(id);
+      if (!outcome) fail("C2_1_OUTCOME_SET");
+      return outcome;
+    }));
+  current.import_boundaries = analyses.flatMap((entry) => entry.import_boundaries)
+    .sort((a, b) => a.route_path.localeCompare(b.route_path) ||
+      a.raw_specifier.localeCompare(b.raw_specifier) ||
+      a.import_boundary_id.localeCompare(b.import_boundary_id));
+  current.routes = historicalLedger.routes.map((route, index) => {
+    const analysis = analyses[index];
+    return {
+      ...route,
+      ...Object.fromEntries(IDENTITY_FIELDS.map((key) => [key, analysis[key]])),
+      exported_method_ids: analysis.methods.map((entry) => entry.method_id),
+      node_ids: analysis.nodes.map((entry) => entry.node_id),
+      import_boundary_ids: analysis.import_boundaries.map((entry) =>
+        entry.import_boundary_id),
+    };
+  });
+  for (const [field, expected] of [
+    ["methods", 37], ["nodes", 409], ["outcomes", 775], ["routes", 28],
+  ]) {
+    if (current[field].length !== expected) fail("C2_1_CURRENT_RECONCILIATION");
+  }
+  current.source_lane = "CURRENT_SOURCE_STATIC_ONLY";
+  current.historical_source_coverage = {
+    verified_identical_routes: 27,
+    changed_route: "UNVERIFIED_NOT_RUN",
+    changed_route_path: CURRENT_DECISION_ROUTE_PATH,
+    current_source_cannot_satisfy_historical_gate: true,
+  };
+  current.historical_provenance = {
+    ledger_sha256: "d668f5955dd0f7b3c079625711fa873576869039f26263267f1a4821da6090e3",
+    repository_baseline: current.repository_baseline,
+    source_contract: current.source_contract,
+    request_positions: "HISTORICAL_OBSERVATIONS_ONLY",
+  };
+  current.repository_baseline = null;
+  current.phase = "CURRENT_SOURCE_STATIC_ONLY";
+  current.artifact_purpose = "CURRENT_SOURCE_SEMANTIC_COMPATIBILITY_ONLY";
+  current.source_contract = {
+    route_contract_digest: sha256Bytes(Buffer.from(JSON.stringify(
+      current.routes.map((route) => [route.route_path,
+        ...IDENTITY_FIELDS.map((key) => route[key])]),
+    ))),
+    request_position_contract_digest:
+      historicalLedger.source_contract.request_position_contract_digest,
+    route_count: 28, method_count: 37,
+    runtime_evidence: "NOT_RUN",
+  };
+  return current;
+}

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { c08TrustedContext, consumeC08Output, C08_TERMINAL } from "../scripts/c08-child-receipts.mjs";
 import {
   createHash,
   randomBytes,
@@ -886,9 +887,9 @@ const POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
 ]);
 const REVIEWED_PRELIVE_AGGREGATE_SHA256 =
-  "93e4ef0ad478578b3305f266f55e300f1c3c08c6b6ab596e9a23a3273dca89f3";
+  "4dddcb33e126d7d7b8f5643945c8320c2ae780e5fc2f3dc2f05e608a320debf6";
 const REVIEWED_STABLE_SURFACE_SHA256 =
-  "20eca1079362737a82427eed3c2b7b5998d0879c48498ddb87a6068a88342672";
+  "ecce45d9b0b1eba90f953957c678547390c170677ef0fcc3a82a0c7d56b313ff";
 const PROTECTED_DRAFT_PATHS = Object.freeze([
   "scripts/_drafts/discovery-phase-27nm-27ol-live-preflight-activation-wrapper-candidate.sh",
   "scripts/_drafts/discovery-phase-27nm-27ol-one-use-authorization-record-generator-candidate.py",
@@ -3384,6 +3385,23 @@ function runDelta20EvidencePublicationChecks(repositoryRoot, lifecycle) {
         "PASS_STATIC_TEST_SAFETY_MANIFEST ",
       ],
     ]) {
+      let c08Context = null;
+      if (repositoryPath === "testing/readiness-coverage-matrix.test.mjs") {
+        const readBound = (relativePath) => readRegularFile(path.join(repositoryRoot, relativePath));
+        const matrixPath = "testing/readiness-coverage-matrix.json";
+        const parserBytes = readBound("scripts/c08-child-receipts.mjs");
+        const matrixBytes = readBound(matrixPath);
+        c08Context = c08TrustedContext(
+          parseJsonBuffer(matrixBytes, "C08_MATRIX_JSON"),
+          parseJsonBuffer(readBound("testing/static-test-safety-manifest.json"), "C08_MANIFEST_JSON").c08_child_receipt_contract,
+          {
+            producer: sha256(readBound("testing/static-governance-utils.mjs")),
+            caller: sha256(readBound("testing/readiness-coverage-matrix.test.mjs")),
+            matrix: sha256(matrixBytes),
+            parser: { bytes: parserBytes.byteLength, sha256: sha256(parserBytes) },
+          },
+        );
+      }
       const output = requireChildSuccess(
         runChild(NODE_EXECUTABLE, [
           path.join(repositoryRoot, repositoryPath),
@@ -3391,8 +3409,10 @@ function runDelta20EvidencePublicationChecks(repositoryRoot, lifecycle) {
         "DELTA20_FINAL_GOVERNANCE_CHECK",
       );
       if (
-        !output.startsWith(expectedPrefix) ||
-        !output.endsWith("failures=0 internal_failures=0\n")
+        c08Context !== null
+          ? !consumeC08Output(output, c08Context.plan, c08Context.trustedBindings, C08_TERMINAL)
+          : !output.startsWith(expectedPrefix) ||
+            !output.endsWith("failures=0 internal_failures=0\n")
       ) {
         fail("DELTA20_FINAL_GOVERNANCE_CHECK_OUTPUT");
       }
@@ -35668,26 +35688,82 @@ function validateLaunchKernelSelfTestCompatibility(
   launchKernelVerification,
   launchKernelUntrackedPaths,
 ) {
+  const currentContract = "CURRENT_CANDIDATE_57_PRESERVED_FOUR_ROUTE_V1";
+  const expectedMemberPaths = [
+    "docs/launch-operations-kernel.md",
+    "scripts/launch-operations-kernel/activation-bridge.mjs",
+    "scripts/launch-operations-kernel/activation-bridge.test.mjs",
+    "scripts/launch-operations-kernel/activation-e2e.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-authorization.schema.json",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-isolation.d.mts",
+    "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs",
+    "scripts/launch-operations-kernel/canonical.mjs",
+    "scripts/launch-operations-kernel/cli.mjs",
+    "scripts/launch-operations-kernel/evidence.schema.json",
+    "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs",
+    "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs",
+    "scripts/launch-operations-kernel/kernel.mjs",
+    "scripts/launch-operations-kernel/kernel.test.mjs",
+    "scripts/launch-operations-kernel/legacy-classifier.mjs",
+    "scripts/launch-operations-kernel/legacy-classifier.test.mjs",
+    "scripts/launch-operations-kernel/legacy-freeze.json",
+    "scripts/launch-operations-kernel/manifest.mjs",
+    "scripts/launch-operations-kernel/manifest.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json",
+    "scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs",
+    "scripts/launch-operations-kernel/recovery.test.mjs",
+    "scripts/launch-operations-kernel/source-policy.test.mjs",
+  ];
   if (
     launchKernelVerification === null ||
     typeof launchKernelVerification !== "object" ||
     !Array.isArray(launchKernelVerification.member_paths) ||
     !Array.isArray(launchKernelUntrackedPaths)
   ) {
-    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
+    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION:" + currentContract);
   }
   const memberPaths = launchKernelVerification.member_paths;
   const memberPathSet = new Set(memberPaths);
   const untrackedPathSet = new Set(launchKernelUntrackedPaths);
-  const expectedUntrackedPathSet = new Set(
-    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS,
-  );
-  const expectedMemberPathSet = new Set(
-    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.filter(
-      (repositoryPath) =>
-        repositoryPath !== LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
-    ),
-  );
+  const expectedMemberPathSet = new Set(expectedMemberPaths);
+  const expectedUntrackedPathSet = new Set([
+    LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
+    ...expectedMemberPaths,
+  ]);
   const manifestPathOccurrences = launchKernelUntrackedPaths.filter(
     (repositoryPath) =>
       repositoryPath === LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,
@@ -35696,21 +35772,21 @@ function validateLaunchKernelSelfTestCompatibility(
     launchKernelVerification.verified !== true ||
     launchKernelVerification.source_policy_verified !== true ||
     launchKernelVerification.legacy_imports !== 0 ||
-    launchKernelVerification.live_routes !== 1 ||
-    launchKernelVerification.member_count !==
-      EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT ||
-    memberPaths.length !== launchKernelVerification.member_count ||
-    memberPathSet.size !== memberPaths.length ||
-    launchKernelUntrackedPaths.length !==
-      launchKernelVerification.member_count + 1 ||
-    launchKernelUntrackedPaths.length !==
-      EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.length ||
-    untrackedPathSet.size !== launchKernelUntrackedPaths.length ||
+    launchKernelVerification.live_routes !== 4 ||
+    launchKernelVerification.live_entrypoints !== 4 ||
+    launchKernelVerification.live_capability_files !== 13 ||
+    launchKernelVerification.credential_access_files !== 3 ||
+    launchKernelVerification.checkpoint_writer_files !== 3 ||
+    launchKernelVerification.member_count !== 57 ||
+    memberPaths.length !== 57 ||
+    memberPathSet.size !== 57 ||
+    launchKernelUntrackedPaths.length !== 58 ||
+    untrackedPathSet.size !== 58 ||
     manifestPathOccurrences !== 1 ||
     !exactSetEqual(memberPathSet, expectedMemberPathSet) ||
     !exactSetEqual(untrackedPathSet, expectedUntrackedPathSet)
   ) {
-    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION");
+    fail("SELF_TEST_LAUNCH_KERNEL_VERIFICATION:" + currentContract);
   }
 }
 

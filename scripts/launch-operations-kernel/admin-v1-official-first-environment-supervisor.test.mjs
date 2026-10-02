@@ -1,4 +1,27 @@
-import assert from "node:assert/strict";
+import strictAssert from "node:assert/strict";
+let assertionCalls = 0;
+const assert = {
+  ok(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.ok(...argumentsList);
+  },
+  deepEqual(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.deepEqual(...argumentsList);
+  },
+  equal(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.equal(...argumentsList);
+  },
+  rejects(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.rejects(...argumentsList);
+  },
+  throws(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.throws(...argumentsList);
+  },
+};
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -141,7 +164,7 @@ function authorization(overrides = {}, requestOverrides = {}) {
         "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_HERMETIC_TEST_V1",
       reviewed_package_sha256: "a".repeat(64),
       reviewed_package_bytes: 1,
-      gemini_approval_token_sha256: "b".repeat(64),
+      work_audit_sha256: "b".repeat(64),
       direct_james_approval_sha256: "c".repeat(64),
       authorization_id: "223e4567-e89b-42d3-a456-426614174001",
       run_id: RUN_ID,
@@ -275,7 +298,7 @@ const temporaryRoot = realpathSync(mkdtempSync(path.join(
   "aifinder-first-environment-supervisor-test-",
 )));
 try {
-  assert(
+  assert.ok(
     SUPERVISOR_SOURCE.includes(
       "dependencies.inspect_repository\n      ? dependencies.inspect_repository(authorization)\n      : inspectAdminV1OfficialFirstEnvironmentRepository(repositoryRoot)",
     ),
@@ -314,6 +337,63 @@ try {
     credential_value_reads: 0,
     runtime_sessions: 0,
   });
+
+  for (const boundary of ["candidate", "git"]) {
+    let clockNow = NOW;
+    const expiryPath = writeAuthorization(
+      mkdtempSync(path.join(temporaryRoot, `cf18-${boundary}-expiry-`)),
+      authorization(),
+    );
+    const expiry = dependencies();
+    expiry.values.clock = () => clockNow;
+    const verify = expiry.values.verify_candidate;
+    expiry.values.verify_candidate = (record) => {
+      const result = verify(record);
+      if (boundary === "candidate") clockNow = Date.parse("2026-08-24T17:00:00.000Z");
+      return result;
+    };
+    expiry.values.inspect_repository = (record) => {
+      if (boundary === "git") clockNow = Date.parse("2026-08-24T17:00:00.000Z");
+      return structuredClone(record.repository);
+    };
+    const result = await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+      ["--run-first-environment", "--authorization", expiryPath],
+      expiry.values,
+    );
+    assert.equal(result.code, "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED");
+    assert.equal(expiry.counters.credential, 0);
+    assert.equal(expiry.counters.provider_auth, 0);
+    assert.equal(expiry.counters.transport, 0);
+    assert.equal(expiry.counters.journal_creates, 0);
+  }
+
+  const providerExpiry = dependencies();
+  let providerNow = NOW;
+  providerExpiry.values.clock = () => providerNow;
+  providerExpiry.values.prepare_provider_auth = async () => {
+    providerExpiry.counters.provider_auth += 1;
+    await Promise.resolve();
+    providerNow = Date.parse("2026-08-24T17:00:00.000Z");
+  };
+  const providerExpiryPath = writeAuthorization(
+    mkdtempSync(path.join(temporaryRoot, "provider-expiry-")), authorization(),
+  );
+  assert.deepEqual(await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+    ["--run-first-environment", "--authorization", providerExpiryPath],
+    providerExpiry.values,
+  ), { exit_code: 1, code: "FAIL_AUTHORIZATION_EXPIRED" });
+  assert.equal(providerExpiry.counters.provider_auth, 1);
+  assert.equal(providerExpiry.counters.credential, 0);
+  assert.equal(providerExpiry.counters.transport, 0);
+  assert.equal(providerExpiry.journal.load().value.state.token_spent, false);
+  for (const options of [{ now_epoch_ms: NOW }, { clock: () => NOW }]) {
+    assert.throws(() => createAdminV1OfficialFirstEnvironmentNativeDependencies({
+      write_output() {}, ...options,
+    }), (error) => error?.code === "FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE");
+  }
+  assert.throws(() => createAdminV1OfficialFirstEnvironmentNativeDependencies({
+    write_output() {}, allow_hermetic_test: true, clock: () => NOW,
+  }), (error) => error?.code === "FIRST_ENVIRONMENT_SUPERVISOR_LIVE_BINDING_REQUIRED");
 
   const denied = dependencies();
   assert.deepEqual(
@@ -413,6 +493,28 @@ try {
     mkdtempSync(path.join(temporaryRoot, "success-")),
     authorization(),
   );
+  for (const mutate of [
+    (value) => { value.schema_version = 1; },
+    (value) => { value.authorization_closure.work_audit_sha256 = "f".repeat(64); },
+    (value) => { delete value.authorization_closure.direct_james_approval_sha256; },
+    (value) => { value.authorization_closure.gemini_approval_token_sha256 = "b".repeat(64); },
+  ]) {
+    const deniedAuthorization = structuredClone(authorization());
+    mutate(deniedAuthorization);
+    const deniedPath = writeAuthorization(
+      mkdtempSync(path.join(temporaryRoot, "work-contract-denied-")),
+      deniedAuthorization,
+    );
+    const deniedDependencies = dependencies();
+    const deniedResult = await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
+      ["--run-first-environment", "--authorization", deniedPath],
+      deniedDependencies.values,
+    );
+    assert.equal(deniedResult.exit_code, 1);
+    assert.deepEqual(deniedDependencies.counters, {
+      candidate: 0, journal_creates: 0, credential: 0, provider_auth: 0, transport: 0,
+    });
+  }
   const success = dependencies();
   assert.deepEqual(
     await dispatchAdminV1OfficialFirstEnvironmentSupervisor(
@@ -573,6 +675,7 @@ try {
 
   let deniedFetches = 0;
   const deniedTransport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+    authorization: authorization(), now_epoch_ms: NOW, allow_hermetic_test: true,
     provider_auth: Buffer.from("SYNTHETIC_DENIED", "utf8"),
     async fetch_impl() {
       deniedFetches += 1;
@@ -603,7 +706,7 @@ try {
 
   console.log(
     "PASS_ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_SUPERVISOR " +
-      "assertions=31 failures=0 process_start_before_credential=true " +
+      `assertions=${assertionCalls} failures=0 process_start_before_credential=true ` +
       "credential_value_reads_before_spend=2 real_provider_calls=0 " +
       "environment_create_max=1 environment_identity_read_max=0 " +
       "environment_update_max=0 environment_delete_max=0 expected_residual=true " +
