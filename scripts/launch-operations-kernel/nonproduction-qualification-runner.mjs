@@ -68,6 +68,7 @@ const BROKER_STREAM_LIMIT = 4 * 1024 * 1024;
 const BROKER_DEADLINE_MS = 25_000;
 const brokerPauseWord = new Int32Array(new SharedArrayBuffer(4));
 const brokerPoisonedTransports = new WeakSet();
+const brokerDescriptorHandles = new Map();
 const BROKER_RESULT_KEYS = [
   "classification", "family", "git_pid", "id", "overflow", "schema",
   "signal", "status", "stderr_base64", "stdout_base64", "timeout",
@@ -118,11 +119,33 @@ export function brokerMode(env = process.env ?? {}) {
   return true;
 }
 
-export function brokerDescriptors(env = process.env ?? {}, fs = brokerNativeFs) {
+function brokerNativeNonblocking(fd) {
+  if (fd !== 3 && fd !== 4) brokerFailure();
+  let handle = brokerDescriptorHandles.get(fd);
+  if (handle === undefined) {
+    // Fixed inherited FIFOs only: no connect, listen, readStart, or process helper.
+    const binding = process.binding("pipe_wrap");
+    handle = new binding.Pipe(binding.constants.SOCKET);
+    if (handle.open(fd) !== 0) brokerFailure();
+    brokerDescriptorHandles.set(fd, handle);
+  }
+  if (handle.fd !== fd || handle.setBlocking(false) !== 0) brokerFailure();
+}
+
+export function brokerDescriptors(env = process.env ?? {}, fs = brokerNativeFs, nonblocking = brokerNativeNonblocking) {
   if (!brokerMode(env)) return null;
   if (env.AIFINDER_GIT_BROKER_REQUEST_FD !== "3" || env.AIFINDER_GIT_BROKER_RESPONSE_FD !== "4") brokerFailure();
+  if (fs === brokerNativeFs && nonblocking !== brokerNativeNonblocking) brokerFailure();
   try {
-    if (!fs.fstatSync(3).isFIFO() || !fs.fstatSync(4).isFIFO()) brokerFailure();
+    const before = [fs.fstatSync(3), fs.fstatSync(4)];
+    if (!before.every((info) => info.isFIFO())) brokerFailure();
+    if (typeof nonblocking !== "function") brokerFailure();
+    nonblocking(3);
+    nonblocking(4);
+    for (const [index, fd] of [3, 4].entries()) {
+      const after = fs.fstatSync(fd);
+      if (!after.isFIFO() || ["dev", "ino", "mode"].some((key) => before[index][key] !== after[key])) brokerFailure();
+    }
   } catch { brokerFailure(); }
   return { requestFd: 3, responseFd: 4 };
 }
@@ -220,12 +243,12 @@ function brokerResult(value, id, family) {
 }
 
 export function brokerRequest(family, params, context, {
-  env = process.env ?? {}, fs = brokerNativeFs, now = brokerNow, pause = brokerPause,
+  env = process.env ?? {}, fs = brokerNativeFs, now = brokerNow, pause = brokerPause, nonblocking = brokerNativeNonblocking,
 } = {}) {
   if (!brokerMode(env)) return null;
   try {
     if (brokerPoisonedTransports.has(fs)) brokerFailure();
-    const descriptors = brokerDescriptors(env, fs);
+    const descriptors = brokerDescriptors(env, fs, nonblocking);
     if (typeof family !== "string" || !/^[A-Z][A-Z0-9_]{0,95}$/u.test(family) || !brokerObject(params) || !brokerExactKeys(context, BROKER_CONTEXT_KEYS)) brokerFailure();
     const started = now();
     if (!Number.isFinite(started) || typeof pause !== "function") brokerFailure();
@@ -244,9 +267,9 @@ export function brokerRequest(family, params, context, {
   }
 }
 
-export function readinessBrokerOptions(environment, { env = process.env ?? {}, fs = brokerNativeFs } = {}) {
+export function readinessBrokerOptions(environment, { env = process.env ?? {}, fs = brokerNativeFs, nonblocking = brokerNativeNonblocking } = {}) {
   const childEnvironment = { ...environment };
-  const descriptors = brokerDescriptors(env, fs);
+  const descriptors = brokerDescriptors(env, fs, nonblocking);
   if (descriptors === null) return { env: childEnvironment, stdio: ["ignore", "pipe", "pipe"] };
   childEnvironment.AIFINDER_GIT_BROKER_MODE = "1";
   childEnvironment.AIFINDER_GIT_BROKER_REQUEST_FD = "3";
@@ -1596,6 +1619,7 @@ export function createConcreteRunnerDependencies({
     },
     async readOfficialCredentials(authorization, credentialSourcePolicy) {
       if (authorization?.schema_version === 2) {
+        validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms: nowEpochMs });
         validateOfficialIsolationAuthorization(authorization, nowEpochMs);
         const root = authorization.execution.journal_directory;
         const directory = lstatSync(root);

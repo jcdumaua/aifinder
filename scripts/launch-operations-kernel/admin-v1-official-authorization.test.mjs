@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { canonicalJson, sha256Hex } from "./canonical.mjs";
+import * as isolationModule from "./admin-v1-official-isolation.mjs";
 import {
   createAdminV1OfficialAuthorizationRecord,
 } from "./admin-v1-official-authorization.mjs";
@@ -107,6 +109,9 @@ const generated = await createAdminV1OfficialAuthorizationRecord({
 assert.equal(generated.repository.head, HEAD);
 assert.equal(generated.repository.remote_main, HEAD);
 assert.equal(generated.review_approval_sha256, request.review_approval_sha256);
+assert.equal(generated.schema_version, 1);
+assert.equal(Object.keys(generated).length, 18);
+assert.equal(Object.keys(generated.execution).length, 11);
 
 await assert.rejects(
   createAdminV1OfficialAuthorizationRecord({
@@ -141,6 +146,53 @@ await assert.rejects(
       "OFFICIAL_AUTHORIZATION_GENERATOR_TEMPORARY_COMMIT_MISMATCH",
 );
 
-console.log(
-  "PASS_ADMIN_V1_OFFICIAL_AUTHORIZATION_GENERATOR assertions=5 published_head_bound=true moved_head_rejected=true live_records_created=0",
-);
+const v2Policy = structuredClone(reviewedPolicy);
+v2Policy.official_runtime.authorization_schema_sha256 =
+  "0c0abad46d6ac7e31d24d3c75b56765b52d8819a9ffd31a19200b67f3c22c3a4";
+v2Policy.official_runtime.isolation_contract_sha256 =
+  isolationModule.ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256 ?? sha("9");
+const v2Request = structuredClone(request);
+v2Request.schema_version = 2;
+v2Request.one_use_authorization_sha256 = sha("f");
+v2Request.execution.environment_keys = ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET",
+  "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+  "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF"];
+v2Request.execution.provider_cleanup_policy = "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1";
+v2Request.execution.isolation = { mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+  project_ref: "producer-synthetic-project", origin: "https://producer-synthetic-project.supabase.co",
+  provisioning_receipt_sha256: sha("a"), schema_contract_sha256: sha("b"),
+  credential_bundle_path: `${execution.journal_directory}/isolated-credentials.json`,
+  credential_bundle_provenance_sha256: sha("c"), validation_run_id: RUN_ID,
+  expected_preview_project_id: execution.preview_project_id, expected_preview_team_id: execution.preview_team_id };
+const generateV2 = (overrides = {}) => createAdminV1OfficialAuthorizationRecord({
+  inspect_repository: async () => structuredClone(repository),
+  inspect_temporary_commit: async () => ({ commit_sha: execution.temporary_commit_sha,
+    parent_sha: HEAD, tree_sha: "e".repeat(40) }),
+  reviewed_policy: v2Policy, request: v2Request,
+  now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"), ...overrides,
+});
+const v2 = await generateV2();
+assert.equal(v2.schema_version, 2);
+assert.equal(Object.keys(v2).length, 19);
+assert.equal(Object.keys(v2.repository).length, 11);
+assert.equal(Object.keys(v2.execution).length, 13);
+assert.equal(Object.keys(v2.execution.isolation).length, 10);
+assert.equal(v2.isolation_contract_sha256, v2Policy.official_runtime.isolation_contract_sha256);
+const { one_use_authorization_sha256: ignored, ...unsigned } = v2;
+assert.equal(v2.one_use_authorization_sha256, sha256Hex(canonicalJson({
+  domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...unsigned,
+})));
+assert.notEqual(v2.one_use_authorization_sha256, v2Request.one_use_authorization_sha256);
+for (const mutate of [
+  (record) => { record.schema_version = 3; },
+  (record) => { delete record.execution.isolation; },
+  (record) => { record.execution.extra = true; },
+  (record) => { record.execution.isolation.origin = "https://other-project.supabase.co"; },
+]) {
+  const invalid = structuredClone(v2Request); mutate(invalid);
+  await assert.rejects(generateV2({ request: invalid }));
+}
+const unreviewedPolicy = structuredClone(v2Policy);
+unreviewedPolicy.official_runtime.isolation_contract_sha256 = sha("f");
+await assert.rejects(generateV2({ reviewed_policy: unreviewedPolicy }));
+console.log("PASS_ADMIN_V1_OFFICIAL_AUTHORIZATION_GENERATOR assertions=21 v1_preserved=true v2_complete=true published_head_bound=true moved_head_rejected=true live_records_created=0");

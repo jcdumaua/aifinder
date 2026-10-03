@@ -10,10 +10,12 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
+import { createAdminV1OfficialAuthorizationRecord } from "./admin-v1-official-authorization.mjs";
 import {
   OFFICIAL_ISOLATION_MODE,
   OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
   OFFICIAL_PROVIDER_RETENTION,
+  ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256,
 } from "./admin-v1-official-isolation.mjs";
 import {
   createConcreteRunnerDependencies,
@@ -25,6 +27,7 @@ import {
 import {
   ADMIN_V1_OFFICIAL_ACTION_COSTS,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
 } from "./admin-v1-official-runtime.mjs";
 
 let assertions = 0;
@@ -71,25 +74,60 @@ const isolationBinding = {
   expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
   expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
 };
-const isolatedAuthorization = {
+const publishedHead = "e".repeat(40);
+const observedRepository = {
+  root: "/Users/jamescarlodumaua/aifinder", branch: "main", head: publishedHead,
+  origin_main: publishedHead, remote_main: publishedHead, ahead: 0, behind: 0,
+  index_empty: true, worktree_count: 1, status_sha256: "a".repeat(64), remote_repository: "jcdumaua/aifinder",
+};
+const reviewedPolicy = {
+  candidate: { candidate_identity_sha256: "2".repeat(64), manifest_sha256: "3".repeat(64) },
+  compatibility_support_sha256: Object.fromEntries([
+    "testing/admin-v1-staging-runtime-orchestrator.mjs", "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+    "testing/run-static-readiness.mjs", "testing/static-test-safety-manifest.json",
+  ].map((name) => [name, "4".repeat(64)])),
+  official_runtime: { operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+    authorization_schema_sha256: "5".repeat(64), isolation_contract_sha256: ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256,
+    route_source_sha256: Object.fromEntries([
+      "app/api/admin/csrf/route.ts", "app/api/admin/login/route.ts", "app/api/admin/logout/route.ts",
+      "app/api/admin/session/route.ts", "app/api/admin/submissions/route.ts", "app/api/admin/tools/route.ts",
+      "app/api/admin/upload-logo/route.ts", "lib/admin-v1-launch-scope.ts", "proxy.ts",
+    ].map((name) => [name, "6".repeat(64)])),
+    contract_sha256: structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256),
+    repository_contract: { root: observedRepository.root, branch: "main", remote_repository: "jcdumaua/aifinder",
+      head_binding: "AUTHORIZATION_PUBLISHED_HEAD", origin_main_binding: "SAME_AS_HEAD",
+      remote_main_binding: "SAME_AS_HEAD", status_binding: "AUTHORIZATION_STATUS_SHA256" },
+  },
+};
+const isolatedRequest = {
   schema_version: 2,
-  operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  published_head: publishedHead,
   authorization_id_sha256: "1".repeat(64),
-  candidate_identity_sha256: "2".repeat(64),
-  manifest_sha256: "3".repeat(64),
+  review_approval_sha256: "7".repeat(64), supervisor_sha256: "8".repeat(64), supervisor_policy_sha256: "9".repeat(64),
   run_id: runId,
   created_at: new Date(Date.now() - 60_000).toISOString(),
   expires_at: new Date(Date.now() + 600_000).toISOString(),
-  repository: { root: realpathSync(".") },
   execution: {
+    access_mode: "SELF_PROJECT_OIDC", branch_name: `aifinder-admin-v1-official-${runId}`,
     journal_directory: contextRoot,
     environment_keys: [...OFFICIAL_PREVIEW_ENVIRONMENT_KEYS],
     provider_cleanup_policy: OFFICIAL_PROVIDER_RETENTION,
     preview_project_id: isolationBinding.expected_preview_project_id,
+    preview_project_name: "aifinder", preview_team_slug: "ai-finder-s-projects",
     preview_team_id: isolationBinding.expected_preview_team_id,
+    storage_bucket: "tool-logos", storage_name: `admin/${runId}.png`, temporary_commit_sha: "d".repeat(40),
     isolation: structuredClone(isolationBinding),
   },
 };
+const isolatedAuthorization = await createAdminV1OfficialAuthorizationRecord({
+  inspect_repository: async () => structuredClone(observedRepository),
+  inspect_temporary_commit: async () => ({ commit_sha: isolatedRequest.execution.temporary_commit_sha,
+    parent_sha: publishedHead, tree_sha: "f".repeat(40) }),
+  reviewed_policy: reviewedPolicy, request: isolatedRequest, now_epoch_ms: Date.now(),
+});
+check.equal(Object.keys(isolatedAuthorization).length, 19);
+check.equal(Object.keys(isolatedAuthorization.execution).length, 13);
+check.equal(Object.keys(isolatedAuthorization.execution.isolation).length, 10);
 function isolatedBundle() {
   return {
     schema_version: 1, run_id: runId,
@@ -290,7 +328,7 @@ try {
     candidate_identity_sha256: "2".repeat(64),
     manifest_sha256: "3".repeat(64),
     run_id: "66666666-6666-4666-8666-666666666666",
-    repository: { root: realpathSync(".") },
+    repository: { root: observedRepository.root },
     execution: { journal_directory: genericContextRoot },
   };
   const genericDependencies = createConcreteRunnerDependencies({

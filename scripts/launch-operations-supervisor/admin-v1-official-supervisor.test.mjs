@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   validateOfficialAuthorizationForSupervisor,
 } from "./nonproduction-qualification-supervisor.mjs";
@@ -181,6 +182,122 @@ assert.throws(
   ),
   (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID",
 );
+
+const v2CanonicalJson = (value) => {
+  if (Array.isArray(value)) return `[${value.map(v2CanonicalJson).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.keys(value)
+    .sort((left, right) => left.localeCompare(right, "en"))
+    .map((key) => `${JSON.stringify(key)}:${v2CanonicalJson(value[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+};
+const v2Sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const V2_ISOLATION_CONTRACT = {
+  schema_version: 1,
+  operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+  provider_cleanup_policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1",
+  origin_relation: "HTTPS_PROJECT_REF_DOT_SUPABASE_DOT_CO_V1",
+  allow_custom_origin: false,
+  excluded_project_ref: "mtpisopvdxuvmpzbzqjw",
+  excluded_origin: "https://mtpisopvdxuvmpzbzqjw.supabase.co",
+  environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+    "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF"],
+  credential_bundle_schema_version: 1,
+  credential_bundle_provenance_source: "OWNER_BOUND_ISOLATED_BUNDLE_V1",
+  credential_value_names: ["admin_password", "admin_session_secret", "github_token",
+    "supabase_anon_key", "supabase_service_role_key", "supabase_url", "vercel_token"],
+  credential_value_max_bytes: 16384,
+  provisioning_receipt_schema_version: 1,
+  provenance_receipt_schema_version: 1,
+  expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+  expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+};
+function oneUseV2(value) {
+  const { one_use_authorization_sha256: ignored, ...fields } = value;
+  void ignored;
+  return v2Sha256(v2CanonicalJson({
+    domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...fields,
+  }));
+}
+function v2Authorization() {
+  const value = authorization();
+  value.schema_version = 2;
+  value.isolation_contract_sha256 = v2Sha256(v2CanonicalJson(V2_ISOLATION_CONTRACT));
+  value.execution.environment_keys = [...V2_ISOLATION_CONTRACT.environment_keys];
+  value.execution.provider_cleanup_policy = V2_ISOLATION_CONTRACT.provider_cleanup_policy;
+  value.execution.isolation = {
+    mode: V2_ISOLATION_CONTRACT.mode,
+    project_ref: "offline-pr4-v2",
+    origin: "https://offline-pr4-v2.supabase.co",
+    provisioning_receipt_sha256: sha("1"),
+    schema_contract_sha256: sha("2"),
+    credential_bundle_path: `${value.execution.journal_directory}/isolated-credentials.json`,
+    credential_bundle_provenance_sha256: sha("3"),
+    validation_run_id: value.run_id,
+    expected_preview_project_id: value.execution.preview_project_id,
+    expected_preview_team_id: value.execution.preview_team_id,
+  };
+  value.one_use_authorization_sha256 = oneUseV2(value);
+  return value;
+}
+const v2Policy = policy();
+v2Policy.official_runtime.isolation_contract_sha256 =
+  v2Sha256(v2CanonicalJson(V2_ISOLATION_CONTRACT));
+assert.equal(validateOfficialAuthorizationForSupervisor(
+  v2Authorization(), v2Policy, Date.parse("2026-08-21T12:00:00.000Z"),
+).schema_version, 2, "COMPLETE_CLOSED_V2_PREIMPORT_ACCEPTED");
+let v2Negatives = 0;
+function rejectV2(change, policyChange = () => {}) {
+  const value = v2Authorization(); const reviewed = structuredClone(v2Policy);
+  change(value); policyChange(reviewed);
+  // Refresh the semantic digest so structural/binding negatives test the actual admission.
+  if (value.one_use_authorization_sha256 !== sha("f")) {
+    value.one_use_authorization_sha256 = oneUseV2(value);
+  }
+  assert.throws(() => validateOfficialAuthorizationForSupervisor(
+    value, reviewed, Date.parse("2026-08-21T12:00:00.000Z"),
+  ), (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID");
+  v2Negatives++;
+}
+for (const field of ["isolation_contract_sha256", "supervisor_sha256",
+  "supervisor_policy_sha256", "authorization_schema_sha256", "candidate_identity_sha256",
+  "manifest_sha256", "compatibility_support_sha256", "route_source_sha256", "contract_sha256"]) {
+  rejectV2((value) => { delete value[field]; });
+}
+rejectV2((value) => { value.extra = true; });
+rejectV2((value) => { value.repository.extra = true; });
+rejectV2((value) => { value.execution.extra = true; });
+rejectV2((value) => { value.execution.isolation.extra = true; });
+rejectV2((value) => { value.schema_version = 1; });
+rejectV2((value) => { value.execution = authorization().execution; });
+rejectV2((value) => { value.authorization_schema_sha256 = sha("f"); });
+rejectV2((value) => { value.isolation_contract_sha256 = sha("f"); });
+rejectV2((value) => { value.contract_sha256.budgets = sha("f"); });
+rejectV2((value) => { value.candidate_identity_sha256 = sha("f"); });
+rejectV2((value) => { value.manifest_sha256 = sha("f"); });
+rejectV2((value) => { value.compatibility_support_sha256[SUPPORT_PATHS[0]] = sha("f"); });
+rejectV2((value) => { value.route_source_sha256[ROUTE_PATHS[0]] = sha("f"); });
+rejectV2((value) => { value.repository.root = "/private/tmp/aifinder"; });
+rejectV2((value) => { value.repository.remote_main = "f".repeat(40); });
+rejectV2((value) => { value.one_use_authorization_sha256 = sha("f"); });
+rejectV2((value) => { value.created_at = "2026-08-21T12:00:00Z"; });
+rejectV2((value) => { value.execution.isolation.origin = "https://other.supabase.co"; });
+rejectV2((value) => { value.execution.isolation.origin = V2_ISOLATION_CONTRACT.excluded_origin; });
+rejectV2((value) => {
+  value.execution.isolation.project_ref = V2_ISOLATION_CONTRACT.excluded_project_ref;
+  value.execution.isolation.origin = V2_ISOLATION_CONTRACT.excluded_origin;
+});
+rejectV2((value) => { value.execution.isolation.origin += "/"; });
+rejectV2((value) => { value.execution.isolation.project_ref = "A"; });
+rejectV2((value) => { value.execution.isolation.validation_run_id = "0".repeat(36); });
+rejectV2((value) => { value.execution.provider_cleanup_policy = "DELETE"; });
+rejectV2((value) => { value.execution.environment_keys.reverse(); });
+rejectV2((value) => { value.execution.branch_name += "-other"; });
+rejectV2((value) => { value.execution.journal_directory += "-other"; });
+rejectV2((value) => { value.execution.storage_name = "admin/other.png"; });
+rejectV2((value) => { value.execution.temporary_commit_sha = sha("f"); });
+process.stdout.write(`PASS_PR4_V2_PREIMPORT closed19=true repository11=true execution13=true isolation10=true negatives=${v2Negatives} real_effects=0\n`);
 
 process.stdout.write(
   "PASS_ADMIN_V1_OFFICIAL_SUPERVISOR assertions=7 current_baseline=true exact_class=true pre_import_node_primitives_only=true failures=0 internal_failures=0\n",

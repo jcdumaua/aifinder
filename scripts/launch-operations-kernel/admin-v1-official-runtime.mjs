@@ -16,7 +16,12 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
-import { validateOfficialIsolationAuthorization } from "./admin-v1-official-isolation.mjs";
+import {
+  ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256,
+  OFFICIAL_ISOLATION_KEYS,
+  OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  validateOfficialIsolationAuthorization,
+} from "./admin-v1-official-isolation.mjs";
 
 export const ADMIN_V1_OFFICIAL_OPERATION_CLASS =
   "ADMIN_V1_OFFICIAL_RUNTIME_V1";
@@ -256,6 +261,8 @@ const EXECUTION_KEYS = Object.freeze([
   "preview_project_name", "preview_team_id", "preview_team_slug",
   "storage_bucket", "storage_name", "temporary_commit_sha", "environment_keys",
 ]);
+const V2_AUTHORIZATION_KEYS = Object.freeze([...AUTHORIZATION_KEYS, "isolation_contract_sha256"]);
+const V2_EXECUTION_KEYS = Object.freeze([...EXECUTION_KEYS, "provider_cleanup_policy", "isolation"]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
@@ -381,10 +388,20 @@ function deepFreeze(value) {
   return Object.freeze(value);
 }
 
-export function validateAdminV1OfficialAuthorization(
+function validatedAuthorizationFields(
   record,
   { now_epoch_ms = Date.now() } = {},
 ) {
+  const isolated = record?.schema_version === 2;
+  if (isolated && (!exactKeys(record, V2_AUTHORIZATION_KEYS) ||
+      !exactKeys(record.repository, REPOSITORY_KEYS) ||
+      !exactKeys(record.execution, V2_EXECUTION_KEYS) ||
+      !exactKeys(record.execution?.isolation, OFFICIAL_ISOLATION_KEYS) ||
+      !exactKeys(record.compatibility_support_sha256, SUPPORT_PATHS) ||
+      !exactKeys(record.route_source_sha256, ROUTE_IDENTITY_PATHS) ||
+      !exactKeys(record.contract_sha256, CONTRACT_DIGEST_KEYS))) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
+  }
   let value;
   try {
     value = structuredClone(record);
@@ -397,8 +414,8 @@ export function validateAdminV1OfficialAuthorization(
   const execution = value?.execution;
   if (
     !Number.isSafeInteger(now_epoch_ms) ||
-    !exactKeys(value, AUTHORIZATION_KEYS) ||
-    value.schema_version !== 1 ||
+    !exactKeys(value, isolated ? V2_AUTHORIZATION_KEYS : AUTHORIZATION_KEYS) ||
+    value.schema_version !== (isolated ? 2 : 1) ||
     value.operation_class !== ADMIN_V1_OFFICIAL_OPERATION_CLASS ||
     ![
       value.authorization_id_sha256,
@@ -421,7 +438,7 @@ export function validateAdminV1OfficialAuthorization(
     !UUID_PATTERN.test(value.run_id ?? "") ||
     !exactKeys(repository, REPOSITORY_KEYS) ||
     !path.isAbsolute(repository.root) ||
-    realpathSync(repository.root) !== repository.root ||
+    isolated && repository.root !== "/Users/jamescarlodumaua/aifinder" ||
     repository.branch !== "main" ||
     !/^[0-9a-f]{40}$/u.test(repository.head ?? "") ||
     repository.origin_main !== repository.head ||
@@ -430,7 +447,7 @@ export function validateAdminV1OfficialAuthorization(
     repository.index_empty !== true || repository.worktree_count !== 1 ||
     !isSha256(repository.status_sha256) ||
     repository.remote_repository !== "jcdumaua/aifinder" ||
-    !exactKeys(execution, EXECUTION_KEYS) ||
+    !exactKeys(execution, isolated ? V2_EXECUTION_KEYS : EXECUTION_KEYS) ||
     execution.access_mode !== "SELF_PROJECT_OIDC" ||
     execution.branch_name !== `aifinder-admin-v1-official-${value.run_id}` ||
     execution.journal_directory !==
@@ -443,11 +460,50 @@ export function validateAdminV1OfficialAuthorization(
     execution.storage_name !== `admin/${value.run_id}.png` ||
     !/^[0-9a-f]{40}$/u.test(execution.temporary_commit_sha ?? "") ||
     canonicalJson(execution.environment_keys) !==
-      canonicalJson(["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"])
+      canonicalJson(isolated ? OFFICIAL_PREVIEW_ENVIRONMENT_KEYS : ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"])
   ) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
   }
+  if (isolated) {
+    try {
+      if (value.isolation_contract_sha256 !== ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256) {
+        throw new Error("V2_DIGEST");
+      }
+      validateOfficialIsolationAuthorization(value, now_epoch_ms);
+    } catch {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
+    }
+  }
+  return value;
+}
+
+export function validateAdminV1OfficialAuthorization(record, options = {}) {
+  const value = validatedAuthorizationFields(record, options);
+  if (
+    realpathSync(value.repository.root) !== value.repository.root ||
+    value.schema_version === 2 &&
+      value.one_use_authorization_sha256 !== adminV1OfficialOneUseAuthorizationDigest(value)
+  ) throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
   return deepFreeze(value);
+}
+
+export function adminV1OfficialOneUseAuthorizationDigest(record) {
+  if (record?.schema_version !== 2 || !exactKeys(record, V2_AUTHORIZATION_KEYS)) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
+  }
+  const value = validatedAuthorizationFields({
+    ...record,
+    one_use_authorization_sha256: "0".repeat(64),
+  }, {
+    now_epoch_ms: typeof record.created_at === "string"
+      ? Date.parse(record.created_at)
+      : Number.NaN,
+  });
+  const unsigned = { domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2" };
+  for (const key of V2_AUTHORIZATION_KEYS) {
+    if (key !== "one_use_authorization_sha256") unsigned[key] = value[key];
+  }
+  return sha256Hex(canonicalJson(unsigned));
 }
 
 function exactJournalDirectory(directory) {

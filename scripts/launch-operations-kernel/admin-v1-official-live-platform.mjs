@@ -7,6 +7,7 @@ import {
   ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   runAdminV1OfficialRuntime,
+  validateAdminV1OfficialAuthorization,
 } from "./admin-v1-official-runtime.mjs";
 import {
   createConcreteLiveTransport,
@@ -2173,6 +2174,7 @@ function loadIsolatedOfficialCredentials({
 }) {
   const sensitive = {};
   try {
+    authorization = validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms });
     if (canonicalJson(credential_source_policy) !==
       canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY) ||
       !exactIsolatedKeys(credential_bundle, [

@@ -421,6 +421,7 @@ function validatePolicy(policy, repositoryRoot) {
         "operation_class",
         "authorization_schema_path",
         "authorization_schema_sha256",
+        "isolation_contract_sha256",
         "contract_sha256",
         "credential_source_policy",
         "route_source_sha256",
@@ -431,6 +432,7 @@ function validatePolicy(policy, repositoryRoot) {
       ["SCHEMA_PATH", official.authorization_schema_path ===
         OFFICIAL_AUTHORIZATION_SCHEMA_PATH],
       ["SCHEMA_SHA", isSha256(official.authorization_schema_sha256)],
+      ["ISOLATION_SHA", isSha256(official.isolation_contract_sha256)],
       ["CONTRACT_KEYS", exactKeys(
         official.contract_sha256,
         OFFICIAL_CONTRACT_DIGEST_KEYS,
@@ -573,8 +575,38 @@ function validateAuthorization(authorization, policy, nowEpochMs) {
   return authorization;
 }
 
-function exactOfficialExecution(value, runId) {
-  return exactKeys(value, [
+function exactOfficialIsolation(value, execution, runId) {
+  if (!exactKeys(value, [
+    "mode", "project_ref", "origin", "provisioning_receipt_sha256",
+    "schema_contract_sha256", "credential_bundle_path",
+    "credential_bundle_provenance_sha256", "validation_run_id",
+    "expected_preview_project_id", "expected_preview_team_id",
+  ]) || value.mode !== "NEW_EMPTY_TEST_ONLY_PROJECT_V1" ||
+    typeof value.project_ref !== "string" || value.project_ref.length > 256 ||
+    !/^[a-z0-9-]+$/u.test(value.project_ref) ||
+    value.project_ref === "mtpisopvdxuvmpzbzqjw" ||
+    value.origin !== `https://${value.project_ref}.supabase.co` ||
+    value.origin === "https://mtpisopvdxuvmpzbzqjw.supabase.co" ||
+    value.validation_run_id !== runId ||
+    value.expected_preview_project_id !== execution.preview_project_id ||
+    value.expected_preview_team_id !== execution.preview_team_id ||
+    value.credential_bundle_path !==
+      `${execution.journal_directory}/isolated-credentials.json` ||
+    ![value.provisioning_receipt_sha256, value.schema_contract_sha256,
+      value.credential_bundle_provenance_sha256].every(isSha256)) return false;
+  try {
+    const origin = new URL(value.origin);
+    return origin.protocol === "https:" && origin.origin === value.origin &&
+      origin.username === "" && origin.password === "" && origin.pathname === "/" &&
+      origin.search === "" && origin.hash === "";
+  } catch {
+    return false;
+  }
+}
+
+function exactOfficialExecution(value, runId, schemaVersion = 1) {
+  const v2 = schemaVersion === 2;
+  const keys = [
     "access_mode",
     "branch_name",
     "journal_directory",
@@ -586,7 +618,9 @@ function exactOfficialExecution(value, runId) {
     "storage_name",
     "temporary_commit_sha",
     "environment_keys",
-  ]) &&
+  ];
+  if (v2) keys.push("provider_cleanup_policy", "isolation");
+  return exactKeys(value, keys) &&
     value.access_mode === "SELF_PROJECT_OIDC" &&
     value.branch_name === `aifinder-admin-v1-official-${runId}` &&
     value.journal_directory ===
@@ -598,10 +632,17 @@ function exactOfficialExecution(value, runId) {
     value.storage_bucket === "tool-logos" &&
     value.storage_name === `admin/${runId}.png` &&
     /^[0-9a-f]{40}$/u.test(value.temporary_commit_sha ?? "") &&
-    exactObject(value.environment_keys, [
+    exactObject(value.environment_keys, v2 ? [
+      "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+      "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
+    ] : [
       "ADMIN_PASSWORD",
       "ADMIN_SESSION_SECRET",
-    ]);
+    ]) && (!v2 || (
+      value.provider_cleanup_policy === "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" &&
+      exactOfficialIsolation(value.isolation, value, runId)
+    ));
 }
 
 export function validateOfficialAuthorizationForSupervisor(
@@ -614,29 +655,20 @@ export function validateOfficialAuthorizationForSupervisor(
   const created = Date.parse(authorization?.created_at);
   const expires = Date.parse(authorization?.expires_at);
   const official = policy?.official_runtime;
+  const v2 = authorization?.schema_version === 2;
+  const keys = [
+    "schema_version", "operation_class", "authorization_id_sha256",
+    "one_use_authorization_sha256", "review_approval_sha256",
+    "candidate_identity_sha256", "manifest_sha256", "supervisor_sha256",
+    "supervisor_policy_sha256", "authorization_schema_sha256",
+    "compatibility_support_sha256", "route_source_sha256", "contract_sha256",
+    "created_at", "expires_at", "run_id", "repository", "execution",
+  ];
+  if (v2) keys.push("isolation_contract_sha256");
   if (
     !Number.isSafeInteger(nowEpochMs) ||
-    !exactKeys(authorization, [
-      "schema_version",
-      "operation_class",
-      "authorization_id_sha256",
-      "one_use_authorization_sha256",
-      "review_approval_sha256",
-      "candidate_identity_sha256",
-      "manifest_sha256",
-      "supervisor_sha256",
-      "supervisor_policy_sha256",
-      "authorization_schema_sha256",
-      "compatibility_support_sha256",
-      "route_source_sha256",
-      "contract_sha256",
-      "created_at",
-      "expires_at",
-      "run_id",
-      "repository",
-      "execution",
-    ]) ||
-    authorization.schema_version !== 1 ||
+    !exactKeys(authorization, keys) ||
+    (authorization.schema_version !== 1 && !v2) ||
     authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
     ![
       authorization.authorization_id_sha256,
@@ -644,6 +676,9 @@ export function validateOfficialAuthorizationForSupervisor(
       authorization.review_approval_sha256,
       authorization.supervisor_sha256,
       authorization.supervisor_policy_sha256,
+      authorization.candidate_identity_sha256,
+      authorization.manifest_sha256,
+      authorization.authorization_schema_sha256,
     ].every(isSha256) ||
     authorization.candidate_identity_sha256 !==
       policy?.candidate?.candidate_identity_sha256 ||
@@ -660,6 +695,8 @@ export function validateOfficialAuthorizationForSupervisor(
     ) ||
     !exactObject(authorization.contract_sha256, official?.contract_sha256) ||
     !Number.isFinite(created) || !Number.isFinite(expires) ||
+    (v2 && (new Date(created).toISOString() !== authorization.created_at ||
+      new Date(expires).toISOString() !== authorization.expires_at)) ||
     created > nowEpochMs || nowEpochMs >= expires || expires <= created ||
     expires - created > 24 * 60 * 60 * 1000 ||
     !runIdPattern.test(authorization.run_id ?? "") ||
@@ -669,8 +706,17 @@ export function validateOfficialAuthorizationForSupervisor(
       official?.repository_contract,
       authorization.repository.root,
     ) ||
-    !exactOfficialExecution(authorization.execution, authorization.run_id)
+    !exactOfficialExecution(authorization.execution, authorization.run_id, authorization.schema_version) ||
+    (v2 && (authorization.repository.root !== REPOSITORY_ROOT ||
+      !isSha256(authorization.isolation_contract_sha256) ||
+      authorization.isolation_contract_sha256 !== official?.isolation_contract_sha256))
   ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  if (v2) {
+    const { one_use_authorization_sha256: oneUseDigest, ...fields } = authorization;
+    if (oneUseDigest !== sha256(canonicalJson({
+      domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...fields,
+    }))) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
   return authorization;
 }
 
@@ -925,6 +971,50 @@ export function inspectPreImportRepository(
   };
 }
 
+export function verifyOfficialRunUnspentBeforeImport(
+  authorization,
+  filesystem = { lstatSync, realpathSync },
+) {
+  const directory = authorization?.execution?.journal_directory;
+  if (
+    authorization?.schema_version !== 2 ||
+    authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+    typeof authorization.run_id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(authorization.run_id) ||
+    directory !== `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${authorization.run_id}`
+  ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  let metadata;
+  try {
+    metadata = filesystem.lstatSync(directory);
+  } catch (error) {
+    if (error?.code === "ENOENT") return Object.freeze({ status: "ABSENT" });
+    throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
+  try {
+    if (
+      !metadata.isDirectory() || metadata.isSymbolicLink() ||
+      (metadata.mode & 0o777) !== 0o700 ||
+      filesystem.realpathSync(directory) !== directory
+    ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  } catch {
+    throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
+  for (const name of [
+    "admin-v1-official-runtime-journal.json",
+    "admin-v1-official-runtime-retired.json",
+  ]) {
+    try {
+      filesystem.lstatSync(path.join(directory, name));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+    }
+    throw new PreImportSupervisorError("OFFICIAL_AUTHORIZATION_SPENT");
+  }
+  return Object.freeze({ status: "ABSENT" });
+}
+
 export function verifyPreImportSupervisorTrust({
   authorization_path,
   repository_root = REPOSITORY_ROOT,
@@ -980,6 +1070,9 @@ export function verifyPreImportSupervisorTrust({
     authorization.supervisor_sha256 !== sha256(supervisorBytes) ||
     authorization.supervisor_policy_sha256 !== sha256(policyBytes)
   ) throw new PreImportSupervisorError("SUPERVISOR_IDENTITY_MISMATCH");
+  if (officialMode && authorization.schema_version === 2) {
+    verifyOfficialRunUnspentBeforeImport(authorization);
+  }
   const manifest = verifyCandidate(repository_root, policy);
   verifySupportsAndPins(repository_root, policy);
   if (officialMode) {

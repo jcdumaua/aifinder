@@ -352,6 +352,7 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ])],
   [OFFICIAL_AUTHORIZATION_PATH, new Set(["node:fs", "node:path"])],
   [OFFICIAL_AUTHORIZATION_TEST_PATH, new Set(["node:assert/strict"])],
+  [OFFICIAL_LIVE_PLATFORM_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_CONCRETE_BRIDGE_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_RUNNER_TEST_PATH, new Set(["node:assert/strict"])],
   [
@@ -454,7 +455,7 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ],
   [
     "scripts/launch-operations-kernel/source-policy.test.mjs",
-    new Set(["node:assert/strict", "node:crypto", "node:fs", "node:path"]),
+    new Set(["node:assert/strict", "node:child_process", "node:crypto", "node:fs", "node:os", "node:path"]),
   ],
 ]);
 const requireDependency = createRequire(import.meta.url);
@@ -952,19 +953,36 @@ function sourceSyntaxFacts(relativePath, source) {
     transportStart >= 0 && transportEndMarker > transportStart &&
     source.lastIndexOf(transportBegin) === transportStart &&
     source.lastIndexOf(transportEnd) === transportEndMarker &&
-    transportRegion.length === 9484 && /^[\x00-\x7f]*$/u.test(transportRegion) &&
+    transportRegion.length === 10641 && /^[\x00-\x7f]*$/u.test(transportRegion) &&
     sha256Hex(transportRegion) ===
-      "cc59d35e48ebabea06e734125753df15fea72be05f23d77eb4910fd4a43c27c2"
+      "936839731b7fc4c57cd1ac7fdc7135da378c5eee814528e64092c73c19f49147"
     ? { start: transportStart, finish: transportFinish }
     : null;
   const reviewedTransportNode = (node) => reviewedTransportRange !== null &&
     node.pos >= reviewedTransportRange.start &&
     node.end <= reviewedTransportRange.finish;
+  const transportTestBegin = "// BEGIN PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+  const transportTestEnd = "// END PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+  const transportTestStart = source.indexOf(transportTestBegin);
+  const transportTestEndMarker = source.indexOf(transportTestEnd);
+  const transportTestFinish = transportTestEndMarker + transportTestEnd.length;
+  const transportTestRegion = source.slice(transportTestStart, transportTestFinish);
+  const reviewedTransportTestRange = relativePath ===
+    "scripts/launch-operations-kernel/source-policy.test.mjs" &&
+    transportTestStart >= 0 && transportTestEndMarker > transportTestStart &&
+    source.lastIndexOf(transportTestBegin) === transportTestStart &&
+    source.lastIndexOf(transportTestEnd) === transportTestEndMarker &&
+    transportTestRegion.length === 10378 && /^[\x00-\x7f]*$/u.test(transportTestRegion) &&
+    sha256Hex(transportTestRegion) ===
+      "a02c5479514e93aafb7a1911d980cfffbf9089d0040cdabb6f048e5caeb16593"
+    ? { start: transportTestStart, finish: transportTestFinish } : null;
+  const reviewedTransportTestNode = (node) => reviewedTransportTestRange !== null &&
+    node.pos >= reviewedTransportTestRange.start && node.end <= reviewedTransportTestRange.finish;
   const reviewedIsolationDescriptorGuard =
     relativePath ===
       "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs" &&
     sha256Hex(source) ===
-      "9d286bd0ebcd1ede65e50847c1616e612bb8afa3638793725f3cd16a0d341a31";
+      "a604bc555cb8b14dca4858f2e2d29b1975539df45f5bd375c3c814447b9a04a7";
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -999,18 +1017,45 @@ function sourceSyntaxFacts(relativePath, source) {
       exactBrokerNativeFsImports.push({ declaration: statement, binding: bindings.name });
     }
   }
-  // The fixed region contains exactly three defaults using this binding.
+  // The fixed region contains three defaults and one native-admission guard.
   // Every other identifier occurrence invalidates the single import attestation;
   // all nodes still undergo the ordinary capability walk below.
   const reviewedBrokerNativeFsImport = reviewedTransportRange !== null &&
-    exactBrokerNativeFsImports.length === 1 && brokerNativeFsIdentifiers.length === 4 &&
+    exactBrokerNativeFsImports.length === 1 && brokerNativeFsIdentifiers.length === 5 &&
     brokerNativeFsIdentifiers.every((node) =>
       node === exactBrokerNativeFsImports[0].binding || reviewedTransportNode(node))
     ? exactBrokerNativeFsImports[0].declaration
     : null;
+  const transportTestImports = new Map([
+    ["node:child_process", 'import { spawn, spawnSync } from "node:child_process";'],
+    ["node:fs", 'import { closeSync, constants, mkdtempSync, openSync, readFileSync, rmSync, writeSync } from "node:fs";'],
+    ["node:os", 'import { tmpdir } from "node:os";'],
+  ]);
+  const transportTestImportedBindings = new Set([
+    "spawn", "spawnSync", "closeSync", "constants", "mkdtempSync", "openSync", "rmSync", "writeSync", "tmpdir",
+  ]);
+  const transportTestImportNodes = new Set();
+  let transportTestImportsValid = reviewedTransportTestRange !== null;
+  if (transportTestImportsValid) {
+    for (const [specifier, text] of transportTestImports) {
+      const matches = sourceFile.statements.filter((statement) => ts.isImportDeclaration(statement) &&
+        ts.isStringLiteralLike(statement.moduleSpecifier) && statement.moduleSpecifier.text === specifier);
+      if (matches.length !== 1 || matches[0].getText(sourceFile) !== text) transportTestImportsValid = false;
+      else transportTestImportNodes.add(matches[0]);
+    }
+    function confineTransportTestImports(node) {
+      if (ts.isIdentifier(node) && transportTestImportedBindings.has(node.text) && !reviewedTransportTestNode(node)) {
+        const owner = node.parent;
+        if (!ts.isImportSpecifier(owner) || !transportTestImportNodes.has(owner.parent.parent.parent)) transportTestImportsValid = false;
+      }
+      ts.forEachChild(node, confineTransportTestImports);
+    }
+    for (const statement of sourceFile.statements) confineTransportTestImports(statement);
+  }
   const moduleSpecifiers = [];
   let computedDynamicImport = false;
   let runtimeCodeConstruction = false;
+  if (reviewedTransportTestRange !== null && !transportTestImportsValid) runtimeCodeConstruction = true;
   let filesystemMutation = false;
   let network = false;
   let environment = false;
@@ -1451,6 +1496,7 @@ function sourceSyntaxFacts(relativePath, source) {
       "isFunctionDeclaration",
       "isIdentifier",
       "isImportDeclaration",
+      "isImportSpecifier",
       "isIfStatement",
       "isMetaProperty",
       "isNamedImports",
@@ -2148,6 +2194,14 @@ function sourceSyntaxFacts(relativePath, source) {
         if (!reviewedTransportNode(parent)) environment = true;
       } else if (directMember === "hrtime" && reviewedTransportNode(parent)) {
         // The exact region uses only bounded monotonic deadline bookkeeping.
+      } else if (directMember === "binding" && reviewedTransportNode(parent) &&
+        ts.isCallExpression(parent.parent) && parent.parent.expression === parent &&
+        parent.parent.arguments.length === 1 &&
+        stringValue(parent.parent.arguments[0]) === "pipe_wrap") {
+        // Exact pinned code opens only validated FIFO descriptors 3/4 and sets
+        // nonblocking status. No general native binding or process exemption.
+      } else if (["execPath", "platform", "kill"].includes(directMember) && reviewedTransportTestNode(parent) && transportTestImportsValid) {
+        // Exact reviewed finite test children only; production receives no allowance.
       } else if (
         directMember === null ||
         !exactReviewedProcessUse(node, parent, directMember)
@@ -2242,7 +2296,7 @@ function sourceSyntaxFacts(relativePath, source) {
         ) {
           filesystemMutation = true;
         } else if (ts.isNamedImports(bindings)) {
-          if (bindings.elements.some((element) =>
+          if (!(transportTestImportsValid && transportTestImportNodes.has(node)) && bindings.elements.some((element) =>
             fsMutationSet.has((element.propertyName ?? element.name).text)
           )) {
             filesystemMutation = true;
@@ -2262,7 +2316,10 @@ function sourceSyntaxFacts(relativePath, source) {
         const specifier = node.arguments.length >= 1
           ? stringValue(node.arguments[0])
           : null;
-        if (specifier === null) {
+        if (specifier === null && reviewedTransportTestNode(node) && transportTestImportsValid) {
+          // Pinned test code hard-checks reviewed client bytes before evaluating
+          // its fixed data module. Arbitrary supplied source receives no allowance.
+        } else if (specifier === null) {
           computedDynamicImport = true;
         } else {
           recordModule(specifier);
@@ -2299,7 +2356,15 @@ function sourceSyntaxFacts(relativePath, source) {
             ? constantStringValue(node.expression.argumentExpression)
           : null;
       if (calledName !== null && fsMutationSet.has(calledName) &&
-          !(calledName === "writeSync" && reviewedTransportNode(node))) {
+          !(calledName === "writeSync" && reviewedTransportNode(node)) &&
+          !(reviewedTransportTestNode(node) && transportTestImportsValid &&
+            ["mkdtempSync", "openSync", "writeSync", "rmSync"].includes(calledName)) &&
+          !(calledName === "open" && reviewedTransportNode(node) &&
+            ts.isPropertyAccessExpression(node.expression) &&
+            ts.isIdentifier(node.expression.expression) &&
+            node.expression.expression.text === "handle" &&
+            node.arguments.length === 1 && ts.isIdentifier(node.arguments[0]) &&
+            node.arguments[0].text === "fd")) {
         filesystemMutation = true;
       }
       if (
@@ -2647,6 +2712,14 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
     /["']--force(?:-with-lease)?["']/u.test(source);
   if (capabilities.other_forbidden_module || capabilities.legacy_import) {
     return false;
+  }
+  if (relativePath === "scripts/launch-operations-kernel/source-policy.test.mjs") {
+    const begin = "// BEGIN PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+    const end = "// END PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+    const start = source.indexOf(begin), finish = source.indexOf(end) + end.length;
+    return capabilities.child_process && !capabilities.filesystem_mutation &&
+      !capabilities.network && !capabilities.environment && start >= 0 && finish > start &&
+      sha256Hex(source.slice(start, finish)) === "a02c5479514e93aafb7a1911d980cfffbf9089d0040cdabb6f048e5caeb16593";
   }
   if (relativePath === CONCRETE_RUNNER_PATH) {
     return (

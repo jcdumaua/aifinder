@@ -373,15 +373,15 @@ function canonicalReviewedBytes(
   const isolationMembers = [
     {
       path: "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
-      bytes: 7995,
-      sha256: "9d286bd0ebcd1ede65e50847c1616e612bb8afa3638793725f3cd16a0d341a31",
+      bytes: 9484,
+      sha256: "a604bc555cb8b14dca4858f2e2d29b1975539df45f5bd375c3c814447b9a04a7",
       role: "SOURCE",
       surface: "runtime",
     },
     {
       path: "scripts/launch-operations-kernel/admin-v1-official-isolation.d.mts",
-      bytes: 1348,
-      sha256: "3d8307854285f405e1e15ebaeb4a4d322b7e4c0ed5240ab1c85611e22dbb6399",
+      bytes: 2388,
+      sha256: "740673a3696059292e76135686acfa264a937001c49447f2843d0443f1857838",
       role: "SCHEMA",
       surface: "evidence",
     },

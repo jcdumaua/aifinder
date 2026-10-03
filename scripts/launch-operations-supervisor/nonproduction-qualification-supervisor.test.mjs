@@ -910,6 +910,7 @@ await check("Official class is verified before the same post-trust runner import
       operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
       authorization_schema_path: schemaPath,
       authorization_schema_sha256: sha256(readFileSync(path.join(test.root, schemaPath))),
+      isolation_contract_sha256: "700cf951450811b04a2e1ed43625fe326b74b3e329ea877548dc0d2dad3071fe",
       contract_sha256: Object.fromEntries(contractKeys.map((entry) => [entry, sha("5")])),
       credential_source_policy: officialCredentialPolicy,
       route_source_sha256: Object.fromEntries(routePaths.map((relativePath) => [

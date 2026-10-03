@@ -17,6 +17,29 @@ export const OFFICIAL_ISOLATION_KEYS = Object.freeze([
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const HASH = /^[0-9a-f]{64}$/u;
 const EXCLUDED_REF = "mtpisopvdxuvmpzbzqjw";
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1 = Object.freeze({
+  schema_version: 1,
+  operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  mode: OFFICIAL_ISOLATION_MODE,
+  provider_cleanup_policy: OFFICIAL_PROVIDER_RETENTION,
+  origin_relation: "HTTPS_PROJECT_REF_DOT_SUPABASE_DOT_CO_V1",
+  allow_custom_origin: false,
+  excluded_project_ref: EXCLUDED_REF,
+  excluded_origin: "https://mtpisopvdxuvmpzbzqjw.supabase.co",
+  environment_keys: OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  credential_bundle_schema_version: 1,
+  credential_bundle_provenance_source: "OWNER_BOUND_ISOLATED_BUNDLE_V1",
+  credential_value_names: Object.freeze(["admin_password", "admin_session_secret",
+    "github_token", "supabase_anon_key", "supabase_service_role_key", "supabase_url", "vercel_token"]),
+  credential_value_max_bytes: 16384,
+  provisioning_receipt_schema_version: 1,
+  provenance_receipt_schema_version: 1,
+  expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+  expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+});
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256 = sha256Hex(
+  canonicalJson(ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1),
+);
 
 export class OfficialIsolationError extends Error {
   constructor(code) {
@@ -48,6 +71,14 @@ export function canonicalOfficialOrigin(value) {
       parsed.origin !== value || parsed.hostname === "localhost" ||
       parsed.hostname.endsWith(".localhost")) deny("OFFICIAL_ISOLATION_ORIGIN");
   return value;
+}
+export function boundOfficialOrigin(projectRef, origin) {
+  if (!text(projectRef) || projectRef === EXCLUDED_REF ||
+      !/^[a-z0-9-]+$/u.test(projectRef) ||
+      canonicalOfficialOrigin(origin) !== `https://${projectRef}.supabase.co`) {
+    deny("OFFICIAL_ISOLATION_ORIGIN");
+  }
+  return origin;
 }
 export function requireOfficialLifetime(authorization, nowEpochMs) {
   const created = Date.parse(authorization?.created_at);
@@ -87,7 +118,7 @@ export function validateOfficialIsolationAuthorization(authorization, nowEpochMs
       canonicalJson(execution.environment_keys) !== canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS)) {
     deny("OFFICIAL_ISOLATION_BINDING");
   }
-  canonicalOfficialOrigin(binding.origin);
+  boundOfficialOrigin(binding.project_ref, binding.origin);
   return Object.freeze({ ...binding });
 }
 
@@ -115,7 +146,7 @@ export function validateOfficialProvisioningReceipt(authorization, receipt, nowE
 export function observeOfficialClientOrigin({ runId, projectRef, actualClientOrigin }) {
   if (!UUID.test(runId ?? "") || !text(projectRef) || projectRef === EXCLUDED_REF ||
       !/^[a-z0-9-]+$/u.test(projectRef)) deny("OFFICIAL_ISOLATION_CLIENT");
-  return Object.freeze({ runId, projectRef, origin: canonicalOfficialOrigin(actualClientOrigin) });
+  return Object.freeze({ runId, projectRef, origin: boundOfficialOrigin(projectRef, actualClientOrigin) });
 }
 
 export function validateOfficialIsolationBinding({

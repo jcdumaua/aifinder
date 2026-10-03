@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { closeSync, constants, mkdtempSync, openSync, readFileSync, rmSync, writeSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { CLI_MODES, dispatchCli } from "./cli.mjs";
 import {
@@ -148,9 +150,9 @@ await check("A20R4 current integrated runner must pass exact region attestation"
   assert.equal(validateTransportRunner(transportCurrentRunner).verified, true);
 });
 await check("A20R4 exact transport region passes with unrelated import capability isolated", async () => {
-  assert.equal(Buffer.byteLength(transportReviewedRegion, "utf8"), 9484);
+  assert.equal(Buffer.byteLength(transportReviewedRegion, "utf8"), 10641);
   assert.equal(createHash("sha256").update(transportReviewedRegion).digest("hex"),
-    "cc59d35e48ebabea06e734125753df15fea72be05f23d77eb4910fd4a43c27c2");
+    "936839731b7fc4c57cd1ac7fdc7135da378c5eee814528e64092c73c19f49147");
   assert.equal(validateTransportRunner(transportIsolatedRunner).verified, true);
 });
 for (const [name, mutate] of [
@@ -169,6 +171,9 @@ for (const [name, mutate] of [
   ["environment outside region", (source) => source + "\nconst outsideEnv = process.env.AIFINDER_GIT_BROKER_MODE;\n"],
   ["writeSync outside region", (source) => source + "\nwriteSync(3, Buffer.from('outside'));\n"],
   ["hrtime outside region", (source) => source + "\nconst outsideTime = process.hrtime.bigint();\n"],
+  ["native binding outside region", (source) => source + '\nprocess.binding("pipe_wrap");\n'],
+  ["changed native binding", (source) => source.replace('process.binding("pipe_wrap")', 'process.binding("tcp_wrap")')],
+  ["native open outside region", (source) => source + "\nhandle.open(5);\n"],
   ["network remains prohibited", (source) => source + "\nfetch('https://example.invalid');\n"],
   ["runtime construction remains prohibited", (source) => source + "\nnew Function('return 1');\n"],
   ["broad Git remains prohibited", (source) => source + '\nconst outsideGit = ["add", "."];\n'],
@@ -254,6 +259,170 @@ await check("A20R5 copied exact import and region in another path receives no at
   ])), (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
 });
 // END A20R5_IMPORT_ATTESTATION_TESTS
+
+// BEGIN PR4_CR2_BOUNDED_TRANSPORT_TESTS
+// Hard admission before evaluating any extracted source in this test contract.
+assert.equal(Buffer.byteLength(transportReviewedRegion), 10641);
+assert.equal(createHash("sha256").update(transportReviewedRegion).digest("hex"), "936839731b7fc4c57cd1ac7fdc7135da378c5eee814528e64092c73c19f49147");
+await check("CR2 both client copies have identical inclusive reviewed bytes", async () => {
+  const utility = readFileSync(path.join(ROOT, "testing/static-governance-utils.mjs"), "utf8");
+  assert.equal(utility.slice(utility.indexOf(transportBegin), utility.indexOf(transportEnd) + transportEnd.length), transportReviewedRegion);
+});
+const transportForTest = await import("data:text/javascript;base64," + Buffer.from(
+  'import * as brokerNativeFs from "node:fs";\n' + transportReviewedRegion,
+).toString("base64"));
+const transportEnv = { AIFINDER_GIT_BROKER_MODE: "1", AIFINDER_GIT_BROKER_REQUEST_FD: "3", AIFINDER_GIT_BROKER_RESPONSE_FD: "4" };
+const transportContext = { git_dir: null, object_directory: null, repository_root: "/synthetic", work_tree_root: null };
+function transportFrame(body) {
+  const text = typeof body === "string" ? body : JSON.stringify(body, Object.keys(body).sort());
+  const bytes = Buffer.from(text); const header = Buffer.alloc(4); header.writeUInt32BE(bytes.length);
+  return Buffer.concat([header, bytes]);
+}
+const transportGrant = transportFrame('{"id":1,"schema":"A20_GIT_GRANT_V1"}');
+const transportReply = transportFrame('{"classification":"PASS","family":"TEST","git_pid":123,"id":1,"overflow":false,"schema":"A20_GIT_RESPONSE_V1","signal":null,"status":0,"stderr_base64":"","stdout_base64":"b2s=","timeout":false}');
+function transportFixture({ bytes = Buffer.concat([transportGrant, transportReply]), readErrors = [], writeErrors = [], readStall = false, writeStall = false, stallAfter = Infinity, writeStallAfter = Infinity, drift = false } = {}) {
+  let offset = 0, tick = 0, stats = 0, reads = 0, written = 0; const writes = []; const admitted = [];
+  const retry = (code) => Object.assign(new Error(code), { code });
+  const fs = {
+    fstatSync(fd) { stats++; return { isFIFO: () => true, dev: 1, ino: drift && stats > 2 ? 99 : fd, mode: 0o10600 }; },
+    readSync(fd, target, at, length) {
+      reads++;
+      assert.equal(fd, 4); assert.deepEqual(admitted, [3, 4]);
+      if (readErrors.length) throw retry(readErrors.shift());
+      if (readStall || offset >= stallAfter) throw retry("EAGAIN");
+      const count = Math.min(length, 3, bytes.length - offset);
+      bytes.copy(target, at, offset, offset + count); offset += count; return count;
+    },
+    writeSync(fd, bytes, at, length) {
+      assert.equal(fd, 3); assert.deepEqual(admitted, [3, 4]);
+      if (writeErrors.length) throw retry(writeErrors.shift());
+      if (writeStall || written >= writeStallAfter) throw retry("EWOULDBLOCK");
+      const count = Math.min(length, 2); writes.push(Buffer.from(bytes.subarray(at, at + count))); written += count; return count;
+    },
+  };
+  return { fs, writes, options: { env: transportEnv, fs, now: () => tick, pause: () => { tick += 5000; }, nonblocking: (fd) => admitted.push(fd) }, tick: () => tick, reads: () => reads, offset: () => offset };
+}
+await check("CR2 partial frames with EAGAIN EWOULDBLOCK EINTR preserve request and result", async () => {
+  const fixture = transportFixture({ readErrors: ["EAGAIN", "EINTR"], writeErrors: ["EWOULDBLOCK", "EINTR"] });
+  const result = transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options);
+  assert.equal(result.stdout.toString(), "ok"); assert.equal(result.status, 0);
+  const sent = Buffer.concat(fixture.writes); assert.equal(sent.readUInt32BE(0), sent.length - 4);
+  assert.deepEqual(JSON.parse(sent.subarray(4).toString()), { schema: "A20_GIT_REQUEST_V1", id: 1, family: "TEST", params: {}, context: transportContext });
+});
+for (const [name, options] of [
+  ["stalled grant", { readStall: true }],
+  ["backpressured request", { writeStall: true }],
+  ["partial response then stall", { stallAfter: transportGrant.length + 6 }],
+  ["partial request then backpressure", { writeStallAfter: 4 }],
+  ["continuous EINTR", { readErrors: ["EINTR", "EINTR", "EINTR", "EINTR", "EINTR"] }],
+  ["fatal read error", { readErrors: ["EIO"] }],
+  ["EOF", { bytes: Buffer.alloc(0) }],
+  ["partial EOF", { bytes: transportGrant.subarray(0, 6) }],
+  ["overflow", { bytes: Buffer.from([0, 128, 0, 1]) }],
+  ["malformed", { bytes: transportFrame("{broken}") }],
+  ["replayed result", { bytes: Buffer.concat([transportGrant, transportReply.subarray(0, 4), Buffer.from(transportReply.subarray(4).toString().replace('"id":1', '"id":2'))]) }],
+  ["descriptor identity drift", { drift: true }],
+]) {
+  await check(`CR2 ${name} fails closed and poisons transport`, async () => {
+    const fixture = transportFixture(options);
+    assert.throws(() => transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options), (error) => error.code === "A20_GIT_BROKER_CLIENT_FAILED");
+    const written = fixture.writes.length;
+    const reads = fixture.reads();
+    assert.throws(() => transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options), (error) => error.code === "A20_GIT_BROKER_CLIENT_FAILED");
+    assert.equal(fixture.writes.length, written);
+    assert.equal(fixture.reads(), reads);
+    if (["stalled grant", "backpressured request", "partial response then stall", "partial request then backpressure", "continuous EINTR"].includes(name)) assert.equal(fixture.tick(), 25000);
+  });
+}
+await check("CR2 grant request response share one deadline including final check", async () => {
+  const fixture = transportFixture({ readErrors: ["EINTR", "EINTR"], writeErrors: ["EINTR", "EINTR", "EINTR"] });
+  assert.throws(() => transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options), (error) => error.code === "A20_GIT_BROKER_CLIENT_FAILED");
+  assert.equal(fixture.tick(), 25000);
+});
+await check("CR2 expiry after final response bytes is rejected", async () => {
+  const fixture = transportFixture();
+  fixture.options.now = () => fixture.offset() === transportGrant.length + transportReply.length ? 25000 : 0;
+  assert.throws(() => transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options), (error) => error.code === "A20_GIT_BROKER_CLIENT_FAILED");
+});
+await check("CR2 failed descriptor setup forbids all frame I/O", async () => {
+  const fixture = transportFixture(); fixture.options.nonblocking = () => { throw new Error("UNAVAILABLE"); };
+  assert.throws(() => transportForTest.brokerRequest("TEST", {}, transportContext, fixture.options), (error) => error.code === "A20_GIT_BROKER_CLIENT_FAILED");
+  assert.equal(fixture.reads(), 0); assert.equal(fixture.writes.length, 0);
+});
+async function nativeTransportDeadline(caseName) {
+  const root = mkdtempSync(path.join(tmpdir(), "aifinder-cr2-fifo-")); const fds = [];
+  const request = path.join(root, "request"), response = path.join(root, "response");
+  try {
+    const created = spawnSync("/usr/bin/mkfifo", [request, response], { env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" }, timeout: 2000, killSignal: "SIGKILL", encoding: "utf8" });
+    assert.equal(created.status, 0); assert.equal(created.stderr, "");
+    const requestAnchor = openSync(request, constants.O_RDWR | constants.O_NONBLOCK); fds.push(requestAnchor);
+    const responseAnchor = openSync(response, constants.O_RDWR | constants.O_NONBLOCK); fds.push(responseAnchor);
+    const requestFd = openSync(request, constants.O_WRONLY); fds.push(requestFd);
+    const responseFd = openSync(response, constants.O_RDONLY); fds.push(responseFd);
+    if (caseName === "full-request") {
+      let full = false;
+      for (let count = 0; count < 16384; count++) {
+        try { writeSync(requestAnchor, Buffer.alloc(4096)); }
+        catch (error) { assert(["EAGAIN", "EWOULDBLOCK"].includes(error.code)); full = true; break; }
+      }
+      assert.equal(full, true);
+    }
+    if (caseName !== "stall-grant") writeSync(responseAnchor, transportGrant);
+    const code = 'import * as brokerNativeFs from "node:fs";\n' + transportReviewedRegion + `\n
+const started = process.hrtime.bigint();
+const now = () => Number((process.hrtime.bigint() - started) / 10000n);
+try { brokerDescriptors(${JSON.stringify(transportEnv)}); if (global.gc) global.gc(); brokerRequest("TEST", {}, ${JSON.stringify(transportContext)}, { env: ${JSON.stringify(transportEnv)}, now }); process.exit(2); }
+catch (error) { if (error.code !== "A20_GIT_BROKER_CLIENT_FAILED") process.exit(3); process.stdout.write("BOUNDED_FAILURE\\n"); process.exit(0); }`;
+    const child = spawn(process.execPath, ["--expose-gc", "--input-type=module", "-e", code], { env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" }, stdio: ["ignore", "pipe", "pipe", requestFd, responseFd], detached: true });
+    let out = "", err = "", outer = false; child.stdout.on("data", (bytes) => { out += bytes; }); child.stderr.on("data", (bytes) => { err += bytes; });
+    const exit = await new Promise((resolve, reject) => {
+      let reap;
+      const timer = setTimeout(() => { outer = true; if (child.exitCode === null && child.signalCode === null) { try { process.kill(-child.pid, "SIGKILL"); } catch (error) { reject(error); } } reap = setTimeout(() => reject(new Error("CR2_REAP_UNCONFIRMED")), 2000); }, 2000);
+      child.once("error", (error) => { clearTimeout(timer); clearTimeout(reap); reject(error); });
+      child.once("close", (status, signal) => { clearTimeout(timer); clearTimeout(reap); resolve({ status, signal }); });
+    });
+    assert.throws(() => process.kill(child.pid, 0), (error) => error.code === "ESRCH");
+    assert.throws(() => process.kill(-child.pid, 0), (error) => error.code === "ESRCH");
+    assert.equal(outer, false); assert.deepEqual(exit, { status: 0, signal: null }); assert.equal(err, ""); assert.equal(out, "BOUNDED_FAILURE\n");
+  } finally { for (const fd of fds) closeSync(fd); rmSync(root, { recursive: true, force: true }); }
+}
+for (const caseName of ["stall-grant", "stall-response", "full-request"]) {
+  await check(`CR2 native ${caseName} deadline returns before owned outer reap deadline`, async () => {
+    assert(["darwin", "linux"].includes(process.platform));
+    await nativeTransportDeadline(caseName);
+  });
+}
+// END PR4_CR2_BOUNDED_TRANSPORT_TESTS
+
+// BEGIN PR4_CR2_TEST_POLICY_NEGATIVES
+const transportPolicyTestPath = "scripts/launch-operations-kernel/source-policy.test.mjs";
+const transportPolicyTestSource = candidateSources.get(transportPolicyTestPath);
+const transportPolicyTestBegin = ["// BEGIN", "PR4_CR2_BOUNDED_TRANSPORT_TESTS"].join(" ");
+const transportPolicyTestEnd = ["// END", "PR4_CR2_BOUNDED_TRANSPORT_TESTS"].join(" ");
+for (const [name, mutate] of [
+  ["missing test BEGIN", (source) => source.replace(transportPolicyTestBegin, "// absent test BEGIN")],
+  ["missing test END", (source) => source.replace(transportPolicyTestEnd, "// absent test END")],
+  ["duplicate test BEGIN", (source) => source.replace(transportPolicyTestBegin, transportPolicyTestBegin + "\n" + transportPolicyTestBegin)],
+  ["duplicate test END", (source) => source.replace(transportPolicyTestEnd, transportPolicyTestEnd + "\n" + transportPolicyTestEnd)],
+  ["changed hard client admission", (source) => source.replace('assert.equal(Buffer.byteLength(transportReviewedRegion), 10641);', 'assert.equal(Buffer.byteLength(transportReviewedRegion), 1);')],
+  ["changed child executable", (source) => source.replace('spawn(process.execPath, ["--expose-gc"', 'spawn("/bin/sh", ["--expose-gc"')],
+  ["changed outer deadline", (source) => source.replace('}, 2000);\n      child.once("error"', '}, 200000);\n      child.once("error"')],
+  ["filesystem operation outside test", (source) => source + '\nwriteSync(3, Buffer.from("outside"));\n'],
+  ["child operation outside test", (source) => source + '\nspawn("/bin/sh", []);\n'],
+  ["computed import outside test", (source) => source + '\nawait import("data:text/javascript," + "export const escaped = true");\n'],
+  ["extra process import", (source) => source.replace('import { spawn, spawnSync } from "node:child_process";', 'import { spawn, spawnSync, exec } from "node:child_process";')],
+]) {
+  await check(`CR2 reviewed test policy ${name} rejects`, async () => {
+    const mutated = mutate(transportPolicyTestSource); assert.notEqual(mutated, transportPolicyTestSource);
+    const sources = new Map(candidateSources); sources.set(transportPolicyTestPath, mutated);
+    assert.throws(() => validateTransportSources(sources), (error) => error.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  });
+}
+await check("CR2 copied native test region in another path receives no capability", async () => {
+  const begin = transportPolicyTestSource.indexOf(transportPolicyTestBegin), end = transportPolicyTestSource.indexOf(transportPolicyTestEnd) + transportPolicyTestEnd.length;
+  assert.throws(() => validateLocalOnlySources(new Map([["scripts/copied-native-tests.mjs", transportPolicyTestSource.slice(begin, end)]])), (error) => error.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+});
+// END PR4_CR2_TEST_POLICY_NEGATIVES
 
 await check("safe source accepted", async () => {
   const result = validateLocalOnlySources(

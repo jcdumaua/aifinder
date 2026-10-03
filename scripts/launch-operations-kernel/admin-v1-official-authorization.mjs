@@ -11,6 +11,7 @@ import path from "node:path";
 import { canonicalJson, isSha256 } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+  adminV1OfficialOneUseAuthorizationDigest,
   validateAdminV1OfficialAuthorization,
 } from "./admin-v1-official-runtime.mjs";
 
@@ -84,6 +85,10 @@ export async function createAdminV1OfficialAuthorizationRecord({
     typeof inspect_temporary_commit !== "function" ||
     !Number.isSafeInteger(now_epoch_ms)
   ) throw new AdminV1OfficialAuthorizationError("OFFICIAL_AUTHORIZATION_GENERATOR_INPUT");
+  const version = request?.schema_version ?? 1;
+  if (version !== 1 && version !== 2) {
+    throw new AdminV1OfficialAuthorizationError("OFFICIAL_AUTHORIZATION_GENERATOR_INPUT");
+  }
   const repository = await inspect_repository();
   if (
     !exactObservedRepository(repository) ||
@@ -103,7 +108,7 @@ export async function createAdminV1OfficialAuthorizationRecord({
     "OFFICIAL_AUTHORIZATION_GENERATOR_TEMPORARY_COMMIT_MISMATCH",
   );
   const record = {
-    schema_version: 1,
+    schema_version: version,
     operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
     authorization_id_sha256: request.authorization_id_sha256,
     one_use_authorization_sha256: request.one_use_authorization_sha256,
@@ -130,6 +135,10 @@ export async function createAdminV1OfficialAuthorizationRecord({
     repository: structuredClone(repository),
     execution: structuredClone(request.execution),
   };
+  if (version === 2) {
+    record.isolation_contract_sha256 = reviewed_policy.official_runtime.isolation_contract_sha256;
+    record.one_use_authorization_sha256 = adminV1OfficialOneUseAuthorizationDigest(record);
+  }
   return validateAdminV1OfficialAuthorization(record, { now_epoch_ms });
 }
 

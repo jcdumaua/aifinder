@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
+import { createAdminV1OfficialAuthorizationRecord } from "./admin-v1-official-authorization.mjs";
 import {
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
@@ -9,6 +10,7 @@ import {
   concreteTemporaryCommitBlobMatches,
   concreteTemporaryCommitMetadataMatches,
   concreteTemporaryCommitParentMatches,
+  createConcreteRunnerDependencies,
   dispatchAdminV1OfficialRunner,
   dispatchConcreteQualificationRunner,
 } from "./nonproduction-qualification-runner.mjs";
@@ -101,9 +103,9 @@ function trust(authorization) {
   });
 }
 
-function dependencies({ candidateMismatch = false, runtimeErrorCode = null } = {}) {
+function dependencies({ candidateMismatch = false, runtimeErrorCode = null,
+  authorization = record() } = {}) {
   const calls = [];
-  const authorization = record();
   return {
     calls,
     now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"),
@@ -151,8 +153,13 @@ function dependencies({ candidateMismatch = false, runtimeErrorCode = null } = {
       calls.push("prepareOfficialExecutionContext");
       return { journal: Object.freeze({}) };
     },
-    readOfficialCredentials() {
+    readOfficialCredentials(boundAuthorization) {
       calls.push("readOfficialCredentials");
+      if (boundAuthorization.schema_version === 2) {
+        assert.equal(boundAuthorization.execution.isolation.project_ref, "offline-pr4-v2");
+        assert.equal(boundAuthorization.execution.isolation.origin, "https://offline-pr4-v2.supabase.co");
+        calls.push("readIsolatedCredentials");
+      }
       return { admin_password: Buffer.from("synthetic"), admin_session_secret: Buffer.from("synthetic") };
     },
     runAuthorizedOfficialRuntime() {
@@ -246,6 +253,108 @@ const routedResult = await dispatchConcreteQualificationRunner(
   trust(record()),
 );
 assert.equal(routedResult.code, "OFFICIAL_RUNTIME_COMPLETE");
+
+function v2Record() {
+  const value = record();
+  value.schema_version = 2;
+  value.isolation_contract_sha256 =
+    "700cf951450811b04a2e1ed43625fe326b74b3e329ea877548dc0d2dad3071fe";
+  value.execution.environment_keys = ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET",
+    "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+    "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF"];
+  value.execution.provider_cleanup_policy = "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1";
+  value.execution.isolation = {
+    mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1", project_ref: "offline-pr4-v2",
+    origin: "https://offline-pr4-v2.supabase.co", provisioning_receipt_sha256: "1".repeat(64),
+    schema_contract_sha256: "2".repeat(64),
+    credential_bundle_path: `${value.execution.journal_directory}/isolated-credentials.json`,
+    credential_bundle_provenance_sha256: "3".repeat(64), validation_run_id: value.run_id,
+    expected_preview_project_id: value.execution.preview_project_id,
+    expected_preview_team_id: value.execution.preview_team_id,
+  };
+  const { one_use_authorization_sha256: ignored, ...fields } = value;
+  void ignored;
+  value.one_use_authorization_sha256 = sha256Hex(canonicalJson({
+    domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...fields,
+  }));
+  return value;
+}
+const v2Template = v2Record();
+const reviewedV2Policy = {
+  candidate: { candidate_identity_sha256: v2Template.candidate_identity_sha256,
+    manifest_sha256: v2Template.manifest_sha256 },
+  compatibility_support_sha256: v2Template.compatibility_support_sha256,
+  official_runtime: {
+    operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+    authorization_schema_path: "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json",
+    authorization_schema_sha256: v2Template.authorization_schema_sha256,
+    isolation_contract_sha256: v2Template.isolation_contract_sha256,
+    route_source_sha256: v2Template.route_source_sha256,
+    contract_sha256: v2Template.contract_sha256,
+    credential_source_policy: ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+    access_mode: "SELF_PROJECT_OIDC",
+    repository_contract: {
+      root: v2Template.repository.root, branch: "main", ahead: 0, behind: 0,
+      index_empty: true, worktree_count: 1, remote_repository: "jcdumaua/aifinder",
+      head_binding: "AUTHORIZATION_PUBLISHED_HEAD", origin_main_binding: "SAME_AS_HEAD",
+      remote_main_binding: "SAME_AS_HEAD", status_binding: "AUTHORIZATION_STATUS_SHA256",
+    },
+  },
+};
+const isolatedV2 = await createAdminV1OfficialAuthorizationRecord({
+  inspect_repository: () => structuredClone(v2Template.repository),
+  inspect_temporary_commit: () => ({ commit_sha: v2Template.execution.temporary_commit_sha,
+    parent_sha: v2Template.repository.head, tree_sha: "e".repeat(40) }),
+  reviewed_policy: reviewedV2Policy,
+  request: { ...v2Template, published_head: v2Template.repository.head },
+  now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"),
+});
+assert.equal(Object.keys(isolatedV2).length, 19);
+const isolatedDependencies = dependencies({ authorization: isolatedV2 });
+const isolatedResult = await dispatchAdminV1OfficialRunner([
+  "--run-admin-v1-official", "--authorization",
+  `/Users/jamescarlodumaua/Downloads/admin-v1-official-${RUN_ID}.json`,
+], isolatedDependencies, trust(isolatedV2));
+assert.deepEqual(isolatedResult, { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" },
+  "COMPLETE_V2_TRUST_AND_PREEFFECT_REACH_ISOLATED_CREDENTIAL_BRANCH");
+assert(isolatedDependencies.calls.indexOf("verifyNoPriorOfficialRecovery") <
+  isolatedDependencies.calls.indexOf("readIsolatedCredentials"));
+assert(isolatedDependencies.calls.indexOf("prepareOfficialExecutionContext") <
+  isolatedDependencies.calls.indexOf("verifyCandidate"));
+for (const change of [
+  (value) => { value.extra = true; },
+  (value) => { value.execution.isolation.origin = "https://other.supabase.co"; },
+  (value) => { value.one_use_authorization_sha256 = "f".repeat(64); },
+  (value) => { value.isolation_contract_sha256 = "f".repeat(64); },
+  (value) => { value.schema_version = 1; },
+]) {
+  const invalid = v2Record(); change(invalid);
+  const blockedDependencies = dependencies({ authorization: invalid });
+  const blocked = await dispatchAdminV1OfficialRunner([
+    "--run-admin-v1-official", "--authorization",
+    `/Users/jamescarlodumaua/Downloads/admin-v1-official-${RUN_ID}.json`,
+  ], blockedDependencies, trust(invalid));
+  assert.equal(blocked.exit_code, 1);
+  assert.equal(blockedDependencies.calls.includes("prepareOfficialExecutionContext"), false);
+  assert.equal(blockedDependencies.calls.includes("readOfficialCredentials"), false);
+  assert.equal(blockedDependencies.calls.includes("runAuthorizedOfficialRuntime"), false);
+}
+console.log("PASS_PR4_V2_RUNNER full_trust=true pre_effect=true isolated_branch=true invalid_before_context=5 real_effects=0");
+
+const directInvalid = v2Record();
+delete directInvalid.manifest_sha256;
+let directBundleReads = 0;
+const directDependencies = createConcreteRunnerDependencies({
+  repositoryRoot: new URL("../../", import.meta.url).pathname.replace(/\/$/u, ""),
+  nowEpochMs: Date.parse("2026-08-21T12:00:00.000Z"),
+  readCredentialEnvironment() { throw new Error("LEGACY_CREDENTIAL_SOURCE_FORBIDDEN"); },
+  async readOfficialBundle() { directBundleReads++; throw new Error("BUNDLE_READ_FORBIDDEN"); },
+});
+await assert.rejects(() => directDependencies.readOfficialCredentials(
+  directInvalid, ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+), (error) => error?.code === "OFFICIAL_AUTHORIZATION_INVALID",
+"INVALID_V2_REJECTED_BEFORE_DIRECTORY_AND_BUNDLE_READ");
+assert.equal(directBundleReads, 0);
 
 const commit = "1".repeat(40);
 const publishedHead = "2".repeat(40);

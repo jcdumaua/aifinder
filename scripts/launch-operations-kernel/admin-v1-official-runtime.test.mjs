@@ -6,6 +6,8 @@ import {
   statSync,
 } from "node:fs";
 import path from "node:path";
+import { canonicalJson, sha256Hex } from "./canonical.mjs";
+import * as isolationModule from "./admin-v1-official-isolation.mjs";
 import * as runtimeModule from "./admin-v1-official-runtime.mjs";
 import {
   ADMIN_V1_OFFICIAL_BUDGET_LIMITS,
@@ -114,6 +116,65 @@ function authorization(overrides = {}) {
     },
   };
   return Object.assign(record, structuredClone(overrides));
+}
+
+const expectedIsolationContract = {
+  schema_version: 1, operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+  provider_cleanup_policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1",
+  origin_relation: "HTTPS_PROJECT_REF_DOT_SUPABASE_DOT_CO_V1", allow_custom_origin: false,
+  excluded_project_ref: "mtpisopvdxuvmpzbzqjw",
+  excluded_origin: "https://mtpisopvdxuvmpzbzqjw.supabase.co",
+  environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "AIFINDER_VALIDATION_RUN_ID",
+    "AIFINDER_VALIDATION_PROJECT_REF"],
+  credential_bundle_schema_version: 1, credential_bundle_provenance_source: "OWNER_BOUND_ISOLATED_BUNDLE_V1",
+  credential_value_names: ["admin_password", "admin_session_secret", "github_token", "supabase_anon_key",
+    "supabase_service_role_key", "supabase_url", "vercel_token"], credential_value_max_bytes: 16384,
+  provisioning_receipt_schema_version: 1, provenance_receipt_schema_version: 1,
+  expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+  expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+};
+function expectedV2OneUse(record) {
+  const { one_use_authorization_sha256: ignored, ...unsigned } = record;
+  return sha256Hex(canonicalJson({ domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...unsigned }));
+}
+function authorizationV2() {
+  const record = authorization();
+  record.schema_version = 2;
+  record.isolation_contract_sha256 = sha256Hex(canonicalJson(expectedIsolationContract));
+  record.execution.environment_keys = [...expectedIsolationContract.environment_keys];
+  record.execution.provider_cleanup_policy = expectedIsolationContract.provider_cleanup_policy;
+  record.execution.isolation = { mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+    project_ref: "runtime-synthetic-project", origin: "https://runtime-synthetic-project.supabase.co",
+    provisioning_receipt_sha256: DIGEST, schema_contract_sha256: DIGEST,
+    credential_bundle_path: `${record.execution.journal_directory}/isolated-credentials.json`,
+    credential_bundle_provenance_sha256: DIGEST, validation_run_id: RUN_ID,
+    expected_preview_project_id: record.execution.preview_project_id,
+    expected_preview_team_id: record.execution.preview_team_id };
+  record.one_use_authorization_sha256 = expectedV2OneUse(record);
+  return record;
+}
+
+// Evaluate the closed structural JSON Schema vocabulary against actual records.
+// Cross-field equality, canonical time and semantic digests are runtime checks.
+function schemaAccepts(document, value, schema = document) {
+  if (schema.$ref) return schemaAccepts(document, value,
+    schema.$ref.slice(2).split("/").reduce((current, key) => current[key], document));
+  if (schema.oneOf && schema.oneOf.filter((branch) => schemaAccepts(document, value, branch)).length !== 1) return false;
+  if (Object.hasOwn(schema, "const") && canonicalJson(value) !== canonicalJson(schema.const)) return false;
+  if (schema.type === "object") {
+    if (!value || Object.getPrototypeOf(value) !== Object.prototype) return false;
+    if ((schema.required ?? []).some((name) => !Object.hasOwn(value, name))) return false;
+    if (schema.additionalProperties === false && Object.keys(value).some((name) => !Object.hasOwn(schema.properties, name))) return false;
+    if (Object.entries(schema.properties ?? {}).some(([name, member]) => Object.hasOwn(value, name) && !schemaAccepts(document, value[name], member))) return false;
+  }
+  if (schema.type === "string" && (typeof value !== "string" ||
+    schema.pattern && !new RegExp(schema.pattern, "u").test(value) ||
+    schema.minLength && value.length < schema.minLength ||
+    schema.maxLength && value.length > schema.maxLength)) return false;
+  if (schema.not && schemaAccepts(document, value, schema.not)) return false;
+  return true;
 }
 
 function exactEffectForOrdinal(ordinal) {
@@ -469,7 +530,63 @@ await check("authorization enforces exact inclusive-created exclusive-expiry win
   );
 });
 
-await check("authorization schema binds published-head shape and operation", async () => {
+await check("v2 complete authorization and semantic digest admission", async () => {
+  const valid = authorizationV2();
+  assert.equal(validateAdminV1OfficialAuthorization(valid, { now_epoch_ms: TEST_NOW_EPOCH_MS }).schema_version, 2);
+  assert.deepEqual(isolationModule.ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1, expectedIsolationContract);
+  assert.equal(isolationModule.ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256, valid.isolation_contract_sha256);
+  assert.equal(runtimeModule.adminV1OfficialOneUseAuthorizationDigest(valid), valid.one_use_authorization_sha256);
+});
+
+await check("v1 and v2 closed shapes reject missing extra and hybrid fields", async () => {
+  const reject = (record) => assert.throws(() => validateAdminV1OfficialAuthorization(record,
+    { now_epoch_ms: TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_AUTHORIZATION_INVALID" });
+  for (const version of [1, 2]) {
+    const valid = version === 1 ? authorization() : authorizationV2();
+    for (const [name, keys] of [["outer", Object.keys(valid)], ["repository", Object.keys(valid.repository)],
+      ["execution", Object.keys(valid.execution)], ...(version === 2 ? [["isolation", Object.keys(valid.execution.isolation)]] : [])]) {
+      for (const key of keys) {
+        const invalid = structuredClone(valid);
+        const target = name === "outer" ? invalid : name === "isolation" ? invalid.execution.isolation : invalid[name];
+        delete target[key]; reject(invalid);
+      }
+      const invalid = structuredClone(valid);
+      const target = name === "outer" ? invalid : name === "isolation" ? invalid.execution.isolation : invalid[name];
+      target.extra = true; reject(invalid);
+    }
+  }
+  const v1Hybrid = authorization(); v1Hybrid.execution = authorizationV2().execution; reject(v1Hybrid);
+  const v2Hybrid = authorizationV2(); v2Hybrid.execution = authorization().execution;
+  v2Hybrid.one_use_authorization_sha256 = expectedV2OneUse(v2Hybrid); reject(v2Hybrid);
+  const v1Extra = authorization(); v1Extra.isolation_contract_sha256 = DIGEST; reject(v1Extra);
+});
+
+await check("v2 identity maps one use lifetime and bound isolation fail closed", async () => {
+  for (const mutate of [
+    ...["authorization_id_sha256", "review_approval_sha256", "candidate_identity_sha256", "manifest_sha256",
+      "supervisor_sha256", "supervisor_policy_sha256", "authorization_schema_sha256", "isolation_contract_sha256",
+      "one_use_authorization_sha256"].map((name) => (record) => { record[name] = "f".repeat(64); }),
+    (record) => { record.compatibility_support_sha256[Object.keys(record.compatibility_support_sha256)[0]] = "f".repeat(64); },
+    (record) => { record.route_source_sha256[Object.keys(record.route_source_sha256)[0]] = "f".repeat(64); },
+    (record) => { record.contract_sha256.budgets = "f".repeat(64); },
+    (record) => { record.repository.origin_main = "f".repeat(40); },
+    (record) => { record.repository.root = "/private/tmp"; },
+    (record) => { record.execution.isolation.origin = "https://other-project.supabase.co"; },
+    (record) => { record.execution.isolation.validation_run_id = "22222222-2222-4222-8222-222222222222"; },
+    (record) => { record.execution.provider_cleanup_policy = "DELETE"; },
+    (record) => { record.execution.environment_keys.reverse(); },
+    (record) => { record.created_at = "2026-08-21T12:00:00Z"; },
+    (record) => { record.expires_at = "2026-08-23T12:00:00.000Z"; },
+  ]) {
+    const invalid = authorizationV2(); mutate(invalid);
+    assert.throws(() => validateAdminV1OfficialAuthorization(invalid, { now_epoch_ms: TEST_NOW_EPOCH_MS }),
+      { code: "OFFICIAL_AUTHORIZATION_INVALID" });
+  }
+  for (const now of [TEST_CREATED_EPOCH_MS - 1, TEST_EXPIRES_EPOCH_MS]) assert.throws(() =>
+    validateAdminV1OfficialAuthorization(authorizationV2(), { now_epoch_ms: now }), { code: "OFFICIAL_AUTHORIZATION_INVALID" });
+});
+
+await check("dual version authorization schema admits each closed record", async () => {
   const schema = JSON.parse(readFileSync(
     path.join(
       import.meta.dirname,
@@ -477,10 +594,21 @@ await check("authorization schema binds published-head shape and operation", asy
     ),
     "utf8",
   ));
-  assert.equal(schema.properties.operation_class.const, ADMIN_V1_OFFICIAL_OPERATION_CLASS);
-  assert.equal(schema.properties.repository.properties.head.pattern, "^[0-9a-f]{40}$");
-  assert.equal(schema.properties.repository.additionalProperties, false);
-  assert.equal(schema.properties.execution.properties.access_mode.const, "SELF_PROJECT_OIDC");
+  for (const valid of [authorization(), authorizationV2()]) {
+    assert.equal(schemaAccepts(schema, valid), true);
+    for (const location of ["outer", "repository", "execution", ...(valid.schema_version === 2 ? ["isolation"] : [])]) {
+      const invalid = structuredClone(valid);
+      const target = location === "outer" ? invalid : location === "isolation" ? invalid.execution.isolation : invalid[location];
+      target.extra = true; assert.equal(schemaAccepts(schema, invalid), false);
+      delete target.extra;
+      for (const key of Object.keys(target)) { const removed = target[key]; delete target[key];
+        assert.equal(schemaAccepts(schema, invalid), false); target[key] = removed; }
+    }
+  }
+  const hybrid = authorization(); hybrid.execution = authorizationV2().execution;
+  assert.equal(schemaAccepts(schema, hybrid), false);
+  hybrid.schema_version = 2; hybrid.execution = authorization().execution;
+  assert.equal(schemaAccepts(schema, hybrid), false);
 });
 
 await check("complete Official runtime and sanitized durable lifecycle", async () => {
