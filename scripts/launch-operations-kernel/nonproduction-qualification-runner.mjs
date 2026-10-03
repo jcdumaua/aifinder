@@ -43,7 +43,8 @@ import {
   validateConcreteAuthorizationRecord,
 } from "./nonproduction-qualification-authorization.mjs";
 import {
-  ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   validateAdminV1OfficialAuthorization,
@@ -57,6 +58,7 @@ import {
   runConcreteAdminV1OfficialRuntime,
 } from "./admin-v1-official-live-platform.mjs";
 import {
+  OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
   validateOfficialIsolationAuthorization,
 } from "./admin-v1-official-isolation.mjs";
 
@@ -699,9 +701,13 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
     await dependencies.hashOfficialAuthorizationSchema() !==
       authorization.authorization_schema_sha256 ||
     canonicalJson(authorization.contract_sha256) !==
-      canonicalJson(ADMIN_V1_OFFICIAL_CONTRACT_SHA256)
+      canonicalJson(authorization.schema_version === 2
+        ? ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 : ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1)
   ) throw new ConcreteRunnerError("OFFICIAL_CONTRACT_MISMATCH");
   const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
+  if (authorization.schema_version === 2 && prior?.status === "SPENT") {
+    throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+  }
   if (prior?.status !== "ABSENT") {
     throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
   }
@@ -712,6 +718,46 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
     manifest_sha256: authorization.manifest_sha256,
     token_spent: false,
   });
+}
+
+const OFFICIAL_RETENTION_RECEIPT_KEYS = Object.freeze([
+  "policy", "phase", "deployment_id", "environment_record_ids", "environment_keys",
+  "data_zero_residual", "external_retained_exact", "unrelated_preserved",
+]);
+
+function exactOfficialRetentionReceipt(receipt, authorization) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return false;
+  const descriptors = Object.getOwnPropertyDescriptors(receipt);
+  if (Reflect.ownKeys(descriptors).length !== OFFICIAL_RETENTION_RECEIPT_KEYS.length ||
+      !OFFICIAL_RETENTION_RECEIPT_KEYS.every((key) => Object.hasOwn(descriptors, key) &&
+        Object.hasOwn(descriptors[key], "value") && descriptors[key].enumerable === true)) return false;
+  const ids = receipt.environment_record_ids;
+  return authorization.schema_version === 2 &&
+    authorization.execution.provider_cleanup_policy === "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" &&
+    receipt.policy === authorization.execution.provider_cleanup_policy &&
+    receipt.phase === "COMPLETE" && /^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") &&
+    Array.isArray(ids) && ids.length === 7 && ids.every((id) => typeof id === "string" &&
+      id.length > 0 && id.length <= 128 && /^[\x21-\x7e]+$/u.test(id)) &&
+    new Set(ids).size === 7 && Array.isArray(receipt.environment_keys) &&
+    exactObject(receipt.environment_keys, OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) &&
+    exactObject(receipt.environment_keys, authorization.execution.environment_keys) &&
+    receipt.data_zero_residual === true && receipt.external_retained_exact === true &&
+    receipt.unrelated_preserved === true;
+}
+
+export function classifyAdminV1OfficialPriorJournal(existing, schemaVersion = 1) {
+  if (existing === null) return { status: "ABSENT" };
+  if (schemaVersion !== 1 && schemaVersion !== 2) return { status: "MISMATCH" };
+  if (schemaVersion === 1 && existing?.retired === true) return { status: "RETIRED" };
+  try {
+    const classification = classifyAdminV1OfficialRecoveryState(existing);
+    if (schemaVersion === 2 && classification === "RETENTION_COMPLETE") return { status: "SPENT" };
+    if (existing?.retired === true) return { status: "RETIRED" };
+    if (classification === "CLEANUP_COMPLETE") return { status: "SPENT" };
+    return { status: "RECOVERY_PENDING" };
+  } catch {
+    return { status: "MISMATCH" };
+  }
 }
 
 function safeOfficialCode(error) {
@@ -774,24 +820,32 @@ export async function dispatchAdminV1OfficialRunner(
       credentials,
       execution_context: executionContext,
     });
+    const isolated = trusted.authorization.schema_version === 2;
+    const completionCode = isolated ? "RETENTION_COMPLETE" : "OFFICIAL_RUNTIME_COMPLETE";
     if (
-      result?.classification === "OFFICIAL_RUNTIME_COMPLETE" &&
+      result?.classification === completionCode &&
       result.official_requests === 20 && result.qualification_requests === 6 &&
       result.runtime_sessions === 1 && result.runtime_retries === 0 &&
-      result.runtime_replays === 0 && result.zero_residual_owned_state === true
+      result.runtime_replays === 0 && result.zero_residual_owned_state === !isolated &&
+      (!isolated || exactOfficialRetentionReceipt(result.retention, trusted.authorization))
     ) {
       emit(dependencies, {
         status: "PASS",
-        code: "OFFICIAL_RUNTIME_COMPLETE",
+        code: completionCode,
         qualification_requests: 6,
         official_requests: 20,
         runtime_sessions: 1,
         runtime_retries: 0,
         runtime_replays: 0,
+        ...(isolated ? {
+          zero_residual_owned_state: false,
+          retention: structuredClone(result.retention),
+        } : {}),
       });
-      return { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" };
+      return { exit_code: 0, code: completionCode };
     }
-    if (result?.classification === "RECOVERY_PENDING") {
+    if (result?.classification === "RECOVERY_PENDING" ||
+        isolated && result?.classification === "RETENTION_PENDING") {
       emit(dependencies, { status: "FAIL", code: "OFFICIAL_RECOVERY_PENDING" });
       return { exit_code: 1, code: "OFFICIAL_RECOVERY_PENDING" };
     }
@@ -1582,15 +1636,7 @@ export function createConcreteRunnerDependencies({
       } catch {
         return { status: "MISMATCH" };
       }
-      if (existing === null) return { status: "ABSENT" };
-      if (existing.retired === true) return { status: "RETIRED" };
-      try {
-        const classification = classifyAdminV1OfficialRecoveryState(existing);
-        if (classification === "CLEANUP_COMPLETE") return { status: "SPENT" };
-        return { status: "RECOVERY_PENDING" };
-      } catch {
-        return { status: "MISMATCH" };
-      }
+      return classifyAdminV1OfficialPriorJournal(existing, authorization.schema_version);
     },
     async readLiveCredentials(authorization, credentialSourcePolicy) {
       const environment = readCredentialEnvironment({ repositoryRoot });

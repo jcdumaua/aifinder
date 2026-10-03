@@ -16,6 +16,11 @@ import {
 } from "./admin-v1-official-runtime.mjs";
 
 const SHA1_PATTERN = /^[0-9a-f]{40}$/u;
+const CONTRACT_DIGEST_KEYS_V1 = Object.freeze([
+  "budgets", "deferred_routes", "environment_names", "official_ledger",
+  "qualification_ledger", "target_routes",
+]);
+const CONTRACT_DIGEST_KEYS_V2 = Object.freeze(["action_costs", ...CONTRACT_DIGEST_KEYS_V1]);
 
 export class AdminV1OfficialAuthorizationError extends Error {
   constructor(code) {
@@ -52,9 +57,13 @@ function exactObservedRepository(value) {
     value.remote_repository === "jcdumaua/aifinder";
 }
 
-function exactReviewedPolicy(value, repositoryRoot) {
+function exactReviewedPolicy(value, repositoryRoot, schemaVersion) {
   const official = value?.official_runtime;
   const contract = official?.repository_contract;
+  const contractDigests = schemaVersion === 2
+    ? official?.contract_sha256_v2 : official?.contract_sha256;
+  const contractKeys = schemaVersion === 2
+    ? CONTRACT_DIGEST_KEYS_V2 : CONTRACT_DIGEST_KEYS_V1;
   return value?.candidate &&
     isSha256(value.candidate.candidate_identity_sha256) &&
     isSha256(value.candidate.manifest_sha256) &&
@@ -63,7 +72,8 @@ function exactReviewedPolicy(value, repositoryRoot) {
     official?.operation_class === ADMIN_V1_OFFICIAL_OPERATION_CLASS &&
     isSha256(official.authorization_schema_sha256) &&
     Object.values(official.route_source_sha256 ?? {}).every(isSha256) &&
-    Object.values(official.contract_sha256 ?? {}).every(isSha256) &&
+    exactKeys(contractDigests, contractKeys) &&
+    Object.values(contractDigests).every(isSha256) &&
     contract?.root === repositoryRoot &&
     contract.branch === "main" &&
     contract.remote_repository === "jcdumaua/aifinder" &&
@@ -92,7 +102,7 @@ export async function createAdminV1OfficialAuthorizationRecord({
   const repository = await inspect_repository();
   if (
     !exactObservedRepository(repository) ||
-    !exactReviewedPolicy(reviewed_policy, repository.root) ||
+    !exactReviewedPolicy(reviewed_policy, repository.root, version) ||
     request?.published_head !== repository.head
   ) throw new AdminV1OfficialAuthorizationError(
     "OFFICIAL_AUTHORIZATION_GENERATOR_REPOSITORY_MISMATCH",
@@ -127,7 +137,9 @@ export async function createAdminV1OfficialAuthorizationRecord({
       reviewed_policy.official_runtime.route_source_sha256,
     ),
     contract_sha256: structuredClone(
-      reviewed_policy.official_runtime.contract_sha256,
+      version === 2
+        ? reviewed_policy.official_runtime.contract_sha256_v2
+        : reviewed_policy.official_runtime.contract_sha256,
     ),
     created_at: request.created_at,
     expires_at: request.expires_at,

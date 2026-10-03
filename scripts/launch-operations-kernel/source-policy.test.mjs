@@ -2370,6 +2370,46 @@ await check("CF18 expiry and read-only authorization guards survive explicit res
   }
 });
 
+await check("v2 receipt descriptor attestation confines exact reflection to its reviewed runner function", async () => {
+  const runnerPath = "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs";
+  const runner = candidateSources.get(runnerPath);
+  const start = runner.indexOf("function exactOfficialRetentionReceipt(receipt, authorization) {");
+  const finish = runner.indexOf("\n}\n\nexport function classifyAdminV1OfficialPriorJournal", start) + 2;
+  const region = runner.slice(start, finish);
+  assert(start >= 0 && finish > start);
+  assert.equal(createHash("sha256").update(region).digest("hex"), "3924dc9e8ad16b1fc58cd3107bf67cb707f6be88733c3e909868fb92f368be37");
+  const copiedPath = "scripts/launch-operations-kernel/receipt-descriptor-fixture.mjs";
+  assert.throws(() => validateLocalOnlySources(new Map([[copiedPath, region]])),
+    (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  for (const mutated of [runner + "\nconst extraReceiptReflection = Object.getOwnPropertyDescriptors({});\n",
+    runner.replace('receipt.phase === "COMPLETE"', 'receipt.phase === "COMMITTED"')]) {
+    assert.notEqual(mutated, runner);
+    const sources = new Map(candidateSources);sources.set(runnerPath, mutated);
+    assert.throws(() => validateExplicitSemanticResealedCandidateSources(sources, [runnerPath]),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  }
+});
+
+await check("v2 preflight descriptor attestation confines exact observation reflection", async () => {
+  const platformPath = "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs";
+  const platform = candidateSources.get(platformPath);
+  const start = platform.indexOf("    const observationValid = isolated");
+  const finish = platform.indexOf("\n    if (\n      !observationValid ||", start);
+  const region = platform.slice(start, finish);
+  assert(start >= 0 && finish > start);
+  assert.equal(createHash("sha256").update(region).digest("hex"), "4dfcfcd6b4ec03caf05016115068faf5771eec116a5d6651c0fd8e1ad3604026");
+  const copiedPath = "scripts/launch-operations-kernel/preflight-descriptor-fixture.mjs";
+  assert.throws(() => validateLocalOnlySources(new Map([[copiedPath, region]])),
+    (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  for (const mutated of [platform + "\nconst extraObservationReflection = Object.getOwnPropertyDescriptors({});\n",
+    platform.replace("observation.bundle_run_id === authorization.run_id", "observation.bundle_run_id !== authorization.run_id")]) {
+    assert.notEqual(mutated, platform);
+    const sources = new Map(candidateSources);sources.set(platformPath, mutated);
+    assert.throws(() => validateExplicitSemanticResealedCandidateSources(sources, [platformPath]),
+      (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY");
+  }
+});
+
 if (failures.length > 0) {
   console.log(
     `FAIL_LAUNCH_OPERATIONS_SOURCE_POLICY assertions=${assertions} mutations=169 failures=${failures.length} failed=${failures.join(",")}`,

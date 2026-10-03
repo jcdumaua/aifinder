@@ -12,6 +12,17 @@ import {
 const HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
 const RUN_ID = "44444444-4444-4444-8444-444444444444";
 const sha = (value) => value.repeat(64);
+const V1_CONTRACT_KEYS = [
+  "budgets", "deferred_routes", "environment_names", "official_ledger",
+  "qualification_ledger", "target_routes",
+];
+const V2_CONTRACT_KEYS = ["action_costs", ...V1_CONTRACT_KEYS];
+// Independently derived from the approved amendment and preserved v1 objects.
+const EXPECTED_V2_CONTRACT_SHA256 = {
+  ...structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256),
+  action_costs: "471fd0bf4977c76e784220275246f2f73632745494723bd158f7c246760a3e36",
+  budgets: "55c557dec8fd8f7a54426bc2f8ac5647a2f3d7389c2239baef5b4efc076075d6",
+};
 const repository = {
   root: "/Users/jamescarlodumaua/aifinder",
   branch: "main",
@@ -112,6 +123,8 @@ assert.equal(generated.review_approval_sha256, request.review_approval_sha256);
 assert.equal(generated.schema_version, 1);
 assert.equal(Object.keys(generated).length, 18);
 assert.equal(Object.keys(generated.execution).length, 11);
+assert.deepEqual(Object.keys(generated.contract_sha256).sort(), V1_CONTRACT_KEYS);
+assert.deepEqual(generated.contract_sha256, ADMIN_V1_OFFICIAL_CONTRACT_SHA256);
 
 await assert.rejects(
   createAdminV1OfficialAuthorizationRecord({
@@ -147,6 +160,8 @@ await assert.rejects(
 );
 
 const v2Policy = structuredClone(reviewedPolicy);
+v2Policy.official_runtime.contract_sha256_v2 =
+  structuredClone(EXPECTED_V2_CONTRACT_SHA256);
 v2Policy.official_runtime.authorization_schema_sha256 =
   "0c0abad46d6ac7e31d24d3c75b56765b52d8819a9ffd31a19200b67f3c22c3a4";
 v2Policy.official_runtime.isolation_contract_sha256 =
@@ -178,6 +193,8 @@ assert.equal(Object.keys(v2.repository).length, 11);
 assert.equal(Object.keys(v2.execution).length, 13);
 assert.equal(Object.keys(v2.execution.isolation).length, 10);
 assert.equal(v2.isolation_contract_sha256, v2Policy.official_runtime.isolation_contract_sha256);
+assert.deepEqual(Object.keys(v2.contract_sha256).sort(), V2_CONTRACT_KEYS);
+assert.deepEqual(v2.contract_sha256, EXPECTED_V2_CONTRACT_SHA256);
 const { one_use_authorization_sha256: ignored, ...unsigned } = v2;
 assert.equal(v2.one_use_authorization_sha256, sha256Hex(canonicalJson({
   domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...unsigned,
@@ -195,4 +212,49 @@ for (const mutate of [
 const unreviewedPolicy = structuredClone(v2Policy);
 unreviewedPolicy.official_runtime.isolation_contract_sha256 = sha("f");
 await assert.rejects(generateV2({ reviewed_policy: unreviewedPolicy }));
-console.log("PASS_ADMIN_V1_OFFICIAL_AUTHORIZATION_GENERATOR assertions=21 v1_preserved=true v2_complete=true published_head_bound=true moved_head_rejected=true live_records_created=0");
+const generateV1 = (policyValue) => createAdminV1OfficialAuthorizationRecord({
+  inspect_repository: async () => structuredClone(repository),
+  inspect_temporary_commit: async () => ({
+    commit_sha: execution.temporary_commit_sha, parent_sha: HEAD,
+    tree_sha: "e".repeat(40),
+  }),
+  reviewed_policy: policyValue, request,
+  now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"),
+});
+for (const mutate of [
+  (policyValue) => { policyValue.official_runtime.contract_sha256.action_costs = sha("a"); },
+  (policyValue) => { delete policyValue.official_runtime.contract_sha256.budgets; },
+]) {
+  const invalid = structuredClone(reviewedPolicy);
+  mutate(invalid);
+  await assert.rejects(generateV1(invalid),
+    (error) => error?.code === "OFFICIAL_AUTHORIZATION_GENERATOR_REPOSITORY_MISMATCH");
+}
+for (const mutate of [
+  (policyValue) => { delete policyValue.official_runtime.contract_sha256_v2; },
+  (policyValue) => {
+    policyValue.official_runtime.contract_sha256_v2 =
+      structuredClone(policyValue.official_runtime.contract_sha256);
+  },
+  (policyValue) => { policyValue.official_runtime.contract_sha256_v2.extra = sha("a"); },
+  (policyValue) => { policyValue.official_runtime.contract_sha256_v2.action_costs = sha("f"); },
+  (policyValue) => { policyValue.official_runtime.contract_sha256_v2.budgets = sha("f"); },
+]) {
+  const invalid = structuredClone(v2Policy);
+  mutate(invalid);
+  await assert.rejects(generateV2({ reviewed_policy: invalid }), (error) =>
+    error?.code === "OFFICIAL_AUTHORIZATION_GENERATOR_REPOSITORY_MISMATCH" ||
+    error?.code === "OFFICIAL_AUTHORIZATION_INVALID");
+}
+for (const mutate of [
+  (fields) => { fields.contract_sha256.action_costs = sha("f"); },
+  (fields) => { fields.contract_sha256.budgets = sha("f"); },
+  (fields) => { fields.isolation_contract_sha256 = sha("f"); },
+]) {
+  const changed = structuredClone(unsigned);
+  mutate(changed);
+  assert.notEqual(v2.one_use_authorization_sha256, sha256Hex(canonicalJson({
+    domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...changed,
+  })));
+}
+console.log("PASS_ADMIN_V1_OFFICIAL_AUTHORIZATION_GENERATOR assertions=35 v1_preserved=true v2_complete=true versioned_contracts=true published_head_bound=true moved_head_rejected=true live_records_created=0");

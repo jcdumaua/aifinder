@@ -427,6 +427,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "action_costs",
             "budgets",
             "deferred_routes",
             "environment_names",
@@ -435,6 +436,9 @@
             "target_routes"
           ],
           "properties": {
+            "action_costs": {
+              "$ref": "#/$defs/sha256"
+            },
             "budgets": {
               "$ref": "#/$defs/sha256"
             },

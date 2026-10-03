@@ -37,9 +37,37 @@ export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1 = Object.freeze({
   expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
   expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
 });
-export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256 = sha256Hex(
+export const OFFICIAL_PREVIEW_ENVIRONMENT_PLAN = Object.freeze([
+  ["ADMIN_PASSWORD", "credential:admin_password"],
+  ["ADMIN_SESSION_SECRET", "credential:admin_session_secret"],
+  ["NEXT_PUBLIC_SUPABASE_URL", "credential:supabase_url"],
+  ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "credential:supabase_anon_key"],
+  ["SUPABASE_SERVICE_ROLE_KEY", "credential:supabase_service_role_key"],
+  ["AIFINDER_VALIDATION_RUN_ID", "authorization:run_id"],
+  ["AIFINDER_VALIDATION_PROJECT_REF", "authorization:isolation.project_ref"],
+].map((entry) => Object.freeze(entry)));
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V2 = Object.freeze({
+  ...ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1,
+  schema_version: 2,
+  preview_environment_plan: OFFICIAL_PREVIEW_ENVIRONMENT_PLAN,
+  retention_trigger: "SUCCESS_AFTER_OFFICIAL_LEDGER_AND_POSTSTATE_V1",
+  pre_commit_failure_policy: "DELETE_EXACT_RUN_OWNED_EXTERNAL_RESOURCES_V1",
+  post_commit_policy: "RETAIN_EXACT_RUN_OWNED_PREVIEW_AND_SEVEN_ENVIRONMENTS_V1",
+  retention_complete_lifecycle: "RETENTION_COMPLETE",
+  retention_pending_lifecycle: "RETENTION_PENDING",
+  retained_preview_count: 1,
+  retained_environment_count: 7,
+  final_retention_verification: "REVERIFY_EXACT_IDS_AFTER_DATA_AND_EPHEMERAL_CLEANUP_V1",
+  automatic_post_success_delete: false,
+  later_destructive_cleanup_requires_owner_authority: true,
+});
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256_V1 = sha256Hex(
   canonicalJson(ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1),
 );
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256_V2 = sha256Hex(
+  canonicalJson(ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V2),
+);
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256 = ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256_V2;
 
 export class OfficialIsolationError extends Error {
   constructor(code) {

@@ -6,6 +6,8 @@ import {
   validateOfficialProvisioningReceipt,
 } from "./admin-v1-official-isolation.mjs";
 import { loadAdminV1OfficialCredentials } from "./admin-v1-official-live-platform.mjs";
+import * as officialPlatform from "./admin-v1-official-live-platform.mjs";
+import * as officialRuntime from "./admin-v1-official-runtime.mjs";
 import { ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY } from "./admin-v1-official-runtime.mjs";
 
 const runId = "44444444-4444-4444-8444-444444444444";
@@ -63,5 +65,564 @@ for (const [ref, origin] of [
   assertions += 4;
 }
 for (const value of Object.values(valid.bundle.values)) value.fill(0);
+// The independently specified v2 fixture exercises the real credential loader,
+// preflight, adapter and concrete descriptor/response boundary. Only fetch/Git
+// are replaced, so these cases cannot contact a provider or read credentials.
+const expectedPreviewKeys = [
+  "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+  "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
+];
+const expectedIsolationV2 = {
+  schema_version: 2,
+  operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+  provider_cleanup_policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1",
+  origin_relation: "HTTPS_PROJECT_REF_DOT_SUPABASE_DOT_CO_V1",
+  allow_custom_origin: false,
+  excluded_project_ref: "mtpisopvdxuvmpzbzqjw",
+  excluded_origin: "https://mtpisopvdxuvmpzbzqjw.supabase.co",
+  environment_keys: expectedPreviewKeys,
+  credential_bundle_schema_version: 1,
+  credential_bundle_provenance_source: "OWNER_BOUND_ISOLATED_BUNDLE_V1",
+  credential_value_names: ["admin_password", "admin_session_secret", "github_token",
+    "supabase_anon_key", "supabase_service_role_key", "supabase_url", "vercel_token"],
+  credential_value_max_bytes: 16384,
+  provisioning_receipt_schema_version: 1,
+  provenance_receipt_schema_version: 1,
+  expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+  expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+  preview_environment_plan: [
+    ["ADMIN_PASSWORD", "credential:admin_password"],
+    ["ADMIN_SESSION_SECRET", "credential:admin_session_secret"],
+    ["NEXT_PUBLIC_SUPABASE_URL", "credential:supabase_url"],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "credential:supabase_anon_key"],
+    ["SUPABASE_SERVICE_ROLE_KEY", "credential:supabase_service_role_key"],
+    ["AIFINDER_VALIDATION_RUN_ID", "authorization:run_id"],
+    ["AIFINDER_VALIDATION_PROJECT_REF", "authorization:isolation.project_ref"],
+  ],
+  retention_trigger: "SUCCESS_AFTER_OFFICIAL_LEDGER_AND_POSTSTATE_V1",
+  pre_commit_failure_policy: "DELETE_EXACT_RUN_OWNED_EXTERNAL_RESOURCES_V1",
+  post_commit_policy: "RETAIN_EXACT_RUN_OWNED_PREVIEW_AND_SEVEN_ENVIRONMENTS_V1",
+  retention_complete_lifecycle: "RETENTION_COMPLETE",
+  retention_pending_lifecycle: "RETENTION_PENDING",
+  retained_preview_count: 1,
+  retained_environment_count: 7,
+  final_retention_verification: "REVERIFY_EXACT_IDS_AFTER_DATA_AND_EPHEMERAL_CLEANUP_V1",
+  automatic_post_success_delete: false,
+  later_destructive_cleanup_requires_owner_authority: true,
+};
+
+function completeFixture(schemaVersion = 2) {
+  const { authorization, bundle } = fixture();
+  const expectedCosts = structuredClone(officialRuntime.ADMIN_V1_OFFICIAL_ACTION_COSTS);
+  for (let ordinal = 3; ordinal <= 7; ordinal += 1) {
+    expectedCosts[`create_environment_${ordinal}`] = {
+      provider_direct_mutations: 1, environment_records_created: 1,
+    };
+    expectedCosts[`verify_environment_${ordinal}`] = {
+      provider_control_invocations: 1, environment_metadata_controls: 1,
+    };
+    expectedCosts[`delete_environment_${ordinal}`] = {
+      provider_direct_mutations: 1, environment_records_deleted: 1,
+    };
+  }
+  const expectedBudgets = { ...officialRuntime.ADMIN_V1_OFFICIAL_BUDGET_LIMITS,
+    provider_direct_mutations: 15, environment_records_created: 7, environment_records_deleted: 7 };
+  Object.assign(authorization, {
+    authorization_id_sha256: "1".repeat(64), one_use_authorization_sha256: "2".repeat(64),
+    review_approval_sha256: "3".repeat(64), candidate_identity_sha256: "4".repeat(64),
+    manifest_sha256: "5".repeat(64), supervisor_sha256: "6".repeat(64),
+    supervisor_policy_sha256: "7".repeat(64), authorization_schema_sha256: "8".repeat(64),
+    compatibility_support_sha256: Object.fromEntries([
+      "testing/admin-v1-staging-runtime-orchestrator.mjs",
+      "testing/admin-v1-staging-runtime-source-policy.test.mjs",
+      "testing/run-static-readiness.mjs", "testing/static-test-safety-manifest.json",
+    ].map((name) => [name, "9".repeat(64)])),
+    route_source_sha256: Object.fromEntries([
+      "app/api/admin/csrf/route.ts", "app/api/admin/login/route.ts", "app/api/admin/logout/route.ts",
+      "app/api/admin/session/route.ts", "app/api/admin/submissions/route.ts", "app/api/admin/tools/route.ts",
+      "app/api/admin/upload-logo/route.ts", "lib/admin-v1-launch-scope.ts", "proxy.ts",
+    ].map((name) => [name, "a".repeat(64)])),
+    contract_sha256: { ...officialRuntime.ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+      action_costs: sha256Hex(canonicalJson(expectedCosts)), budgets: sha256Hex(canonicalJson(expectedBudgets)) },
+    isolation_contract_sha256: sha256Hex(canonicalJson(expectedIsolationV2)),
+    repository: { root: "/Users/jamescarlodumaua/aifinder", branch: "main", head: "b".repeat(40),
+      origin_main: "b".repeat(40), remote_main: "b".repeat(40), ahead: 0, behind: 0,
+      index_empty: true, worktree_count: 1, status_sha256: "c".repeat(64), remote_repository: "jcdumaua/aifinder" },
+  });
+  Object.assign(authorization.execution, {
+    access_mode: "SELF_PROJECT_OIDC", branch_name: `aifinder-admin-v1-official-${runId}`,
+    preview_project_name: "aifinder", preview_team_slug: "ai-finder-s-projects", storage_bucket: "tool-logos",
+    storage_name: `admin/${runId}.png`, temporary_commit_sha: "d".repeat(40),
+  });
+  if (schemaVersion === 1) {
+    authorization.schema_version = 1;
+    delete authorization.isolation_contract_sha256;
+    delete authorization.execution.provider_cleanup_policy;
+    delete authorization.execution.isolation;
+    authorization.execution.environment_keys = ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"];
+    authorization.contract_sha256 = structuredClone(officialRuntime.ADMIN_V1_OFFICIAL_CONTRACT_SHA256);
+  } else {
+    const { one_use_authorization_sha256: ignored, ...unsigned } = authorization;
+    authorization.one_use_authorization_sha256 = sha256Hex(canonicalJson({
+      domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...unsigned,
+    }));
+  }
+  return { authorization, bundle };
+}
+
+function credentialProbe(schemaVersion = 2, { journal, spawn_sync } = {}) {
+  const { authorization, bundle } = completeFixture(schemaVersion);
+  const credentials = loadAdminV1OfficialCredentials(schemaVersion === 2
+    ? { authorization, credential_bundle: bundle, credential_source_policy: ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+        now_epoch_ms: now }
+    : { authorization, credential_source_policy: ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+        environment: { ADMIN_PASSWORD: "synthetic-admin", ADMIN_SESSION_SECRET: "synthetic-session",
+          NEXT_PUBLIC_SUPABASE_URL: `https://${projectRef}.supabase.co`, NEXT_PUBLIC_SUPABASE_ANON_KEY: "synthetic-anon",
+          SUPABASE_SERVICE_ROLE_KEY: "synthetic-service", GH_TOKEN: "synthetic-github", VERCEL_TOKEN: "synthetic-vercel",
+          NODE_ENV: "production" } });
+  const calls = [];
+  let responseFor = () => ({ id: authorization.execution.preview_project_id,
+    name: authorization.execution.preview_project_name, accountId: authorization.execution.preview_team_id });
+  const transport = officialPlatform.createAdminV1OfficialConcreteTransport({
+    execution_context: { ...(journal ? { journal } : {}),
+      ...(spawn_sync ? { git_execution_context: {
+        git_dir: "/tmp/aifinder-official-synthetic-git-dir",
+        object_directory: "/tmp/aifinder-official-synthetic-objects",
+      } } : {}) },
+    spawn_sync: spawn_sync ?? (() => assert.fail("unexpected synthetic Git call")),
+    fetch_impl: async (rawUrl, init) => {
+      const request = { url: new URL(String(rawUrl)), method: init.method,
+        body: init.body === undefined ? null : JSON.parse(init.body) };
+      calls.push(request);
+      const response = responseFor(request);
+      return { status: response?.http_status ?? 200, headers: { get: () => null, getSetCookie: () => [] },
+        text: async () => JSON.stringify(response?.http_body ?? response) };
+    },
+  });
+  return { authorization, credentials, bundle, calls, transport,
+    respondWith(operation) { responseFor = operation; },
+    execute(operation, input = {}, suppliedCredentials = credentials) {
+      return transport.execute({ operation, input, authorization, credentials: suppliedCredentials });
+    },
+    retire() {
+      for (const value of Object.values(credentials)) value.fill(0);
+      for (const value of Object.values(bundle.values)) value.fill(0);
+    } };
+}
+
+const contractFailures = [];
+async function contractCheck(name, operation) {
+  try { await operation(); assertions += 1; }
+  catch (error) { contractFailures.push(`${name}:${error?.code ?? error?.message ?? "UNKNOWN"}`); }
+}
+
+for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} valid preflight`, async () => {
+  const probe = credentialProbe(schemaVersion);
+  try {
+    const result = await probe.execute("inspect_environment_contract");
+    assert.deepEqual(result, { status: "EXACT", names: [...officialRuntime.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] });
+    assert.equal(probe.calls.length, 1);
+    assert.equal(probe.calls[0].url.pathname, `/v9/projects/${probe.authorization.execution.preview_project_id}`);
+    assert.equal(probe.calls[0].url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+  } finally { probe.retire(); }
+});
+
+for (const [name, change] of [
+  ["wrong run", (observation) => { observation.bundle_run_id = "55555555-5555-4555-8555-555555555555"; }],
+  ["wrong provenance", (observation) => { observation.bundle_provenance_sha256 = "f".repeat(64); }],
+  ["wrong names", (observation) => { observation.names = observation.names.slice(1); }],
+  ["wrong policy", (observation) => { observation.credential_source_policy.GITHUB = "UNBOUND"; }],
+  ["wrong node environment", (observation) => { observation.node_env = "development"; }],
+  ["extra legacy alias", (observation) => { observation.github_alias_count = 1; }],
+  ["extra field", (observation) => { observation.unrelated = true; }],
+]) await contractCheck(`v2 observation rejects ${name} before request`, async () => {
+  const probe = credentialProbe();
+  try {
+    const [symbol] = Object.getOwnPropertySymbols(probe.credentials);
+    const observation = structuredClone(probe.credentials[symbol]);
+    change(observation);
+    const supplied = { ...probe.credentials };
+    Object.defineProperty(supplied, symbol, { value: observation });
+    await assert.rejects(probe.execute("inspect_environment_contract", {}, supplied),
+      { code: "OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN" });
+    assert.equal(probe.calls.length, 0);
+  } finally { probe.retire(); }
+});
+
+for (const keys of [expectedPreviewKeys.slice(0, 2), [...expectedPreviewKeys].reverse(),
+  [...expectedPreviewKeys.slice(0, 6), "UNBOUND_KEY"]]) {
+  await contractCheck("v2 preflight rejects wrong exact ordered key set before request", async () => {
+    const probe = credentialProbe();
+    try {
+      probe.authorization.execution.environment_keys = keys;
+      await assert.rejects(probe.execute("inspect_environment_contract"), { code: "OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN" });
+      assert.equal(probe.calls.length, 0);
+    } finally { probe.retire(); }
+  });
+}
+
+await contractCheck("v2 adapter operation map adds exactly fifteen actions with closed metadata", async () => {
+  const v1 = officialPlatform.ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1;
+  const v2 = officialPlatform.ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V2;
+  assert.strictEqual(officialPlatform.ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP, v1);
+  assert.ok(Object.isFrozen(v1) && Object.isFrozen(v2));
+  const expectedOperations = v1.map((row) => row.operation);
+  const metadata = {
+    create: ["SETUP", "PROVIDER_MUTATION", "provider_direct_mutations+environment_records_created", "mutation", "CREATE_EXACT", "OFFICIAL_STATE_MACHINE"],
+    verify: ["SETUP", "PROVIDER_CONTROL", "provider_control_invocations+environment_metadata_controls", "read", "READ_ONLY", "NONE"],
+    delete: ["CLEANUP", "PROVIDER_MUTATION", "provider_direct_mutations+environment_records_deleted", "mutation", "DELETE_EXACT", "OFFICIAL_STATE_MACHINE"],
+  };
+  for (const row of v1) assert.deepEqual(v2.find((entry) => entry.operation === row.operation), row);
+  for (const [kind, [stage, authority, budget, effect, idempotency, owner]] of Object.entries(metadata)) {
+    for (let ordinal = 3; ordinal <= 7; ordinal += 1) {
+      const operation = `${kind}_environment_${ordinal}`;
+      expectedOperations.push(operation);
+      assert.deepEqual(v2.find((row) => row.operation === operation), {
+        operation, state_machine_stage: stage, concrete_implementation: "vercel.environment",
+        underlying_transport: "vercel", authority_class: authority, budget_counter: budget,
+        mutation_or_read: effect, idempotency, retry_rule: "ZERO",
+        sanitized_result_shape: "BOUNDED_OPERATION_SPECIFIC_OBJECT", cleanup_owner: owner,
+      });
+    }
+  }
+  assert.deepEqual(v2.map((row) => row.operation).sort(), expectedOperations.sort());
+});
+
+for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} operation closure precedes adapter/concrete calls`, async () => {
+  const probe = credentialProbe(schemaVersion);
+  try {
+    let adapterCalls = 0;
+    const adapter = officialPlatform.createAdminV1OfficialAdapter({ authorization: probe.authorization,
+      credentials: probe.credentials, execution_context: {}, transport: {
+        execute: async () => { adapterCalls += 1; return { status: "UNEXPECTED" }; },
+      } });
+    const denied = ["create_environment_0", "create_environment_8", "create_environment_01",
+      "create_environment_2_extra", "verify_environment_8", "delete_environment_8",
+      ...(schemaVersion === 1 ? ["create_environment_3", "verify_environment_3", "delete_environment_3"] : [])];
+    for (const operation of denied) {
+      await assert.rejects(adapter.invoke(operation, { key: "ADMIN_PASSWORD", value: Buffer.from("synthetic"), record_id: "env-owned" }),
+        { code: "OFFICIAL_ADAPTER_OPERATION_DENIED" });
+      await assert.rejects(probe.execute(operation, { key: "ADMIN_PASSWORD", value: Buffer.from("synthetic"), record_id: "env-owned" }),
+        { code: "OFFICIAL_ADAPTER_OPERATION_DENIED" });
+    }
+    assert.equal(adapterCalls, 0);
+    assert.equal(probe.calls.length, 0);
+  } finally { probe.retire(); }
+});
+
+for (const schemaVersion of [0, 3, "2", undefined]) await contractCheck("adapter and concrete reject unknown schema before calls", async () => {
+  const probe = credentialProbe(1);
+  try {
+    probe.authorization.schema_version = schemaVersion;
+    assert.throws(() => officialPlatform.createAdminV1OfficialAdapter({ authorization: probe.authorization,
+      credentials: probe.credentials, execution_context: {}, transport: probe.transport }), { code: "OFFICIAL_ADAPTER_INPUT" });
+    await assert.rejects(probe.execute("create_environment_1", { key: "ADMIN_PASSWORD", value: Buffer.from("synthetic") }),
+      { code: "OFFICIAL_ADAPTER_INPUT" });
+    assert.equal(probe.calls.length, 0);
+  } finally { probe.retire(); }
+});
+
+for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} rejects ordinal key mismatch and unbounded exact IDs`, async () => {
+  const probe = credentialProbe(schemaVersion);
+  try {
+    const adapter = officialPlatform.createAdminV1OfficialAdapter({ authorization: probe.authorization,
+      credentials: probe.credentials, execution_context: {}, transport: probe.transport });
+    for (const operation of ["create_environment_1", "verify_environment_1"]) {
+      const input = { key: "ADMIN_SESSION_SECRET", value: Buffer.from("synthetic"), record_id: "env-owned" };
+      await assert.rejects(adapter.invoke(operation, input), { code: "OFFICIAL_ADAPTER_INPUT" });
+      await assert.rejects(probe.execute(operation, input), { code: "OFFICIAL_ADAPTER_INPUT" });
+    }
+    for (const record_id of [undefined, null, "", "bad\0id", "x".repeat(257)]) {
+      for (const operation of ["verify_environment_1", "delete_environment_1"]) {
+        await assert.rejects(probe.execute(operation, { record_id, key: "ADMIN_PASSWORD" }), { code: "OFFICIAL_ADAPTER_INPUT" });
+      }
+    }
+    assert.equal(probe.calls.length, 0);
+  } finally { probe.retire(); }
+});
+
+await contractCheck("all seven v2 create/verify/delete descriptors and exact readback shapes", async () => {
+  const probe = credentialProbe();
+  try {
+    await probe.execute("inspect_environment_contract");
+    probe.calls.length = 0;
+    const records = new Map();
+    probe.respondWith(({ url, method, body }) => {
+      assert.equal(url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+      if (method === "POST") {
+        assert.equal(url.pathname, `/v10/projects/${probe.authorization.execution.preview_project_id}/env`);
+        assert.equal(url.searchParams.get("upsert"), "false");
+        const ordinal = expectedPreviewKeys.indexOf(body.key) + 1;
+        assert.ok(ordinal >= 1 && ordinal <= 7);
+        assert.deepEqual(body, { key: expectedPreviewKeys[ordinal - 1], value: `synthetic-preview-${ordinal}`,
+          type: "encrypted", target: ["preview"], gitBranch: probe.authorization.execution.branch_name });
+        const id = `env-owned-${ordinal}`;
+        records.set(id, { id, key: body.key, type: "encrypted", target: ["preview"], gitBranch: body.gitBranch });
+        return { http_status: 201, http_body: { id } };
+      }
+      const id = decodeURIComponent(url.pathname.split("/").at(-1));
+      assert.equal(url.pathname, `/v9/projects/${probe.authorization.execution.preview_project_id}/env/${id}`);
+      assert.ok(records.has(id));
+      if (method === "GET") {
+        assert.equal(url.searchParams.get("decrypt"), "false");
+        return records.get(id);
+      }
+      assert.equal(method, "DELETE");
+      records.delete(id);
+      return { http_status: 204, http_body: {} };
+    });
+    const adapter = officialPlatform.createAdminV1OfficialAdapter({ authorization: probe.authorization,
+      credentials: probe.credentials, execution_context: {}, transport: probe.transport });
+    for (let ordinal = 1; ordinal <= 7; ordinal += 1) {
+      const key = expectedPreviewKeys[ordinal - 1];
+      const created = await adapter.invoke(`create_environment_${ordinal}`, { key, value: Buffer.from(`synthetic-preview-${ordinal}`) });
+      assert.deepEqual(created, { status: "CREATED_EXACT", record_id: `env-owned-${ordinal}` });
+      const verified = await adapter.invoke(`verify_environment_${ordinal}`, { key, record_id: created.record_id });
+      assert.deepEqual(verified, { status: "EXACT", record_id: created.record_id, key,
+        project_id: probe.authorization.execution.preview_project_id, team_id: probe.authorization.execution.preview_team_id,
+        git_branch: probe.authorization.execution.branch_name, unrelated_preserved: true });
+    }
+    for (let ordinal = 1; ordinal <= 7; ordinal += 1) {
+      assert.deepEqual(await adapter.invoke(`delete_environment_${ordinal}`, { record_id: `env-owned-${ordinal}` }),
+        { status: "DELETED_EXACT" });
+    }
+    assert.equal(probe.calls.filter((row) => row.method === "POST").length, 7);
+    assert.equal(probe.calls.filter((row) => row.method === "GET").length, 7);
+    assert.equal(probe.calls.filter((row) => row.method === "DELETE").length, 7);
+    assert.equal(records.size, 0);
+  } finally { probe.retire(); }
+});
+
+for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} environment readback rejects wrong exact identity`, async () => {
+  const probe = credentialProbe(schemaVersion);
+  try {
+    await probe.execute("inspect_environment_contract");
+    const exact = { id: "env-owned-1", key: "ADMIN_PASSWORD", type: "encrypted", target: ["preview"],
+      gitBranch: probe.authorization.execution.branch_name,
+      projectId: probe.authorization.execution.preview_project_id, teamId: probe.authorization.execution.preview_team_id };
+    for (const [field, value] of [["id", "env-unrelated"], ["key", "ADMIN_SESSION_SECRET"], ["type", "plain"],
+      ["target", ["production"]], ["gitBranch", "unrelated"], ["projectId", "prj_unrelated"], ["teamId", "team_unrelated"]]) {
+      probe.respondWith(() => ({ ...exact, [field]: value }));
+      await assert.rejects(probe.execute("verify_environment_1", { key: "ADMIN_PASSWORD", record_id: "env-owned-1" }),
+        { code: "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN" });
+    }
+    if (schemaVersion === 1) {
+      probe.respondWith(() => exact);
+      assert.deepEqual(await probe.execute("verify_environment_1", { key: "ADMIN_PASSWORD", record_id: "env-owned-1" }),
+        { status: "EXACT", record_id: "env-owned-1" });
+    }
+  } finally { probe.retire(); }
+});
+
+await contractCheck("v2 metadata omissions require proven project/team preflight", async () => {
+  const probe = credentialProbe();
+  try {
+    probe.respondWith(() => ({ id: "env-owned-1", key: "ADMIN_PASSWORD", type: "encrypted", target: ["preview"],
+      gitBranch: probe.authorization.execution.branch_name }));
+    await assert.rejects(probe.execute("verify_environment_1", { key: "ADMIN_PASSWORD", record_id: "env-owned-1" }),
+      { code: "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN" });
+  } finally { probe.retire(); }
+});
+
+for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} exact Preview identity result and input binding`, async () => {
+  const probe = credentialProbe(schemaVersion);
+  try {
+    const deployment = { id: "dpl_owned", uid: "dpl_owned", url: "aifinder-owned-preview.vercel.app",
+      production: false, target: null, readyState: "READY", createdAt: now,
+      projectId: probe.authorization.execution.preview_project_id, name: "aifinder",
+      ownerId: probe.authorization.execution.preview_team_id,
+      gitSource: { type: "github", sha: probe.authorization.execution.temporary_commit_sha,
+        ref: probe.authorization.execution.branch_name, repo: "jcdumaua/aifinder" } };
+    probe.respondWith(({ url }) => url.pathname === "/v6/deployments"
+      ? { deployments: [deployment], pagination: { count: 1, next: null } } : deployment);
+    assert.deepEqual(await probe.execute("acquire_automatic_preview"), { status: "ACQUIRED_EXACT", deployment_id: "dpl_owned" });
+    const before = probe.calls.length;
+    if (schemaVersion === 2) {
+      for (const deployment_id of [undefined, "dpl_unrelated", "x".repeat(257)]) {
+        await assert.rejects(probe.execute("verify_preview_identity", { deployment_id }), { code: "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN" });
+      }
+      assert.equal(probe.calls.length, before);
+    }
+    assert.deepEqual(await probe.execute("verify_preview_identity", schemaVersion === 2 ? { deployment_id: "dpl_owned" } : {}),
+      { status: "EXACT", deployment_id: "dpl_owned", ...(schemaVersion === 2 ? { unrelated_preserved: true } : {}) });
+    assert.equal(probe.calls.at(-1).url.pathname, "/v13/deployments/dpl_owned");
+    assert.equal(probe.calls.at(-1).url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+  } finally { probe.retire(); }
+});
+
+for (const [schemaVersion, count, admitted] of [[1, 2, true], [1, 3, false], [2, 7, true], [2, 8, false]]) {
+  await contractCheck(`schema-${schemaVersion} zero-external-residual exact ID limit ${count}`, async () => {
+    let gitCalls = 0;
+    const probe = credentialProbe(schemaVersion, { spawn_sync: () => {
+      gitCalls += 1;return { status: 0, stdout: "", stderr: "" };
+    } });
+    try {
+      const ids = Array.from({ length: count }, (_, index) => `env-owned-${index + 1}`);
+      probe.respondWith(({ url, method }) => {
+        assert.equal(method, "GET");
+        assert.equal(url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+        if (url.pathname === "/v6/deployments") return { deployments: [], pagination: { count: 0, next: null } };
+        if (url.pathname === `/v10/projects/${probe.authorization.execution.preview_project_id}/env`) {
+          return { envs: [], pagination: { count: 0, next: null } };
+        }
+        const id = decodeURIComponent(url.pathname.split("/").at(-1));
+        assert.ok(ids.includes(id));
+        assert.equal(url.pathname, `/v9/projects/${probe.authorization.execution.preview_project_id}/env/${id}`);
+        return { http_status: 404, http_body: { code: "not_found" } };
+      });
+      const result = probe.execute("verify_zero_external_residual", { remote_ref: null, deployment_id: null,
+        environment_record_ids: ids, local_state_id: null });
+      if (admitted) {
+        assert.deepEqual(await result, { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true });
+        assert.equal(gitCalls, 1);
+        assert.equal(probe.calls.length, count + 2);
+        assert.deepEqual(probe.calls.filter(({ url }) => url.pathname.startsWith("/v9/")).map(({ url }) =>
+          decodeURIComponent(url.pathname.split("/").at(-1))), ids);
+      } else {
+        await assert.rejects(result, { code: "OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS" });
+        assert.equal(gitCalls, 0);assert.equal(probe.calls.length, 0);
+      }
+    } finally { probe.retire(); }
+  });
+}
+
+function committedRecoveryRecord(authorization, lifecycle = "RETENTION_PENDING") {
+  const ids = Array.from({ length: 7 }, (_, index) => `env-owned-${index + 1}`);
+  return { retired: false, value: { schema_version: 1,
+    identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id },
+    sequence: 1, state: { lifecycle, stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
+      runtime_sessions: 1, last_completed_qualification_ordinal: 6, last_completed_official_ordinal: 20,
+      owned: { deployment_id: "dpl_owned", environment_record_ids: [...ids] }, zero_residual: false,
+      cleanup: ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"],
+      retention: { policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMMITTED",
+        deployment_id: "dpl_owned", environment_record_ids: [...ids], environment_keys: [...expectedPreviewKeys],
+        data_zero_residual: true, external_retained_exact: false, unrelated_preserved: false } } } };
+}
+
+function retainedDeployment(authorization) {
+  return { id: "dpl_owned", uid: "dpl_owned", url: "aifinder-owned-preview.vercel.app",
+    production: false, target: null, readyState: "READY", createdAt: now,
+    projectId: authorization.execution.preview_project_id, name: "aifinder", ownerId: authorization.execution.preview_team_id,
+    gitSource: { type: "github", sha: authorization.execution.temporary_commit_sha,
+      ref: authorization.execution.branch_name, repo: "jcdumaua/aifinder" } };
+}
+
+for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
+  await contractCheck(`fresh active ${lifecycle} recovery verifies exact Preview and seven IDs without inventories`, async () => {
+    let record;
+    const probe = credentialProbe(2, { journal: { load: () => structuredClone(record) } });
+    try {
+      record = committedRecoveryRecord(probe.authorization, lifecycle);
+      const deployment = retainedDeployment(probe.authorization);
+      probe.respondWith(({ url, method }) => {
+        assert.equal(method, "GET");
+        assert.equal(url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+        if (url.pathname === "/v13/deployments/dpl_owned") {
+          assert.equal(url.searchParams.get("withGitRepoInfo"), "true");return deployment;
+        }
+        const id = decodeURIComponent(url.pathname.split("/").at(-1));
+        const ordinal = record.value.state.retention.environment_record_ids.indexOf(id);
+        assert.ok(ordinal >= 0);
+        assert.equal(url.pathname, `/v9/projects/${probe.authorization.execution.preview_project_id}/env/${id}`);
+        assert.equal(url.searchParams.get("decrypt"), "false");
+        return { id, key: expectedPreviewKeys[ordinal], type: "encrypted", target: ["preview"],
+          gitBranch: probe.authorization.execution.branch_name,
+          projectId: probe.authorization.execution.preview_project_id, teamId: probe.authorization.execution.preview_team_id };
+      });
+      assert.deepEqual(await probe.execute("verify_preview_identity", { deployment_id: "dpl_owned" }),
+        { status: "EXACT", deployment_id: "dpl_owned", unrelated_preserved: true });
+      for (let ordinal = 1; ordinal <= 7; ordinal += 1) {
+        const record_id = `env-owned-${ordinal}`;
+        const key = expectedPreviewKeys[ordinal - 1];
+        assert.deepEqual(await probe.execute(`verify_environment_${ordinal}`, { key, record_id }), {
+          status: "EXACT", record_id, key, project_id: probe.authorization.execution.preview_project_id,
+          team_id: probe.authorization.execution.preview_team_id, git_branch: probe.authorization.execution.branch_name,
+          unrelated_preserved: true,
+        });
+      }
+      assert.equal(probe.calls.length, 8);
+      const before = probe.calls.length;
+      for (const operation of ["acquire_automatic_preview", "inspect_prior_residue", "create_environment_1",
+        "delete_environment_1", "delete_preview", "generate_oidc", "protected_access_handshake",
+        "retire_protected_access", "application_request", "verify_zero_data_residual", "verify_zero_external_residual"]) {
+        await assert.rejects(probe.execute(operation, { deployment_id: "dpl_owned", record_id: "env-owned-1",
+          key: "ADMIN_PASSWORD", value: Buffer.from("synthetic") }), { code: "OFFICIAL_ADAPTER_OPERATION_DENIED" });
+      }
+      await assert.rejects(probe.execute("verify_environment_1", { key: "ADMIN_PASSWORD", record_id: "env-unrelated" }),
+        { code: "OFFICIAL_ADAPTER_INPUT" });
+      assert.equal(probe.calls.length, before);
+    } finally { probe.retire(); }
+  });
+}
+
+await contractCheck("retired journal denies all subsequent recovery reads before calls", async () => {
+  let record;
+  let gitCalls = 0;
+  const probe = credentialProbe(2, { journal: { load: () => structuredClone(record) },
+    spawn_sync: () => { gitCalls += 1;return { status: 0, stdout: "", stderr: "" }; } });
+  try {
+    record = committedRecoveryRecord(probe.authorization);
+    probe.respondWith(() => retainedDeployment(probe.authorization));
+    await probe.execute("verify_preview_identity", { deployment_id: "dpl_owned" });
+    record.retired = true;
+    for (const operation of ["inspect_remote_ref", "inspect_environment_contract", "verify_preview_identity", "verify_environment_1"]) {
+      await assert.rejects(probe.execute(operation, { deployment_id: "dpl_owned", record_id: "env-owned-1", key: "ADMIN_PASSWORD" }),
+        { code: "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN" });
+    }
+    assert.equal(gitCalls, 0);assert.equal(probe.calls.length, 1);
+  } finally { probe.retire(); }
+});
+
+for (const [name, change, inputId = "dpl_owned"] of [
+  ["missing journal record", () => null],
+  ["retired record", (record) => { record.retired = true;return record; }],
+  ["state retired", (record) => { record.value.state.retired = true;return record; }],
+  ["wrong run", (record) => { record.value.identity.run_id = "55555555-5555-4555-8555-555555555555";return record; }],
+  ["wrong authorization", (record) => { record.value.identity.authorization_id_sha256 = "2".repeat(64);return record; }],
+  ["extra identity field", (record) => { record.value.identity.extra = true;return record; }],
+  ["wrong input ID", (record) => record, "dpl_unrelated"],
+  ["missing input ID", (record) => record, null],
+  ["wrong owned ID", (record) => { record.value.state.owned.deployment_id = "dpl_other";return record; }],
+  ["duplicate environments", (record) => { record.value.state.retention.environment_record_ids[6] = "env-owned-1";return record; }],
+  ["wrong keys", (record) => { record.value.state.retention.environment_keys.reverse();return record; }],
+  ["uncommitted phase", (record) => { record.value.state.retention.phase = "ARMED";return record; }],
+  ["false data cleanup", (record) => { record.value.state.retention.data_zero_residual = false;return record; }],
+  ["missing ephemeral cleanup", (record) => { record.value.state.cleanup.pop();return record; }],
+]) await contractCheck(`fresh recovery rejects ${name} before provider calls`, async () => {
+  let record;
+  const probe = credentialProbe(2, { journal: { load: () => structuredClone(record) } });
+  try {
+    record = change(committedRecoveryRecord(probe.authorization));
+    await assert.rejects(probe.execute("verify_preview_identity", { deployment_id: inputId }),
+      { code: "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN" });
+    assert.equal(probe.calls.length, 0);
+  } finally { probe.retire(); }
+});
+
+for (const [name, change] of [
+  ["wrong source commit", (body) => { body.gitSource.sha = "e".repeat(40); }],
+  ["wrong project", (body) => { body.projectId = "prj_unrelated"; }],
+  ["wrong team", (body) => { body.ownerId = "team_unrelated"; }],
+  ["outside lifetime", (body) => { body.createdAt = now - 7_200_000; }],
+  ["wrong hostname", (body) => { body.url = "unrelated.example"; }],
+  ["wrong deployment ID", (body) => { body.id = "dpl_other";body.uid = "dpl_other"; }],
+]) await contractCheck(`fresh recovery rejects provider ${name} without other effects`, async () => {
+  let record;
+  const probe = credentialProbe(2, { journal: { load: () => structuredClone(record) } });
+  try {
+    record = committedRecoveryRecord(probe.authorization);
+    const body = retainedDeployment(probe.authorization);change(body);
+    probe.respondWith(({ url, method }) => {
+      assert.equal(method, "GET");assert.equal(url.pathname, "/v13/deployments/dpl_owned");return body;
+    });
+    await assert.rejects(probe.execute("verify_preview_identity", { deployment_id: "dpl_owned" }),
+      { code: "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN" });
+    assert.equal(probe.calls.length, 1);
+  } finally { probe.retire(); }
+});
+
+assert.deepEqual(contractFailures, [], contractFailures.join("\n"));
 console.log(`PASS_ADMIN_V1_OFFICIAL_CR3 assertions=${assertions} canonical_relation=true repeated_receipts_bypass=false real_calls=0`);
 await import("./admin-v1-official-concrete-bridge.test.mjs");

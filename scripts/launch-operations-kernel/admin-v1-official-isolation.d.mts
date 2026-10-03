@@ -23,6 +23,23 @@ export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1: Readonly<{
   expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3";
 }>;
 export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256: string;
+export const OFFICIAL_PREVIEW_ENVIRONMENT_PLAN: readonly (readonly [string, string])[];
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V2: Readonly<Omit<typeof ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_V1, "schema_version"> & {
+  schema_version: 2;
+  preview_environment_plan: typeof OFFICIAL_PREVIEW_ENVIRONMENT_PLAN;
+  retention_trigger: "SUCCESS_AFTER_OFFICIAL_LEDGER_AND_POSTSTATE_V1";
+  pre_commit_failure_policy: "DELETE_EXACT_RUN_OWNED_EXTERNAL_RESOURCES_V1";
+  post_commit_policy: "RETAIN_EXACT_RUN_OWNED_PREVIEW_AND_SEVEN_ENVIRONMENTS_V1";
+  retention_complete_lifecycle: "RETENTION_COMPLETE";
+  retention_pending_lifecycle: "RETENTION_PENDING";
+  retained_preview_count: 1;
+  retained_environment_count: 7;
+  final_retention_verification: "REVERIFY_EXACT_IDS_AFTER_DATA_AND_EPHEMERAL_CLEANUP_V1";
+  automatic_post_success_delete: false;
+  later_destructive_cleanup_requires_owner_authority: true;
+}>;
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256_V1: string;
+export const ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256_V2: string;
 export class OfficialIsolationError extends Error { readonly code: string; }
 export function canonicalOfficialOrigin(value: unknown): string;
 export function boundOfficialOrigin(projectRef: unknown, origin: unknown): string;

@@ -982,7 +982,37 @@ function sourceSyntaxFacts(relativePath, source) {
     relativePath ===
       "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs" &&
     sha256Hex(source) ===
-      "a604bc555cb8b14dca4858f2e2d29b1975539df45f5bd375c3c814447b9a04a7";
+      "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c";
+  // Permit descriptor reflection only inside the exact reviewed receipt validator.
+  const retentionReceiptBegin = "function exactOfficialRetentionReceipt(receipt, authorization) {";
+  const retentionReceiptEnd = "\n}\n\nexport function classifyAdminV1OfficialPriorJournal";
+  const retentionReceiptStart = source.indexOf(retentionReceiptBegin);
+  const retentionReceiptEndMarker = source.indexOf(retentionReceiptEnd, retentionReceiptStart);
+  const retentionReceiptFinish = retentionReceiptEndMarker + 2;
+  const retentionReceiptRegion = source.slice(retentionReceiptStart, retentionReceiptFinish);
+  const reviewedRetentionReceiptRange = relativePath === CONCRETE_RUNNER_PATH &&
+    retentionReceiptStart >= 0 && retentionReceiptEndMarker > retentionReceiptStart &&
+    source.lastIndexOf(retentionReceiptBegin) === retentionReceiptStart &&
+    source.lastIndexOf(retentionReceiptEnd) === retentionReceiptEndMarker &&
+    retentionReceiptRegion.length === 1408 && /^[\x00-\x7f]*$/u.test(retentionReceiptRegion) &&
+    sha256Hex(retentionReceiptRegion) === "3924dc9e8ad16b1fc58cd3107bf67cb707f6be88733c3e909868fb92f368be37"
+    ? { start: retentionReceiptStart, finish: retentionReceiptFinish } : null;
+  const reviewedRetentionReceiptNode = (node) => reviewedRetentionReceiptRange !== null &&
+    node.pos >= reviewedRetentionReceiptRange.start && node.end <= reviewedRetentionReceiptRange.finish;
+  const preflightObservationBegin = "    const observationValid = isolated";
+  const preflightObservationEnd = "\n    if (\n      !observationValid ||";
+  const preflightObservationStart = source.indexOf(preflightObservationBegin);
+  const preflightObservationFinish = source.indexOf(preflightObservationEnd, preflightObservationStart);
+  const preflightObservationRegion = source.slice(preflightObservationStart, preflightObservationFinish);
+  const reviewedPreflightObservationRange = relativePath === OFFICIAL_LIVE_PLATFORM_PATH &&
+    preflightObservationStart >= 0 && preflightObservationFinish > preflightObservationStart &&
+    source.lastIndexOf(preflightObservationBegin) === preflightObservationStart &&
+    source.lastIndexOf(preflightObservationEnd) === preflightObservationFinish &&
+    preflightObservationRegion.length === 614 && /^[\x00-\x7f]*$/u.test(preflightObservationRegion) &&
+    sha256Hex(preflightObservationRegion) === "4dfcfcd6b4ec03caf05016115068faf5771eec116a5d6651c0fd8e1ad3604026"
+    ? { start: preflightObservationStart, finish: preflightObservationFinish } : null;
+  const reviewedPreflightObservationNode = (node) => reviewedPreflightObservationRange !== null &&
+    node.pos >= reviewedPreflightObservationRange.start && node.end <= reviewedPreflightObservationRange.finish;
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -2224,14 +2254,15 @@ function sourceSyntaxFacts(relativePath, source) {
       runtimeCodeConstruction = true;
     }
     if (ts.isIdentifier(node) && node.text === "Reflect" &&
-        !reviewedIsolationDescriptorGuard) {
+        !reviewedIsolationDescriptorGuard && !reviewedRetentionReceiptNode(node)) {
       runtimeCodeConstruction = true;
     }
     if (
       (ts.isPropertyAccessExpression(node) ||
         ts.isElementAccessExpression(node)) &&
       runtimeConstructionMembers.has(memberName(node)) &&
-      !(reviewedIsolationDescriptorGuard &&
+      !((reviewedIsolationDescriptorGuard || reviewedRetentionReceiptNode(node) ||
+        reviewedPreflightObservationNode(node)) &&
         memberName(node) === "getOwnPropertyDescriptors")
     ) {
       runtimeCodeConstruction = true;

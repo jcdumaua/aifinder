@@ -76,13 +76,16 @@ const OFFICIAL_ROUTE_SOURCE_PATHS = Object.freeze([
   "lib/admin-v1-launch-scope.ts",
   "proxy.ts",
 ]);
-const OFFICIAL_CONTRACT_DIGEST_KEYS = Object.freeze([
+const OFFICIAL_CONTRACT_DIGEST_KEYS_V1 = Object.freeze([
   "budgets",
   "deferred_routes",
   "environment_names",
   "official_ledger",
   "qualification_ledger",
   "target_routes",
+]);
+const OFFICIAL_CONTRACT_DIGEST_KEYS_V2 = Object.freeze([
+  "action_costs", ...OFFICIAL_CONTRACT_DIGEST_KEYS_V1,
 ]);
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const PRE_TRUST_GIT_SANDBOX_PROFILE = [
@@ -423,6 +426,7 @@ function validatePolicy(policy, repositoryRoot) {
         "authorization_schema_sha256",
         "isolation_contract_sha256",
         "contract_sha256",
+        "contract_sha256_v2",
         "credential_source_policy",
         "route_source_sha256",
         "repository_contract",
@@ -435,9 +439,16 @@ function validatePolicy(policy, repositoryRoot) {
       ["ISOLATION_SHA", isSha256(official.isolation_contract_sha256)],
       ["CONTRACT_KEYS", exactKeys(
         official.contract_sha256,
-        OFFICIAL_CONTRACT_DIGEST_KEYS,
+        OFFICIAL_CONTRACT_DIGEST_KEYS_V1,
       )],
       ["CONTRACT_SHA", Object.values(official.contract_sha256 ?? {}).every(
+        (value) => isSha256(value),
+      )],
+      ["CONTRACT_V2_KEYS", exactKeys(
+        official.contract_sha256_v2,
+        OFFICIAL_CONTRACT_DIGEST_KEYS_V2,
+      )],
+      ["CONTRACT_V2_SHA", Object.values(official.contract_sha256_v2 ?? {}).every(
         (value) => isSha256(value),
       )],
       ["CREDENTIAL_POLICY", exactObject(
@@ -656,6 +667,10 @@ export function validateOfficialAuthorizationForSupervisor(
   const expires = Date.parse(authorization?.expires_at);
   const official = policy?.official_runtime;
   const v2 = authorization?.schema_version === 2;
+  const contractKeys = v2
+    ? OFFICIAL_CONTRACT_DIGEST_KEYS_V2 : OFFICIAL_CONTRACT_DIGEST_KEYS_V1;
+  const contractDigests = v2
+    ? official?.contract_sha256_v2 : official?.contract_sha256;
   const keys = [
     "schema_version", "operation_class", "authorization_id_sha256",
     "one_use_authorization_sha256", "review_approval_sha256",
@@ -693,7 +708,11 @@ export function validateOfficialAuthorizationForSupervisor(
       authorization.route_source_sha256,
       official?.route_source_sha256,
     ) ||
-    !exactObject(authorization.contract_sha256, official?.contract_sha256) ||
+    !exactKeys(authorization.contract_sha256, contractKeys) ||
+    !Object.values(authorization.contract_sha256 ?? {}).every(isSha256) ||
+    !exactKeys(contractDigests, contractKeys) ||
+    !Object.values(contractDigests ?? {}).every(isSha256) ||
+    !exactObject(authorization.contract_sha256, contractDigests) ||
     !Number.isFinite(created) || !Number.isFinite(expires) ||
     (v2 && (new Date(created).toISOString() !== authorization.created_at ||
       new Date(expires).toISOString() !== authorization.expires_at)) ||
@@ -1199,6 +1218,7 @@ const SAFE_RUNNER_OUTPUT_CODES = new Set([
   "OFFICIAL_REPOSITORY_MISMATCH",
   "OFFICIAL_ROUTE_SOURCE_MISMATCH",
   "OFFICIAL_RUNTIME_COMPLETE",
+  "RETENTION_COMPLETE",
   "OFFICIAL_RUNTIME_FAILED_CLOSED",
   "OFFICIAL_SUPPORT_MISMATCH",
   "OFFICIAL_SUPERVISOR_TRUST_REQUIRED",
@@ -1206,12 +1226,49 @@ const SAFE_RUNNER_OUTPUT_CODES = new Set([
   "QUALIFIED",
 ]);
 
-function sanitizedRunnerOutput(value) {
-  const code = SAFE_RUNNER_OUTPUT_CODES.has(value?.code)
+const OFFICIAL_RETENTION_RECEIPT_KEYS = Object.freeze([
+  "policy", "phase", "deployment_id", "environment_record_ids", "environment_keys",
+  "data_zero_residual", "external_retained_exact", "unrelated_preserved",
+]);
+const OFFICIAL_RETENTION_ENVIRONMENT_KEYS = Object.freeze([
+  "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+  "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
+]);
+
+function exactRetainedRunnerOutput(value, authorization) {
+  const receipt = value?.retention;
+  if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+      authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+      value.status !== "PASS" || value.qualification_requests !== 6 || value.official_requests !== 20 ||
+      value.runtime_sessions !== 1 || value.runtime_retries !== 0 || value.runtime_replays !== 0 ||
+      value.zero_residual_owned_state !== false || !receipt || typeof receipt !== "object" ||
+      Array.isArray(receipt)) return false;
+  const descriptors = Object.getOwnPropertyDescriptors(receipt);
+  if (Reflect.ownKeys(descriptors).length !== OFFICIAL_RETENTION_RECEIPT_KEYS.length ||
+      !OFFICIAL_RETENTION_RECEIPT_KEYS.every((key) => Object.hasOwn(descriptors, key) &&
+        Object.hasOwn(descriptors[key], "value") && descriptors[key].enumerable === true)) return false;
+  const ids = receipt.environment_record_ids;
+  return receipt.policy === authorization.execution.provider_cleanup_policy && receipt.phase === "COMPLETE" &&
+    /^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") && Array.isArray(ids) && ids.length === 7 &&
+    ids.every((id) => typeof id === "string" && id.length > 0 && id.length <= 128 && /^[\x21-\x7e]+$/u.test(id)) &&
+    new Set(ids).size === 7 && Array.isArray(receipt.environment_keys) &&
+    exactObject(receipt.environment_keys, OFFICIAL_RETENTION_ENVIRONMENT_KEYS) &&
+    exactObject(receipt.environment_keys, authorization.execution.environment_keys) &&
+    receipt.data_zero_residual === true && receipt.external_retained_exact === true &&
+    receipt.unrelated_preserved === true;
+}
+
+export function sanitizedRunnerOutput(value, authorization) {
+  let code = SAFE_RUNNER_OUTPUT_CODES.has(value?.code)
     ? value.code
     : "CONCRETE_RUNNER_FAILED";
+  if (code === "RETENTION_COMPLETE" && !exactRetainedRunnerOutput(value, authorization) ||
+      code === "OFFICIAL_RUNTIME_COMPLETE" && authorization?.schema_version === 2) {
+    code = "CONCRETE_RUNNER_FAILED";
+  }
   const output = {
-    status: ["QUALIFIED", "OFFICIAL_RUNTIME_COMPLETE"].includes(code)
+    status: ["QUALIFIED", "OFFICIAL_RUNTIME_COMPLETE", "RETENTION_COMPLETE"].includes(code)
       ? "PASS"
       : "FAIL",
     code,
@@ -1258,14 +1315,31 @@ function sanitizedRunnerOutput(value) {
     output.attempts_used = 1;
     output.retained_preview_count = code === "QUALIFIED" ? 1 : 0;
   }
-  if (code === "OFFICIAL_RUNTIME_COMPLETE") {
+  if (["OFFICIAL_RUNTIME_COMPLETE", "RETENTION_COMPLETE"].includes(code)) {
     output.qualification_requests = 6;
     output.official_requests = 20;
     output.runtime_sessions = 1;
     output.runtime_retries = 0;
     output.runtime_replays = 0;
+    if (code === "RETENTION_COMPLETE") {
+      output.zero_residual_owned_state = false;
+      output.retention = structuredClone(value.retention);
+    }
   }
   return output;
+}
+
+export function admitSupervisorRunnerResult(result, authorization, normalizedOutput) {
+  if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS) {
+    return result;
+  }
+  if (result?.exit_code === 0 && result.code === "RETENTION_COMPLETE" &&
+      normalizedOutput?.code === "RETENTION_COMPLETE" &&
+      exactRetainedRunnerOutput(normalizedOutput, authorization)) return result;
+  if (result?.exit_code !== 1 || result?.code === "RETENTION_COMPLETE" || result?.code === "OFFICIAL_RUNTIME_COMPLETE") {
+    return { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" };
+  }
+  return result;
 }
 
 export async function dispatchPreImportSupervisor(argumentsList, dependencies = {}) {
@@ -1323,7 +1397,8 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
     if (sha256(currentAuthorizationBytes) !== trust.authorization_sha256) {
       throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_CHANGED");
     }
-    return runner.dispatchConcreteQualificationRunner(
+    let normalizedRunnerOutput = null;
+    const dispatched = runner.dispatchConcreteQualificationRunner(
       argumentsList,
       runner.createConcreteRunnerDependencies({
         repositoryRoot: dependencies.repository_root,
@@ -1351,7 +1426,9 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
             }
           : {}),
         writeOutput(value) {
-          dependencies.write_output(sanitizedRunnerOutput(value));
+          const normalized = sanitizedRunnerOutput(value, trust.authorization);
+          normalizedRunnerOutput = structuredClone(normalized);
+          dependencies.write_output(normalized);
         },
       }),
       Object.freeze({
@@ -1372,6 +1449,13 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
           : {}),
       }),
     );
+    if (trust.authorization.schema_version === 2 && trust.operation_class === OFFICIAL_OPERATION_CLASS) {
+      const result = await dispatched;
+      const admitted = admitSupervisorRunnerResult(result, trust.authorization, normalizedRunnerOutput);
+      if (admitted !== result) dependencies.write_output({ status: "FAIL", code: admitted.code });
+      return admitted;
+    }
+    return dispatched;
   } catch (error) {
     const code = safeCode(error);
     dependencies.write_output?.({ status: "FAIL", code });

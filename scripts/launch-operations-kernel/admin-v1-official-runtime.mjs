@@ -20,6 +20,7 @@ import {
   ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256,
   OFFICIAL_ISOLATION_KEYS,
   OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  OFFICIAL_PREVIEW_ENVIRONMENT_PLAN,
   validateOfficialIsolationAuthorization,
 } from "./admin-v1-official-isolation.mjs";
 
@@ -114,7 +115,7 @@ export const ADMIN_V1_OFFICIAL_TARGET_ROUTES = Object.freeze([
   "app/api/admin/upload-logo/route.ts",
 ]);
 
-export const ADMIN_V1_OFFICIAL_BUDGET_LIMITS = Object.freeze({
+export const ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V1 = Object.freeze({
   git_remote_mutations: 4,
   git_remote_reads: 42,
   local_temporary_commits: 1,
@@ -148,7 +149,15 @@ export const ADMIN_V1_OFFICIAL_BUDGET_LIMITS = Object.freeze({
   cleanup_reconciliation_requests: 2,
 });
 
-export const ADMIN_V1_OFFICIAL_CONTRACT_SHA256 = Object.freeze({
+export const ADMIN_V1_OFFICIAL_BUDGET_LIMITS = ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V1;
+export const ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2 = Object.freeze({
+  ...ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V1,
+  provider_direct_mutations: 15,
+  environment_records_created: 7,
+  environment_records_deleted: 7,
+});
+
+export const ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1 = Object.freeze({
   budgets: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_BUDGET_LIMITS)),
   deferred_routes: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_DEFERRED_ROUTES)),
   environment_names: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES)),
@@ -158,6 +167,8 @@ export const ADMIN_V1_OFFICIAL_CONTRACT_SHA256 = Object.freeze({
   ),
   target_routes: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_TARGET_ROUTES)),
 });
+
+export const ADMIN_V1_OFFICIAL_CONTRACT_SHA256 = ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1;
 
 export const ADMIN_V1_OFFICIAL_FAILURE_TRANSITIONS = Object.freeze({
   BASELINE_STATUS_IDENTITY_MISMATCH: "STOP_PRE_CREDENTIAL_NEW_AUTHORITY",
@@ -183,10 +194,141 @@ export const ADMIN_V1_OFFICIAL_FAILURE_TRANSITIONS = Object.freeze({
   GOVERNED_EVIDENCE_UPDATE_FAILURE: "NO_COMMIT_PUSH_SEPARATE_AUTHORITY",
 });
 
+const RETENTION_RECEIPT_KEYS = Object.freeze(["policy", "phase", "deployment_id",
+  "environment_record_ids", "environment_keys", "data_zero_residual",
+  "external_retained_exact", "unrelated_preserved"]);
+
+function retainedOwnershipExact(state) {
+  const receipt = state?.retention;
+  return exactKeys(receipt, RETENTION_RECEIPT_KEYS) &&
+    receipt.policy === "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" &&
+    /^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") &&
+    receipt.deployment_id === state.owned?.deployment_id &&
+    Array.isArray(receipt.environment_record_ids) &&
+    receipt.environment_record_ids.length === 7 &&
+    receipt.environment_record_ids.every((id) => boundedAscii(id, 128)) &&
+    new Set(receipt.environment_record_ids).size === 7 &&
+    Array.isArray(state.owned?.environment_record_ids) && Array.isArray(receipt.environment_keys) &&
+    [receipt.data_zero_residual, receipt.external_retained_exact, receipt.unrelated_preserved].every((value) => typeof value === "boolean") &&
+    canonicalJson(receipt.environment_record_ids) === canonicalJson(state.owned?.environment_record_ids) &&
+    canonicalJson(receipt.environment_keys) === canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) &&
+    state.zero_residual === false;
+}
+
+function retentionEphemeralCleanupExact(state) {
+  return Array.isArray(state?.cleanup) && state.cleanup.every((step) => typeof step === "string") &&
+    ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"]
+      .every((operation) => state.cleanup.includes(operation)) &&
+    !state.cleanup.some((step) => step === "DELETE_PREVIEW" || /^DELETE_ENVIRONMENT_[1-7]$/u.test(step));
+}
+
+function retentionTerminalExact(state) {
+  return retainedOwnershipExact(state) && state.lifecycle === "RETENTION_COMPLETE" &&
+    state.retention.phase === "COMPLETE" && state.retention.data_zero_residual === true &&
+    state.retention.external_retained_exact === true && state.retention.unrelated_preserved === true &&
+    state.token_spent === true && state.runtime_sessions === 1 &&
+    state.last_completed_qualification_ordinal === 6 && state.last_completed_official_ordinal === 20 &&
+    retentionEphemeralCleanupExact(state);
+}
+
+function requireEnvironmentVerification(response, input, authorization) {
+  if (!exactAdapterResponse(response, "EXACT") || response.record_id !== input.record_id ||
+    authorization.schema_version === 2 && (response.key !== input.key ||
+      response.project_id !== authorization.execution.preview_project_id ||
+      response.team_id !== authorization.execution.preview_team_id ||
+      response.git_branch !== authorization.execution.branch_name || response.unrelated_preserved !== true)) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CREATE_MISMATCH");
+  }
+}
+
+function requireRetainedPreview(response, deploymentId) {
+  if (!exactAdapterResponse(response, "EXACT") || response.deployment_id !== deploymentId ||
+      response.unrelated_preserved !== true) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_PREVIEW_IDENTITY_MISMATCH");
+  }
+}
+
+// A committed run is never replayed. Recovery only reads bound resource IDs and
+// finalizes a journal whose data and ephemeral cleanup receipts already exist.
+export async function recoverAdminV1OfficialRetention({ authorization, adapters, journal,
+  now_epoch_ms = Date.now() }) {
+  const validated = validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms });
+  if (validated.schema_version !== 2 || typeof adapters?.invoke !== "function" ||
+      typeof journal?.load !== "function" || typeof journal.publish !== "function" ||
+      typeof journal.retire !== "function") throw new AdminV1OfficialRuntimeError("OFFICIAL_RUNTIME_INPUT");
+  const record = journal.load();
+  if (record?.retired === true) throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_SPENT");
+  const state = structuredClone(record?.value?.state);
+  if (!retainedOwnershipExact(state) || state.retention.phase !== "COMMITTED" ||
+      state.token_spent !== true || state.last_completed_official_ordinal !== 20 ||
+      state.last_completed_qualification_ordinal !== 6) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  const budget = createAdminV1OfficialBudget({ schema_version: 2 });
+  const read = async (operation, input = {}) => {
+    const allowed = operation === "verify_preview_identity" || operation === "inspect_remote_ref" ||
+      /^verify_environment_[1-7]$/u.test(operation);
+    if (!allowed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+    budget.take(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);return adapters.invoke(operation, input);
+  };
+  try {
+    if (state.retention.data_zero_residual !== true || !retentionEphemeralCleanupExact(state)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_EPHEMERAL_CLEANUP_UNPROVEN");
+    }
+    if ((await read("inspect_remote_ref")).status !== "ABSENT") {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
+    }
+    requireRetainedPreview(await read("verify_preview_identity", { deployment_id: state.retention.deployment_id }),
+      state.retention.deployment_id);
+    for (let index = 0; index < 7; index += 1) {
+      const input = { key: state.retention.environment_keys[index], record_id: state.retention.environment_record_ids[index] };
+      requireEnvironmentVerification(await read(`verify_environment_${index + 1}`, input), input, validated);
+    }
+    state.retention.external_retained_exact = true;state.retention.unrelated_preserved = true;
+    state.retention.phase = "COMPLETE";state.lifecycle = "RETENTION_COMPLETE";state.stage = "RETENTION_COMPLETE_PUBLISHED";
+    journal.publish(state);journal.retire(state);
+    return Object.freeze({ classification: "RETENTION_COMPLETE", zero_residual_owned_state: false,
+      retention: Object.freeze(structuredClone(state.retention)) });
+  } catch {
+    state.retention.phase = "COMMITTED";state.retention.external_retained_exact = false;state.retention.unrelated_preserved = false;
+    state.lifecycle = "RECOVERY_PENDING";state.stage = "RETENTION_RECOVERY_UNPROVEN";
+    journal.publish(state);
+    return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });
+  }
+}
+
 export function classifyAdminV1OfficialRecoveryState(record) {
   const state = record?.value?.state ?? record?.state ?? record;
   if (!state || typeof state !== "object" || Array.isArray(state)) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  if (Object.hasOwn(state, "retention")) {
+    const precommitCleanupComplete = ["UNARMED", "ARMED"].includes(state.retention?.phase) &&
+      state.lifecycle === "CLEANUP_COMPLETE" && state.zero_residual === true;
+    if (state.retired !== undefined && typeof state.retired !== "boolean" ||
+        record !== state && record?.retired !== undefined && typeof record.retired !== "boolean" ||
+        record !== state && record?.retired === true && state.retired !== true ||
+        record !== state && record?.retired === false && state.retired === true ||
+        state.retention?.phase !== "COMPLETE" && !precommitCleanupComplete &&
+          (state.retired === true || record !== state && record?.retired === true)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    if (!exactKeys(state.retention, RETENTION_RECEIPT_KEYS) ||
+        state.retention.policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1") {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    if (state.retention.phase === "COMPLETE" || state.lifecycle === "RETENTION_COMPLETE") {
+      if (retentionTerminalExact(state) && state.retired === true &&
+          (record === state || record?.retired === true)) return "RETENTION_COMPLETE";
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    if (state.retention.phase === "COMMITTED") {
+      if (!retainedOwnershipExact(state)) throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+      return state.lifecycle === "RECOVERY_PENDING" ? "RECOVERY_PENDING" : "RETENTION_PENDING";
+    }
+    if (!["UNARMED", "ARMED"].includes(state.retention.phase)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
   }
   if (state.lifecycle === "CLEANUP_COMPLETE" && state.zero_residual === true) {
     return "CLEANUP_COMPLETE";
@@ -232,6 +374,7 @@ const CONTRACT_DIGEST_KEYS = Object.freeze([
   "qualification_ledger",
   "target_routes",
 ]);
+const CONTRACT_DIGEST_KEYS_V2 = Object.freeze(["action_costs", ...CONTRACT_DIGEST_KEYS]);
 const AUTHORIZATION_KEYS = Object.freeze([
   "schema_version",
   "operation_class",
@@ -399,7 +542,7 @@ function validatedAuthorizationFields(
       !exactKeys(record.execution?.isolation, OFFICIAL_ISOLATION_KEYS) ||
       !exactKeys(record.compatibility_support_sha256, SUPPORT_PATHS) ||
       !exactKeys(record.route_source_sha256, ROUTE_IDENTITY_PATHS) ||
-      !exactKeys(record.contract_sha256, CONTRACT_DIGEST_KEYS))) {
+      !exactKeys(record.contract_sha256, CONTRACT_DIGEST_KEYS_V2))) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_INVALID");
   }
   let value;
@@ -429,9 +572,9 @@ function validatedAuthorizationFields(
     ].every(isSha256) ||
     !exactDigestMap(value.compatibility_support_sha256, SUPPORT_PATHS) ||
     !exactDigestMap(value.route_source_sha256, ROUTE_IDENTITY_PATHS) ||
-    !exactDigestMap(value.contract_sha256, CONTRACT_DIGEST_KEYS) ||
+    !exactDigestMap(value.contract_sha256, isolated ? CONTRACT_DIGEST_KEYS_V2 : CONTRACT_DIGEST_KEYS) ||
     canonicalJson(value.contract_sha256) !==
-      canonicalJson(ADMIN_V1_OFFICIAL_CONTRACT_SHA256) ||
+      canonicalJson(isolated ? ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 : ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1) ||
     created === null || expires === null || created >= expires ||
     now_epoch_ms < created || now_epoch_ms >= expires ||
     expires - created > 24 * 60 * 60 * 1000 ||
@@ -560,7 +703,22 @@ function sanitizedJournalState(value) {
     "authorization_header", "raw_headers", "raw_body", "raw_child", "secret_sha256",
     "provider_output", "sql_output",
   ];
-  if (forbidden.some((entry) => serialized.toLowerCase().includes(entry))) {
+  let scanned = serialized;
+  if (Object.hasOwn(value.state ?? {}, "retention")) {
+    const receipt = value.state.retention;
+    if (!exactKeys(receipt, RETENTION_RECEIPT_KEYS) ||
+        receipt.policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+        !["UNARMED", "ARMED", "COMMITTED", "COMPLETE"].includes(receipt.phase) ||
+        canonicalJson(receipt.environment_keys) !== canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_EVIDENCE_SENSITIVE");
+    }
+    // These seven constant names are public contract metadata. Exempt only
+    // this exact array; every other journal field retains the original scan.
+    const publicProjection = structuredClone(value);
+    publicProjection.state.retention.environment_keys = [];
+    scanned = canonicalJson(publicProjection);
+  }
+  if (forbidden.some((entry) => scanned.toLowerCase().includes(entry))) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_EVIDENCE_SENSITIVE");
   }
   return serialized;
@@ -661,8 +819,16 @@ export function createAdminV1OfficialJournal({ directory, identity }) {
       return persistTo(activePath, state);
     },
     retire(state) {
-      if (state?.lifecycle !== "CLEANUP_COMPLETE" || state?.zero_residual !== true) {
+      const destructiveCleanupComplete = state?.lifecycle === "CLEANUP_COMPLETE" && state?.zero_residual === true &&
+        !["COMMITTED", "COMPLETE"].includes(state?.retention?.phase);
+      if (!destructiveCleanupComplete && !retentionTerminalExact(state)) {
         throw new AdminV1OfficialRuntimeError("OFFICIAL_RETIREMENT_DENIED");
+      }
+      if (existsSync(retiredPath)) {
+        const retired = strictJournalObject(retiredPath);
+        if (Object.hasOwn(state, "retention") || Object.hasOwn(retired.value.state ?? {}, "retention")) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_AUTHORIZATION_SPENT");
+        }
       }
       const sha256 = persistTo(retiredPath, { ...state, retired: true });
       if (existsSync(activePath)) unlinkSync(activePath);
@@ -678,8 +844,9 @@ function blankCounts() {
   );
 }
 
-function createBudget(overrides) {
-  const limits = { ...ADMIN_V1_OFFICIAL_BUDGET_LIMITS };
+export function createAdminV1OfficialBudget({ schema_version = 1, test_budget_overrides: overrides } = {}) {
+  if (![1, 2].includes(schema_version)) throw new AdminV1OfficialRuntimeError("OFFICIAL_BUDGET_INPUT");
+  const limits = { ...(schema_version === 2 ? ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2 : ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V1) };
   if (overrides !== undefined) {
     if (
       !overrides || typeof overrides !== "object" || Array.isArray(overrides) ||
@@ -707,7 +874,7 @@ function createBudget(overrides) {
   };
 }
 
-export const ADMIN_V1_OFFICIAL_ACTION_COSTS = Object.freeze({
+export const ADMIN_V1_OFFICIAL_ACTION_COSTS_V1 = Object.freeze({
   inspect_prior_residue: { provider_control_invocations: 1 },
   prepare_local_temporary_commit: { local_temporary_commits: 1 },
   inspect_github_metadata: { git_remote_reads: 1 },
@@ -780,6 +947,21 @@ export const ADMIN_V1_OFFICIAL_ACTION_COSTS = Object.freeze({
   cleanup_local_owned_temp_state: { local_temporary_cleanups: 1 },
 });
 
+export const ADMIN_V1_OFFICIAL_ACTION_COSTS = ADMIN_V1_OFFICIAL_ACTION_COSTS_V1;
+export const ADMIN_V1_OFFICIAL_ACTION_COSTS_V2 = deepFreeze({
+  ...structuredClone(ADMIN_V1_OFFICIAL_ACTION_COSTS_V1),
+  ...Object.fromEntries([3, 4, 5, 6, 7].flatMap((ordinal) => [
+    [`create_environment_${ordinal}`, { provider_direct_mutations: 1, environment_records_created: 1 }],
+    [`verify_environment_${ordinal}`, { provider_control_invocations: 1, environment_metadata_controls: 1 }],
+    [`delete_environment_${ordinal}`, { provider_direct_mutations: 1, environment_records_deleted: 1 }],
+  ])),
+});
+export const ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 = Object.freeze({
+  ...ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1,
+  action_costs: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2)),
+  budgets: sha256Hex(canonicalJson(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2)),
+});
+
 function publicState(state) {
   return {
     lifecycle: state.lifecycle,
@@ -798,6 +980,7 @@ function publicState(state) {
     failure: structuredClone(state.failure),
     cleanup: structuredClone(state.cleanup),
     zero_residual: state.zero_residual,
+    ...(state.retention === undefined ? {} : { retention: structuredClone(state.retention) }),
   };
 }
 
@@ -813,9 +996,9 @@ const ENVIRONMENT_CREATE_HTTP_STATUS_CLASSES = new Set([
   "OTHER",
 ]);
 
-function boundedEnvironmentCreateFailure(operation, error) {
+function boundedEnvironmentCreateFailure(operation, error, schemaVersion = 1) {
   if (
-    !["create_environment_1", "create_environment_2"].includes(operation) ||
+    !(schemaVersion === 2 ? /^create_environment_[1-7]$/u : /^create_environment_[1-2]$/u).test(operation) ||
     !ENVIRONMENT_CREATE_FAILURE_CLASSES.has(
       error?.environment_create_failure_class,
     ) ||
@@ -844,7 +1027,7 @@ export function classifyAdminV1OfficialEnvironmentCreateFailureEvidence(
     failure &&
     typeof failure === "object" &&
     !Array.isArray(failure) &&
-    ["create_environment_1", "create_environment_2"].includes(failure.operation) &&
+    (state.retention === undefined ? /^create_environment_[1-2]$/u : /^create_environment_[1-7]$/u).test(failure.operation) &&
     failure.stage === "SETUP" &&
     ENVIRONMENT_CREATE_FAILURE_CLASSES.has(failure.class) &&
     (failure.http_status_class === null ||
@@ -1180,7 +1363,15 @@ export async function runAdminV1OfficialRuntime({
     clearSensitiveRecord(sensitive);
     throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_REQUIRED");
   }
-  const budget = createBudget(test_budget_overrides);
+  const isolated = validated.schema_version === 2;
+  if (isolated && (!["supabase_url", "supabase_anon_key", "supabase_service_role_key"].every((name) =>
+      sensitive[name] instanceof Uint8Array && sensitive[name].byteLength > 0) ||
+      Buffer.from(sensitive.supabase_url).toString("utf8") !== validated.execution.isolation.origin)) {
+    clearSensitiveRecord(sensitive);
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_RUNTIME_INPUT");
+  }
+  const budget = createAdminV1OfficialBudget({ schema_version: validated.schema_version, test_budget_overrides });
+  const actionCosts = isolated ? ADMIN_V1_OFFICIAL_ACTION_COSTS_V2 : ADMIN_V1_OFFICIAL_ACTION_COSTS_V1;
   const state = {
     lifecycle: "PRE_EFFECT",
     stage: "AUTHORIZATION_VERIFIED",
@@ -1213,11 +1404,15 @@ export async function runAdminV1OfficialRuntime({
     failure: null,
     cleanup: [],
     zero_residual: false,
+    ...(isolated ? { retention: { policy: validated.execution.provider_cleanup_policy,
+      phase: "UNARMED", deployment_id: null, environment_record_ids: [],
+      environment_keys: [...OFFICIAL_PREVIEW_ENVIRONMENT_KEYS], data_zero_residual: false,
+      external_retained_exact: false, unrelated_preserved: false } } : {}),
   };
   journal.publish(publicState(state));
 
   const invoke = async (operation, input = {}, extraCost = {}) => {
-    const fixed = ADMIN_V1_OFFICIAL_ACTION_COSTS[operation];
+    const fixed = actionCosts[operation];
     if (!fixed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
     budget.take({ ...fixed, ...extraCost });
     return adapters.invoke(operation, input);
@@ -1339,10 +1534,12 @@ export async function runAdminV1OfficialRuntime({
   let storageReplacementPreserved = false;
   let poststateOwnershipRequired = false;
   let logoOwnershipConfirmed = false;
+  let retentionVerificationFailed = false;
   const expectedAuditActions = [];
   const cleanup = async () => {
-    state.lifecycle = "CLEANUP_PENDING";
-    state.stage = "CLEANUP_PENDING_PUBLISHED";
+    const retain = state.retention?.phase === "COMMITTED";
+    state.lifecycle = retain ? "RETENTION_PENDING" : "CLEANUP_PENDING";
+    state.stage = retain ? "RETENTION_FINALIZATION_PUBLISHED" : "CLEANUP_PENDING_PUBLISHED";
     journal.publish(publicState(state));
     if (state.owned.logo !== null) {
       if (poststateOwnershipRequired && !logoOwnershipConfirmed) {
@@ -1449,9 +1646,9 @@ export async function runAdminV1OfficialRuntime({
       await safeDelete("retire_protected_access", {
         deployment_id: state.owned.deployment_id,
       });
-      await safeDelete("delete_preview", { deployment_id: state.owned.deployment_id });
+      if (!retain) await safeDelete("delete_preview", { deployment_id: state.owned.deployment_id });
     }
-    for (let index = 0; index < state.owned.environment_record_ids.length; index += 1) {
+    for (let index = 0; !retain && index < state.owned.environment_record_ids.length; index += 1) {
       await safeDelete(`delete_environment_${index + 1}`, {
         record_id: state.owned.environment_record_ids[index],
       });
@@ -1461,7 +1658,8 @@ export async function runAdminV1OfficialRuntime({
         const observed = await invoke("inspect_remote_ref_before_delete", {
           ref_id: state.owned.remote_ref,
         });
-        if (observed?.status !== "EXACT_OWNED") recoveryPending = true;
+        if (observed?.status !== "EXACT_OWNED" || isolated &&
+            (observed.ref_id !== state.owned.remote_ref || observed.commit_sha !== validated.execution.temporary_commit_sha)) recoveryPending = true;
         else await safeDelete("delete_remote_ref", { ref_id: state.owned.remote_ref });
       } catch {
         recoveryPending = true;
@@ -1471,6 +1669,29 @@ export async function runAdminV1OfficialRuntime({
       await safeDelete("cleanup_local_owned_temp_state", {
         local_state_id: state.owned.local_temp_state,
       });
+    }
+    if (retain) {
+      state.retention.data_zero_residual = dataResidualProven && !storageReplacementPreserved;
+      try {
+        if (!retainedOwnershipExact(state)) throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_OWNERSHIP_UNPROVEN");
+        requireRetainedPreview(await invoke("verify_preview_identity", { deployment_id: state.retention.deployment_id }),
+          state.retention.deployment_id);
+        for (let index = 0; index < 7; index += 1) {
+          const input = { key: state.retention.environment_keys[index], record_id: state.retention.environment_record_ids[index] };
+          requireEnvironmentVerification(await invoke(`verify_environment_${index + 1}`, input), input, validated);
+        }
+        state.retention.external_retained_exact = true;
+        state.retention.unrelated_preserved = dataResidualProven;
+      } catch {
+        retentionVerificationFailed = true;recoveryPending = true;
+      }
+      state.zero_residual = false;
+      if (recoveryPending) {
+        state.lifecycle = "RECOVERY_PENDING";state.stage = "RETENTION_UNPROVEN";
+        journal.publish(publicState(state));return;
+      }
+      state.retention.phase = "COMPLETE";state.lifecycle = "RETENTION_COMPLETE";state.stage = "RETENTION_COMPLETE_PUBLISHED";
+      journal.publish(publicState(state));journal.retire(publicState(state));return;
     }
     let externalResidualProven = false;
     try {
@@ -1545,17 +1766,21 @@ export async function runAdminV1OfficialRuntime({
     if (remote?.status !== "ABSENT") {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_PRIOR_RESIDUE");
     }
-    for (let index = 1; index <= 2; index += 1) {
+    const environmentPlan = isolated
+      ? OFFICIAL_PREVIEW_ENVIRONMENT_PLAN.map(([key, source]) => ({ key, value: source.startsWith("credential:")
+        ? sensitive[source.slice("credential:".length)]
+        : Buffer.from(source === "authorization:run_id" ? validated.run_id : validated.execution.isolation.project_ref, "utf8") }))
+      : [{ key: "ADMIN_PASSWORD", value: sensitive.admin_password },
+        { key: "ADMIN_SESSION_SECRET", value: sensitive.admin_session_secret }];
+    for (let index = 1; index <= environmentPlan.length; index += 1) {
       const operation = `create_environment_${index}`;
       let recordId;
       try {
         recordId = await mutation(
           operation,
           {
-            key: validated.execution.environment_keys[index - 1],
-            value: index === 1
-              ? sensitive.admin_password
-              : sensitive.admin_session_secret,
+            key: environmentPlan[index - 1].key,
+            value: environmentPlan[index - 1].value,
           },
           (response) => {
             if (!exactAdapterResponse(response, "CREATED_EXACT") ||
@@ -1565,11 +1790,14 @@ export async function runAdminV1OfficialRuntime({
             return response.record_id;
           },
           (ownedRecordId) => {
+            if (isolated && state.owned.environment_record_ids.includes(ownedRecordId)) {
+              throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CREATE_MISMATCH");
+            }
             state.owned.environment_record_ids.push(ownedRecordId);
           },
         );
       } catch (error) {
-        const failure = boundedEnvironmentCreateFailure(operation, error);
+        const failure = boundedEnvironmentCreateFailure(operation, error, validated.schema_version);
         if (failure !== null) {
           state.failure = failure;
           state.stage = `FAILURE_${operation.toUpperCase()}_CLASSIFIED`;
@@ -1581,14 +1809,13 @@ export async function runAdminV1OfficialRuntime({
         key: validated.execution.environment_keys[index - 1],
         record_id: recordId,
       });
-      if (
-        !exactAdapterResponse(verifiedEnvironment, "EXACT") ||
-        verifiedEnvironment.record_id !== recordId
-      ) {
-        throw new AdminV1OfficialRuntimeError(
-          "OFFICIAL_ENVIRONMENT_CREATE_MISMATCH",
-        );
-      }
+      requireEnvironmentVerification(verifiedEnvironment, {
+        key: environmentPlan[index - 1].key, record_id: recordId,
+      }, validated);
+    }
+    if (isolated && (state.owned.environment_record_ids.length !== 7 || new Set(state.owned.environment_record_ids).size !== 7 ||
+        canonicalJson(environmentPlan.map((entry) => entry.key)) !== canonicalJson(validated.execution.environment_keys))) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CREATE_MISMATCH");
     }
     await mutation(
       "create_remote_ref",
@@ -1654,8 +1881,16 @@ export async function runAdminV1OfficialRuntime({
         "OFFICIAL_AUTOMATIC_PREVIEW_NOT_ACQUIRED",
       );
     }
-    if (!exactAdapterResponse(await invoke("verify_preview_identity"), "EXACT")) {
+    const previewIdentity = await invoke("verify_preview_identity", isolated ? { deployment_id: state.owned.deployment_id } : {});
+    if (!exactAdapterResponse(previewIdentity, "EXACT")) {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_PREVIEW_IDENTITY_MISMATCH");
+    }
+    if (isolated) {
+      requireRetainedPreview(previewIdentity, state.owned.deployment_id);
+      state.retention.deployment_id = state.owned.deployment_id;
+      state.retention.environment_record_ids = [...state.owned.environment_record_ids];
+      state.retention.phase = "ARMED";state.stage = "RETENTION_ARMED_PUBLISHED";
+      journal.publish(publicState(state));
     }
     const oidc = await invoke("generate_oidc");
     if (!(oidc?.token instanceof Uint8Array)) {
@@ -1730,6 +1965,10 @@ export async function runAdminV1OfficialRuntime({
     }
     state.stage = "SANITIZED_POSTSTATE_PUBLISHED";
     journal.publish(publicState(state));
+    if (isolated) {
+      state.retention.phase = "COMMITTED";state.stage = "RETENTION_COMMITTED_PUBLISHED";
+      journal.publish(publicState(state));
+    }
   } catch (error) {
     primaryError = error;
   }
@@ -1738,8 +1977,10 @@ export async function runAdminV1OfficialRuntime({
     await cleanup();
   } catch {
     recoveryPending = true;
-    state.lifecycle = "RECOVERY_PENDING";
-    state.stage = "CLEANUP_EXCEPTION";
+    const committedRetention = ["COMMITTED", "COMPLETE"].includes(state.retention?.phase);
+    if (committedRetention) state.retention.phase = "COMMITTED";
+    state.lifecycle = committedRetention && !retentionVerificationFailed ? "RETENTION_PENDING" : "RECOVERY_PENDING";
+    state.stage = committedRetention ? "RETENTION_FINALIZATION_EXCEPTION" : "CLEANUP_EXCEPTION";
     try {
       journal.publish(publicState(state));
     } catch (publicationError) {
@@ -1755,7 +1996,7 @@ export async function runAdminV1OfficialRuntime({
 
   if (recoveryPending) {
     return Object.freeze({
-      classification: "RECOVERY_PENDING",
+      classification: state.lifecycle === "RETENTION_PENDING" ? "RETENTION_PENDING" : "RECOVERY_PENDING",
       official_requests: state.last_completed_official_ordinal,
       qualification_requests: state.last_completed_qualification_ordinal,
       runtime_sessions: state.runtime_sessions,
@@ -1770,7 +2011,7 @@ export async function runAdminV1OfficialRuntime({
   }
   if (primaryError !== null) throw primaryError;
   return Object.freeze({
-    classification: "OFFICIAL_RUNTIME_COMPLETE",
+    classification: isolated ? "RETENTION_COMPLETE" : "OFFICIAL_RUNTIME_COMPLETE",
     official_requests: 20,
     qualification_requests: 6,
     runtime_sessions: 1,
@@ -1778,7 +2019,8 @@ export async function runAdminV1OfficialRuntime({
     runtime_replays: 0,
     token_spent: true,
     storage_replacement_preserved: false,
-    zero_residual_owned_state: true,
+    zero_residual_owned_state: !isolated,
+    ...(isolated ? { retention: Object.freeze(structuredClone(state.retention)) } : {}),
     effects: Object.freeze(structuredClone(state.effects)),
     budgets: Object.freeze(structuredClone(budget.used)),
   });
