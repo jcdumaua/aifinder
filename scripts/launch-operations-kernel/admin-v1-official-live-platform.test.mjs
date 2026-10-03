@@ -623,6 +623,198 @@ for (const [name, change] of [
   } finally { probe.retire(); }
 });
 
+
+function recoveryDocument(auth) {
+  const ids = Array.from({ length: 7 }, (_, index) => `env-retained-${index + 1}`);
+  return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
+    state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
+      runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
+      last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
+      owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
+        submissions: [{ row_id: "submission-owned", version: "v1" }], tools: [{ row_id: "tool-owned", version: "v1" }],
+        audit_rows: [{ row_id: "audit-owned", version: "v1" }], logo: { object_id: "logo-owned", version: "v1" } },
+      effects: { submitted_tools: 3, tools: 2, audits: 9, approval_rpc: 1, logo_objects: 1, grant_prepare: 1, grant_revoke: 1 },
+      evidence: [], failure: null, cleanup: ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"], zero_residual: false,
+      retention: { policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMMITTED", deployment_id: "dpl_RetainedV2",
+        environment_record_ids: [...ids], environment_keys: [...auth.execution.environment_keys], data_zero_residual: true,
+        external_retained_exact: false, unrelated_preserved: false } } };
+}
+
+function recoveryContext(journal, document) {
+  return { journal, retention_recovery: { mode: "OFFICIAL_RETENTION_RECOVERY_V1",
+    journal_sha256: sha256Hex(`${canonicalJson(document)}\n`) } };
+}
+
+for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
+  await contractCheck(`production recovery wrapper finalizes ${lifecycle} through nine real adapter reads`, async () => {
+    const fixture = completeFixture(2);const doc = recoveryDocument(fixture.authorization);doc.state.lifecycle = lifecycle;
+    let current = { retired: false, value: doc }, publishes = 0, retirements = 0, gitCalls = 0;
+    const journal = { load: () => structuredClone(current),
+      publish(state) { publishes++;current = { retired: false, value: { ...current.value, sequence: current.value.sequence + 1, state: structuredClone(state) } }; },
+      retire(state) { retirements++;current = { retired: true, value: { ...current.value, sequence: current.value.sequence + 1, state: { ...structuredClone(state), retired: true } } }; } };
+    const probe = credentialProbe(2, { journal, spawn_sync(executable, argv) {
+      gitCalls++;assert.equal(argv.includes("ls-remote"), true);assert.equal(argv.includes("push"), false);
+      return { status: 0, signal: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) };
+    } });
+    const deployment = retainedDeployment(probe.authorization);deployment.id = deployment.uid = "dpl_RetainedV2";
+    probe.respondWith(({ url, method }) => {
+      assert.equal(method, "GET");assert.equal(url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
+      if (url.pathname === "/v13/deployments/dpl_RetainedV2") return deployment;
+      const id = decodeURIComponent(url.pathname.split("/").at(-1));const index = doc.state.retention.environment_record_ids.indexOf(id);
+      assert(index >= 0);assert.equal(url.searchParams.get("decrypt"), "false");
+      return { id, key: expectedPreviewKeys[index], type: "encrypted", target: ["preview"], gitBranch: probe.authorization.execution.branch_name,
+        projectId: probe.authorization.execution.preview_project_id, teamId: probe.authorization.execution.preview_team_id };
+    });
+    const input = { authorization: probe.authorization, credentials: probe.credentials, execution_context: recoveryContext(journal, doc),
+      transport: probe.transport, now_epoch_ms: now };
+    const restricted = officialPlatform.createAdminV1OfficialRecoveryAdapter(input);
+    for (const operation of ["application_request", "create_remote_ref", "create_environment_1", "delete_environment_7",
+      "delete_preview", "retire_protected_access", "generate_oidc", "inspect_prior_residue", "cleanup_local_owned_temp_state"])
+      await assert.rejects(restricted.invoke(operation), { code: "OFFICIAL_ADAPTER_OPERATION_DENIED" });
+    assert.equal(probe.calls.length, 0);assert.equal(gitCalls, 0);
+    const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention(input);
+    assert.equal(result.classification, "RETENTION_COMPLETE");assert.equal(result.qualification_requests, 6);assert.equal(result.official_requests, 20);
+    assert.equal(result.runtime_sessions, 1);assert.equal(result.runtime_replays, 0);assert.equal(result.zero_residual_owned_state, false);
+    assert.equal(publishes, 1);assert.equal(retirements, 1);assert.equal(current.retired, true);
+    assert.equal(probe.calls.length, 8);assert.equal(gitCalls, 1);
+    assert(Object.values(probe.credentials).every((value) => value.every((byte) => byte === 0)));
+    await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention(input), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
+    assert.equal(probe.calls.length, 8);assert.equal(gitCalls, 1);probe.retire();
+  });
+}
+await contractCheck("recovery wrapper clears credentials and leaves durable pending after unproven concrete read", async () => {
+  const fixture = completeFixture(2);let current = { retired: false, value: recoveryDocument(fixture.authorization) };let retired = 0;
+  const journal = { load: () => structuredClone(current), publish(state) { current.value.state = structuredClone(state);current.value.sequence++; }, retire() { retired++; } };
+  const probe = credentialProbe(2, { journal, spawn_sync: () => ({status:0,signal:null,stdout:Buffer.alloc(0),stderr:Buffer.alloc(0)}) });
+  probe.respondWith(() => ({http_status:503,http_body:{}}));
+  const output = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization:probe.authorization,credentials:probe.credentials,
+    execution_context:recoveryContext(journal,current.value),transport:probe.transport,now_epoch_ms:now });
+  assert.equal(output.classification,"RECOVERY_PENDING");assert.equal(current.value.state.retention.phase,"COMMITTED");assert.equal(retired,0);
+  assert(Object.values(probe.credentials).every((value)=>value.every((byte)=>byte===0)));probe.retire();
+});
+console.log("PASS_RETENTION_RECOVERY_CONCRETE pending_routes=2 real_adapter_reads=9 mutation_attempts_denied=9 durable_terminal=true real_effects=0");
+
+
+for (const failure of ["FINAL_READ_DRIFT", "PUBLISH_THROW", "RETIRE_THROW", "PUBLISH_READBACK_THROW"]) {
+  await contractCheck(`recovery fails closed and clears credentials after ${failure}`, async () => {
+    const auth = completeFixture(2).authorization;let current = { retired: false, value: recoveryDocument(auth) };
+    let publishes = 0, retires = 0, reads = 0, changed = false, poisonReadback = false, replacement;
+    const credentials = { github_token:Buffer.from("synthetic-github"),vercel_token:Buffer.from("synthetic-vercel") };
+    const journal = {
+      load() { if (poisonReadback) throw new Error("synthetic readback unavailable");return structuredClone(current); },
+      publish(state) { publishes++;assert.equal(changed,false);
+        if (failure === "PUBLISH_THROW") throw new Error("synthetic publish unavailable");
+        current.value.state = structuredClone(state);current.value.sequence++;
+        if (failure === "PUBLISH_READBACK_THROW") poisonReadback = true;
+      },
+      retire(state) { retires++;if (failure === "RETIRE_THROW") throw new Error("synthetic retire unavailable");
+        current.retired = true;current.value.sequence++;current.value.state = { ...structuredClone(state), retired:true }; },
+    };
+    const transport = { async execute({operation,input}) {
+      reads++;
+      if (failure === "FINAL_READ_DRIFT" && operation === "verify_environment_7") {
+        current.value.sequence++;current.value.state.retention.environment_record_ids[6] = "env-replacement";
+        current.value.state.owned.environment_record_ids[6] = "env-replacement";replacement=structuredClone(current);changed=true;
+      }
+      if (operation === "inspect_remote_ref") return {status:"ABSENT"};
+      if (operation === "verify_preview_identity") return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:true};
+      return {status:"EXACT",...input,project_id:auth.execution.preview_project_id,team_id:auth.execution.preview_team_id,
+        git_branch:auth.execution.branch_name,unrelated_preserved:true};
+    } };
+    const input = {authorization:auth,credentials,execution_context:recoveryContext(journal,current.value),transport,now_epoch_ms:now};
+    if (failure === "RETIRE_THROW") {
+      assert.equal((await officialPlatform.recoverConcreteAdminV1OfficialRetention(input)).classification,"RECOVERY_PENDING");
+      assert.equal(current.retired,false);assert.equal(current.value.state.retention.phase,"COMMITTED");
+    } else await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention(input));
+    assert.equal(reads,9);assert(Object.values(credentials).every((value)=>value.every((byte)=>byte===0)));
+    if (failure === "FINAL_READ_DRIFT") { assert.deepEqual(current,replacement);assert.equal(publishes,0);assert.equal(retires,0); }
+    if (failure === "PUBLISH_READBACK_THROW") { assert.equal(publishes,1);assert.equal(retires,0); }
+  });
+}
+await contractCheck("restricted recovery adapter refuses substituted input IDs and unrelated readback", async () => {
+  const auth = completeFixture(2).authorization;const original = {retired:false,value:recoveryDocument(auth)};let calls=0;
+  const credentials={github_token:Buffer.from("synthetic"),vercel_token:Buffer.from("synthetic")};
+  const journal={load:()=>structuredClone(original),publish(){},retire(){}};
+  const transport={async execute({operation,input}){calls++;
+    if(operation==="inspect_remote_ref")return {status:"ABSENT"};
+    return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:false};}};
+  const adapter=officialPlatform.createAdminV1OfficialRecoveryAdapter({authorization:auth,credentials,execution_context:recoveryContext(journal,original.value),transport});
+  assert.deepEqual(await adapter.invoke("inspect_remote_ref"),{status:"ABSENT"});
+  await assert.rejects(adapter.invoke("verify_preview_identity",{deployment_id:"dpl_other"}),{code:"OFFICIAL_ADAPTER_INPUT"});
+  assert.equal(calls,1);
+  await adapter.invoke("verify_preview_identity",{deployment_id:"dpl_RetainedV2"});
+  for(const bad of [{key:auth.execution.environment_keys[0],record_id:"env-other"},
+    {key:"WRONG_KEY",record_id:"env-retained-1"}])
+    await assert.rejects(adapter.invoke("verify_environment_1",bad),{code:"OFFICIAL_ADAPTER_INPUT"});
+  assert.equal(calls,2);
+  const denied=await officialPlatform.recoverConcreteAdminV1OfficialRetention({authorization:auth,credentials,execution_context:{
+    retention_recovery:recoveryContext(journal,original.value).retention_recovery,
+    journal:{load:()=>structuredClone(original),publish(state){original.value.state=structuredClone(state);original.value.sequence++;},retire(){assert.fail("unproven readback cannot retire");}}
+  },transport,now_epoch_ms:now});
+  assert.equal(denied.classification,"RECOVERY_PENDING");
+  assert(Object.values(credentials).every((value)=>value.every((byte)=>byte===0)));
+});
+console.log("PASS_RETENTION_RECOVERY_RACES final_await_drift_preserved=true completion_failures_denied=3 unrelated_readback_denied=true");
+
+
+for (const markerKind of ["MISSING", "NULL", "WRONG_MODE", "WRONG_HASH", "EXTRA_KEY", "INVALID_HASH"]) {
+  await contractCheck(`recovery wrapper rejects ${markerKind} admission marker before transport`, async () => {
+    const auth = completeFixture(2).authorization;const original = { retired:false, value:recoveryDocument(auth) };
+    let calls=0,publishes=0,retires=0;
+    const journal={load:()=>structuredClone(original),publish(){publishes++;},retire(){retires++;}};
+    const context=recoveryContext(journal,original.value);
+    if(markerKind==="MISSING")delete context.retention_recovery;
+    if(markerKind==="NULL")context.retention_recovery=null;
+    if(markerKind==="WRONG_MODE")context.retention_recovery.mode="OTHER";
+    if(markerKind==="WRONG_HASH")context.retention_recovery.journal_sha256="f".repeat(64);
+    if(markerKind==="EXTRA_KEY")context.retention_recovery.extra=true;
+    if(markerKind==="INVALID_HASH")context.retention_recovery.journal_sha256="invalid";
+    const credentials={github_token:Buffer.from("synthetic-github"),vercel_token:Buffer.from("synthetic-vercel")};
+    await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention({authorization:auth,credentials,
+      execution_context:context,transport:{async execute(){calls++;assert.fail("denied marker cannot call transport");}},now_epoch_ms:now}),
+      {code:"OFFICIAL_RECOVERY_STATE_INVALID"});
+    assert.deepEqual({calls,publishes,retires},{calls:0,publishes:0,retires:0});
+    assert(Object.values(credentials).every(value=>value.every(byte=>byte===0)));
+    assert.deepEqual(journal.load(),original);
+  });
+}
+for (const replacementAt of ["WRAPPER_ENTRY", "ADAPTER_ENTRY"]) {
+  await contractCheck(`valid same-authorization replacement at ${replacementAt} cannot re-baseline admitted IDs`, async () => {
+    const auth=completeFixture(2).authorization;const original={retired:false,value:recoveryDocument(auth)};
+    const replacement=structuredClone(original);replacement.value.sequence++;
+    replacement.value.state.retention.deployment_id=replacement.value.state.owned.deployment_id="dpl_SubstitutedV2";
+    officialRuntime.validateAdminV1OfficialRetentionRecoveryRecord(replacement,auth);
+    let loads=0,calls=0,publishes=0,retires=0;
+    const journal={load(){loads++;return structuredClone(replacementAt==="ADAPTER_ENTRY"&&loads===1?original:replacement);},
+      publish(){publishes++;},retire(){retires++;}};
+    const context=recoveryContext(journal,original.value);
+    const credentials={github_token:Buffer.from("synthetic-github"),vercel_token:Buffer.from("synthetic-vercel")};
+    await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention({authorization:auth,credentials,
+      execution_context:context,transport:{async execute(){calls++;assert.fail("replacement cannot call transport");}},now_epoch_ms:now}),
+      {code:"OFFICIAL_RECOVERY_STATE_INVALID"});
+    assert.deepEqual({calls,publishes,retires},{calls:0,publishes:0,retires:0});
+    assert.deepEqual(journal.load(),replacement);
+    assert(Object.values(credentials).every(value=>value.every(byte=>byte===0)));
+  });
+}
+await contractCheck("direct recovery adapter rejects missing marker and supplied-document mismatch", async () => {
+  const auth=completeFixture(2).authorization;const original={retired:false,value:recoveryDocument(auth)};
+  const replacement=structuredClone(original.value);replacement.sequence++;
+  replacement.state.retention.deployment_id=replacement.state.owned.deployment_id="dpl_SubstitutedV2";
+  let calls=0;const journal={load:()=>structuredClone(original),publish(){assert.fail("no publish");},retire(){assert.fail("no retire");}};
+  const transport={async execute(){calls++;assert.fail("denied direct admission cannot call transport");}};
+  const credentials={github_token:Buffer.from("synthetic-github"),vercel_token:Buffer.from("synthetic-vercel")};
+  try {
+    assert.throws(()=>officialPlatform.createAdminV1OfficialRecoveryAdapter({authorization:auth,credentials,execution_context:{journal},transport}),
+      {code:"OFFICIAL_RECOVERY_STATE_INVALID"});
+    assert.throws(()=>officialPlatform.createAdminV1OfficialRecoveryAdapter({authorization:auth,credentials,
+      execution_context:recoveryContext(journal,original.value),transport,admitted_document:replacement}),{code:"OFFICIAL_RECOVERY_STATE_INVALID"});
+    assert.equal(calls,0);assert.deepEqual(journal.load(),original);
+  } finally {for(const value of Object.values(credentials))value.fill(0);}
+});
+console.log("PASS_RETENTION_RECOVERY_ADMISSION_BINDING marker_negatives=6 valid_replacement_negatives=2 direct_adapter_negatives=2 read_calls=0 real_effects=0");
+
 assert.deepEqual(contractFailures, [], contractFailures.join("\n"));
 console.log(`PASS_ADMIN_V1_OFFICIAL_CR3 assertions=${assertions} canonical_relation=true repeated_receipts_bypass=false real_calls=0`);
 await import("./admin-v1-official-concrete-bridge.test.mjs");

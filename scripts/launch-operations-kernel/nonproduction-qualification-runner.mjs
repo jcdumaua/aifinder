@@ -4,6 +4,7 @@ import {
   readFileSync,
   lstatSync,
   realpathSync,
+  readdirSync,
 } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -51,11 +52,14 @@ import {
   createAdminV1OfficialJournal,
   classifyAdminV1OfficialRecoveryState,
   readAdminV1OfficialIsolatedBundle,
+  readAdminV1OfficialRecoveryFile,
+  validateAdminV1OfficialRetentionRecoveryRecord,
 } from "./admin-v1-official-runtime.mjs";
 import {
   loadAdminV1OfficialCredentials,
   createAdminV1OfficialConcreteTransport,
   runConcreteAdminV1OfficialRuntime,
+  recoverConcreteAdminV1OfficialRetention,
 } from "./admin-v1-official-live-platform.mjs";
 import {
   OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
@@ -589,7 +593,7 @@ function authorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
   }
 }
 
-function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
+function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs, recovery = false) {
   try {
     if (
       !supervisorTrust || typeof supervisorTrust !== "object" ||
@@ -601,6 +605,7 @@ function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
         "credential_source_policy",
         "operation_class",
         "repository_observation",
+        ...(recovery ? ["retention_recovery"] : []),
         "supervisor_policy_sha256",
         "supervisor_sha256",
         "verified",
@@ -618,6 +623,8 @@ function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
       !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_sha256) ||
       !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_policy_sha256)
     ) throw new Error("SHAPE");
+    if (recovery && (supervisorTrust.authorization?.schema_version !== 2 ||
+      !exactRecoveryMarker(supervisorTrust.retention_recovery))) throw new Error("RECOVERY_TRUST");
     const authorizationBytes = Buffer.from(supervisorTrust.authorization_bytes);
     const authorizationText = new TextDecoder("utf-8", { fatal: true }).decode(
       authorizationBytes,
@@ -655,6 +662,7 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
   authorization_record,
   dependencies,
   git_execution_context,
+  retention_recovery = false,
 }) {
   const authorization = validateAdminV1OfficialAuthorization(
     authorization_record,
@@ -684,12 +692,9 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
   if (!exactObject(repository, authorization.repository)) {
     throw new ConcreteRunnerError("OFFICIAL_REPOSITORY_MISMATCH");
   }
-  const temporaryCommit = await dependencies.verifyTemporaryCommit(
-    authorization,
-    git_execution_context,
-  );
-  if (temporaryCommit?.verified !== true) {
-    throw new ConcreteRunnerError("OFFICIAL_TEMPORARY_COMMIT_MISMATCH");
+  if (!retention_recovery) {
+    const temporaryCommit = await dependencies.verifyTemporaryCommit(authorization, git_execution_context);
+    if (temporaryCommit?.verified !== true) throw new ConcreteRunnerError("OFFICIAL_TEMPORARY_COMMIT_MISMATCH");
   }
   for (const routePath of Object.keys(authorization.route_source_sha256)) {
     if (
@@ -704,19 +709,17 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
       canonicalJson(authorization.schema_version === 2
         ? ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 : ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1)
   ) throw new ConcreteRunnerError("OFFICIAL_CONTRACT_MISMATCH");
-  const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
-  if (authorization.schema_version === 2 && prior?.status === "SPENT") {
-    throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
-  }
-  if (prior?.status !== "ABSENT") {
-    throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
+  if (!retention_recovery) {
+    const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
+    if (authorization.schema_version === 2 && prior?.status === "SPENT") throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+    if (prior?.status !== "ABSENT") throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
   }
   return Object.freeze({
     verified: true,
     operation_class: authorization.operation_class,
     candidate_identity_sha256: authorization.candidate_identity_sha256,
     manifest_sha256: authorization.manifest_sha256,
-    token_spent: false,
+    token_spent: retention_recovery,
   });
 }
 
@@ -772,6 +775,8 @@ function safeOfficialCode(error) {
     "OFFICIAL_CREDENTIAL_SOURCE_MISMATCH",
     "OFFICIAL_CONCRETE_TRANSPORT_MISSING",
     "OFFICIAL_PRIOR_RECOVERY_PENDING",
+    "OFFICIAL_RECOVERY_STATE_INVALID",
+    "OFFICIAL_RECOVERY_CONTEXT_INVALID",
     "OFFICIAL_RECOVERY_PENDING",
     "OFFICIAL_REPOSITORY_MISMATCH",
     "OFFICIAL_ROUTE_SOURCE_MISMATCH",
@@ -781,6 +786,107 @@ function safeOfficialCode(error) {
     "OFFICIAL_TEMPORARY_COMMIT_MISMATCH",
   ]);
   return allowed.has(error?.code) ? error.code : "OFFICIAL_RUNTIME_FAILED_CLOSED";
+}
+
+
+function exactRecoveryMarker(marker) {
+  return marker && typeof marker === "object" && !Array.isArray(marker) &&
+    Object.keys(marker).sort().join("\0") === ["journal_sha256", "mode"].sort().join("\0") &&
+    marker.mode === "OFFICIAL_RETENTION_RECOVERY_V1" && /^[0-9a-f]{64}$/u.test(marker.journal_sha256 ?? "");
+}
+
+const OFFICIAL_RECOVERY_READONLY_FS = Object.freeze({ lstatSync, realpathSync, readdirSync });
+
+export function readExistingOfficialRecoveryAdmission(authorization, marker, filesystem = OFFICIAL_RECOVERY_READONLY_FS) {
+  try {
+    if (!exactRecoveryMarker(marker) || authorization.schema_version !== 2) throw new Error("MODE");
+    const root = authorization.execution.journal_directory;
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const metadata = filesystem.lstatSync(root);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner ||
+        (metadata.mode & 0o777) !== 0o700 || filesystem.realpathSync(root) !== root) throw new Error("ROOT");
+    try {
+      filesystem.lstatSync(path.join(root, "admin-v1-official-runtime-retired.json"));
+      throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+    } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    const identityBytes = readAdminV1OfficialRecoveryFile({ target: path.join(root, "admin-v1-official-runtime-identity.json"), owner,
+      ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+    const identity = { schema_version: 1, identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id } };
+    if (identityBytes.toString("utf8") !== `${canonicalJson(identity)}\n`) throw new Error("IDENTITY");
+    const bytes = readAdminV1OfficialRecoveryFile({ target: path.join(root, "admin-v1-official-runtime-journal.json"), owner,
+      ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+    if (sha256Hex(bytes) !== marker.journal_sha256) throw new Error("CHANGED");
+    const document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (bytes.toString("utf8") !== `${canonicalJson(document)}\n`) throw new Error("CANONICAL");
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: document }, authorization);
+    return Object.freeze({ ...marker });
+  } catch (error) {
+    if (error?.code === "OFFICIAL_AUTHORIZATION_SPENT") throw error;
+    throw new ConcreteRunnerError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+}
+
+export function verifyOfficialRecoveryGitContext(authorization, filesystem = OFFICIAL_RECOVERY_READONLY_FS) {
+  try {
+    const root = authorization.execution.journal_directory;
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const gitDirectory = path.join(authorization.repository.root, ".git");
+    const objectDirectory = path.join(gitDirectory, "objects");
+    for (const target of [authorization.repository.root, gitDirectory, objectDirectory]) {
+      const metadata = filesystem.lstatSync(target);
+      if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner || filesystem.realpathSync(target) !== target) throw new Error("REPOSITORY");
+    }
+    const contextDirectory = path.join(root, ".qualification-git-context");
+    for (const [relative, names] of [["", ["HEAD", "config", "objects", "refs"]], ["objects", []], ["refs", ["heads"]], ["refs/heads", []]]) {
+      const target = path.join(contextDirectory, relative);const metadata = filesystem.lstatSync(target);
+      if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner || (metadata.mode & 0o777) !== 0o500 ||
+          filesystem.realpathSync(target) !== target || !exactObject(filesystem.readdirSync(target).sort(), names)) throw new Error("DIRECTORY");
+    }
+    for (const [name, expected] of [["HEAD", "ref: refs/heads/qualification-context\n"], ["config", "[core]\n\tbare = true\n\trepositoryformatversion = 0\n"]]) {
+      const bytes = readAdminV1OfficialRecoveryFile({ target: path.join(contextDirectory, name), owner, mode: 0o400, maximum_bytes: 256,
+        ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+      if (bytes.toString("utf8") !== expected) throw new Error("FILE");
+    }
+    return Object.freeze({ git_dir: contextDirectory, object_directory: objectDirectory });
+  } catch { throw new ConcreteRunnerError("OFFICIAL_RECOVERY_CONTEXT_INVALID"); }
+}
+
+export async function dispatchAdminV1OfficialRetentionRecovery(argumentsList, dependencies = {}, supervisorTrust = dependencies.supervisor_trust) {
+  let credentials;
+  try {
+    if (!Array.isArray(argumentsList) || argumentsList.length !== 3 || argumentsList[0] !== "--recover-admin-v1-official-retention" ||
+        argumentsList[1] !== "--authorization" || !exactAuthorizationPath(argumentsList[2])) throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_REQUIRED");
+    const trusted = officialAuthorizationFromSupervisorTrust(supervisorTrust, dependencies.now_epoch_ms, true);
+    const context = await dependencies.openOfficialRecoveryExecutionContext(trusted.authorization, supervisorTrust.retention_recovery);
+    const assertPending = () => {
+      const record = context?.journal?.load();
+      if (record?.retired === true) throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+      validateAdminV1OfficialRetentionRecoveryRecord(record, trusted.authorization);
+    };
+    assertPending();
+    await verifyAdminV1OfficialPreEffectAuthorization({ authorization_record: trusted.authorization, dependencies,
+      git_execution_context: context.git_execution_context, retention_recovery: true });
+    await dependencies.verifyOfficialRecoveryAdmission(trusted.authorization, context);
+    assertPending();
+    credentials = await dependencies.readOfficialCredentials(trusted.authorization, trusted.credential_source_policy);
+    const result = await dependencies.runAuthorizedOfficialRecovery({ authorization: trusted.authorization, credentials, execution_context: context });
+    if (result?.classification !== "RETENTION_COMPLETE") throw new ConcreteRunnerError("OFFICIAL_RECOVERY_PENDING");
+    const durable = context.journal.load();
+    const completed = validateAdminV1OfficialRetentionRecoveryRecord(durable, trusted.authorization, { complete: true });
+    if (classifyAdminV1OfficialRecoveryState(durable) !== "RETENTION_COMPLETE" || !exactOfficialRetentionReceipt(result.retention, trusted.authorization) ||
+        !exactObject(result.retention, completed.state.retention) || result.qualification_requests !== completed.state.last_completed_qualification_ordinal ||
+        result.official_requests !== completed.state.last_completed_official_ordinal || result.runtime_sessions !== completed.state.runtime_sessions ||
+        result.runtime_retries !== completed.state.runtime_retries || result.runtime_replays !== completed.state.runtime_replays ||
+        result.zero_residual_owned_state !== false) throw new ConcreteRunnerError("OFFICIAL_RECOVERY_STATE_INVALID");
+    emit(dependencies, { status: "PASS", code: "RETENTION_COMPLETE", qualification_requests: result.qualification_requests,
+      official_requests: result.official_requests, runtime_sessions: result.runtime_sessions, runtime_retries: result.runtime_retries,
+      runtime_replays: result.runtime_replays, zero_residual_owned_state: false, retention: structuredClone(result.retention) });
+    return { exit_code: 0, code: "RETENTION_COMPLETE" };
+  } catch (error) {
+    const code = safeOfficialCode(error);emit(dependencies, { status: "FAIL", code });return { exit_code: 1, code };
+  } finally {
+    for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0);
+  }
 }
 
 export async function dispatchAdminV1OfficialRunner(
@@ -875,6 +981,9 @@ export async function dispatchConcreteQualificationRunner(
       live_mutations: 0,
     });
     return { exit_code: 0, code: "PASS_SELF_TEST" };
+  }
+  if (Array.isArray(argumentsList) && argumentsList[0] === "--recover-admin-v1-official-retention") {
+    return dispatchAdminV1OfficialRetentionRecovery(argumentsList, dependencies, supervisorTrust);
   }
   if (Array.isArray(argumentsList) &&
     argumentsList[0] === "--run-admin-v1-official") {
@@ -1626,6 +1735,25 @@ export function createConcreteRunnerDependencies({
       });
       officialContexts.set(authorization.authorization_id_sha256, context);
       return context;
+    },
+    openOfficialRecoveryExecutionContext(authorization, marker) {
+      const admission = readExistingOfficialRecoveryAdmission(authorization, marker);
+      const gitExecutionContext = verifyOfficialRecoveryGitContext(authorization);
+      const journal = createAdminV1OfficialJournal({ directory: authorization.execution.journal_directory,
+        identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id }, existing_only: true });
+      return Object.freeze({ journal, git_execution_context: gitExecutionContext, retention_recovery: admission });
+    },
+    verifyOfficialRecoveryAdmission(authorization, context) {
+      readExistingOfficialRecoveryAdmission(authorization, context.retention_recovery);
+      if (!exactObject(verifyOfficialRecoveryGitContext(authorization), context.git_execution_context)) {
+        throw new ConcreteRunnerError("OFFICIAL_RECOVERY_CONTEXT_INVALID");
+      }
+    },
+    async runAuthorizedOfficialRecovery({ authorization, credentials, execution_context }) {
+      try {
+        const transport = officialTransport ?? createAdminV1OfficialConcreteTransport({ execution_context });
+        return await recoverConcreteAdminV1OfficialRetention({ authorization, credentials, execution_context, transport, now_epoch_ms: nowEpochMs });
+      } finally { for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0); }
     },
     verifyNoPriorOfficialRecovery(authorization) {
       const context = officialContexts.get(authorization.authorization_id_sha256);

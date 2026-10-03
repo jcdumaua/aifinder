@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
   lstatSync,
   readFileSync,
   realpathSync,
@@ -1034,6 +1038,106 @@ export function verifyOfficialRunUnspentBeforeImport(
   return Object.freeze({ status: "ABSENT" });
 }
 
+function validatePreImportRecoveryDocument(record, authorization) {
+  const complete = false;
+
+  const value = record?.value;
+  const state = value?.state;
+  const receipt = state?.retention;
+  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention"];
+  const ids = receipt?.environment_record_ids;
+  if (authorization?.schema_version !== 2 ||
+      authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+      record?.retired !== complete || !exactKeys(value, ["schema_version", "identity", "sequence", "state"]) ||
+      value.schema_version !== 1 || !Number.isSafeInteger(value.sequence) || value.sequence < 1 ||
+      !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
+      value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
+      !exactKeys(state, complete ? [...stateKeys, "retired"] : stateKeys) ||
+      (complete ? state.retired !== true || state.lifecycle !== "RETENTION_COMPLETE" : !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state.lifecycle)) ||
+      receipt?.phase !== (complete ? "COMPLETE" : "COMMITTED") ||
+      state.token_spent !== true || state.runtime_sessions !== 1 || state.runtime_retries !== 0 || state.runtime_replays !== 0 ||
+      state.last_attempted_qualification_ordinal !== 6 || state.last_completed_qualification_ordinal !== 6 ||
+      state.last_attempted_official_ordinal !== 20 || state.last_completed_official_ordinal !== 20 ||
+      typeof state.stage !== "string" || !/^[A-Z0-9_]{1,128}$/u.test(state.stage) ||
+      !exactKeys(receipt, ["policy", "phase", "deployment_id", "environment_record_ids", "environment_keys", "data_zero_residual", "external_retained_exact", "unrelated_preserved"]) ||
+      receipt.policy !== authorization.execution.provider_cleanup_policy || !/^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") ||
+      !Array.isArray(ids) || ids.length !== 7 || new Set(ids).size !== 7 ||
+      !ids.every((id) => typeof id === "string" && /^[\x21-\x7e]{1,128}$/u.test(id)) ||
+      canonicalJson(receipt.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
+      canonicalJson(authorization.execution.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
+      receipt.data_zero_residual !== true || ![receipt.external_retained_exact, receipt.unrelated_preserved].every((flag) => typeof flag === "boolean") ||
+      complete && (receipt.external_retained_exact !== true || receipt.unrelated_preserved !== true) || state.zero_residual !== false ||
+      !exactKeys(state.owned, ["local_temp_state", "remote_ref", "environment_record_ids", "deployment_id", "submissions", "tools", "audit_rows", "logo"]) ||
+      state.owned.deployment_id !== receipt.deployment_id || canonicalJson(state.owned.environment_record_ids) !== canonicalJson(ids) ||
+      !(state.owned.local_temp_state === null || typeof state.owned.local_temp_state === "string" && /^[\x21-\x7e]{1,256}$/u.test(state.owned.local_temp_state)) ||
+      !(state.owned.remote_ref === null || state.owned.remote_ref === `refs/heads/${authorization.execution.branch_name}`) ||
+      !(state.owned.logo === null || state.owned.logo && typeof state.owned.logo === "object" && !Array.isArray(state.owned.logo)) ||
+      ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) => Array.isArray(rows) && rows.length <= 9 &&
+        rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) ||
+      !exactKeys(state.effects, ["submitted_tools", "tools", "audits", "approval_rpc", "logo_objects", "grant_prepare", "grant_revoke"]) ||
+      !Object.values(state.effects).every((count) => Number.isSafeInteger(count) && count >= 0) ||
+      !Array.isArray(state.evidence) || !(state.failure === null || state.failure && typeof state.failure === "object" && !Array.isArray(state.failure)) ||
+      !Array.isArray(state.cleanup) || !state.cleanup.every((step) => typeof step === "string") ||
+      !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"].every((step) => state.cleanup.includes(step)) ||
+      state.cleanup.some((step) => step === "DELETE_PREVIEW" || /^DELETE_ENVIRONMENT_[1-7]$/u.test(step))) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  return Object.freeze(structuredClone(value));
+}
+
+function readPreImportRecoveryFile(target, owner, filesystem) {
+  const mode = 0o600;
+  const maximum_bytes = 1024 * 1024;
+
+  const before = filesystem.lstatSync(target, { bigint: true });
+  const valid = (metadata) => metadata.isFile() && !metadata.isSymbolicLink() && Number(metadata.nlink) === 1 &&
+    Number(metadata.uid) === Number(owner) && (Number(metadata.mode) & 0o777) === mode &&
+    Number(metadata.size) >= 1 && Number(metadata.size) <= maximum_bytes;
+  const same = (left, right) => ["dev", "ino", "mode", "nlink", "uid", "gid", "size", "mtimeNs", "ctimeNs"]
+    .every((key) => left[key] !== undefined && right[key] !== undefined && String(left[key]) === String(right[key]));
+  if (!valid(before) || filesystem.realpathSync(target) !== target) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  const descriptor = filesystem.openSync(target, filesystem.constants.O_RDONLY | filesystem.constants.O_NOFOLLOW);
+  try {
+    const opened = filesystem.fstatSync(descriptor, { bigint: true });
+    if (!valid(opened) || !same(before, opened)) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    const bytes = filesystem.readFileSync(descriptor);
+    const after = filesystem.fstatSync(descriptor, { bigint: true });
+    const named = filesystem.lstatSync(target, { bigint: true });
+    if (!same(opened, after) || !same(opened, named) || bytes.byteLength !== Number(opened.size) ||
+        filesystem.realpathSync(target) !== target) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    return bytes;
+  } finally { filesystem.closeSync(descriptor); }
+}
+
+export function verifyOfficialRetentionRecoveryBeforeImport(authorization,
+  filesystem = { closeSync, constants, fstatSync, openSync, lstatSync, readFileSync, realpathSync }) {
+  try {
+    const directory = authorization?.execution?.journal_directory;
+    if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(authorization.run_id ?? "") ||
+        directory !== `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${authorization.run_id}`) throw new Error("AUTHORIZATION");
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const root = filesystem.lstatSync(directory);
+    if (!root.isDirectory() || root.isSymbolicLink() || root.uid !== owner || (root.mode & 0o777) !== 0o700 ||
+        filesystem.realpathSync(directory) !== directory) throw new Error("ROOT");
+    try {
+      filesystem.lstatSync(path.join(directory, "admin-v1-official-runtime-retired.json"));
+      throw new PreImportSupervisorError("OFFICIAL_AUTHORIZATION_SPENT");
+    } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    const identityBytes = readPreImportRecoveryFile(path.join(directory, "admin-v1-official-runtime-identity.json"), owner, filesystem);
+    const identity = { schema_version: 1, identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id } };
+    if (identityBytes.toString("utf8") !== `${canonicalJson(identity)}\n`) throw new Error("IDENTITY");
+    const bytes = readPreImportRecoveryFile(path.join(directory, "admin-v1-official-runtime-journal.json"), owner, filesystem);
+    const document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (bytes.toString("utf8") !== `${canonicalJson(document)}\n`) throw new Error("CANONICAL");
+    validatePreImportRecoveryDocument({ retired: false, value: document }, authorization);
+    return Object.freeze({ mode: "OFFICIAL_RETENTION_RECOVERY_V1", journal_sha256: sha256(bytes) });
+  } catch (error) {
+    if (error?.code === "OFFICIAL_AUTHORIZATION_SPENT") throw error;
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+}
+
 export function verifyPreImportSupervisorTrust({
   authorization_path,
   repository_root = REPOSITORY_ROOT,
@@ -1041,6 +1145,7 @@ export function verifyPreImportSupervisorTrust({
   policy_path = path.join(REPOSITORY_ROOT, POLICY_RELATIVE_PATH),
   now_epoch_ms = Date.now(),
   inspect_repository = inspectPreImportRepository,
+  retention_recovery = false,
 }) {
   if (
     realpathSync(repository_root) !== repository_root ||
@@ -1089,7 +1194,11 @@ export function verifyPreImportSupervisorTrust({
     authorization.supervisor_sha256 !== sha256(supervisorBytes) ||
     authorization.supervisor_policy_sha256 !== sha256(policyBytes)
   ) throw new PreImportSupervisorError("SUPERVISOR_IDENTITY_MISMATCH");
-  if (officialMode && authorization.schema_version === 2) {
+  let recoveryAdmission = null;
+  if (retention_recovery) {
+    if (!officialMode || authorization.schema_version !== 2) throw new PreImportSupervisorError("SUPERVISOR_MODE_DENIED");
+    recoveryAdmission = verifyOfficialRetentionRecoveryBeforeImport(authorization);
+  } else if (officialMode && authorization.schema_version === 2) {
     verifyOfficialRunUnspentBeforeImport(authorization);
   }
   const manifest = verifyCandidate(repository_root, policy);
@@ -1161,6 +1270,7 @@ export function verifyPreImportSupervisorTrust({
         : policy.credential_source_policy,
     ),
     operation_class: authorization.operation_class,
+    ...(recoveryAdmission ? { retention_recovery: recoveryAdmission } : {}),
     ...(officialMode
       ? { repository_observation: structuredClone(observedRepository) }
       : {}),
@@ -1176,6 +1286,8 @@ function safeCode(error) {
     "SUPERVISOR_IDENTITY_MISMATCH",
     "SUPERVISOR_MEMBER_MISMATCH",
     "SUPERVISOR_MODE_DENIED",
+    "SUPERVISOR_RECOVERY_STATE_INVALID",
+    "OFFICIAL_AUTHORIZATION_SPENT",
     "SUPERVISOR_OUTPUT_WRITER_MISSING",
     "SUPERVISOR_PATH_INVALID",
     "SUPERVISOR_POLICY_INVALID",
@@ -1361,7 +1473,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
   if (
     !Array.isArray(argumentsList) ||
     argumentsList.length !== 3 ||
-    !["--qualify-nonproduction", "--run-admin-v1-official"].includes(
+    !["--qualify-nonproduction", "--run-admin-v1-official", "--recover-admin-v1-official-retention"].includes(
       requestedMode,
     ) ||
     argumentsList[1] !== "--authorization" ||
@@ -1381,6 +1493,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
       policy_path: dependencies.policy_path,
       now_epoch_ms: dependencies.now_epoch_ms,
       inspect_repository: dependencies.inspect_repository,
+      retention_recovery: requestedMode === "--recover-admin-v1-official-retention",
     });
     const importRunner = dependencies.import_runner ??
       ((url) => import(url.href));
@@ -1437,6 +1550,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
         authorization_bytes: Buffer.from(trust.authorization_bytes),
         authorization_sha256: trust.authorization_sha256,
         credential_source_policy: structuredClone(trust.credential_source_policy),
+        ...(trust.retention_recovery ? { retention_recovery: structuredClone(trust.retention_recovery) } : {}),
         supervisor_sha256: trust.supervisor_sha256,
         supervisor_policy_sha256: trust.supervisor_policy_sha256,
         ...(trust.operation_class === OFFICIAL_OPERATION_CLASS

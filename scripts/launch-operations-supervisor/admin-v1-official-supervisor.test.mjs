@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   validateOfficialAuthorizationForSupervisor,
+  verifyOfficialRetentionRecoveryBeforeImport,
+  verifyOfficialRunUnspentBeforeImport,
 } from "./nonproduction-qualification-supervisor.mjs";
 
 const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
@@ -365,3 +367,89 @@ process.stdout.write(`PASS_PR4_V2_PREIMPORT closed19=true repository11=true exec
 process.stdout.write(
   "PASS_ADMIN_V1_OFFICIAL_SUPERVISOR assertions=7 current_baseline=true exact_class=true pre_import_node_primitives_only=true failures=0 internal_failures=0\n",
 );
+
+function recoveryDocument(auth) {
+  const ids = Array.from({ length: 7 }, (_, index) => `env-retained-${index + 1}`);
+  return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
+    state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
+      runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
+      last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
+      owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
+        submissions: [{ row_id: "submission-owned", version: "v1" }], tools: [{ row_id: "tool-owned", version: "v1" }],
+        audit_rows: [{ row_id: "audit-owned", version: "v1" }], logo: { object_id: "logo-owned", version: "v1" } },
+      effects: { submitted_tools: 3, tools: 2, audits: 9, approval_rpc: 1, logo_objects: 1, grant_prepare: 1, grant_revoke: 1 },
+      evidence: [], failure: null, cleanup: ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"], zero_residual: false,
+      retention: { policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMMITTED", deployment_id: "dpl_RetainedV2",
+        environment_record_ids: [...ids], environment_keys: [...auth.execution.environment_keys], data_zero_residual: true,
+        external_retained_exact: false, unrelated_preserved: false } } };
+}
+
+function recoveryFilesystem(auth, document = recoveryDocument(auth)) {
+  const root = auth.execution.journal_directory; const git = `${root}/.qualification-git-context`;
+  const nodes = new Map(); const opened = new Map(); const operations = []; let next = 10;
+  const directory = (name, names, mode) => nodes.set(name, { names, mode, inode: nodes.size + 1 });
+  const file = (name, value, mode = 0o600) => nodes.set(name, { bytes: Buffer.from(value), mode, inode: nodes.size + 1 });
+  directory(auth.repository.root, [".git"], 0o755);directory(`${auth.repository.root}/.git`, ["objects"], 0o755);
+  directory(`${auth.repository.root}/.git/objects`, [], 0o755);directory(root, [], 0o700);
+  file(`${root}/admin-v1-official-runtime-identity.json`, `${canonicalRecovery({schema_version:1,identity:document.identity})}\n`);
+  file(`${root}/admin-v1-official-runtime-journal.json`, `${canonicalRecovery(document)}\n`);
+  directory(git, ["HEAD", "config", "objects", "refs"], 0o500);directory(`${git}/objects`, [], 0o500);
+  directory(`${git}/refs`, ["heads"], 0o500);directory(`${git}/refs/heads`, [], 0o500);
+  file(`${git}/HEAD`, "ref: refs/heads/qualification-context\n", 0o400);
+  file(`${git}/config`, "[core]\n\tbare = true\n\trepositoryformatversion = 0\n", 0o400);
+  const metadata = (name) => {
+    const node = nodes.get(name);if (!node) throw Object.assign(new Error("ABSENT"), { code: "ENOENT" });
+    return { dev: 1, ino: node.inode, uid: node.uid ?? 501, gid: 20, nlink: node.nlink ?? 1, mode: node.mode,
+      size: node.bytes?.length ?? 0, mtimeMs: 1, ctimeMs: node.ctime ?? 1, mtimeNs: "1", ctimeNs: String(node.ctime ?? 1),
+      isFile: () => Boolean(node.bytes), isDirectory: () => Boolean(node.names), isSymbolicLink: () => node.symlink === true };
+  };
+  return { nodes, operations, filesystem: {
+    constants: { O_RDONLY: 0, O_NOFOLLOW: 256 },
+    lstatSync(name) { operations.push(["lstat", name]);return metadata(name); },
+    realpathSync(name) { metadata(name);return nodes.get(name).realpath ?? name; },
+    readdirSync(name) { return [...nodes.get(name).names]; },
+    openSync(name, flags) { assert.equal(flags, 256);operations.push(["open", name]);metadata(name);const fd = next++;opened.set(fd, name);return fd; },
+    fstatSync(fd) { return metadata(opened.get(fd)); },
+    readFileSync(fd) { assert.equal(typeof fd, "number");return Buffer.from(nodes.get(opened.get(fd)).bytes); },
+    closeSync(fd) { assert.equal(opened.delete(fd), true); },
+  } };
+}
+
+const canonicalRecovery = v2CanonicalJson;
+const recoveryAuth = v2Authorization();
+for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
+  const document = recoveryDocument(recoveryAuth);document.state.lifecycle = lifecycle;const p = recoveryFilesystem(recoveryAuth, document);
+  const admitted = verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem);
+  assert.deepEqual(admitted, { mode: "OFFICIAL_RETENTION_RECOVERY_V1", journal_sha256: v2Sha256(`${canonicalRecovery(document)}\n`) });
+  assert.throws(() => verifyOfficialRunUnspentBeforeImport(recoveryAuth, p.filesystem), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
+}
+let recoveryPreImportNegatives = 0;
+for (const change of [
+  (p, d) => { d.state.retention.phase = "ARMED"; }, (p, d) => { d.state.lifecycle = "CLEANUP_COMPLETE"; },
+  (p, d) => { d.state.retention.phase = "COMPLETE";d.state.lifecycle = "RETENTION_COMPLETE"; },
+  (p, d) => { d.extra = true; }, (p, d) => { d.identity.extra = true; },
+  (p, d) => { d.state.token_spent = false; }, (p, d) => { d.state.runtime_sessions = 2; },
+  (p, d) => { d.state.runtime_replays = 1; }, (p, d) => { d.state.last_completed_official_ordinal = 19; },
+  (p, d) => { delete d.state.runtime_retries; }, (p, d) => { d.state.retention.extra = true; },
+  (p, d) => { d.state.retention.environment_record_ids[6] = d.state.retention.environment_record_ids[0]; },
+  (p, d) => { d.state.retention.environment_keys.reverse(); }, (p, d) => { d.state.retention.data_zero_residual = false; },
+  (p, d) => { d.state.cleanup.pop(); }, (p, d) => { d.state.cleanup.push("DELETE_ENVIRONMENT_1"); },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).nlink = 2; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).uid = 0; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).mode = 0o644; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).symlink = true; },
+  (p) => { p.nodes.set(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-retired.json`, {bytes:Buffer.from("{}"),mode:0o600,inode:100}); },
+]) {
+  const d = recoveryDocument(recoveryAuth);const p = recoveryFilesystem(recoveryAuth, d);change(p, d);
+  p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).bytes = Buffer.from(`${canonicalRecovery(d)}\n`);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem));recoveryPreImportNegatives++;
+}
+for (const name of ["admin-v1-official-runtime-journal.json", "admin-v1-official-runtime-identity.json"]) {
+  const p = recoveryFilesystem(recoveryAuth);p.nodes.delete(`${recoveryAuth.execution.journal_directory}/${name}`);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem));recoveryPreImportNegatives++;
+}
+const missingRecoveryRoot = recoveryFilesystem(recoveryAuth);missingRecoveryRoot.nodes.delete(recoveryAuth.execution.journal_directory);
+assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, missingRecoveryRoot.filesystem));
+assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(authorization(), recoveryFilesystem(recoveryAuth).filesystem));
+console.log(`PASS_RETENTION_RECOVERY_PREIMPORT pending_routes=2 normal_spent_guard=preserved no_follow=true negatives=${recoveryPreImportNegatives + 2} credentials=0 provider_calls=0`);

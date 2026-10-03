@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "41a36f6c548a053705a1d0f1f6c36c0f21b9753f0defebaebdb2e314c004d774",
+  "testing_tree_digest": "6a1b003c2ae169a831ab61fc6d6229b925879f2e83f3c08bb5a8a9725a7025ca",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -24,11 +24,11 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "f12e92d7ff3072b88673d378042396fe571670792ca69100587ff45bd87bea0d",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "7d675265a8035f99df641aeb7fe365ddcee3f40f9a1e6d4af5f4abf686ba9bf2",
     "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs": "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "90bf9fb736ee2d354455ceccabb26b5f92bf13a623e7bb6107f5f40af9a68c33",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "f78f315c80c1fd7f65ed50672fa17f433123966c374a3e147aefd2a9d182daa8",
-    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "221978ad2768456e79b5750fb03b326996dae3017c104a6a11bcbb302085902c",
-    "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "81e69d5c309a0f84259f2ae9c632010c2d13cdfe743be25638b87db5ad5b0a4c",
-    "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "5839c0bf43d8c653097e1a920b4086549110c9e9e59006385c9cb837a03946b4",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "d0e894f0aefe453d77709cd6c07e88c10d25994a0bf7beefe81ba2c56b2a2fce",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "eb0f02330bb2e7ea74ce0150282c78383610d44a0d211748d48ece1a53b687b2",
+    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "3cdf8154187c5b99522183ebbd0bf3ffcd3b19427ada55eadcdd24526452aa4a",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "1682dafb501974e342e843fd4553a05d872c4f0740930f6aaaf6226bc6f76a66",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "8c47dd3157cabaa30d54eda133954bd3aabea5373f3215c9a4c9d30284f50543",
     "scripts/launch-operations-kernel/canonical.mjs": "8b9aa4eca1330011569b9831a2e216840367a67cb74a99976ea072fcb3d18821",
     "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs": "a6d091656834a9eb1550486cb911930dd7b537c93a85d9c7e3a0e921d0cf3ce9",
     "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs": "5ba053cbbc68c777217a41f77822ecb1d3ee676882d06f5736a4c6ae13ba9104",
@@ -42,7 +42,7 @@
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs": "2701e5ec08031cbf902720492cdbbfb42d728d7cf1846985a4a8cb84224c008b",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs": "df5b71748157679a5bcec791611f3eb41080c850319da6653905417685358e92",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs": "775aa3a933b3f0776d415cd227dcf34f37144c246c954fdfd3547fe73cd0694c",
-    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "22631e4be9243cf90fce601c87f6bf17c14cdde38a227b7ee88ba66162fbd5b6",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "9d44b3b1501e97b0a256ff6dda1d17982159c953515421ff6fe14c1420016142",
     "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs": "c20be31f67b3450f5da1c7939fb01c1e6658dd18158e9e839c1353f4b25fd3c1",
     "scripts/launch-operations-kernel/recovery.test.mjs": "66e9a59a21593a7136012939aac5f891fb6332fd2b9dc1ba71a4f96771b506a3"
   },
@@ -66,11 +66,11 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "f12e92d7ff3072b88673d378042396fe571670792ca69100587ff45bd87bea0d",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "7d675265a8035f99df641aeb7fe365ddcee3f40f9a1e6d4af5f4abf686ba9bf2",
     "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs": "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "90bf9fb736ee2d354455ceccabb26b5f92bf13a623e7bb6107f5f40af9a68c33",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "f78f315c80c1fd7f65ed50672fa17f433123966c374a3e147aefd2a9d182daa8",
-    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "221978ad2768456e79b5750fb03b326996dae3017c104a6a11bcbb302085902c",
-    "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "81e69d5c309a0f84259f2ae9c632010c2d13cdfe743be25638b87db5ad5b0a4c",
-    "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "5839c0bf43d8c653097e1a920b4086549110c9e9e59006385c9cb837a03946b4",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "d0e894f0aefe453d77709cd6c07e88c10d25994a0bf7beefe81ba2c56b2a2fce",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "eb0f02330bb2e7ea74ce0150282c78383610d44a0d211748d48ece1a53b687b2",
+    "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "3cdf8154187c5b99522183ebbd0bf3ffcd3b19427ada55eadcdd24526452aa4a",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "1682dafb501974e342e843fd4553a05d872c4f0740930f6aaaf6226bc6f76a66",
+    "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "8c47dd3157cabaa30d54eda133954bd3aabea5373f3215c9a4c9d30284f50543",
     "scripts/launch-operations-kernel/canonical.mjs": "8b9aa4eca1330011569b9831a2e216840367a67cb74a99976ea072fcb3d18821",
     "scripts/launch-operations-kernel/cli.mjs": "607cd904b231564c42f7c8aaa8cf77523f0614aeeeacff014908f03fb3a03487",
     "scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs": "a6d091656834a9eb1550486cb911930dd7b537c93a85d9c7e3a0e921d0cf3ce9",
@@ -83,7 +83,7 @@
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs": "271654644a072f796e4996dce3940588f3fb97633f191541ece249d6a788ae3c",
     "scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs": "2701e5ec08031cbf902720492cdbbfb42d728d7cf1846985a4a8cb84224c008b",
     "scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs": "df5b71748157679a5bcec791611f3eb41080c850319da6653905417685358e92",
-    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "22631e4be9243cf90fce601c87f6bf17c14cdde38a227b7ee88ba66162fbd5b6",
+    "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs": "9d44b3b1501e97b0a256ff6dda1d17982159c953515421ff6fe14c1420016142",
     "scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs": "c20be31f67b3450f5da1c7939fb01c1e6658dd18158e9e839c1353f4b25fd3c1"
   },
   "phase_33fa_c1_execution_surface_digest": {
@@ -1525,7 +1525,7 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "976f77dcd90573006fb67ad814c49f4dec84d80444282cd863aa48e24a9e11f2"
+    "sha256": "8099db3cfe54b6042272fceec6ee5544be5ac4b0f874673974390e3ff2b4a9fd"
   },
   "c08_child_receipt_contract": {
     "path": "scripts/c08-child-receipts.mjs",

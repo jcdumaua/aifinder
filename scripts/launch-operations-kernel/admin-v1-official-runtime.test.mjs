@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   mkdtempSync,
+  existsSync,
+  readdirSync,
   readFileSync,
   statSync,
 } from "node:fs";
@@ -1534,6 +1536,49 @@ await check("contract digest versions and semantic one-use binding", async () =>
     assert.notEqual(expectedV2OneUse(changed), original.one_use_authorization_sha256);
     assert.throws(() => validateAdminV1OfficialAuthorization(changed, { now_epoch_ms: TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_AUTHORIZATION_INVALID" });
   }
+});
+
+
+await check("existing-only journal cannot create absent roots or identity records", async () => {
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-journal.");
+  const identity = { authorization_id_sha256: "1".repeat(64), run_id: RUN_ID };
+  const before = readdirSync(root);
+  assert.throws(() => createAdminV1OfficialJournal({directory:root,identity,existing_only:true}));
+  assert.deepEqual(readdirSync(root),before);
+  const absent = `${root}/absent`;
+  assert.throws(() => createAdminV1OfficialJournal({directory:absent,identity,existing_only:true}));
+  assert.equal(existsSync(absent),false);
+  const journal = createAdminV1OfficialJournal({directory:root,identity});
+  journal.publish({lifecycle:"PRE_EFFECT",zero_residual:false});
+  const names = readdirSync(root);
+  const reopened = createAdminV1OfficialJournal({directory:root,identity,existing_only:true});
+  assert.deepEqual(reopened.load(),journal.load());assert.deepEqual(readdirSync(root),names);
+});
+
+
+await check("real durable final-failure journal admits recovery with historical owned handles", async () => {
+  const f = v2Fixture({final_failure:"verify_environment_7"});
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-retention.");
+  const identity = {authorization_id_sha256:f.record.authorization_id_sha256,run_id:RUN_ID};
+  const journal = createAdminV1OfficialJournal({directory:root,identity});
+  assert.equal((await f.run({journal})).classification,"RECOVERY_PENDING");
+  const before=journal.load();
+  assert.equal(before.value.state.owned.submissions.length,3);
+  assert.equal(before.value.state.owned.tools.length,2);assert(before.value.state.owned.local_temp_state);
+  assert.equal(runtimeModule.validateAdminV1OfficialRetentionRecoveryRecord(before,f.record).state.retention.phase,"COMMITTED");
+  const reopened=createAdminV1OfficialJournal({directory:root,identity,existing_only:true});
+  let reads=0;
+  const result=await runtimeModule.recoverAdminV1OfficialRetention({authorization:f.record,journal:reopened,
+    now_epoch_ms:TEST_NOW_EPOCH_MS,adapters:{async invoke(operation,input={}){
+      reads++;if(operation==="inspect_remote_ref")return {status:"ABSENT"};
+      if(operation==="verify_preview_identity")return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:true};
+      return {status:"EXACT",...input,project_id:f.record.execution.preview_project_id,team_id:f.record.execution.preview_team_id,
+        git_branch:f.record.execution.branch_name,unrelated_preserved:true};}}});
+  assert.equal(result.classification,"RETENTION_COMPLETE");assert.equal(reads,9);
+  const completed=reopened.load().value.state;
+  assert.equal(completed.last_completed_official_ordinal,20);assert.equal(completed.last_completed_qualification_ordinal,6);assert.equal(completed.runtime_sessions,1);
+  assert.equal(classifyAdminV1OfficialRecoveryState(reopened.load()),"RETENTION_COMPLETE");
+  assert.deepEqual(reopened.load().value.state.owned,before.value.state.owned);
 });
 
 if (failures.length > 0) {

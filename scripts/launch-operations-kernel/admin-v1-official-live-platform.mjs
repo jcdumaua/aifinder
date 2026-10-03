@@ -9,6 +9,8 @@ import {
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   classifyAdminV1OfficialRecoveryState,
   runAdminV1OfficialRuntime,
+  recoverAdminV1OfficialRetention,
+  validateAdminV1OfficialRetentionRecoveryRecord,
   validateAdminV1OfficialAuthorization,
 } from "./admin-v1-official-runtime.mjs";
 import {
@@ -2541,4 +2543,118 @@ export async function runConcreteAdminV1OfficialRuntime({
     sensitive: credentials,
     now_epoch_ms,
   });
+}
+
+const RECOVERY_READ_OPERATIONS = Object.freeze(["inspect_remote_ref", "verify_preview_identity",
+  ...Array.from({ length: 7 }, (_, index) => `verify_environment_${index + 1}`)]);
+
+function admitBoundOfficialRecoveryDocument(executionContext, authorization) {
+  const marker = executionContext?.retention_recovery;
+  if (marker === null || typeof marker !== "object" || Array.isArray(marker) ||
+      Object.keys(marker).sort().join(",") !== "journal_sha256,mode" ||
+      marker.mode !== "OFFICIAL_RETENTION_RECOVERY_V1" ||
+      typeof marker.journal_sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(marker.journal_sha256)) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  const initial = executionContext?.journal?.load();
+  if (initial?.retired === true) throw new AdminV1OfficialLivePlatformError("OFFICIAL_AUTHORIZATION_SPENT");
+  const admitted = validateAdminV1OfficialRetentionRecoveryRecord(initial, authorization);
+  if (sha256Hex(`${canonicalJson(admitted)}\n`) !== marker.journal_sha256) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  return structuredClone(admitted);
+}
+
+// Restrict authority before the first read, rather than relying on later transport bindings.
+export function createAdminV1OfficialRecoveryAdapter({ authorization, credentials, execution_context, transport, admitted_document }) {
+  const admitted = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+  if (admitted_document !== undefined) {
+    const supplied = structuredClone(admitted_document);
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: supplied }, authorization);
+    if (canonicalJson(supplied) !== canonicalJson(admitted)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  const boundDocument = canonicalJson(admitted);
+  const adapter = createAdminV1OfficialAdapter({ authorization, credentials, execution_context, transport });
+  let next = 0;
+  return Object.freeze({ async invoke(operation, input = {}) {
+    if (!RECOVERY_READ_OPERATIONS.includes(operation) || operation !== RECOVERY_READ_OPERATIONS[next]) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+    }
+    const current = execution_context.journal.load();
+    if (current?.retired === true) throw new AdminV1OfficialLivePlatformError("OFFICIAL_AUTHORIZATION_SPENT");
+    if (canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(current, authorization)) !== boundDocument) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    const receipt = admitted.state.retention;
+    const expected = operation === "inspect_remote_ref" ? {} : operation === "verify_preview_identity"
+      ? { deployment_id: receipt.deployment_id }
+      : { key: receipt.environment_keys[next - 2], record_id: receipt.environment_record_ids[next - 2] };
+    if (canonicalJson(input) !== canonicalJson(expected)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+    next += 1;
+    const result = await adapter.invoke(operation, input);
+    const after = execution_context.journal.load();
+    if (after?.retired !== false || canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(after, authorization)) !== boundDocument) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    return result;
+  } });
+}
+
+export async function recoverConcreteAdminV1OfficialRetention({ authorization, credentials, execution_context,
+  transport, now_epoch_ms }) {
+  try {
+    validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms });
+    const journal = execution_context?.journal;
+    const admitted = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+    const adapters = createAdminV1OfficialRecoveryAdapter({ authorization, credentials, execution_context, transport,
+      admitted_document: admitted });
+    let expectedDocument = admitted;
+    let expectedRetired = false;
+    let changed = false;
+    const requireExpectedJournal = () => {
+      try {
+        const current = journal.load();
+        if (changed || current?.retired !== expectedRetired || canonicalJson(current.value) !== canonicalJson(expectedDocument)) throw new Error("CHANGED");
+      } catch {
+        changed = true;
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+      }
+    };
+    const guardedJournal = Object.freeze({
+      load: () => journal.load(),
+      publish(state) {
+        requireExpectedJournal();
+        journal.publish(state);
+        expectedDocument = { ...expectedDocument, sequence: expectedDocument.sequence + 1, state: structuredClone(state) };
+        requireExpectedJournal();
+      },
+      retire(state) {
+        requireExpectedJournal();
+        journal.retire(state);
+        expectedDocument = { ...expectedDocument, sequence: expectedDocument.sequence + 1, state: { ...structuredClone(state), retired: true } };
+        expectedRetired = true;
+        requireExpectedJournal();
+      },
+    });
+    const result = await recoverAdminV1OfficialRetention({ authorization, adapters, journal: guardedJournal, now_epoch_ms });
+    const durable = journal.load();
+    if (result?.classification !== "RETENTION_COMPLETE") {
+      validateAdminV1OfficialRetentionRecoveryRecord(durable, authorization);
+      return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });
+    }
+    const completed = validateAdminV1OfficialRetentionRecoveryRecord(durable, authorization, { complete: true });
+    if (classifyAdminV1OfficialRecoveryState(durable) !== "RETENTION_COMPLETE" ||
+        result.zero_residual_owned_state !== false || canonicalJson(result.retention) !== canonicalJson(completed.state.retention) ||
+        completed.state.retention.deployment_id !== admitted.state.retention.deployment_id ||
+        canonicalJson(completed.state.retention.environment_record_ids) !== canonicalJson(admitted.state.retention.environment_record_ids) ||
+        completed.sequence <= admitted.sequence) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    // Counts come from the existing durable run; this lane never starts a session or ledger.
+    const state = completed.state;
+    return Object.freeze({ classification: "RETENTION_COMPLETE", zero_residual_owned_state: false,
+      qualification_requests: state.last_completed_qualification_ordinal, official_requests: state.last_completed_official_ordinal,
+      runtime_sessions: state.runtime_sessions, runtime_retries: state.runtime_retries, runtime_replays: state.runtime_replays,
+      retention: Object.freeze(structuredClone(state.retention)) });
+  } finally {
+    for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0);
+  }
 }

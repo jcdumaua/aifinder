@@ -669,7 +669,7 @@ function strictJournalObject(filePath) {
   if (!regularIdentity(filePath, 0o600)) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
   }
-  const bytes = readFileSync(filePath);
+  const bytes = readAdminV1OfficialRecoveryFile({ target: filePath, owner: lstatSync(path.dirname(filePath)).uid });
   try {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const value = JSON.parse(text);
@@ -724,14 +724,88 @@ function sanitizedJournalState(value) {
   return serialized;
 }
 
-export function createAdminV1OfficialJournal({ directory, identity }) {
+// Admission for a continuation of one completed, spent schema-v2 runtime.
+export function validateAdminV1OfficialRetentionRecoveryRecord(record, authorization, { complete = false } = {}) {
+
+  const value = record?.value;
+  const state = value?.state;
+  const receipt = state?.retention;
+  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention"];
+  const ids = receipt?.environment_record_ids;
+  if (authorization?.schema_version !== 2 ||
+      authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+      record?.retired !== complete || !exactKeys(value, ["schema_version", "identity", "sequence", "state"]) ||
+      value.schema_version !== 1 || !Number.isSafeInteger(value.sequence) || value.sequence < 1 ||
+      !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
+      value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
+      !exactKeys(state, complete ? [...stateKeys, "retired"] : stateKeys) ||
+      (complete ? state.retired !== true || state.lifecycle !== "RETENTION_COMPLETE" : !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state.lifecycle)) ||
+      receipt?.phase !== (complete ? "COMPLETE" : "COMMITTED") ||
+      state.token_spent !== true || state.runtime_sessions !== 1 || state.runtime_retries !== 0 || state.runtime_replays !== 0 ||
+      state.last_attempted_qualification_ordinal !== 6 || state.last_completed_qualification_ordinal !== 6 ||
+      state.last_attempted_official_ordinal !== 20 || state.last_completed_official_ordinal !== 20 ||
+      typeof state.stage !== "string" || !/^[A-Z0-9_]{1,128}$/u.test(state.stage) ||
+      !exactKeys(receipt, ["policy", "phase", "deployment_id", "environment_record_ids", "environment_keys", "data_zero_residual", "external_retained_exact", "unrelated_preserved"]) ||
+      receipt.policy !== authorization.execution.provider_cleanup_policy || !/^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") ||
+      !Array.isArray(ids) || ids.length !== 7 || new Set(ids).size !== 7 ||
+      !ids.every((id) => typeof id === "string" && /^[\x21-\x7e]{1,128}$/u.test(id)) ||
+      canonicalJson(receipt.environment_keys) !== canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) ||
+      canonicalJson(authorization.execution.environment_keys) !== canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) ||
+      receipt.data_zero_residual !== true || ![receipt.external_retained_exact, receipt.unrelated_preserved].every((flag) => typeof flag === "boolean") ||
+      complete && (receipt.external_retained_exact !== true || receipt.unrelated_preserved !== true) || state.zero_residual !== false ||
+      !exactKeys(state.owned, ["local_temp_state", "remote_ref", "environment_record_ids", "deployment_id", "submissions", "tools", "audit_rows", "logo"]) ||
+      state.owned.deployment_id !== receipt.deployment_id || canonicalJson(state.owned.environment_record_ids) !== canonicalJson(ids) ||
+      !(state.owned.local_temp_state === null || typeof state.owned.local_temp_state === "string" && /^[\x21-\x7e]{1,256}$/u.test(state.owned.local_temp_state)) ||
+      !(state.owned.remote_ref === null || state.owned.remote_ref === `refs/heads/${authorization.execution.branch_name}`) ||
+      !(state.owned.logo === null || state.owned.logo && typeof state.owned.logo === "object" && !Array.isArray(state.owned.logo)) ||
+      ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) => Array.isArray(rows) && rows.length <= 9 &&
+        rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) ||
+      !exactKeys(state.effects, ["submitted_tools", "tools", "audits", "approval_rpc", "logo_objects", "grant_prepare", "grant_revoke"]) ||
+      !Object.values(state.effects).every((count) => Number.isSafeInteger(count) && count >= 0) ||
+      !Array.isArray(state.evidence) || !(state.failure === null || state.failure && typeof state.failure === "object" && !Array.isArray(state.failure)) ||
+      !Array.isArray(state.cleanup) || !state.cleanup.every((step) => typeof step === "string") ||
+      !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"].every((step) => state.cleanup.includes(step)) ||
+      state.cleanup.some((step) => step === "DELETE_PREVIEW" || /^DELETE_ENVIRONMENT_[1-7]$/u.test(step))) {
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  return Object.freeze(structuredClone(value));
+}
+
+// A recovery read never creates state and binds the descriptor to its pathname.
+export function readAdminV1OfficialRecoveryFile({ target, owner, mode = 0o600, maximum_bytes = 1024 * 1024,
+  filesystem = { constants, lstatSync, realpathSync, openSync, fstatSync, readFileSync, closeSync } }) {
+
+  const before = filesystem.lstatSync(target, { bigint: true });
+  const valid = (metadata) => metadata.isFile() && !metadata.isSymbolicLink() && Number(metadata.nlink) === 1 &&
+    Number(metadata.uid) === Number(owner) && (Number(metadata.mode) & 0o777) === mode &&
+    Number(metadata.size) >= 1 && Number(metadata.size) <= maximum_bytes;
+  const same = (left, right) => ["dev", "ino", "mode", "nlink", "uid", "gid", "size", "mtimeNs", "ctimeNs"]
+    .every((key) => left[key] !== undefined && right[key] !== undefined && String(left[key]) === String(right[key]));
+  if (!valid(before) || filesystem.realpathSync(target) !== target) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
+  const descriptor = filesystem.openSync(target, filesystem.constants.O_RDONLY | filesystem.constants.O_NOFOLLOW);
+  try {
+    const opened = filesystem.fstatSync(descriptor, { bigint: true });
+    if (!valid(opened) || !same(before, opened)) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
+    const bytes = filesystem.readFileSync(descriptor);
+    const after = filesystem.fstatSync(descriptor, { bigint: true });
+    const named = filesystem.lstatSync(target, { bigint: true });
+    if (!same(opened, after) || !same(opened, named) || bytes.byteLength !== Number(opened.size) ||
+        filesystem.realpathSync(target) !== target) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
+    return bytes;
+  } finally { filesystem.closeSync(descriptor); }
+}
+
+export function createAdminV1OfficialJournal({ directory, identity, existing_only = false }) {
   if (
     !exactJournalDirectory(directory) ||
     !exactKeys(identity, ["authorization_id_sha256", "run_id"]) ||
     !isSha256(identity.authorization_id_sha256) ||
     !UUID_PATTERN.test(identity.run_id ?? "")
   ) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_INPUT");
-  if (!existsSync(directory)) mkdirSync(directory, { mode: 0o700 });
+  if (!existsSync(directory)) {
+    if (existing_only) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
+    mkdirSync(directory, { mode: 0o700 });
+  }
   const directoryIdentity = lstatSync(directory);
   const canonicalDirectory = realpathSync(directory);
   if (
@@ -750,6 +824,9 @@ export function createAdminV1OfficialJournal({ directory, identity }) {
     canonicalDirectory,
     "admin-v1-official-runtime-identity.json",
   );
+  if (existing_only && (existsSync(retiredPath) || !existsSync(activePath))) {
+    throw new AdminV1OfficialRuntimeError(existsSync(retiredPath) ? "OFFICIAL_AUTHORIZATION_SPENT" : "OFFICIAL_RECOVERY_STATE_INVALID");
+  }
   let sequence = 0;
   const exactIdentity = Object.freeze(structuredClone(identity));
   const identityDocument = {
@@ -757,6 +834,7 @@ export function createAdminV1OfficialJournal({ directory, identity }) {
     identity: structuredClone(exactIdentity),
   };
   if (!existsSync(identityPath)) {
+    if (existing_only) throw new AdminV1OfficialRuntimeError("OFFICIAL_JOURNAL_IDENTITY");
     writeFileSync(identityPath, `${canonicalJson(identityDocument)}\n`, {
       flag: "wx",
       mode: 0o600,
