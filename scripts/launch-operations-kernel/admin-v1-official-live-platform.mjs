@@ -1,13 +1,51 @@
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
+import { createHmac } from "node:crypto";
+import {
+  OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  observeOfficialClientOrigin,
+  validateOfficialProvisioningReceipt,
+} from "./admin-v1-official-isolation.mjs";
 import {
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
+  createAdminV1OfficialExpiryGuard,
+  createAdminV1OfficialBudget,
+  ADMIN_V1_OFFICIAL_ACTION_COSTS_V2,
+  adminV1OfficialRetentionCleanupPlan,
+  officialStorageGrantId,
+  officialStorageCleanupSteps,
+  officialRecoveryActionCost,
+  STORAGE_CLEANUP_CONTRACT,
+  classifyAdminV1OfficialRecoveryState,
   runAdminV1OfficialRuntime,
+  recoverAdminV1OfficialRetention,
+  validateAdminV1OfficialRetentionRecoveryRecord,
+  validateAdminV1OfficialAuthorization,
 } from "./admin-v1-official-runtime.mjs";
 import {
   createConcreteLiveTransport,
 } from "./nonproduction-qualification-live-platform.mjs";
+
+const isolatedProvisioningReceipts = new WeakMap();
+
+export function deriveOfficialStorageCleanupToken(authorization, logo, grantId, secret) {
+  if (grantId !== officialStorageGrantId(authorization, logo) ||
+      !(secret instanceof Uint8Array) || secret.byteLength === 0) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+  }
+  const key = Buffer.from(secret);
+  let digest;
+  try {
+    digest = createHmac("sha256", key).update(canonicalJson({
+      domain: "AIFINDER_STORAGE_CLEANUP_CAPABILITY_V1", contract: STORAGE_CLEANUP_CONTRACT,
+      operation_class: authorization.operation_class, authorization_id_sha256: authorization.authorization_id_sha256,
+      run_id: authorization.run_id, grant_id: grantId, bucket: authorization.execution.storage_bucket,
+      object_id: logo.object_id, expected_version: logo.version,
+    })).digest();
+    return Buffer.from(digest.toString("hex"), "ascii");
+  } finally { key.fill(0); digest?.fill(0); }
+}
 
 const rows = [
   ["inspect_prior_residue", "PRE_EFFECT", "provider.inventory", "PROVIDER_CONTROL", "provider_control_invocations", "read", "READ_ONLY", "ZERO"],
@@ -51,7 +89,7 @@ const rows = [
   ["application_request", "QUALIFICATION_OR_OFFICIAL", "preview.application", "AUTHENTICATED_APPLICATION", "application_request_lane_budget", "read_or_mutation", "SEQUENCED_ONCE", "ZERO"],
 ];
 
-export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP = Object.freeze(
+export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1 = Object.freeze(
   rows.map(([
     operation,
     state_machine_stage,
@@ -76,9 +114,55 @@ export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP = Object.freeze(
   })),
 );
 
-const OPERATION_BY_NAME = new Map(
-  ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP.map((entry) => [entry.operation, entry]),
+export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP =
+  ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1;
+export const ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V2 = Object.freeze([
+  ...ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1,
+  ...[3, 4, 5, 6, 7].flatMap((ordinal) =>
+    ["create", "verify", "delete"].map((kind) => Object.freeze({
+      ...ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1.find(
+        (entry) => entry.operation === `${kind}_environment_1`,
+      ),
+      operation: `${kind}_environment_${ordinal}`,
+    }))
+  ),
+]);
+const OPERATION_BY_NAME_V1 = new Map(
+  ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V1.map((entry) => [entry.operation, entry]),
 );
+const OPERATION_BY_NAME_V2 = new Map(
+  ADMIN_V1_OFFICIAL_ADAPTER_OPERATION_MAP_V2.map((entry) => [entry.operation, entry]),
+);
+
+function operationMapForAuthorization(authorization) {
+  if (authorization?.operation_class !== ADMIN_V1_OFFICIAL_OPERATION_CLASS ||
+      ![1, 2].includes(authorization.schema_version)) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+  }
+  return authorization.schema_version === 2
+    ? OPERATION_BY_NAME_V2
+    : OPERATION_BY_NAME_V1;
+}
+
+function validatedOperation(operation, input, authorization) {
+  const mapping = operationMapForAuthorization(authorization).get(operation);
+  if (!mapping) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+  }
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+  }
+  const environment = /^(create|verify|delete)_environment_([1-7])$/u.exec(operation);
+  if (environment !== null) {
+    const [, kind, ordinal] = environment;
+    const expectedKey = authorization.execution?.environment_keys?.[Number(ordinal) - 1];
+    if (kind !== "delete" && (!boundedText(expectedKey, 256) || input.key !== expectedKey) ||
+        kind !== "create" && !boundedText(input.record_id, 256)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+    }
+  }
+  return mapping;
+}
 const CREDENTIAL_ENVIRONMENT_OBSERVATION = Symbol(
   "ADMIN_V1_OFFICIAL_CREDENTIAL_ENVIRONMENT_OBSERVATION",
 );
@@ -203,11 +287,27 @@ function exactOwnedDeployment(candidate, authorization) {
     meta.githubCommitRepo === repository && meta.githubCommitOrg === owner;
 }
 
+function expectedEnvironmentType(key) {
+  switch (key) {
+    case "ADMIN_PASSWORD":
+    case "ADMIN_SESSION_SECRET":
+    case "SUPABASE_SERVICE_ROLE_KEY":
+      return "sensitive";
+    case "NEXT_PUBLIC_SUPABASE_URL":
+    case "NEXT_PUBLIC_SUPABASE_ANON_KEY":
+    case "AIFINDER_VALIDATION_RUN_ID":
+    case "AIFINDER_VALIDATION_PROJECT_REF":
+      return "encrypted";
+    default:
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+  }
+}
+
 function exactEnvironmentRecord(record, authorization) {
   if (!(record && typeof record === "object" && !Array.isArray(record) &&
     boundedText(record.id, 256) && boundedText(record.key, 256) &&
     authorization.execution.environment_keys.includes(record.key) &&
-    record.type === "encrypted" &&
+    record.type === expectedEnvironmentType(record.key) &&
     canonicalJson(record.target) === '["preview"]' &&
     record.gitBranch === authorization.execution.branch_name &&
     (!Object.hasOwn(record, "projectId") ||
@@ -262,7 +362,7 @@ function exactCreatedEnvironmentReadbackRecord(
   if (
     !record || typeof record !== "object" || Array.isArray(record) ||
     record.id !== expectedId || record.key !== expectedKey ||
-    record.type !== "encrypted" ||
+    record.type !== expectedEnvironmentType(expectedKey) ||
     canonicalJson(record.target) !== '["preview"]' ||
     record.gitBranch !== authorization.execution.branch_name
   ) return false;
@@ -302,6 +402,50 @@ function exactProjectObservation(project, authorization) {
     teamFacts.length >= 1 && teamFacts.every(
       (value) => value === authorization.execution.preview_team_id,
     );
+}
+
+function provenV2EnvironmentScope(record, authorization, bindings) {
+  const projectFacts = [record.projectId,
+    typeof record.project === "string" ? record.project : record.project?.id]
+    .filter((value) => value !== undefined && value !== null);
+  const teamFacts = [record.accountId, record.teamId,
+    record.project?.accountId, record.project?.teamId]
+    .filter((value) => value !== undefined && value !== null);
+  const preflight = bindings.environment_contract;
+  return (projectFacts.length >= 1 && teamFacts.length >= 1) ||
+    preflight?.project_id === authorization.execution.preview_project_id &&
+      preflight?.team_id === authorization.execution.preview_team_id;
+}
+
+function committedRetentionBinding(authorization, journal) {
+  try {
+    if (authorization.schema_version !== 2 || typeof journal?.load !== "function") {
+      throw new Error("RECOVERY_JOURNAL");
+    }
+    const record = journal.load();
+    const value = record?.value;
+    const identity = value?.identity;
+    const state = value?.state;
+    if (record?.retired !== false || value?.schema_version !== 1 ||
+        !exactIsolatedKeys(identity, ["authorization_id_sha256", "run_id"]) ||
+        identity.authorization_id_sha256 !== authorization.authorization_id_sha256 ||
+        identity.run_id !== authorization.run_id || state?.retired === true ||
+        !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state?.lifecycle) ||
+        state?.retention?.phase !== "COMMITTED" ||
+        state.retention.data_zero_residual !== true || state.token_spent !== true ||
+        state.runtime_sessions !== 1 || state.last_completed_qualification_ordinal !== 6 ||
+        state.last_completed_official_ordinal !== 20 || !Array.isArray(state.cleanup) ||
+        !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"]
+          .every((operation) => state.cleanup.includes(operation)) ||
+        canonicalJson(authorization.execution.environment_keys) !== canonicalJson(OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) ||
+        !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(classifyAdminV1OfficialRecoveryState(record))) {
+      throw new Error("RECOVERY_JOURNAL");
+    }
+    return Object.freeze({ deployment_id: state.retention.deployment_id,
+      environment_record_ids: Object.freeze([...state.retention.environment_record_ids]) });
+  } catch {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_PREVIEW_IDENTITY_UNPROVEN");
+  }
 }
 
 function exactPreviewHostname(value) {
@@ -1084,6 +1228,7 @@ function normalizedApplicationResult(
 }
 
 function providerDescriptor(operation, input, authorization, bindings) {
+  validatedOperation(operation, input, authorization);
   const team = `teamId=${encodeURIComponent(authorization.execution.preview_team_id)}`;
   const project = encodeURIComponent(authorization.execution.preview_project_id);
   const run = encodeURIComponent(authorization.run_id);
@@ -1099,7 +1244,7 @@ function providerDescriptor(operation, input, authorization, bindings) {
     body: {
       key: input.key,
       value: memoryText(input.value),
-      type: "encrypted",
+      type: expectedEnvironmentType(input.key),
       target: ["preview"],
       gitBranch: authorization.execution.branch_name,
     },
@@ -1108,10 +1253,17 @@ function providerDescriptor(operation, input, authorization, bindings) {
     service: "VERCEL", method: "GET",
     path: `/v9/projects/${project}/env/${encodeURIComponent(input.record_id)}?decrypt=false&${team}`,
   };
-  if (operation === "verify_preview_identity") return {
-    service: "VERCEL", method: "GET",
-    path: `/v13/deployments/${encodeURIComponent(bindings.deployment_id)}?${team}&withGitRepoInfo=true`,
-  };
+  if (operation === "verify_preview_identity") {
+    if (authorization.schema_version === 2 &&
+        (!boundedText(input.deployment_id, 256) ||
+          input.deployment_id !== bindings.deployment_id)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_PREVIEW_IDENTITY_UNPROVEN");
+    }
+    return {
+      service: "VERCEL", method: "GET",
+      path: `/v13/deployments/${encodeURIComponent(bindings.deployment_id)}?${team}&withGitRepoInfo=true`,
+    };
+  }
   if (operation === "generate_oidc") {
     verifiedPreviewUrl(bindings);
     return {
@@ -1248,27 +1400,52 @@ function normalizedProviderResult(
         authorization,
         input.record_id,
         input.key,
-      )
+      ) ||
+      authorization.schema_version === 2 &&
+        !provenV2EnvironmentScope(body, authorization, bindings)
     ) {
       throw new AdminV1OfficialLivePlatformError(
         "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN",
       );
     }
-    return { status: "EXACT", record_id: input.record_id };
+    return authorization.schema_version === 2
+      ? { status: "EXACT", record_id: input.record_id, key: input.key,
+          project_id: authorization.execution.preview_project_id,
+          team_id: authorization.execution.preview_team_id,
+          git_branch: authorization.execution.branch_name, unrelated_preserved: true }
+      : { status: "EXACT", record_id: input.record_id };
   }
   if (operation === "verify_preview_identity") {
+    const expectedBindings = authorization.schema_version === 2 &&
+      bindings.retention_recovery === true && bindings.deployment_url === undefined
+      ? { ...bindings, deployment_id: bindings.deployment_id, deployment_url: body?.url }
+      : bindings;
     if (
       response.status !== 200 ||
-      !exactReadyPreviewDeployment(body, authorization, bindings)
+      !exactReadyPreviewDeployment(body, authorization, expectedBindings)
     ) {
       throw new AdminV1OfficialLivePlatformError(
         "OFFICIAL_PREVIEW_IDENTITY_UNPROVEN",
       );
     }
+    if (authorization.schema_version === 2 && bindings.retention_recovery === true &&
+        bindings.deployment_url === undefined) {
+      bindings.deployment_url = body.url;
+    }
     bindings.preview_identity_verified = true;
     return {
       status: "EXACT",
       deployment_id: bindings.deployment_id,
+      ...(authorization.schema_version === 2 ? { unrelated_preserved: true } : {}),
+      ...(authorization.schema_version === 2 && bindings.retention_recovery !== true ? { isolation_identity: {
+        projectId: authorization.execution.preview_project_id,
+        teamId: authorization.execution.preview_team_id,
+        target: "preview",
+        sourceCommit: authorization.execution.temporary_commit_sha,
+        sourceBranch: authorization.execution.branch_name,
+        repository: authorization.repository.remote_repository,
+        sourceIdentityVerified: true,
+      } } : {}),
     };
   }
   if (operation === "generate_oidc") {
@@ -1412,13 +1589,33 @@ export function createAdminV1OfficialConcreteTransport({
   random_bytes = (size) => globalThis.crypto.getRandomValues(new Uint8Array(size)),
   random_uuid = () => globalThis.crypto.randomUUID(),
   spawn_sync,
+  live_now_epoch_ms = () => Date.now(),
 } = {}) {
+  let activeGuard = () => {};
+  let recoveryRequestReservation = null;
+  let recoveryFirstRequest = false;
+  const guards = new WeakMap();
   const lowLevel = createConcreteLiveTransport({
+    before_effect: (effect) => {
+      activeGuard();
+      if ((bindings.cleanup_document || recoveryRequestReservation) && effect?.kind === "HTTP" && effect.service.startsWith("SUPABASE")) {
+        // Reserve a success before dispatch too: even ambiguous replies may
+        // have succeeded. Recovery must never exceed the signed upper bound.
+        if (recoveryRequestReservation) {
+          // The operation reservation covers its first request; charge every
+          // additional reconciliation request durably before dispatch as well.
+          if (recoveryFirstRequest) recoveryFirstRequest = false;
+          else recoveryRequestReservation();
+          activeGuard();
+        } else recoveryBudget.take({ database_rest_requests: 1, database_rest_successes: 1 });
+      }
+    },
     fetch_impl,
     ...(spawn_sync ? { spawn_sync } : {}),
     git_execution_context: execution_context?.git_execution_context,
   });
   const bindings = {};
+  const recoveryBudget = createAdminV1OfficialBudget({ schema_version: 2 });
   const request = (operation, credentials, descriptor) => lowLevel.request({
     ...descriptor,
     credentials,
@@ -1523,15 +1720,27 @@ export function createAdminV1OfficialConcreteTransport({
 
   async function inspectEnvironmentContract({ authorization, credentials, rawCredentials }) {
     const observation = rawCredentials?.[CREDENTIAL_ENVIRONMENT_OBSERVATION];
+    const isolated = authorization.schema_version === 2;
+    const observationValid = isolated
+      ? exactIsolatedKeys(observation, ["credential_source_policy", "bundle_run_id",
+          "bundle_provenance_sha256", "names", "node_env"]) &&
+        Object.values(Object.getOwnPropertyDescriptors(observation)).every(
+          (descriptor) => Object.hasOwn(descriptor, "value") && descriptor.enumerable,
+        ) &&
+        observation.bundle_run_id === authorization.run_id &&
+        observation.bundle_provenance_sha256 ===
+          authorization.execution.isolation?.credential_bundle_provenance_sha256
+      : observation && observation.github_alias_count === 1;
     if (
-      !observation || observation.github_alias_count !== 1 ||
+      !observationValid ||
       observation.node_env !== "production" ||
       canonicalJson(observation.names) !==
         canonicalJson(ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES) ||
       canonicalJson(observation.credential_source_policy) !==
         canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY) ||
       canonicalJson(authorization.execution.environment_keys) !==
-        canonicalJson(["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"])
+        canonicalJson(isolated ? OFFICIAL_PREVIEW_ENVIRONMENT_KEYS
+          : ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"])
     ) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN");
     }
@@ -1542,6 +1751,10 @@ export function createAdminV1OfficialConcreteTransport({
     });
     if (response.status !== 200 || !exactProjectObservation(response.body, authorization)) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_ENVIRONMENT_OBSERVATION_UNPROVEN");
+    }
+    if (isolated) {
+      bindings.environment_contract = Object.freeze({ project_id: response.body.id,
+        team_id: response.body.accountId ?? response.body.teamId });
     }
     return {
       status: "EXACT",
@@ -1707,7 +1920,7 @@ export function createAdminV1OfficialConcreteTransport({
       ![null, expectedRef].includes(input.remote_ref) ||
       (input.deployment_id !== null && !boundedText(input.deployment_id, 256)) ||
       !Array.isArray(input.environment_record_ids) ||
-      input.environment_record_ids.length > 2 ||
+      input.environment_record_ids.length > (authorization.schema_version === 2 ? 7 : 2) ||
       input.environment_record_ids.some((value) => !boundedText(value, 256)) ||
       new Set(input.environment_record_ids).size !== input.environment_record_ids.length ||
       (input.local_state_id !== null && !boundedText(input.local_state_id, 256))
@@ -1747,7 +1960,7 @@ export function createAdminV1OfficialConcreteTransport({
       const environment = await request("verify_zero_external_residual", credentials, {
         service: "VERCEL",
         method: "GET",
-        path: `/v9/projects/${projectPath(authorization)}/env/${encodeURIComponent(recordId)}?${teamQuery(authorization)}`,
+        path: `/v9/projects/${projectPath(authorization)}/env/${encodeURIComponent(recordId)}?decrypt=false&${teamQuery(authorization)}`,
       });
       if (environment.status !== 404) {
         if (
@@ -1772,15 +1985,135 @@ export function createAdminV1OfficialConcreteTransport({
     };
   }
 
+  async function reconcileRecoveryRows(operation, input, authorization, credentials) {
+    const audit = operation === "delete_owned_audits";
+    const relation = audit ? "admin_audit_logs" : operation.startsWith("delete_submitted_fixture_") ? "submitted_tools" : "tools";
+    const versionKey = audit ? "created_at" : "updated_at";
+    const owned = audit ? input.rows : [{ row_id: input.row_id, version: input.expected_version }];
+    const expected = new Map(owned.map((row) => [row.row_id, row.version]));
+    if (!owned.length || expected.size !== owned.length) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    const observe = async () => {
+      const result = await request(operation, credentials, { service: "SUPABASE_SERVICE", method: "GET",
+        path: `/rest/v1/${relation}?select=id,${versionKey}&id=in.(${owned.map((row) => encodeURIComponent(row.row_id)).join(",")})&limit=${owned.length + 1}` });
+      if (result.status !== 200 || !Array.isArray(result.body) || result.body.length > owned.length ||
+          new Set(result.body.map((row) => String(row?.id))).size !== result.body.length ||
+          result.body.some((row) => !row || !expected.has(String(row.id)) || expected.get(String(row.id)) !== row[versionKey])) {
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
+      }
+      return result.body;
+    };
+    const present = await observe();
+    if (present.length) {
+      const remaining = audit ? { rows: present.map((row) => ({ row_id: String(row.id), version: row[versionKey] })) } : input;
+      const response = await request(operation, credentials, providerDescriptor(operation, remaining, authorization, bindings));
+      if (response.status < 200 || response.status >= 300) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
+      if ((await observe()).length) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
+    }
+    return { status: "DELETED_EXACT" };
+  }
+
   return Object.freeze({
-    async execute({ operation, input, authorization, credentials }) {
+    async execute({ operation, input, authorization, credentials, recovery }) {
+      if (!guards.has(authorization)) guards.set(authorization,
+        createAdminV1OfficialExpiryGuard(authorization, Date.parse(authorization.created_at), live_now_epoch_ms));
+      activeGuard = guards.get(authorization);
+      activeGuard();
+      validatedOperation(operation, input, authorization);
+      recoveryRequestReservation = recovery?.reserve_database_request ?? null;
+      recoveryFirstRequest = Boolean(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]?.database_rest_requests);
+      if (execution_context?.retention_recovery && bindings.cleanup_document === undefined) {
+        if (recovery) {
+          const admitted = validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: recovery.admitted_document }, authorization);
+          if (sha256Hex(`${canonicalJson(admitted)}\n`) !== execution_context.retention_recovery.journal_sha256) {
+            throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+          }
+          bindings.cleanup_document = admitted;
+        } else bindings.cleanup_document = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+        bindings.cleanup_plan = adminV1OfficialRetentionCleanupPlan(bindings.cleanup_document.state);
+        bindings.cleanup_attempted = new Set();
+      }
+      let cleanupStep = false;
+      if (bindings.cleanup_plan?.length) {
+        const current = validateAdminV1OfficialRetentionRecoveryRecord(execution_context.journal.load(), authorization);
+        if (canonicalJson(current.state.owned) !== canonicalJson(bindings.cleanup_document.state.owned) ||
+            Object.keys(current.state.effects).filter(key => !["grant_prepare", "grant_revoke"].includes(key))
+              .some(key => current.state.effects[key] !== bindings.cleanup_document.state.effects[key])) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+        }
+        cleanupStep = bindings.cleanup_plan.some((step) => step.operation === operation && canonicalJson(step.input) === canonicalJson(input));
+        const logo = bindings.cleanup_document.state.owned.logo;
+        if (logo && bindings.cleanup_plan.some(step => step.operation === "resume_storage_cleanup")) {
+          const storageInputs = {
+            storage_read_owned_version: { object_id: logo.object_id, expected_version: logo.version },
+            prepare_storage_cleanup_grant: { object_id: logo.object_id, expected_version: logo.version, grant_id: current.state.recovery_storage?.grant_id },
+            delete_storage_exact_version: { object_id: logo.object_id, expected_version: logo.version, grant_id: current.state.recovery_storage?.grant_id },
+            revoke_storage_cleanup_grant: { grant_id: current.state.recovery_storage?.grant_id },
+          };
+          cleanupStep ||= Object.hasOwn(storageInputs, operation) && canonicalJson(storageInputs[operation]) === canonicalJson(input);
+        }
+        if (cleanupStep) {
+          if (bindings.cleanup_attempted.has(operation) || !bindings.environment_contract) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+          bindings.cleanup_attempted.add(operation);
+        } else if (operation !== "inspect_environment_contract" && adminV1OfficialRetentionCleanupPlan(current.state).length) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+        }
+      }
+      let retainedRecovery = null;
+      if (operation === "verify_preview_identity" && authorization.schema_version === 2 &&
+          (bindings.deployment_id === undefined || bindings.retention_recovery === true)) {
+        const retained = committedRetentionBinding(authorization, execution_context?.journal);
+        retainedRecovery = retained;
+        if (!boundedText(input.deployment_id, 256) || input.deployment_id !== retained.deployment_id ||
+            bindings.deployment_id !== undefined && bindings.deployment_id !== retained.deployment_id) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_PREVIEW_IDENTITY_UNPROVEN");
+        }
+        bindings.deployment_id = retained.deployment_id;
+        bindings.retention_recovery = true;
+      }
+      if (bindings.retention_recovery === true) {
+        const environment = /^verify_environment_([1-7])$/u.exec(operation);
+        if (!["inspect_remote_ref", "inspect_environment_contract", "verify_preview_identity"].includes(operation) &&
+            environment === null) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+        }
+        const retained = retainedRecovery ?? committedRetentionBinding(authorization, execution_context?.journal);
+        if (bindings.deployment_id !== retained.deployment_id) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_PREVIEW_IDENTITY_UNPROVEN");
+        }
+        if (environment !== null && input.record_id !== retained.environment_record_ids[Number(environment[1]) - 1]) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+        }
+      }
       const textCredentials = transportCredentials(credentials);
+      if (authorization.schema_version === 2 && ["prepare_storage_cleanup_grant", "delete_storage_exact_version", "revoke_storage_cleanup_grant"].includes(operation)) {
+        const current = execution_context.journal.load();
+        const state = current?.value?.state;
+        const storage = state?.recovery_storage;
+        const expectedPhase = { prepare_storage_cleanup_grant: "PREPARING", delete_storage_exact_version: "DELETE_ATTEMPTED", revoke_storage_cleanup_grant: "REVOKE_ATTEMPTED" }[operation];
+        if (!storage || storage.contract !== STORAGE_CLEANUP_CONTRACT || storage.phase !== expectedPhase ||
+            storage.object_id !== state.owned.logo?.object_id || storage.version !== state.owned.logo?.version ||
+            storage.grant_id !== officialStorageGrantId(authorization, state.owned.logo) || input.grant_id !== storage.grant_id) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+        }
+        bindings.cleanup_grant_token?.fill(0);
+        bindings.cleanup_grant_token = deriveOfficialStorageCleanupToken(authorization, state.owned.logo,
+          storage.grant_id, credentials.supabase_service_role_key);
+        bindings.cleanup_grant_token_hash = sha256Hex(bindings.cleanup_grant_token);
+        bindings.cleanup_grant_id = storage.grant_id;
+        bindings.cleanup_grant_revoked = false;
+      }
+      if (cleanupStep && /^delete_(owned|submitted)/u.test(operation)) {
+        return reconcileRecoveryRows(operation, input, authorization, textCredentials);
+      }
       if (operation === "prepare_local_temporary_commit") {
         bindings.local_state_id = `git:${input.temporary_commit_sha}`;
         bindings.local_state_cleaned = false;
         return { status: "VERIFIED_EXACT", commit_sha: input.temporary_commit_sha, local_state_id: bindings.local_state_id };
       }
       if (operation === "cleanup_local_owned_temp_state") {
+        if (cleanupStep && input.local_state_id === `git:${authorization.execution.temporary_commit_sha}`) {
+          bindings.local_state_id = input.local_state_id;
+        }
         if (input.local_state_id !== bindings.local_state_id) {
           throw new AdminV1OfficialLivePlatformError("OFFICIAL_LOCAL_STATE_OWNERSHIP_MISMATCH");
         }
@@ -1897,14 +2230,38 @@ export function createAdminV1OfficialConcreteTransport({
             headers: {
               accept: "application/json",
               [TRUSTED_SOURCE_OIDC_HEADER]: credentialText(input.oidc_token),
+              ...(authorization.schema_version === 2
+                ? { "x-aifinder-validation": "client-origin-v1" } : {}),
             },
           });
-          if (!exactAiFinderUnauthenticatedSession(positive)) {
+          let observation;
+          if (authorization.schema_version === 2) {
+            if (input.deployment_id !== bindings.deployment_id ||
+                positive?.status !== 200 || positive.response_json !== "EXACT_BOUNDED" ||
+                !Number.isSafeInteger(positive.response_bytes) || positive.response_bytes < 1 ||
+                positive.response_bytes > 4096 ||
+                !exactApplicationSecurityHeaders(positive.response_headers) ||
+                !Array.isArray(positive.response_headers.set_cookie) ||
+                positive.response_headers.set_cookie.length !== 0 ||
+                !exactPlainObject(positive.body, ["runId", "projectRef", "origin"])) {
+              return { status: "FAILED", physical_requests: 2 };
+            }
+            try {
+              observation = observeOfficialClientOrigin({ runId: positive.body.runId,
+                projectRef: positive.body.projectRef, actualClientOrigin: positive.body.origin });
+            } catch {
+              return { status: "FAILED", physical_requests: 2 };
+            }
+          } else if (!exactAiFinderUnauthenticatedSession(positive)) {
             return { status: "FAILED", physical_requests: 2 };
           }
           bindings.protected_access_oidc_token = Buffer.from(input.oidc_token);
           bindings.protected_access_verified = true;
-          return { status: "BOUND", physical_requests: 2 };
+          // Authenticated here means the same OIDC request passed the proven
+          // deployment protection boundary, not an application admin session.
+          return { status: "BOUND", physical_requests: 2,
+            ...(authorization.schema_version === 2
+              ? { observation, protected: true, authenticated: true } : {}) };
         } finally {
           zeroProjectedResponseCookies(negative);
           zeroProjectedResponseCookies(positive);
@@ -1918,7 +2275,7 @@ export function createAdminV1OfficialConcreteTransport({
           textCredentials,
           objectName,
         );
-        if ([400, 404].includes(presence.status)) return { status: "ABSENT" };
+        if (presence.status === 404 || authorization.schema_version !== 2 && presence.status === 400) return { status: "ABSENT" };
         if (!(presence.status >= 200 && presence.status < 300)) {
           throw new AdminV1OfficialLivePlatformError("OFFICIAL_DATA_OBSERVATION_AMBIGUOUS");
         }
@@ -1928,25 +2285,37 @@ export function createAdminV1OfficialConcreteTransport({
           textCredentials,
           objectName,
         );
+        if (authorization.schema_version === 2 && input.expected_version !== undefined) {
+          const owned = bindings.cleanup_document?.state.owned.logo ?? execution_context.journal.load()?.value?.state.owned.logo;
+          if (!owned || objectName !== owned.object_id || input.expected_version !== owned.version ||
+              !exactStorageObjectName(objectName, authorization) || info.version !== input.expected_version ||
+              !exactCreatedStorageObservation(info, authorization, objectName)) {
+            throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
+          }
+          bindings.logo = { object_id: objectName, expected_version: info.version,
+            expected_etag: info.metadata.eTag, expected_size: info.metadata.size };
+        }
         return { status: "EXACT", version: info.version };
       }
       if (operation === "prepare_storage_cleanup_grant") {
         if (
           !bindings.logo || input.object_id !== bindings.logo.object_id ||
           input.expected_version !== bindings.logo.expected_version ||
-          bindings.cleanup_grant_revoked === false
+          authorization.schema_version !== 2 && bindings.cleanup_grant_revoked === false
         ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
-        const tokenBytes = random_bytes(32);
-        const grantId = random_uuid();
+        const tokenBytes = authorization.schema_version === 2 ? null : random_bytes(32);
+        const grantId = authorization.schema_version === 2 ? input.grant_id : random_uuid();
         if (
-          !(tokenBytes instanceof Uint8Array) || tokenBytes.byteLength !== 32 ||
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(grantId)
+          authorization.schema_version !== 2 && (!(tokenBytes instanceof Uint8Array) || tokenBytes.byteLength !== 32) ||
+          !(authorization.schema_version === 2
+            ? /^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+            : /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u).test(grantId)
         ) {
           if (tokenBytes instanceof Uint8Array) tokenBytes.fill(0);
           throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
         }
-        const rawToken = Buffer.from(tokenBytes).toString("hex");
-        tokenBytes.fill(0);
+        const rawToken = authorization.schema_version === 2 ? memoryText(bindings.cleanup_grant_token, 128) : Buffer.from(tokenBytes).toString("hex");
+        tokenBytes?.fill(0);
         const tokenHash = sha256Hex(rawToken);
         try {
           const response = await request(operation, textCredentials, {
@@ -1976,6 +2345,7 @@ export function createAdminV1OfficialConcreteTransport({
             !boundedText(row.expires_at, 64) || !Number.isFinite(Date.parse(row.expires_at))
           ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_STORAGE_CAS_MISMATCH");
           bindings.cleanup_grant_id = grantId;
+          bindings.cleanup_grant_token?.fill(0);
           bindings.cleanup_grant_token = Buffer.from(rawToken, "ascii");
           bindings.cleanup_grant_token_hash = tokenHash;
           bindings.cleanup_grant_revoked = false;
@@ -2016,7 +2386,7 @@ export function createAdminV1OfficialConcreteTransport({
           textCredentials,
           bindings.logo.object_id,
         );
-        if ([400, 404].includes(after.status)) return { status: "DELETED_EXACT" };
+        if (after.status === 404 || authorization.schema_version !== 2 && after.status === 400) return { status: "DELETED_EXACT" };
         if (after.status >= 200 && after.status < 300) {
           const info = await readExactStorageInfo(
             operation,
@@ -2157,10 +2527,94 @@ function safeString(value) {
     !value.includes("\0");
 }
 
+function exactIsolatedKeys(value, names) {
+  if (!value || Object.getPrototypeOf(value) !== Object.prototype) return false;
+  const actual = Object.keys(value);
+  return actual.length === names.length &&
+    Object.getOwnPropertySymbols(value).length === 0 &&
+    names.every((name) => Object.hasOwn(value, name));
+}
+
+function loadIsolatedOfficialCredentials({
+  authorization, credential_bundle, credential_source_policy, now_epoch_ms,
+}) {
+  const sensitive = {};
+  try {
+    authorization = validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms });
+    if (canonicalJson(credential_source_policy) !==
+      canonicalJson(ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY) ||
+      !exactIsolatedKeys(credential_bundle, [
+        "schema_version", "run_id", "provisioning_receipt",
+        "provenance_receipt", "values",
+      ]) || credential_bundle.schema_version !== 1 ||
+      credential_bundle.run_id !== authorization?.run_id) throw new Error("BUNDLE");
+    const binding = validateOfficialProvisioningReceipt(
+      authorization, credential_bundle.provisioning_receipt, now_epoch_ms,
+    );
+    const provenance = credential_bundle.provenance_receipt;
+    if (!exactIsolatedKeys(provenance, [
+      "schemaVersion", "runId", "projectRef", "origin", "path", "source",
+    ]) || provenance.schemaVersion !== 1 ||
+      provenance.runId !== authorization.run_id ||
+      provenance.projectRef !== binding.project_ref ||
+      provenance.origin !== binding.origin ||
+      provenance.path !== binding.credential_bundle_path ||
+      provenance.source !== "OWNER_BOUND_ISOLATED_BUNDLE_V1" ||
+      sha256Hex(canonicalJson(provenance)) !==
+        binding.credential_bundle_provenance_sha256) throw new Error("PROVENANCE");
+    const names = [
+      "admin_password", "admin_session_secret", "github_token",
+      "supabase_anon_key", "supabase_service_role_key", "supabase_url",
+      "vercel_token",
+    ];
+    if (!exactIsolatedKeys(credential_bundle.values, names)) {
+      throw new Error("CATEGORIES");
+    }
+    for (const name of names) {
+      const rawCredentialBytes = credential_bundle.values[name];
+      if (!(rawCredentialBytes instanceof Uint8Array) ||
+        rawCredentialBytes.byteLength < 1 ||
+        rawCredentialBytes.byteLength > 16_384) throw new Error("VALUE");
+      const decoded = new TextDecoder("utf-8", { fatal: true }).decode(rawCredentialBytes);
+      if (!safeString(decoded) ||
+        (name === "supabase_url" && decoded !== binding.origin)) {
+        throw new Error("VALUE");
+      }
+      sensitive[name] = Buffer.from(rawCredentialBytes);
+    }
+    Object.defineProperty(sensitive, CREDENTIAL_ENVIRONMENT_OBSERVATION, {
+      configurable: false,
+      enumerable: false,
+      value: Object.freeze({
+        credential_source_policy: structuredClone(credential_source_policy),
+        bundle_run_id: authorization.run_id,
+        bundle_provenance_sha256: binding.credential_bundle_provenance_sha256,
+        names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES],
+        node_env: "production",
+      }),
+      writable: false,
+    });
+    isolatedProvisioningReceipts.set(sensitive,
+      Object.freeze(structuredClone(credential_bundle.provisioning_receipt)));
+    return Object.freeze(sensitive);
+  } catch {
+    zeroRecord(sensitive);
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_CREDENTIAL_MISSING");
+  }
+}
+
 export function loadAdminV1OfficialCredentials({
   environment,
+  authorization,
+  credential_bundle,
   credential_source_policy,
+  now_epoch_ms = Date.now(),
 }) {
+  if (authorization?.schema_version === 2) {
+    return loadIsolatedOfficialCredentials({
+      authorization, credential_bundle, credential_source_policy, now_epoch_ms,
+    });
+  }
   const sensitive = {};
   try {
     if (
@@ -2248,21 +2702,14 @@ export function createAdminV1OfficialAdapter({
 }) {
   if (
     authorization?.operation_class !== ADMIN_V1_OFFICIAL_OPERATION_CLASS ||
+    ![1, 2].includes(authorization.schema_version) ||
     !credentials || typeof credentials !== "object" ||
     !execution_context || typeof execution_context !== "object" ||
     typeof transport?.execute !== "function"
   ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
   return Object.freeze({
-    async invoke(operation, input = {}) {
-      const mapping = OPERATION_BY_NAME.get(operation);
-      if (!mapping) {
-        throw new AdminV1OfficialLivePlatformError(
-          "OFFICIAL_ADAPTER_OPERATION_DENIED",
-        );
-      }
-      if (!input || typeof input !== "object" || Array.isArray(input)) {
-        throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
-      }
+    async invoke(operation, input = {}, recovery) {
+      const mapping = validatedOperation(operation, input, authorization);
       const result = await transport.execute(Object.freeze({
         operation,
         mapping,
@@ -2270,6 +2717,7 @@ export function createAdminV1OfficialAdapter({
         authorization,
         credentials,
         execution_context,
+        ...(recovery === undefined ? {} : { recovery }),
       }));
       if (!boundedResult(result)) {
         const error = new AdminV1OfficialLivePlatformError(
@@ -2289,6 +2737,7 @@ export async function runConcreteAdminV1OfficialRuntime({
   execution_context,
   transport,
   now_epoch_ms,
+  live_now_epoch_ms,
 }) {
   const adapters = createAdminV1OfficialAdapter({
     authorization,
@@ -2301,6 +2750,199 @@ export async function runConcreteAdminV1OfficialRuntime({
     adapters,
     journal: execution_context.journal,
     sensitive: credentials,
+    provisioning_receipt: isolatedProvisioningReceipts.get(credentials),
     now_epoch_ms,
+    live_now_epoch_ms,
   });
+}
+
+const RECOVERY_READ_OPERATIONS = Object.freeze(["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract",
+  ...Array.from({ length: 7 }, (_, index) => `verify_environment_${index + 1}`)]);
+
+function admitBoundOfficialRecoveryDocument(executionContext, authorization) {
+  const marker = executionContext?.retention_recovery;
+  if (marker === null || typeof marker !== "object" || Array.isArray(marker) ||
+      Object.keys(marker).sort().join(",") !== "journal_sha256,mode" ||
+      marker.mode !== "OFFICIAL_RETENTION_RECOVERY_V1" ||
+      typeof marker.journal_sha256 !== "string" || !/^[a-f0-9]{64}$/u.test(marker.journal_sha256)) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  const initial = executionContext?.journal?.load();
+  if (initial?.retired === true) throw new AdminV1OfficialLivePlatformError("OFFICIAL_AUTHORIZATION_SPENT");
+  const admitted = validateAdminV1OfficialRetentionRecoveryRecord(initial, authorization);
+  if (sha256Hex(`${canonicalJson(admitted)}\n`) !== marker.journal_sha256) {
+    throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  return structuredClone(admitted);
+}
+
+// Restrict authority before the first read, rather than relying on later transport bindings.
+export function createAdminV1OfficialRecoveryAdapter({ authorization, credentials, execution_context, transport, admitted_document }) {
+  const admitted = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+  if (admitted_document !== undefined) {
+    const supplied = structuredClone(admitted_document);
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: supplied }, authorization);
+    if (canonicalJson(supplied) !== canonicalJson(admitted)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+  let expectedDocument = structuredClone(admitted);
+  const cleanupPlan = adminV1OfficialRetentionCleanupPlan(admitted.state);
+  const sequence = [
+    ...(cleanupPlan.length ? [{ operation: "inspect_environment_contract", input: {} }, ...cleanupPlan] : []),
+    ...RECOVERY_READ_OPERATIONS.map((operation, index) => ({ operation,
+      input: operation === "inspect_remote_ref" || operation === "inspect_environment_contract" ? {} :
+        operation === "verify_preview_identity" ? { deployment_id: admitted.state.retention.deployment_id } :
+          { key: admitted.state.retention.environment_keys[index - 3], record_id: admitted.state.retention.environment_record_ids[index - 3] },
+    })),
+  ];
+  const adapter = createAdminV1OfficialAdapter({ authorization, credentials, execution_context, transport });
+  let next = 0;
+  let storageSteps = null, storageStep = null;
+  const advanceStorage = (result, error) => {
+    try {
+      storageStep = error ? storageSteps.throw(error) : storageSteps.next(result);
+      while (!storageStep.done && storageStep.value.publish) {
+        expectedDocument.sequence += 1;
+        storageStep = storageSteps.next();
+      }
+      if (storageStep.done) { storageSteps = null; next += 1; }
+    } catch { storageSteps = null; storageStep = null; }
+  };
+  return Object.freeze({ async invoke(operation, input = {}, recovery) {
+    if (sequence[next]?.operation === "resume_storage_cleanup" && storageSteps === null) {
+      storageSteps = officialStorageCleanupSteps(expectedDocument.state, authorization);
+      advanceStorage();
+    }
+    // A delete whose logical budget is already exhausted never reaches this
+    // adapter. Independently prove that denial before admitting its finally.
+    if (storageSteps && storageStep?.value.operation === "delete_storage_exact_version" &&
+        operation === "revoke_storage_cleanup_grant") {
+      const probeBudget = createAdminV1OfficialBudget({ schema_version: 2 });
+      Object.assign(probeBudget.used, expectedDocument.state.recovery_usage);
+      let denied = false;
+      try { probeBudget.take(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2.delete_storage_exact_version); }
+      catch (error) { denied = error?.code === "OFFICIAL_BUDGET_EXHAUSTED"; }
+      if (denied) advanceStorage(undefined, new AdminV1OfficialLivePlatformError("OFFICIAL_BUDGET_EXHAUSTED"));
+    }
+    const expectedStep = storageSteps ? storageStep?.value : sequence[next];
+    const isStorage = storageSteps !== null;
+    if (operation !== expectedStep?.operation) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+    }
+    const current = execution_context.journal.load();
+    if (current?.retired === true) throw new AdminV1OfficialLivePlatformError("OFFICIAL_AUTHORIZATION_SPENT");
+    const reserved = expectedDocument;
+    const budget = createAdminV1OfficialBudget({ schema_version: 2 });
+    Object.assign(budget.used, reserved.state.recovery_usage);
+    budget.take(officialRecoveryActionCost(operation, reserved.state.recovery_usage));
+    reserved.sequence += 1;reserved.state.recovery_usage = structuredClone(budget.used);
+    expectedDocument = reserved;
+    if (canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(current, authorization)) !== canonicalJson(expectedDocument)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    const expectedRecoveryInput = expectedStep.input;
+    if (canonicalJson(input) !== canonicalJson(expectedRecoveryInput)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+    if (!isStorage) next += 1;
+    let result;
+    try { result = await adapter.invoke(operation, input, {
+      admitted_document: admitted,
+      reserve_database_request() {
+        if (typeof recovery?.reserve_database_request !== "function" ||
+            canonicalJson(execution_context.journal.load()?.value) !== canonicalJson(expectedDocument)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+        }
+        recovery.reserve_database_request();
+        budget.take({ database_rest_requests: 1, database_rest_successes: 1 });
+        expectedDocument.sequence += 1;expectedDocument.state.recovery_usage = structuredClone(budget.used);
+        if (canonicalJson(execution_context.journal.load()?.value) !== canonicalJson(expectedDocument)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+        }
+      },
+    }); } catch (error) {
+      if (isStorage) advanceStorage(undefined, error);
+      throw error;
+    }
+    const after = execution_context.journal.load();
+    if (after?.retired !== false || canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(after, authorization)) !== canonicalJson(expectedDocument)) {
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+    if (isStorage) { advanceStorage(result); return result; }
+    if (cleanupPlan.length && next <= cleanupPlan.length + 1 && operation !== "inspect_environment_contract") {
+      let receiptOperation = operation;
+      if (operation === "inspect_remote_ref_before_delete") {
+        if (result?.status !== "ABSENT") return result;
+        receiptOperation = "delete_remote_ref";next += 1;
+      } else if (operation === "verify_zero_data_residual") {
+        if (result?.status !== "PROVEN_ABSENT" || result.ownership_readback !== "EXACT" || result.unrelated_preserved !== true) return result;
+      } else if (result?.status !== "DELETED_EXACT") return result;
+      expectedDocument = structuredClone(expectedDocument);
+      expectedDocument.sequence += 1;
+      if (receiptOperation === "verify_zero_data_residual") expectedDocument.state.retention.data_zero_residual = true;
+      else {
+        expectedDocument.state.cleanup.push(receiptOperation.toUpperCase());
+        if (/^delete_(owned|submitted)/u.test(receiptOperation)) expectedDocument.state.retention.data_zero_residual = false;
+      }
+      expectedDocument.state.stage = `RECOVERY_COMPLETE_${receiptOperation.toUpperCase()}`;
+    }
+    return result;
+  } });
+}
+
+export async function recoverConcreteAdminV1OfficialRetention({ authorization, credentials, execution_context,
+  transport, now_epoch_ms, live_now_epoch_ms }) {
+  try {
+    validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms });
+    const journal = execution_context?.journal;
+    const admitted = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+    const adapters = createAdminV1OfficialRecoveryAdapter({ authorization, credentials, execution_context, transport,
+      admitted_document: admitted });
+    let expectedDocument = admitted;
+    let expectedRetired = false;
+    let changed = false;
+    const requireExpectedJournal = () => {
+      try {
+        const current = journal.load();
+        if (changed || current?.retired !== expectedRetired || canonicalJson(current.value) !== canonicalJson(expectedDocument)) throw new Error("CHANGED");
+        return current;
+      } catch {
+        changed = true;
+        throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+      }
+    };
+    const guardedJournal = Object.freeze({
+      load: () => journal.load(),
+      publish(state) {
+        requireExpectedJournal();
+        journal.publish(state);
+        expectedDocument = { ...expectedDocument, sequence: expectedDocument.sequence + 1, state: structuredClone(state) };
+        requireExpectedJournal();
+      },
+      retire(state) {
+        requireExpectedJournal();
+        journal.retire(state);
+        expectedDocument = { ...expectedDocument, sequence: expectedDocument.sequence + 1, state: { ...structuredClone(state), retired: true } };
+        expectedRetired = true;
+        requireExpectedJournal();
+      },
+    });
+    const result = await recoverAdminV1OfficialRetention({ authorization, adapters, journal: guardedJournal, now_epoch_ms, live_now_epoch_ms });
+    const durable = requireExpectedJournal();
+    if (result?.classification !== "RETENTION_COMPLETE") {
+      validateAdminV1OfficialRetentionRecoveryRecord(durable, authorization);
+      return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });
+    }
+    const completed = validateAdminV1OfficialRetentionRecoveryRecord(durable, authorization, { complete: true });
+    if (classifyAdminV1OfficialRecoveryState(durable) !== "RETENTION_COMPLETE" ||
+        result.zero_residual_owned_state !== false || canonicalJson(result.retention) !== canonicalJson(completed.state.retention) ||
+        completed.state.retention.deployment_id !== admitted.state.retention.deployment_id ||
+        canonicalJson(completed.state.retention.environment_record_ids) !== canonicalJson(admitted.state.retention.environment_record_ids) ||
+        completed.sequence <= admitted.sequence) throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+    // Counts come from the existing durable run; this lane never starts a session or ledger.
+    const state = completed.state;
+    return Object.freeze({ classification: "RETENTION_COMPLETE", zero_residual_owned_state: false,
+      qualification_requests: state.last_completed_qualification_ordinal, official_requests: state.last_completed_official_ordinal,
+      runtime_sessions: state.runtime_sessions, runtime_retries: state.runtime_retries, runtime_replays: state.runtime_replays,
+      retention: Object.freeze(structuredClone(state.retention)) });
+  } finally {
+    for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0);
+  }
 }

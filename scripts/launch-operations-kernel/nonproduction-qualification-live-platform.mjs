@@ -373,6 +373,7 @@ export function createConcreteLiveTransport({
   fetch_impl = globalThis.fetch,
   spawn_sync = spawnSync,
   git_execution_context = null,
+  before_effect = () => {},
 } = {}) {
   if (typeof fetch_impl !== "function" || typeof spawn_sync !== "function") {
     throw new ConcreteLivePlatformError("CONCRETE_LIVE_TRANSPORT_INVALID");
@@ -429,6 +430,7 @@ export function createConcreteLiveTransport({
     };
     basicBytes.fill(0);
     try {
+      before_effect();
       const result = spawn_sync("/usr/bin/git", [
         "-c",
         "core.hooksPath=/dev/null",
@@ -593,6 +595,7 @@ export function createConcreteLiveTransport({
         }
       }
       let response;
+      before_effect({ kind: "HTTP", service, method });
       try {
         response = await fetch_impl(`${base}${path}`, init);
       } catch {

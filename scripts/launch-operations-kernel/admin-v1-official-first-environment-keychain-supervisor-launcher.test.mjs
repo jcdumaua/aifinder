@@ -1,4 +1,15 @@
-import assert from "node:assert/strict";
+import strictAssert from "node:assert/strict";
+let assertionCalls = 0;
+const assert = {
+  deepEqual(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.deepEqual(...argumentsList);
+  },
+  equal(...argumentsList) {
+    assertionCalls += 1;
+    return strictAssert.equal(...argumentsList);
+  },
+};
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -19,12 +30,18 @@ const LAUNCHER_PATH = path.join(
   import.meta.dirname,
   "admin-v1-official-first-environment-keychain-supervisor-launcher.mjs",
 );
-const SUPERVISOR_PATH = path.join(
-  import.meta.dirname,
-  "admin-v1-official-first-environment-supervisor.mjs",
-);
+const EXPECTED_SUPERVISOR_PATH =
+  "/Users/jamescarlodumaua/aifinder/scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs";
+const EXPECTED_SUPERVISOR_CWD = "/Users/jamescarlodumaua/aifinder";
 const NODE_EXECUTABLE = "/usr/local/bin/node";
 const SYNTHETIC_SECRET = "SYNTHETIC_KEYCHAIN_ADMIN_VALUE";
+const NOW = Date.parse("2026-08-24T16:00:00.000Z");
+const EXPIRES = Date.parse("2026-08-24T17:00:00.000Z");
+const INTERVAL = {
+  authorization_closure: { authorization_mode: "HERMETIC_TEST_ONLY" },
+  created_at: "2026-08-24T15:00:00.000Z",
+  expires_at: "2026-08-24T17:00:00.000Z",
+};
 
 function syntheticDependencies({
   secret = Buffer.from(`${SYNTHETIC_SECRET}\n`, "utf8"),
@@ -38,6 +55,8 @@ function syntheticDependencies({
   supervisorStderr = Buffer.alloc(0),
   supervisorError,
   platform = "darwin",
+  clock = () => NOW,
+  afterKeychain = () => {},
 } = {}) {
   const parentEnvironment = Object.freeze({
     HOME: "/synthetic/home",
@@ -48,6 +67,7 @@ function syntheticDependencies({
   const stderr = [];
   const dependencies = {
     allow_hermetic_test: true,
+    clock,
     environment: parentEnvironment,
     platform,
     spawn_process(command, argumentsList, options) {
@@ -58,6 +78,7 @@ function syntheticDependencies({
         options,
       });
       if (calls.length === 1) {
+        afterKeychain();
         return {
           error: undefined,
           signal: null,
@@ -91,7 +112,7 @@ const temporaryRoot = realpathSync(mkdtempSync(path.join(
 )));
 try {
   const authorizationPath = path.join(temporaryRoot, "authorization.json");
-  writeFileSync(authorizationPath, "{}\n", { mode: 0o600 });
+  writeFileSync(authorizationPath, JSON.stringify(INTERVAL) + "\n", { mode: 0o600 });
   chmodSync(authorizationPath, 0o600);
 
   assert.deepEqual(
@@ -122,6 +143,65 @@ try {
     status: "PASS",
     supervisor_starts: 0,
   });
+
+  const expiredAuthorizationPath = path.join(temporaryRoot, "expired-authorization.json");
+  writeFileSync(expiredAuthorizationPath, JSON.stringify({
+    authorization_closure: { authorization_mode: "HERMETIC_TEST_ONLY" },
+    created_at: "2026-08-24T15:00:00.000Z",
+    expires_at: "2026-08-24T17:00:00.000Z",
+  }) + "\n", { mode: 0o600 });
+  const expiredBeforeKeychain = syntheticDependencies({ clock: () => EXPIRES });
+  const expiredBeforeResult =
+    dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+      arguments_list: ["--run-first-environment", "--authorization", expiredAuthorizationPath],
+      dependencies: expiredBeforeKeychain.dependencies,
+    });
+  assert.equal(expiredBeforeKeychain.calls.length, 0);
+  assert.equal(expiredBeforeResult.code, "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED");
+
+  let waitingNow = NOW;
+  const expiredWhileWaiting = syntheticDependencies({
+    clock: () => waitingNow,
+    afterKeychain() { waitingNow = EXPIRES; },
+  });
+  const waitingResult = dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+    arguments_list: ["--run-first-environment", "--authorization", authorizationPath],
+    dependencies: expiredWhileWaiting.dependencies,
+  });
+  assert.equal(waitingResult.code, "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED");
+  assert.equal(expiredWhileWaiting.calls.length, 1);
+  assert.equal(expiredWhileWaiting.stdout.length, 0);
+  assert.equal(Buffer.concat(expiredWhileWaiting.stderr).includes(Buffer.from(SYNTHETIC_SECRET)), false);
+
+  for (const clock of [
+    () => NaN, () => Infinity, () => undefined, () => 1.5,
+    () => { throw new Error("SYNTHETIC_UNAVAILABLE"); },
+    () => NOW - 2 * 60 * 60 * 1000,
+  ]) {
+    const invalidClock = syntheticDependencies({ clock });
+    const result = dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+      arguments_list: ["--run-first-environment", "--authorization", authorizationPath],
+      dependencies: invalidClock.dependencies,
+    });
+    assert.equal(result.exit_code, 1);
+    assert.equal(invalidClock.calls.length, 0);
+  }
+
+  for (const interval of [
+    {}, { ...INTERVAL, expires_at: "invalid" },
+    { ...INTERVAL, expires_at: INTERVAL.created_at },
+    { ...INTERVAL, expires_at: "2026-08-26T17:00:00.000Z" },
+  ]) {
+    const invalidPath = path.join(temporaryRoot, "invalid-interval.json");
+    writeFileSync(invalidPath, JSON.stringify(interval) + "\n", { mode: 0o600 });
+    const invalid = syntheticDependencies();
+    const result = dispatchAdminV1OfficialFirstEnvironmentKeychainSupervisorLauncher({
+      arguments_list: ["--run-first-environment", "--authorization", invalidPath],
+      dependencies: invalid.dependencies,
+    });
+    assert.equal(result.exit_code, 1);
+    assert.equal(invalid.calls.length, 0);
+  }
 
   const success = syntheticDependencies();
   const successResult =
@@ -157,11 +237,12 @@ try {
   );
   assert.equal(success.calls[1].command, NODE_EXECUTABLE);
   assert.deepEqual(success.calls[1].argumentsList, [
-    SUPERVISOR_PATH,
+    EXPECTED_SUPERVISOR_PATH,
     "--run-first-environment",
     "--authorization",
     authorizationPath,
   ]);
+  assert.equal(success.calls[1].options.cwd, EXPECTED_SUPERVISOR_CWD);
   assert.equal(success.calls[1].options.shell, false);
   assert.equal(
     success.calls[1].adminPasswordAtSpawn,
@@ -440,7 +521,7 @@ try {
 
   console.log(
     "PASS_ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_KEYCHAIN_SUPERVISOR_LAUNCHER " +
-      "assertions=52 failures=0 real_keychain_reads=0 real_keychain_writes=0 " +
+      `assertions=${assertionCalls} failures=0 real_keychain_reads=0 real_keychain_writes=0 ` +
       "real_supervisor_starts=0 credential_values_exposed=0 shell_uses=0 " +
       "provider_calls=0 network_calls=0 database_actions=0 retries=0 replays=0",
   );

@@ -19,6 +19,7 @@ import {
   CONCRETE_SUPPORT_PATHS,
 } from "./nonproduction-qualification-authorization.mjs";
 import {
+  createCommonGitControls,
   createConcreteRunnerDependencies,
   dispatchConcreteQualificationRunner,
   verifyConcreteTemporaryCommit,
@@ -72,8 +73,10 @@ function supervisorTrust(authorization) {
   });
 }
 
-function localGit(repositoryRoot, args, input = undefined) {
+function localGit(repositoryRoot, args, input = undefined, executeGit = spawnSync) {
+  const spawnSync = executeGit;
   const result = spawnSync("/usr/bin/git", [
+    ...createCommonGitControls().configArgs,
     "-c",
     "user.name=AiFinder Synthetic",
     "-c",
@@ -84,10 +87,7 @@ function localGit(repositoryRoot, args, input = undefined) {
   ], {
     encoding: "utf8",
     env: {
-      GIT_CONFIG_GLOBAL: "/dev/null",
-      GIT_CONFIG_NOSYSTEM: "1",
-      GIT_CONFIG_SYSTEM: "/dev/null",
-      LC_ALL: "C",
+      ...createCommonGitControls().environment,
       PATH: "/usr/bin:/bin",
     },
     input,
@@ -421,6 +421,54 @@ await check("pre-effect Git uses an absolute binary and credential-free hardened
   );
   assert.equal(source.includes('"core.fsmonitor=false"'), true);
   assert.equal(source.includes('"core.hooksPath=/dev/null"'), true);
+  const controls = createCommonGitControls();
+  assert.deepEqual(controls.configArgs, [
+    "-c", "maintenance.auto=false",
+    "-c", "maintenance.autoDetach=false",
+    "-c", "gc.auto=0",
+    "-c", "gc.autoPackLimit=0",
+    "-c", "gc.autoDetach=false",
+    "-c", "core.hooksPath=/dev/null",
+    "-c", "core.fsmonitor=false",
+    "-c", "credential.helper=",
+    "-c", "credential.interactive=false",
+  ]);
+  assert.deepEqual(controls.environment, {
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_SYSTEM: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_TERMINAL_PROMPT: "0",
+    GIT_ASKPASS: "/usr/bin/false",
+    SSH_ASKPASS: "/usr/bin/false",
+    GIT_OPTIONAL_LOCKS: "0",
+    LC_ALL: "C",
+  });
+  assert.equal(Object.isFrozen(controls), true);
+  assert.equal(Object.isFrozen(controls.configArgs), true);
+  assert.equal(Object.isFrozen(controls.environment), true);
+  let directCall = null;
+  const captureGit = (binary, args, options) => {
+    directCall = { binary, args, options };
+    return { status: 0, stdout: "captured\n", stderr: "" };
+  };
+  assert.equal(localGit("/private/tmp/aifinder-captured-git", [
+    "status", "--porcelain",
+  ], "input", captureGit), "captured");
+  assert.equal(directCall.binary, "/usr/bin/git");
+  assert.deepEqual(directCall.args, [
+    ...controls.configArgs,
+    "-c", "user.name=AiFinder Synthetic",
+    "-c", "user.email=aifinder-synthetic@example.invalid",
+    "-C", "/private/tmp/aifinder-captured-git",
+    "status", "--porcelain",
+  ]);
+  assert.deepEqual(directCall.options.env, {
+    ...controls.environment,
+    PATH: "/usr/bin:/bin",
+  });
+  assert.equal(directCall.options.input, "input");
+  assert.equal(source.includes("...createCommonGitControls().configArgs"), true);
+  assert.equal(source.includes("...createCommonGitControls().environment"), true);
 });
 
 for (const [name, options] of [
@@ -477,19 +525,31 @@ await check("pre-effect repository drift cannot execute a clean filter helper", 
   );
   const markerPath = path.join(fixtureRoot, "filter-executed");
   const gitEnvironment = {
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_NOSYSTEM: "1",
-    GIT_CONFIG_SYSTEM: "/dev/null",
-    LC_ALL: "C",
+    ...createCommonGitControls().environment,
   };
-  const runFixtureGit = (args) => {
-    const result = spawnSync("/usr/bin/git", args, {
+  const runFixtureGit = (args, executeGit = spawnSync) => {
+    const spawnSync = executeGit;
+    const result = spawnSync("/usr/bin/git", [
+      ...createCommonGitControls().configArgs,
+      ...args,
+    ], {
       cwd: fixtureRoot,
       encoding: "utf8",
       env: gitEnvironment,
     });
     assert.equal(result.status, 0, `${args.join(" ")}:${result.stderr}`);
   };
+  const captureGit = (binary, args, options) => {
+    assert.equal(binary, "/usr/bin/git");
+    assert.deepEqual(args, [
+      ...createCommonGitControls().configArgs,
+      "status", "--porcelain",
+    ]);
+    assert.deepEqual(options.env, createCommonGitControls().environment);
+    assert.equal(options.cwd, fixtureRoot);
+    return { status: 0, stdout: "", stderr: "" };
+  };
+  runFixtureGit(["status", "--porcelain"], captureGit);
   try {
     runFixtureGit(["init", "--initial-branch=main", "."]);
     writeFileSync(path.join(fixtureRoot, "probe.txt"), "baseline\n", {

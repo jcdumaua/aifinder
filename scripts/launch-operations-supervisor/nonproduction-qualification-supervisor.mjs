@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
   lstatSync,
   readFileSync,
   realpathSync,
@@ -76,13 +80,16 @@ const OFFICIAL_ROUTE_SOURCE_PATHS = Object.freeze([
   "lib/admin-v1-launch-scope.ts",
   "proxy.ts",
 ]);
-const OFFICIAL_CONTRACT_DIGEST_KEYS = Object.freeze([
+const OFFICIAL_CONTRACT_DIGEST_KEYS_V1 = Object.freeze([
   "budgets",
   "deferred_routes",
   "environment_names",
   "official_ledger",
   "qualification_ledger",
   "target_routes",
+]);
+const OFFICIAL_CONTRACT_DIGEST_KEYS_V2 = Object.freeze([
+  "action_costs", ...OFFICIAL_CONTRACT_DIGEST_KEYS_V1,
 ]);
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const PRE_TRUST_GIT_SANDBOX_PROFILE = [
@@ -421,7 +428,9 @@ function validatePolicy(policy, repositoryRoot) {
         "operation_class",
         "authorization_schema_path",
         "authorization_schema_sha256",
+        "isolation_contract_sha256",
         "contract_sha256",
+        "contract_sha256_v2",
         "credential_source_policy",
         "route_source_sha256",
         "repository_contract",
@@ -431,11 +440,19 @@ function validatePolicy(policy, repositoryRoot) {
       ["SCHEMA_PATH", official.authorization_schema_path ===
         OFFICIAL_AUTHORIZATION_SCHEMA_PATH],
       ["SCHEMA_SHA", isSha256(official.authorization_schema_sha256)],
+      ["ISOLATION_SHA", isSha256(official.isolation_contract_sha256)],
       ["CONTRACT_KEYS", exactKeys(
         official.contract_sha256,
-        OFFICIAL_CONTRACT_DIGEST_KEYS,
+        OFFICIAL_CONTRACT_DIGEST_KEYS_V1,
       )],
       ["CONTRACT_SHA", Object.values(official.contract_sha256 ?? {}).every(
+        (value) => isSha256(value),
+      )],
+      ["CONTRACT_V2_KEYS", exactKeys(
+        official.contract_sha256_v2,
+        OFFICIAL_CONTRACT_DIGEST_KEYS_V2,
+      )],
+      ["CONTRACT_V2_SHA", Object.values(official.contract_sha256_v2 ?? {}).every(
         (value) => isSha256(value),
       )],
       ["CREDENTIAL_POLICY", exactObject(
@@ -573,8 +590,38 @@ function validateAuthorization(authorization, policy, nowEpochMs) {
   return authorization;
 }
 
-function exactOfficialExecution(value, runId) {
-  return exactKeys(value, [
+function exactOfficialIsolation(value, execution, runId) {
+  if (!exactKeys(value, [
+    "mode", "project_ref", "origin", "provisioning_receipt_sha256",
+    "schema_contract_sha256", "credential_bundle_path",
+    "credential_bundle_provenance_sha256", "validation_run_id",
+    "expected_preview_project_id", "expected_preview_team_id",
+  ]) || value.mode !== "NEW_EMPTY_TEST_ONLY_PROJECT_V1" ||
+    typeof value.project_ref !== "string" || value.project_ref.length > 256 ||
+    !/^[a-z0-9-]+$/u.test(value.project_ref) ||
+    value.project_ref === "mtpisopvdxuvmpzbzqjw" ||
+    value.origin !== `https://${value.project_ref}.supabase.co` ||
+    value.origin === "https://mtpisopvdxuvmpzbzqjw.supabase.co" ||
+    value.validation_run_id !== runId ||
+    value.expected_preview_project_id !== execution.preview_project_id ||
+    value.expected_preview_team_id !== execution.preview_team_id ||
+    value.credential_bundle_path !==
+      `${execution.journal_directory}/isolated-credentials.json` ||
+    ![value.provisioning_receipt_sha256, value.schema_contract_sha256,
+      value.credential_bundle_provenance_sha256].every(isSha256)) return false;
+  try {
+    const origin = new URL(value.origin);
+    return origin.protocol === "https:" && origin.origin === value.origin &&
+      origin.username === "" && origin.password === "" && origin.pathname === "/" &&
+      origin.search === "" && origin.hash === "";
+  } catch {
+    return false;
+  }
+}
+
+function exactOfficialExecution(value, runId, schemaVersion = 1) {
+  const v2 = schemaVersion === 2;
+  const keys = [
     "access_mode",
     "branch_name",
     "journal_directory",
@@ -586,7 +633,9 @@ function exactOfficialExecution(value, runId) {
     "storage_name",
     "temporary_commit_sha",
     "environment_keys",
-  ]) &&
+  ];
+  if (v2) keys.push("provider_cleanup_policy", "isolation");
+  return exactKeys(value, keys) &&
     value.access_mode === "SELF_PROJECT_OIDC" &&
     value.branch_name === `aifinder-admin-v1-official-${runId}` &&
     value.journal_directory ===
@@ -598,10 +647,17 @@ function exactOfficialExecution(value, runId) {
     value.storage_bucket === "tool-logos" &&
     value.storage_name === `admin/${runId}.png` &&
     /^[0-9a-f]{40}$/u.test(value.temporary_commit_sha ?? "") &&
-    exactObject(value.environment_keys, [
+    exactObject(value.environment_keys, v2 ? [
+      "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+      "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
+    ] : [
       "ADMIN_PASSWORD",
       "ADMIN_SESSION_SECRET",
-    ]);
+    ]) && (!v2 || (
+      value.provider_cleanup_policy === "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" &&
+      exactOfficialIsolation(value.isolation, value, runId)
+    ));
 }
 
 export function validateOfficialAuthorizationForSupervisor(
@@ -614,29 +670,24 @@ export function validateOfficialAuthorizationForSupervisor(
   const created = Date.parse(authorization?.created_at);
   const expires = Date.parse(authorization?.expires_at);
   const official = policy?.official_runtime;
+  const v2 = authorization?.schema_version === 2;
+  const contractKeys = v2
+    ? OFFICIAL_CONTRACT_DIGEST_KEYS_V2 : OFFICIAL_CONTRACT_DIGEST_KEYS_V1;
+  const contractDigests = v2
+    ? official?.contract_sha256_v2 : official?.contract_sha256;
+  const keys = [
+    "schema_version", "operation_class", "authorization_id_sha256",
+    "one_use_authorization_sha256", "review_approval_sha256",
+    "candidate_identity_sha256", "manifest_sha256", "supervisor_sha256",
+    "supervisor_policy_sha256", "authorization_schema_sha256",
+    "compatibility_support_sha256", "route_source_sha256", "contract_sha256",
+    "created_at", "expires_at", "run_id", "repository", "execution",
+  ];
+  if (v2) keys.push("isolation_contract_sha256");
   if (
     !Number.isSafeInteger(nowEpochMs) ||
-    !exactKeys(authorization, [
-      "schema_version",
-      "operation_class",
-      "authorization_id_sha256",
-      "one_use_authorization_sha256",
-      "review_approval_sha256",
-      "candidate_identity_sha256",
-      "manifest_sha256",
-      "supervisor_sha256",
-      "supervisor_policy_sha256",
-      "authorization_schema_sha256",
-      "compatibility_support_sha256",
-      "route_source_sha256",
-      "contract_sha256",
-      "created_at",
-      "expires_at",
-      "run_id",
-      "repository",
-      "execution",
-    ]) ||
-    authorization.schema_version !== 1 ||
+    !exactKeys(authorization, keys) ||
+    (authorization.schema_version !== 1 && !v2) ||
     authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
     ![
       authorization.authorization_id_sha256,
@@ -644,6 +695,9 @@ export function validateOfficialAuthorizationForSupervisor(
       authorization.review_approval_sha256,
       authorization.supervisor_sha256,
       authorization.supervisor_policy_sha256,
+      authorization.candidate_identity_sha256,
+      authorization.manifest_sha256,
+      authorization.authorization_schema_sha256,
     ].every(isSha256) ||
     authorization.candidate_identity_sha256 !==
       policy?.candidate?.candidate_identity_sha256 ||
@@ -658,8 +712,14 @@ export function validateOfficialAuthorizationForSupervisor(
       authorization.route_source_sha256,
       official?.route_source_sha256,
     ) ||
-    !exactObject(authorization.contract_sha256, official?.contract_sha256) ||
+    !exactKeys(authorization.contract_sha256, contractKeys) ||
+    !Object.values(authorization.contract_sha256 ?? {}).every(isSha256) ||
+    !exactKeys(contractDigests, contractKeys) ||
+    !Object.values(contractDigests ?? {}).every(isSha256) ||
+    !exactObject(authorization.contract_sha256, contractDigests) ||
     !Number.isFinite(created) || !Number.isFinite(expires) ||
+    (v2 && (new Date(created).toISOString() !== authorization.created_at ||
+      new Date(expires).toISOString() !== authorization.expires_at)) ||
     created > nowEpochMs || nowEpochMs >= expires || expires <= created ||
     expires - created > 24 * 60 * 60 * 1000 ||
     !runIdPattern.test(authorization.run_id ?? "") ||
@@ -669,8 +729,17 @@ export function validateOfficialAuthorizationForSupervisor(
       official?.repository_contract,
       authorization.repository.root,
     ) ||
-    !exactOfficialExecution(authorization.execution, authorization.run_id)
+    !exactOfficialExecution(authorization.execution, authorization.run_id, authorization.schema_version) ||
+    (v2 && (authorization.repository.root !== REPOSITORY_ROOT ||
+      !isSha256(authorization.isolation_contract_sha256) ||
+      authorization.isolation_contract_sha256 !== official?.isolation_contract_sha256))
   ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  if (v2) {
+    const { one_use_authorization_sha256: oneUseDigest, ...fields } = authorization;
+    if (oneUseDigest !== sha256(canonicalJson({
+      domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...fields,
+    }))) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
   return authorization;
 }
 
@@ -925,6 +994,258 @@ export function inspectPreImportRepository(
   };
 }
 
+export function verifyOfficialRunUnspentBeforeImport(
+  authorization,
+  filesystem = { lstatSync, realpathSync },
+) {
+  const directory = authorization?.execution?.journal_directory;
+  if (
+    authorization?.schema_version !== 2 ||
+    authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+    typeof authorization.run_id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(authorization.run_id) ||
+    directory !== `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${authorization.run_id}`
+  ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  let metadata;
+  try {
+    metadata = filesystem.lstatSync(directory);
+  } catch (error) {
+    if (error?.code === "ENOENT") return Object.freeze({ status: "ABSENT" });
+    throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
+  try {
+    if (
+      !metadata.isDirectory() || metadata.isSymbolicLink() ||
+      (metadata.mode & 0o777) !== 0o700 ||
+      filesystem.realpathSync(directory) !== directory
+    ) throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  } catch {
+    throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+  }
+  for (const name of [
+    "admin-v1-official-runtime-journal.json",
+    "admin-v1-official-runtime-retired.json",
+  ]) {
+    try {
+      filesystem.lstatSync(path.join(directory, name));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_INVALID");
+    }
+    throw new PreImportSupervisorError("OFFICIAL_AUTHORIZATION_SPENT");
+  }
+  return Object.freeze({ status: "ABSENT" });
+}
+
+const OFFICIAL_RECOVERY_BUDGET_LIMITS_V2 = Object.freeze({
+  git_remote_mutations: 4,
+  git_remote_reads: 42,
+  local_temporary_commits: 1,
+  local_temporary_cleanups: 1,
+  provider_control_invocations: 353,
+  provider_inventory_traversals: 30,
+  provider_inventory_pages: 118,
+  provider_direct_mutations: 15,
+  preview_creations: 1,
+  protected_handshake_requests: 6,
+  oidc_generations: 4,
+  automation_bypass_cycles: 1,
+  browser_requests: 0,
+  application_requests: 26,
+  qualification_application_requests: 6,
+  official_application_requests: 20,
+  database_rest_requests: 26,
+  database_rest_successes: 14,
+  approval_rpc_calls: 1,
+  grant_prepare_rpc_calls: 1,
+  grant_revoke_rpc_calls: 1,
+  storage_reads: 7,
+  storage_uploads: 1,
+  storage_delete_attempts: 2,
+  environment_metadata_controls: 64,
+  environment_records_created: 7,
+  environment_records_deleted: 7,
+  runtime_sessions: 1,
+  runtime_retries: 0,
+  runtime_replays: 0,
+  cleanup_reconciliation_requests: 2,
+});
+
+// Deliberately independent of candidate runtime imports: admission happens before
+// loading the runner or resolving credentials. Match the current UUIDv8 contract.
+function preImportStorageGrantId(authorization, logo) {
+  const digest = createHash("sha256").update(canonicalJson({
+    domain: "AIFINDER_STORAGE_CLEANUP_GRANT_ID_V1",
+    operation_class: OFFICIAL_OPERATION_CLASS,
+    run_id: authorization.run_id,
+    bucket: authorization.execution.storage_bucket,
+    object_id: logo.object_id,
+    expected_version: logo.version,
+  })).digest();
+  digest[6] = (digest[6] & 15) | 0x80;
+  digest[8] = (digest[8] & 63) | 0x80;
+  const hex = digest.subarray(0, 16).toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function preImportStorageEffectsInvalid(state) {
+  return state.recovery_storage === undefined
+    ? state.effects.grant_prepare !== state.effects.grant_revoke
+    : state.effects.grant_prepare > 1 || state.effects.grant_revoke > 1 ||
+      state.effects.grant_prepare > state.recovery_usage.grant_prepare_rpc_calls ||
+      state.effects.grant_revoke > state.recovery_usage.grant_revoke_rpc_calls;
+}
+
+function validatePreImportRecoveryDocument(record, authorization) {
+  const complete = false;
+  const boundedAscii = (value, maximum) => typeof value === "string" && value.length >= 1 &&
+    value.length <= maximum && /^[\x20-\x7e]+$/u.test(value);
+
+  const value = record?.value;
+  const state = value?.state;
+  const receipt = state?.retention;
+  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention", "recovery_usage"];
+  const ids = receipt?.environment_record_ids;
+  if (authorization?.schema_version !== 2 ||
+      authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+      record?.retired !== complete || !exactKeys(value, ["schema_version", "identity", "sequence", "state"]) ||
+      value.schema_version !== 1 || !Number.isSafeInteger(value.sequence) || value.sequence < 1 ||
+      !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
+      value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
+      !exactKeys(state, [...stateKeys, ...(complete ? ["retired"] : []),
+        ...(Object.hasOwn(state ?? {}, "recovery_storage") ? ["recovery_storage"] : [])]) ||
+      sha256(canonicalJson(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) !== authorization.contract_sha256.budgets ||
+      !exactKeys(state.recovery_usage, Object.keys(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) ||
+      !Object.entries(state.recovery_usage).every(([key, count]) => Number.isSafeInteger(count) &&
+        count >= 0 && count <= OFFICIAL_RECOVERY_BUDGET_LIMITS_V2[key]) ||
+      (complete ? state.retired !== true || state.lifecycle !== "RETENTION_COMPLETE" : !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state.lifecycle)) ||
+      receipt?.phase !== (complete ? "COMPLETE" : "COMMITTED") ||
+      state.token_spent !== true || state.runtime_sessions !== 1 || state.runtime_retries !== 0 || state.runtime_replays !== 0 ||
+      state.last_attempted_qualification_ordinal !== 6 || state.last_completed_qualification_ordinal !== 6 ||
+      state.last_attempted_official_ordinal !== 20 || state.last_completed_official_ordinal !== 20 ||
+      typeof state.stage !== "string" || !/^[A-Z0-9_]{1,128}$/u.test(state.stage) ||
+      !exactKeys(receipt, ["policy", "phase", "deployment_id", "environment_record_ids", "environment_keys", "data_zero_residual", "external_retained_exact", "unrelated_preserved"]) ||
+      receipt.policy !== authorization.execution.provider_cleanup_policy || !/^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") ||
+      !Array.isArray(ids) || ids.length !== 7 || new Set(ids).size !== 7 ||
+      !ids.every((id) => typeof id === "string" && /^[\x21-\x7e]{1,128}$/u.test(id)) ||
+      canonicalJson(receipt.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
+      canonicalJson(authorization.execution.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
+      typeof receipt.data_zero_residual !== "boolean" || complete && receipt.data_zero_residual !== true ||
+      ![receipt.external_retained_exact, receipt.unrelated_preserved].every((flag) => typeof flag === "boolean") ||
+      complete && (receipt.external_retained_exact !== true || receipt.unrelated_preserved !== true) || state.zero_residual !== false ||
+      !exactKeys(state.owned, ["local_temp_state", "remote_ref", "environment_record_ids", "deployment_id", "submissions", "tools", "audit_rows", "logo"]) ||
+      state.owned.deployment_id !== receipt.deployment_id || canonicalJson(state.owned.environment_record_ids) !== canonicalJson(ids) ||
+      !(state.owned.local_temp_state === null || typeof state.owned.local_temp_state === "string" && /^[\x21-\x7e]{1,256}$/u.test(state.owned.local_temp_state)) ||
+      !(state.owned.remote_ref === null || state.owned.remote_ref === `refs/heads/${authorization.execution.branch_name}`) ||
+      !(state.owned.logo === null || state.owned.logo && typeof state.owned.logo === "object" && !Array.isArray(state.owned.logo)) ||
+      ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) => Array.isArray(rows) && rows.length <= 9 &&
+        rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) ||
+      !exactKeys(state.effects, ["submitted_tools", "tools", "audits", "approval_rpc", "logo_objects", "grant_prepare", "grant_revoke"]) ||
+      !Object.values(state.effects).every((count) => Number.isSafeInteger(count) && count >= 0) ||
+      !Array.isArray(state.evidence) || !(state.failure === null || state.failure && typeof state.failure === "object" && !Array.isArray(state.failure)) ||
+      !Array.isArray(state.cleanup) || !state.cleanup.every((step) => typeof step === "string") ||
+      complete && !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"].every((step) => state.cleanup.includes(step)) ||
+      state.cleanup.some((step) => step === "DELETE_PREVIEW" || /^DELETE_ENVIRONMENT_[1-7]$/u.test(step))) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  if (!complete && (!boundedAscii(state.owned.local_temp_state, 256) ||
+      state.owned.remote_ref !== `refs/heads/${authorization.execution.branch_name}` ||
+      state.owned.logo !== null && (!exactKeys(state.owned.logo, ["object_id", "version"]) ||
+        !boundedAscii(state.owned.logo.object_id, 256) || !boundedAscii(state.owned.logo.version, 128)) ||
+      preImportStorageEffectsInvalid(state) ||
+      ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) =>
+        rows.every((row) => exactKeys(row, ["row_id", "version"]) && boundedAscii(row.row_id, 128) && boundedAscii(row.version, 128)) &&
+        new Set(rows.map((row) => row.row_id)).size === rows.length) ||
+      state.owned.submissions.length > 3 || state.owned.tools.length > 2 ||
+      new Set(state.cleanup).size !== state.cleanup.length ||
+      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|DELETE_STORAGE_EXACT_VERSION|STORAGE_DELETION_CONFIRMED_ABSENT|REVOKE_STORAGE_CLEANUP_GRANT|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  const storage = state.recovery_storage;
+  if (storage !== undefined) {
+    const used = state.recovery_usage;
+    const deleted = state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION");
+    const absent = state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT");
+    const revoked = state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT");
+    if (!exactKeys(storage, ["object_id", "version", "grant_id", "phase", "contract", "deletion"]) ||
+        storage.contract !== "DETERMINISTIC_STORAGE_CLEANUP_V1" ||
+        storage.object_id !== state.owned.logo?.object_id || storage.version !== state.owned.logo?.version ||
+        storage.grant_id !== preImportStorageGrantId(authorization, state.owned.logo) ||
+        !["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "DELETION_COMPLETE", "REVOKE_ATTEMPTED", "REVOKED"].includes(storage.phase) ||
+        !["PENDING", "DELETED_EXACT", "ABSENT_CONFIRMED"].includes(storage.deletion) ||
+        deleted !== (storage.deletion === "DELETED_EXACT") || absent !== (storage.deletion === "ABSENT_CONFIRMED") ||
+        revoked !== (storage.phase === "REVOKED") ||
+        storage.phase !== "PREPARING" && used.grant_prepare_rpc_calls !== 1 ||
+        used.grant_prepare_rpc_calls === 0 && (used.grant_revoke_rpc_calls !== 0 || used.storage_delete_attempts !== 0) ||
+        absent && used.storage_reads < 1 ||
+        ["PREPARING", "PREPARED", "DELETE_ATTEMPTED"].includes(storage.phase) && storage.deletion !== "PENDING" ||
+        storage.phase === "DELETION_COMPLETE" && storage.deletion === "PENDING" ||
+        storage.phase === "REVOKED" && used.grant_revoke_rpc_calls !== 1 ||
+        deleted && used.storage_delete_attempts < 1 ||
+        (receipt.data_zero_residual || complete) && (storage.phase !== "REVOKED" || storage.deletion === "PENDING")) {
+      throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    }
+  } else if (state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT") ||
+      state.recovery_usage.grant_prepare_rpc_calls || state.recovery_usage.grant_revoke_rpc_calls || state.recovery_usage.storage_delete_attempts) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  return Object.freeze(structuredClone(value));
+}
+
+function readPreImportRecoveryFile(target, owner, filesystem) {
+  const mode = 0o600;
+  const maximum_bytes = 1024 * 1024;
+
+  const before = filesystem.lstatSync(target, { bigint: true });
+  const valid = (metadata) => metadata.isFile() && !metadata.isSymbolicLink() && Number(metadata.nlink) === 1 &&
+    Number(metadata.uid) === Number(owner) && (Number(metadata.mode) & 0o777) === mode &&
+    Number(metadata.size) >= 1 && Number(metadata.size) <= maximum_bytes;
+  const same = (left, right) => ["dev", "ino", "mode", "nlink", "uid", "gid", "size", "mtimeNs", "ctimeNs"]
+    .every((key) => left[key] !== undefined && right[key] !== undefined && String(left[key]) === String(right[key]));
+  if (!valid(before) || filesystem.realpathSync(target) !== target) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  const descriptor = filesystem.openSync(target, filesystem.constants.O_RDONLY | filesystem.constants.O_NOFOLLOW);
+  try {
+    const opened = filesystem.fstatSync(descriptor, { bigint: true });
+    if (!valid(opened) || !same(before, opened)) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    const bytes = filesystem.readFileSync(descriptor);
+    const after = filesystem.fstatSync(descriptor, { bigint: true });
+    const named = filesystem.lstatSync(target, { bigint: true });
+    if (!same(opened, after) || !same(opened, named) || bytes.byteLength !== Number(opened.size) ||
+        filesystem.realpathSync(target) !== target) throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    return bytes;
+  } finally { filesystem.closeSync(descriptor); }
+}
+
+export function verifyOfficialRetentionRecoveryBeforeImport(authorization,
+  filesystem = { closeSync, constants, fstatSync, openSync, lstatSync, readFileSync, realpathSync }) {
+  try {
+    const directory = authorization?.execution?.journal_directory;
+    if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(authorization.run_id ?? "") ||
+        directory !== `/Users/jamescarlodumaua/Downloads/AiFinder-Admin-V1-Official-${authorization.run_id}`) throw new Error("AUTHORIZATION");
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const root = filesystem.lstatSync(directory);
+    if (!root.isDirectory() || root.isSymbolicLink() || root.uid !== owner || (root.mode & 0o777) !== 0o700 ||
+        filesystem.realpathSync(directory) !== directory) throw new Error("ROOT");
+    try {
+      filesystem.lstatSync(path.join(directory, "admin-v1-official-runtime-retired.json"));
+      throw new PreImportSupervisorError("OFFICIAL_AUTHORIZATION_SPENT");
+    } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    const identityBytes = readPreImportRecoveryFile(path.join(directory, "admin-v1-official-runtime-identity.json"), owner, filesystem);
+    const identity = { schema_version: 1, identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id } };
+    if (identityBytes.toString("utf8") !== `${canonicalJson(identity)}\n`) throw new Error("IDENTITY");
+    const bytes = readPreImportRecoveryFile(path.join(directory, "admin-v1-official-runtime-journal.json"), owner, filesystem);
+    const document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (bytes.toString("utf8") !== `${canonicalJson(document)}\n`) throw new Error("CANONICAL");
+    validatePreImportRecoveryDocument({ retired: false, value: document }, authorization);
+    return Object.freeze({ mode: "OFFICIAL_RETENTION_RECOVERY_V1", journal_sha256: sha256(bytes) });
+  } catch (error) {
+    if (error?.code === "OFFICIAL_AUTHORIZATION_SPENT") throw error;
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+}
+
 export function verifyPreImportSupervisorTrust({
   authorization_path,
   repository_root = REPOSITORY_ROOT,
@@ -932,6 +1253,7 @@ export function verifyPreImportSupervisorTrust({
   policy_path = path.join(REPOSITORY_ROOT, POLICY_RELATIVE_PATH),
   now_epoch_ms = Date.now(),
   inspect_repository = inspectPreImportRepository,
+  retention_recovery = false,
 }) {
   if (
     realpathSync(repository_root) !== repository_root ||
@@ -980,6 +1302,13 @@ export function verifyPreImportSupervisorTrust({
     authorization.supervisor_sha256 !== sha256(supervisorBytes) ||
     authorization.supervisor_policy_sha256 !== sha256(policyBytes)
   ) throw new PreImportSupervisorError("SUPERVISOR_IDENTITY_MISMATCH");
+  let recoveryAdmission = null;
+  if (retention_recovery) {
+    if (!officialMode || authorization.schema_version !== 2) throw new PreImportSupervisorError("SUPERVISOR_MODE_DENIED");
+    recoveryAdmission = verifyOfficialRetentionRecoveryBeforeImport(authorization);
+  } else if (officialMode && authorization.schema_version === 2) {
+    verifyOfficialRunUnspentBeforeImport(authorization);
+  }
   const manifest = verifyCandidate(repository_root, policy);
   verifySupportsAndPins(repository_root, policy);
   if (officialMode) {
@@ -1049,6 +1378,7 @@ export function verifyPreImportSupervisorTrust({
         : policy.credential_source_policy,
     ),
     operation_class: authorization.operation_class,
+    ...(recoveryAdmission ? { retention_recovery: recoveryAdmission } : {}),
     ...(officialMode
       ? { repository_observation: structuredClone(observedRepository) }
       : {}),
@@ -1064,6 +1394,8 @@ function safeCode(error) {
     "SUPERVISOR_IDENTITY_MISMATCH",
     "SUPERVISOR_MEMBER_MISMATCH",
     "SUPERVISOR_MODE_DENIED",
+    "SUPERVISOR_RECOVERY_STATE_INVALID",
+    "OFFICIAL_AUTHORIZATION_SPENT",
     "SUPERVISOR_OUTPUT_WRITER_MISSING",
     "SUPERVISOR_PATH_INVALID",
     "SUPERVISOR_POLICY_INVALID",
@@ -1106,6 +1438,7 @@ const SAFE_RUNNER_OUTPUT_CODES = new Set([
   "OFFICIAL_REPOSITORY_MISMATCH",
   "OFFICIAL_ROUTE_SOURCE_MISMATCH",
   "OFFICIAL_RUNTIME_COMPLETE",
+  "RETENTION_COMPLETE",
   "OFFICIAL_RUNTIME_FAILED_CLOSED",
   "OFFICIAL_SUPPORT_MISMATCH",
   "OFFICIAL_SUPERVISOR_TRUST_REQUIRED",
@@ -1113,12 +1446,49 @@ const SAFE_RUNNER_OUTPUT_CODES = new Set([
   "QUALIFIED",
 ]);
 
-function sanitizedRunnerOutput(value) {
-  const code = SAFE_RUNNER_OUTPUT_CODES.has(value?.code)
+const OFFICIAL_RETENTION_RECEIPT_KEYS = Object.freeze([
+  "policy", "phase", "deployment_id", "environment_record_ids", "environment_keys",
+  "data_zero_residual", "external_retained_exact", "unrelated_preserved",
+]);
+const OFFICIAL_RETENTION_ENVIRONMENT_KEYS = Object.freeze([
+  "ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+  "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
+]);
+
+function exactRetainedRunnerOutput(value, authorization) {
+  const receipt = value?.retention;
+  if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS ||
+      authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
+      value.status !== "PASS" || value.qualification_requests !== 6 || value.official_requests !== 20 ||
+      value.runtime_sessions !== 1 || value.runtime_retries !== 0 || value.runtime_replays !== 0 ||
+      value.zero_residual_owned_state !== false || !receipt || typeof receipt !== "object" ||
+      Array.isArray(receipt)) return false;
+  const descriptors = Object.getOwnPropertyDescriptors(receipt);
+  if (Reflect.ownKeys(descriptors).length !== OFFICIAL_RETENTION_RECEIPT_KEYS.length ||
+      !OFFICIAL_RETENTION_RECEIPT_KEYS.every((key) => Object.hasOwn(descriptors, key) &&
+        Object.hasOwn(descriptors[key], "value") && descriptors[key].enumerable === true)) return false;
+  const ids = receipt.environment_record_ids;
+  return receipt.policy === authorization.execution.provider_cleanup_policy && receipt.phase === "COMPLETE" &&
+    /^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") && Array.isArray(ids) && ids.length === 7 &&
+    ids.every((id) => typeof id === "string" && id.length > 0 && id.length <= 128 && /^[\x21-\x7e]+$/u.test(id)) &&
+    new Set(ids).size === 7 && Array.isArray(receipt.environment_keys) &&
+    exactObject(receipt.environment_keys, OFFICIAL_RETENTION_ENVIRONMENT_KEYS) &&
+    exactObject(receipt.environment_keys, authorization.execution.environment_keys) &&
+    receipt.data_zero_residual === true && receipt.external_retained_exact === true &&
+    receipt.unrelated_preserved === true;
+}
+
+export function sanitizedRunnerOutput(value, authorization) {
+  let code = SAFE_RUNNER_OUTPUT_CODES.has(value?.code)
     ? value.code
     : "CONCRETE_RUNNER_FAILED";
+  if (code === "RETENTION_COMPLETE" && !exactRetainedRunnerOutput(value, authorization) ||
+      code === "OFFICIAL_RUNTIME_COMPLETE" && authorization?.schema_version === 2) {
+    code = "CONCRETE_RUNNER_FAILED";
+  }
   const output = {
-    status: ["QUALIFIED", "OFFICIAL_RUNTIME_COMPLETE"].includes(code)
+    status: ["QUALIFIED", "OFFICIAL_RUNTIME_COMPLETE", "RETENTION_COMPLETE"].includes(code)
       ? "PASS"
       : "FAIL",
     code,
@@ -1165,14 +1535,31 @@ function sanitizedRunnerOutput(value) {
     output.attempts_used = 1;
     output.retained_preview_count = code === "QUALIFIED" ? 1 : 0;
   }
-  if (code === "OFFICIAL_RUNTIME_COMPLETE") {
+  if (["OFFICIAL_RUNTIME_COMPLETE", "RETENTION_COMPLETE"].includes(code)) {
     output.qualification_requests = 6;
     output.official_requests = 20;
     output.runtime_sessions = 1;
     output.runtime_retries = 0;
     output.runtime_replays = 0;
+    if (code === "RETENTION_COMPLETE") {
+      output.zero_residual_owned_state = false;
+      output.retention = structuredClone(value.retention);
+    }
   }
   return output;
+}
+
+export function admitSupervisorRunnerResult(result, authorization, normalizedOutput) {
+  if (authorization?.schema_version !== 2 || authorization.operation_class !== OFFICIAL_OPERATION_CLASS) {
+    return result;
+  }
+  if (result?.exit_code === 0 && result.code === "RETENTION_COMPLETE" &&
+      normalizedOutput?.code === "RETENTION_COMPLETE" &&
+      exactRetainedRunnerOutput(normalizedOutput, authorization)) return result;
+  if (result?.exit_code !== 1 || result?.code === "RETENTION_COMPLETE" || result?.code === "OFFICIAL_RUNTIME_COMPLETE") {
+    return { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" };
+  }
+  return result;
 }
 
 export async function dispatchPreImportSupervisor(argumentsList, dependencies = {}) {
@@ -1194,7 +1581,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
   if (
     !Array.isArray(argumentsList) ||
     argumentsList.length !== 3 ||
-    !["--qualify-nonproduction", "--run-admin-v1-official"].includes(
+    !["--qualify-nonproduction", "--run-admin-v1-official", "--recover-admin-v1-official-retention"].includes(
       requestedMode,
     ) ||
     argumentsList[1] !== "--authorization" ||
@@ -1214,6 +1601,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
       policy_path: dependencies.policy_path,
       now_epoch_ms: dependencies.now_epoch_ms,
       inspect_repository: dependencies.inspect_repository,
+      retention_recovery: requestedMode === "--recover-admin-v1-official-retention",
     });
     const importRunner = dependencies.import_runner ??
       ((url) => import(url.href));
@@ -1230,7 +1618,8 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
     if (sha256(currentAuthorizationBytes) !== trust.authorization_sha256) {
       throw new PreImportSupervisorError("SUPERVISOR_AUTHORIZATION_CHANGED");
     }
-    return runner.dispatchConcreteQualificationRunner(
+    let normalizedRunnerOutput = null;
+    const dispatched = runner.dispatchConcreteQualificationRunner(
       argumentsList,
       runner.createConcreteRunnerDependencies({
         repositoryRoot: dependencies.repository_root,
@@ -1258,7 +1647,9 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
             }
           : {}),
         writeOutput(value) {
-          dependencies.write_output(sanitizedRunnerOutput(value));
+          const normalized = sanitizedRunnerOutput(value, trust.authorization);
+          normalizedRunnerOutput = structuredClone(normalized);
+          dependencies.write_output(normalized);
         },
       }),
       Object.freeze({
@@ -1267,6 +1658,7 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
         authorization_bytes: Buffer.from(trust.authorization_bytes),
         authorization_sha256: trust.authorization_sha256,
         credential_source_policy: structuredClone(trust.credential_source_policy),
+        ...(trust.retention_recovery ? { retention_recovery: structuredClone(trust.retention_recovery) } : {}),
         supervisor_sha256: trust.supervisor_sha256,
         supervisor_policy_sha256: trust.supervisor_policy_sha256,
         ...(trust.operation_class === OFFICIAL_OPERATION_CLASS
@@ -1279,6 +1671,13 @@ export async function dispatchPreImportSupervisor(argumentsList, dependencies = 
           : {}),
       }),
     );
+    if (trust.authorization.schema_version === 2 && trust.operation_class === OFFICIAL_OPERATION_CLASS) {
+      const result = await dispatched;
+      const admitted = admitSupervisorRunnerResult(result, trust.authorization, normalizedRunnerOutput);
+      if (admitted !== result) dependencies.write_output({ status: "FAIL", code: admitted.code });
+      return admitted;
+    }
+    return dispatched;
   } catch (error) {
     const code = safeCode(error);
     dependencies.write_output?.({ status: "FAIL", code });

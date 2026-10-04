@@ -24,7 +24,7 @@ const REQUEST_KEYS = Object.freeze([
   "phase_identity",
   "reviewed_package_sha256",
   "reviewed_package_bytes",
-  "gemini_approval_token_sha256",
+  "work_audit_sha256",
   "direct_james_approval_sha256",
   "authorization_id",
   "run_id",
@@ -115,7 +115,7 @@ function validateRequest(request, nowEpochMs, allowLive) {
     expires - created > 24 * 60 * 60 * 1000 ||
     ![
       request.reviewed_package_sha256,
-      request.gemini_approval_token_sha256,
+      request.work_audit_sha256,
       request.direct_james_approval_sha256,
       request.candidate_identity_sha256,
       request.manifest_sha256,
@@ -163,7 +163,7 @@ export function createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     reviewed_package_sha256: request.reviewed_package_sha256,
     reviewed_package_bytes: request.reviewed_package_bytes,
     authorization_id: request.authorization_id,
-    gemini_approval_token_sha256: request.gemini_approval_token_sha256,
+    work_audit_sha256: request.work_audit_sha256,
     direct_james_approval_sha256: request.direct_james_approval_sha256,
     candidate_member_count: request.candidate_member_count,
     repository_tree: request.repository.tree,
@@ -213,17 +213,17 @@ export function createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     { authorization_id: request.authorization_id, run_id: request.run_id },
   );
   const reviewApprovalSha256 = digest(
-    "AIFINDER_FIRST_ENVIRONMENT_REVIEW_APPROVAL_V1",
+    "AIFINDER_FIRST_ENVIRONMENT_WORK_REVIEW_APPROVAL_V2",
     {
       phase_identity: request.phase_identity,
       reviewed_package_sha256: request.reviewed_package_sha256,
       reviewed_package_bytes: request.reviewed_package_bytes,
-      gemini_approval_token_sha256: request.gemini_approval_token_sha256,
+      work_audit_sha256: request.work_audit_sha256,
       direct_james_approval_sha256: request.direct_james_approval_sha256,
     },
   );
   const oneUseAuthorizationSha256 = digest(
-    "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V1",
+    "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V2",
     {
       authorization_id_sha256: authorizationIdSha256,
       review_approval_sha256: reviewApprovalSha256,
@@ -237,7 +237,7 @@ export function createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
     },
   );
   const record = {
-    schema_version: 1,
+    schema_version: 2,
     operation_class: OPERATION_CLASS,
     authorization_id_sha256: authorizationIdSha256,
     one_use_authorization_sha256: oneUseAuthorizationSha256,

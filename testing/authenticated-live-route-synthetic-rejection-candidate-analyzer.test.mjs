@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import * as analyzer from "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs";
+import * as currentSemanticAnalyzer from "./authenticated-live-route-semantic-analyzer.mjs";
 
 const C2_1_LEDGER_PATH =
   "testing/authenticated-live-route-semantic-branch-ledger.json";
@@ -201,26 +202,29 @@ function loadContext() {
     sha256(ledgerBytes),
     "d668f5955dd0f7b3c079625711fa873576869039f26263267f1a4821da6090e3",
   );
-  const c2_1_ledger = JSON.parse(ledgerBytes.toString("utf8"));
+  const historicalLedger = JSON.parse(ledgerBytes.toString("utf8"));
   assert.deepEqual(
-    c2_1_ledger.routes.map((route) => route.route_path),
+    historicalLedger.routes.map((route) => route.route_path),
     ROUTE_PATHS,
   );
   const routeInputs = ROUTE_PATHS.map((routePath, index) => ({
     path: routePath,
     bytes: readExactC2_2(routePath),
-    expectedIdentity: {
-      sha256: c2_1_ledger.routes[index].sha256,
-      git_blob: c2_1_ledger.routes[index].git_blob,
-      bytes: c2_1_ledger.routes[index].bytes,
-      lf_lines: c2_1_ledger.routes[index].lf_lines,
-    },
+    expectedIdentity: currentSemanticAnalyzer.currentRouteIdentity(routePath, {
+      sha256: historicalLedger.routes[index].sha256,
+      git_blob: historicalLedger.routes[index].git_blob,
+      bytes: historicalLedger.routes[index].bytes,
+      lf_lines: historicalLedger.routes[index].lf_lines,
+    }),
   }));
+  const c2_1_ledger = currentSemanticAnalyzer.buildCurrentSourceView({
+    historicalLedger, routeInputs,
+  });
   const matrix = JSON.parse(readExactC2_2(MATRIX_PATH).toString("utf8"));
   const blockerRegistry = JSON.parse(
     readExactC2_2(BLOCKER_PATH).toString("utf8"),
   );
-  cachedContext = { c2_1_ledger, routeInputs, matrix, blockerRegistry };
+  cachedContext = { c2_1_ledger, historicalLedger, routeInputs, matrix, blockerRegistry };
   return cachedContext;
 }
 
@@ -231,6 +235,7 @@ function buildCandidate() {
   cachedCandidate = analyzer.qualifyCandidateOverlay({
     routeInputs: context.routeInputs,
     c2_1_ledger: context.c2_1_ledger,
+    historicalLedger: context.historicalLedger,
     governanceFacts: GOVERNANCE_FACTS,
   });
   return cachedCandidate;
@@ -323,6 +328,7 @@ function qualifyMutated({
   return analyzer.qualifyCandidateOverlay({
     routeInputs,
     c2_1_ledger,
+    historicalLedger: loadContext().historicalLedger,
     governanceFacts,
   });
 }
@@ -573,27 +579,33 @@ const assertions = [
   ["A02_C2_1_LEDGER_IDENTITY_AND_DIGESTS", () => {
     const result = buildCandidate();
     assert.equal(
-      result.source_contract.c2_1_ledger_sha256,
+      result.historical_provenance.source_contract.c2_1_ledger_sha256,
       "d668f5955dd0f7b3c079625711fa873576869039f26263267f1a4821da6090e3",
     );
     assert.equal(
-      result.source_contract.c2_1_independent_oracle_digest,
+      result.historical_provenance.source_contract.c2_1_independent_oracle_digest,
       "6e15cd4bc24025892fe7d3985709e48ba56cb2198ea04fe21ec99b08ab2fe172",
     );
     assert.equal(
-      result.source_contract.node_set_digest,
+      result.historical_provenance.source_contract.node_set_digest,
       "e93014829e190d478ee8d057289a12bc2703f990b795c3bbf5fdade838dd87d8",
     );
+    assert.equal(result.source_lane, "CURRENT_SOURCE_STATIC_ONLY");
+    assert.equal(result.repository_baseline, null);
+    assert.equal(result.historical_provenance.source_coverage.changed_route,
+      "UNVERIFIED_NOT_RUN");
+    assert.equal(result.source_contract.node_set_digest,
+      sha256(analyzer.canonicalJson(loadContext().c2_1_ledger.nodes)));
   }],
   ["A03_ROUTE_METHOD_NODE_OUTCOME_IDENTITIES", () => {
     const result = buildCandidate();
     assert.deepEqual(
       [result.summary.routes, result.summary.methods, result.summary.nodes, result.summary.outcomes],
-      [28, 37, 409, 775],
+      [28, 37, 411, 779],
     );
-    assert.equal(result.outcome_overlay.length, 775);
+    assert.equal(result.outcome_overlay.length, 779);
   }],
-  ["A04_OWNERSHIP_KIND_SPLIT_290_76_36_7", () => {
+  ["A04_OWNERSHIP_KIND_SPLIT_292_76_36_7", () => {
     const summary = buildCandidate().summary;
     assert.deepEqual(
       [
@@ -604,7 +616,7 @@ const assertions = [
         summary.unique_catch_nodes,
         summary.unattributed_catch_nodes,
       ],
-      [326, 83, 290, 76, 36, 7],
+      [328, 83, 292, 76, 36, 7],
     );
   }],
   ["A05_EXACT_ROUTE_SET_AND_IDENTITIES", () => {
@@ -612,7 +624,7 @@ const assertions = [
     assert.deepEqual(result.source_contract.route_paths, ROUTE_PATHS);
     assert.equal(result.source_contract.route_identities_verified, 28);
   }],
-  ["A06_OUTCOME_UNIVERSE_580_152_43", () => {
+  ["A06_OUTCOME_UNIVERSE_584_152_43", () => {
     const summary = buildCandidate().summary;
     assert.deepEqual(
       [
@@ -621,7 +633,7 @@ const assertions = [
         summary.mandatory_deferred_catch_outcomes,
         summary.mandatory_deferred_outcomes,
       ],
-      [580, 152, 43, 195],
+      [584, 152, 43, 195],
     );
   }],
   ["A07_EXPLICIT_BRANCH_MATERIALIZATION", () => {
@@ -807,12 +819,12 @@ const assertions = [
         entry.reason_code,
       ].join("\0") + "\n"
     ).join("");
-    assert.equal(result.outcome_overlay.length, 775);
+    assert.equal(result.outcome_overlay.length, 779);
     assert.equal(result.summary.candidate_set_digest, sha256(candidateRows));
     assert.equal(result.summary.overlay_digest, sha256(overlayRows));
     assert.equal(
       result.summary.candidate_outcomes + result.summary.total_deferred_outcomes,
-      775,
+      779,
     );
   }],
   ["A16_OPAQUE_METHOD_DEFERRALS_15", () => {

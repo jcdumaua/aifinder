@@ -420,3 +420,105 @@ if (failures.size > 0) {
     "PASS_AUTHENTICATION_AND_SESSION_LIVE_ROUTE_STATIC_SYNTHETIC domains=5/5\n",
   );
 }
+
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import * as isolation from "../scripts/launch-operations-kernel/admin-v1-official-isolation.mjs";
+{
+
+
+const root = new URL("../", import.meta.url);
+const runId = "44444444-4444-4444-8444-444444444444";
+const projectRef = "attestation-test-project";
+const origin = "https://attestation-test-project.supabase.co";
+const source = (name) => readFileSync(new URL(name, root), "utf8");
+const sources = Object.fromEntries(["lib/supabase.ts", "lib/supabase-validation.ts",
+  "app/api/admin/session/route.ts"].map((name) => [name, source(name)]));
+let assertions = 0;
+function fixture({ env = {}, admin = false } = {}) {
+  const environment = { NEXT_PUBLIC_SUPABASE_URL: origin,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "SENTINEL_ANON_NEVER_RETURN",
+    AIFINDER_VALIDATION_RUN_ID: runId, AIFINDER_VALIDATION_PROJECT_REF: projectRef, ...env };
+  const calls = [], logs = [], cache = {};
+  const context = vm.createContext({ process: { env: environment }, Object, Promise,
+    console: { log: (...v) => logs.push(v), error: (...v) => logs.push(v), warn: (...v) => logs.push(v) } });
+  function load(name) {
+    if (cache[name]) return cache[name];
+    const compiledModule = { exports: {} };
+    const output = ts.transpileModule(sources[name], { compilerOptions: {
+      target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+    } }).outputText;
+    const localRequire = (specifier) => {
+      if (specifier === "server-only") return {};
+      if (specifier === "@supabase/supabase-js") return { createClient(url, key) {
+        calls.push({ url, key });return Object.freeze({});
+      } };
+      if (specifier === "next/server") return { NextResponse: { json: (body, init) => Response.json(body, init) } };
+      if (specifier.endsWith("admin-auth")) return { verifyAdminSession: () => ({ isAdmin: admin }) };
+      if (specifier.endsWith("admin-v1-official-isolation.mjs")) return isolation;
+      if (specifier.endsWith("supabase-validation")) return load("lib/supabase-validation.ts");
+      if (specifier.endsWith("supabase")) return load("lib/supabase.ts");
+      throw new Error(`Unexpected dependency: ${specifier}`);
+    };
+    vm.runInContext(`(function(require,module,exports){${output}\n})`, context)(localRequire, compiledModule, compiledModule.exports);
+    cache[name] = compiledModule.exports;return compiledModule.exports;
+  }
+  const request = (headers = {}) => load("app/api/admin/session/route.ts").GET(
+    new Request("https://preview.example/api/admin/session", { headers }));
+  return { request, load, calls, logs, environment };
+}
+const mode = { "x-aifinder-validation": "client-origin-v1" };
+for (const admin of [false, true]) {
+  for (const markers of [true, false]) {
+    for (const headers of [{}, { "x-aifinder-validation": "wrong-mode" }]) {
+      const f = fixture({ admin, env: markers ? {} : {
+        AIFINDER_VALIDATION_RUN_ID: undefined, AIFINDER_VALIDATION_PROJECT_REF: undefined } });
+      const response = await f.request(headers);
+      assert.equal(response.status, admin ? 200 : 401);
+      assert.deepEqual(await response.json(), admin ? { authenticated: true, role: "admin" }
+        : { authenticated: false, message: "Unauthorized." });
+      assert.equal(f.calls.length, 0);assertions += 3;
+    }
+  }
+}
+for (const env of [{ AIFINDER_VALIDATION_RUN_ID: undefined }, { AIFINDER_VALIDATION_PROJECT_REF: undefined },
+  { AIFINDER_VALIDATION_RUN_ID: "stale" }, { AIFINDER_VALIDATION_PROJECT_REF: "bad/ref" },
+  { AIFINDER_VALIDATION_PROJECT_REF: "mtpisopvdxuvmpzbzqjw" },
+  { NEXT_PUBLIC_SUPABASE_URL: "https://mtpisopvdxuvmpzbzqjw.supabase.co" },
+  { NEXT_PUBLIC_SUPABASE_URL: "https://default-project.supabase.co" },
+  { NEXT_PUBLIC_SUPABASE_URL: "https://user:secret@example.com" }]) {
+  const f = fixture({ env, admin: true });
+  const response = await f.request(mode);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { authenticated: false, message: "Unauthorized." });
+  assert.deepEqual(f.logs, []);assertions += 3;
+}
+{
+  const f = fixture();
+  const response = await f.request({ ...mode, "x-aifinder-validation-run-id": "spoofed",
+    "x-aifinder-validation-project-ref": "spoofed", "x-aifinder-validation-origin": "https://spoofed.example" });
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.deepEqual(JSON.parse(body), { runId, projectRef, origin });
+  assert.equal(f.calls[0].url, origin);
+  assert.equal(f.calls[0].key, "SENTINEL_ANON_NEVER_RETURN");
+  assert.doesNotMatch(body, /SENTINEL|secret|token|key|password|spoofed/u);
+  assert.deepEqual(f.logs, []);
+  assert.equal(response.headers.get("cache-control"), "no-store");assertions += 7;
+}
+{
+  const f = fixture({ env: { NEXT_PUBLIC_SUPABASE_URL: "https://default-project.supabase.co" } });
+  f.load("lib/supabase.ts");
+  f.environment.NEXT_PUBLIC_SUPABASE_URL = origin;
+  const response = await f.request(mode);
+  assert.equal(response.status, 401);
+  assert.equal(f.calls.length, 1);assertions += 2;
+}
+{
+  const f = fixture();f.load("lib/supabase.ts");
+  f.environment.AIFINDER_VALIDATION_RUN_ID = "11111111-1111-4111-8111-111111111111";
+  assert.equal((await f.request(mode)).status, 401);assertions += 1;
+}
+// The test has no real SDK, transport or credential source.
+console.log(`PASS_ADMIN_VALIDATION_CLIENT_ATTESTATION assertions=${assertions} network=0 credential_reads=0`);
+}

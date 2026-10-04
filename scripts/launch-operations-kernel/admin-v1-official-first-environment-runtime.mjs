@@ -74,7 +74,7 @@ const AUTHORIZATION_CLOSURE_KEYS = Object.freeze([
   "reviewed_package_sha256",
   "reviewed_package_bytes",
   "authorization_id",
-  "gemini_approval_token_sha256",
+  "work_audit_sha256",
   "direct_james_approval_sha256",
   "candidate_member_count",
   "repository_tree",
@@ -186,6 +186,72 @@ function exactTimestamp(value) {
     : null;
 }
 
+// Execution clocks may be substituted only for explicitly hermetic effects.
+// Snapshot the interval; every invocation reads the clock again.
+export function createAdminV1OfficialFirstEnvironmentExpiryGuard(
+  record,
+  { now_epoch_ms, clock, allow_hermetic_test = false } = {},
+) {
+  const mode = record?.authorization_closure?.authorization_mode;
+  if (mode === "LIVE" &&
+    (now_epoch_ms !== undefined || clock !== undefined || allow_hermetic_test)) {
+    throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+      "FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE",
+    );
+  }
+  const hermetic = mode === "HERMETIC_TEST_ONLY" && allow_hermetic_test === true;
+  const created = exactTimestamp(record?.created_at);
+  const expires = exactTimestamp(record?.expires_at);
+  if ((!hermetic && mode !== "LIVE") ||
+    created === null || expires === null || created >= expires ||
+    expires - created > 24 * 60 * 60 * 1000) {
+    throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+      "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+    );
+  }
+  if ((clock !== undefined && typeof clock !== "function") ||
+    (now_epoch_ms !== undefined && !Number.isSafeInteger(now_epoch_ms))) {
+    throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+      "FIRST_ENVIRONMENT_CLOCK_INVALID",
+    );
+  }
+  return () => {
+    let now;
+    try {
+      now = hermetic && clock !== undefined ? clock() :
+        hermetic && now_epoch_ms !== undefined ? now_epoch_ms : Date.now();
+    } catch {
+      throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+        "FIRST_ENVIRONMENT_CLOCK_INVALID",
+      );
+    }
+    if (!Number.isSafeInteger(now)) {
+      throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+        "FIRST_ENVIRONMENT_CLOCK_INVALID",
+      );
+    }
+    if (now >= expires) {
+      throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+        "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED",
+      );
+    }
+    if (now < created) {
+      throw new AdminV1OfficialFirstEnvironmentRuntimeError(
+        "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+      );
+    }
+    return now;
+  };
+}
+
+export function isAdminV1OfficialFirstEnvironmentExpiryFailure(error) {
+  return [
+    "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED",
+    "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID",
+    "FIRST_ENVIRONMENT_CLOCK_INVALID",
+  ].includes(error?.code);
+}
+
 function exactSpentAmbiguousDispositionState(state) {
   const failure = state?.failure;
   return exactKeys(state, AMBIGUOUS_DISPOSITION_STATE_KEYS) &&
@@ -284,17 +350,17 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
       },
     }));
     reviewApprovalSha256 = sha256Hex(canonicalJson({
-      domain: "AIFINDER_FIRST_ENVIRONMENT_REVIEW_APPROVAL_V1",
+      domain: "AIFINDER_FIRST_ENVIRONMENT_WORK_REVIEW_APPROVAL_V2",
       value: {
         phase_identity: closure?.phase_identity,
         reviewed_package_sha256: closure?.reviewed_package_sha256,
         reviewed_package_bytes: closure?.reviewed_package_bytes,
-        gemini_approval_token_sha256: closure?.gemini_approval_token_sha256,
+        work_audit_sha256: closure?.work_audit_sha256,
         direct_james_approval_sha256: closure?.direct_james_approval_sha256,
       },
     }));
     oneUseAuthorizationSha256 = sha256Hex(canonicalJson({
-      domain: "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V1",
+      domain: "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V2",
       value: {
         authorization_id_sha256: authorizationIdSha256,
         review_approval_sha256: reviewApprovalSha256,
@@ -313,7 +379,7 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
   if (
     !Number.isSafeInteger(now_epoch_ms) ||
     !exactKeys(value, AUTHORIZATION_KEYS) ||
-    value.schema_version !== 1 ||
+    value.schema_version !== 2 ||
     value.operation_class !==
       ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS ||
     value.authorization_id_sha256 !== authorizationIdSha256 ||
@@ -367,7 +433,7 @@ export function validateAdminV1OfficialFirstEnvironmentAuthorization(
     !Number.isSafeInteger(closure.reviewed_package_bytes) ||
     closure.reviewed_package_bytes < 1 ||
     !UUID_PATTERN.test(closure.authorization_id ?? "") ||
-    !isSha256(closure.gemini_approval_token_sha256) ||
+    !isSha256(closure.work_audit_sha256) ||
     !isSha256(closure.direct_james_approval_sha256) ||
     !Number.isSafeInteger(closure.candidate_member_count) ||
     closure.candidate_member_count < 1 ||
@@ -782,12 +848,16 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
   adapter,
   journal,
   load_sensitive,
-  now_epoch_ms = Date.now(),
+  now_epoch_ms,
+  clock,
   allow_hermetic_test = false,
 }) {
+  const guard = createAdminV1OfficialFirstEnvironmentExpiryGuard(
+    authorization, { now_epoch_ms, clock, allow_hermetic_test },
+  );
   const validated = validateAdminV1OfficialFirstEnvironmentAuthorization(
     authorization,
-    { now_epoch_ms, allow_hermetic_test },
+    { now_epoch_ms: guard(), allow_hermetic_test },
   );
   if (
     !adapter || !exactKeys(adapter, ["calls", "createEnvironment"]) &&
@@ -838,14 +908,18 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
     zero_residual: true,
     provider_creates: 0,
   };
-  journal.publish(publicState(state));
-  take("runtime_sessions");
-  state.runtime_sessions = 1;
-  journal.publish(publicState(state));
   let sensitive = null;
   try {
+    guard();
+    await journal.publish(publicState(state));
+    guard();
+    take("runtime_sessions");
+    state.runtime_sessions = 1;
+    await journal.publish(publicState(state));
+    guard();
     try {
       sensitive = await load_sensitive();
+      guard();
       if (
         !exactKeys(sensitive, ["environment_value"]) ||
         !(sensitive.environment_value instanceof Uint8Array) ||
@@ -856,6 +930,7 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
         );
       }
     } catch (error) {
+      if (isAdminV1OfficialFirstEnvironmentExpiryFailure(error)) throw error;
       state.failure = {
         operation: "load_credential_source",
         stage: "PRE_EFFECT",
@@ -867,8 +942,8 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       state.stage = "CREDENTIAL_SOURCE_UNAVAILABLE";
       state.terminal_classification = "FAIL_CREDENTIAL_SOURCE_UNAVAILABLE";
       state.resource_state = "PROVEN_NO_PROVIDER_EFFECT";
-      journal.publish(publicState(state));
-      journal.retire(publicState(state));
+      await journal.publish(publicState(state));
+      await journal.retire(publicState(state));
       return Object.freeze({
         classification: state.terminal_classification,
         token_spent: false,
@@ -883,14 +958,17 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       });
     }
     state.stage = "CREDENTIAL_SOURCE_ACQUIRED";
-    journal.publish(publicState(state));
+    await journal.publish(publicState(state));
+    guard();
     state.stage = "INTENT_CREATE_ENVIRONMENT";
-    journal.publish(publicState(state));
+    await journal.publish(publicState(state));
+    guard();
     take("environment_creates");
     state.token_spent = true;
     state.lifecycle = "EXECUTION_STARTED";
     state.stage = "AUTHORIZATION_SPENT";
-    journal.publish(publicState(state));
+    await journal.publish(publicState(state));
+    guard();
     let created;
     try {
       created = await adapter.createEnvironment({
@@ -898,6 +976,7 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
         value: sensitive.environment_value,
       });
     } catch (error) {
+      if (isAdminV1OfficialFirstEnvironmentExpiryFailure(error)) throw error;
       const failure = boundedFailure(error);
       const classification = failure?.classification ??
         "FAIL_AMBIGUOUS_OR_UNEXPECTED_PROVIDER_RESPONSE";
@@ -922,14 +1001,14 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
         state.lifecycle = "TERMINAL_NO_EFFECT_FAILURE";
         state.stage = "PROVIDER_NO_EFFECT_FAILURE_CLASSIFIED";
         state.resource_state = "PROVEN_NO_PROVIDER_EFFECT";
-        journal.publish(publicState(state));
-        journal.retire(publicState(state));
+        await journal.publish(publicState(state));
+        await journal.retire(publicState(state));
       } else {
         state.lifecycle = "ACTIVE_UNKNOWN_STATE";
         state.stage = "AMBIGUOUS_POST_SPEND_RESULT";
         state.resource_state = "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE";
         state.zero_residual = false;
-        journal.publish(publicState(state));
+        await journal.publish(publicState(state));
       }
       return Object.freeze({
         classification,
@@ -963,7 +1042,7 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       state.stage = "AMBIGUOUS_POST_SPEND_RESULT";
       state.resource_state = "UNKNOWN_OR_AMBIGUOUS_PROVIDER_STATE";
       state.zero_residual = false;
-      journal.publish(publicState(state));
+      await journal.publish(publicState(state));
       return Object.freeze({
         classification: state.terminal_classification,
         token_spent: true,
@@ -986,8 +1065,8 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
     state.resource_state = "EXPECTED_CREATED_RESOURCE_PRESENT";
     state.expected_residual = true;
     state.zero_residual = false;
-    journal.publish(publicState(state));
-    journal.retire(publicState(state));
+    await journal.publish(publicState(state));
+    await journal.retire(publicState(state));
     return Object.freeze({
       classification: state.terminal_classification,
       token_spent: true,
@@ -998,6 +1077,37 @@ export async function runAdminV1OfficialFirstEnvironmentRuntime({
       owned_environment_record_id: state.owned_environment_record_id,
       expected_residual: true,
       zero_residual: false,
+      budgets: Object.freeze(structuredClone(budgets)),
+    });
+  } catch (error) {
+    if (!isAdminV1OfficialFirstEnvironmentExpiryFailure(error)) throw error;
+    const classification = error.code === "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED"
+      ? "FAIL_AUTHORIZATION_EXPIRED"
+      : error.code === "FIRST_ENVIRONMENT_CLOCK_INVALID"
+      ? "FAIL_AUTHORIZATION_CLOCK_INVALID" : "FAIL_AUTHORIZATION_INVALID";
+    state.lifecycle = "TERMINAL_NO_EFFECT_FAILURE";
+    state.stage = "AUTHORIZATION_VALIDITY_FAILURE";
+    state.terminal_classification = classification;
+    state.resource_state = "PROVEN_NO_PROVIDER_EFFECT";
+    state.failure = {
+      operation: "check_authorization_validity",
+      stage: state.token_spent ? "EXECUTION" : "PRE_EFFECT",
+      classification,
+      provider: "LOCAL",
+      retry_allowed: false,
+    };
+    await journal.publish(publicState(state));
+    await journal.retire(publicState(state));
+    return Object.freeze({
+      classification,
+      token_spent: state.token_spent,
+      runtime_sessions: state.runtime_sessions,
+      runtime_retries: 0,
+      runtime_replays: 0,
+      resource_state: state.resource_state,
+      owned_environment_record_id: null,
+      expected_residual: false,
+      zero_residual: true,
       budgets: Object.freeze(structuredClone(budgets)),
     });
   } finally {

@@ -7,6 +7,8 @@ import { DiagnosticError } from './error-catalog.mjs';
 import { verifyCompiledDirectory, verifyZipTransport } from './compiled-bundle-verifier.mjs';
 import { validateArtifactBuffers, zipNameForPhase } from './deterministic-renderer.mjs';
 
+const PYTHON_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python' : '/usr/bin/python3';
+
 const BOUND_PARENT_PROGRAM = String.raw`import ctypes
 import errno
 import hashlib
@@ -247,7 +249,7 @@ async function assertBoundParent(binding) {
 
 async function boundParentOperation(binding, args, input = Buffer.alloc(0)) {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn('/usr/bin/python3', ['-I', '-S', '-c', BOUND_PARENT_PROGRAM, ...args], {
+    const child = spawn(PYTHON_EXECUTABLE, ['-I', '-S', '-c', BOUND_PARENT_PROGRAM, ...args], {
       cwd: '/',
       env: { LANG: 'C', LC_ALL: 'C', PATH: '/usr/bin:/bin' },
       shell: false,
@@ -276,7 +278,7 @@ async function boundParentOperation(binding, args, input = Buffer.alloc(0)) {
         finish(new DiagnosticError('PATH_SYMLINK_FORBIDDEN', { sanitized_evidence: { reason: `descriptor-relative ${args[0]} output exceeded bound` } }));
       }
     });
-    child.on('error', () => finish(new DiagnosticError('COMPILER_CAPABILITY_UNAVAILABLE', { sanitized_evidence: { reason: 'fixed /usr/bin/python3 publication helper is unavailable' } })));
+    child.on('error', () => finish(new DiagnosticError('COMPILER_CAPABILITY_UNAVAILABLE', { sanitized_evidence: { reason: 'fixed selected Python publication helper is unavailable' } })));
     child.on('close', (code) => {
       if (code === 0) finish(null, Buffer.concat(stdout));
       else if (code === 17) finish(new DiagnosticError('OUTPUT_PATH_COLLISION', { sanitized_evidence: { reason: 'descriptor-relative no-replace collision' } }));

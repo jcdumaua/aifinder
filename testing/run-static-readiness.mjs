@@ -14,6 +14,7 @@ import { gunzipSync } from "node:zlib";
 import ts from "typescript";
 import {
   GovernanceError,
+  fileIdentity,
   compareExactPathSets,
   executableSafetyViolations,
   listRegularFiles,
@@ -23,7 +24,10 @@ import {
   repositoryStateDigest,
   stableSortedPaths,
   testingTreeDigest,
+  readinessBrokerOptions,
 } from "./static-governance-utils.mjs";
+
+import { c08TrustedContext, c08ResultPass } from "../scripts/c08-child-receipts.mjs";
 
 process.env.PATH = "/usr/bin:/bin";
 process.env.HOME = "/tmp/aifinder-c1-no-home";
@@ -108,21 +112,25 @@ const LEGACY_V1_RUNTIME_STABLE_PROJECTIONS = Object.freeze([
     absolutePath:
       "/Users/jamescarlodumaua/aifinder/testing/admin-v1-staging-runtime-orchestrator.mjs",
     currentSha256:
-      "b532650b0c3173f16e9d175741586d4acda9a0160f4aef2239a9843cc4b0f095",
-    currentBytes: 1523751,
+      "a7956d682fefd401acb14a50ba011d02bcf076018b7a9a8e14a1e92161a2b69a",
+    currentBytes: 1528315,
     currentIdentityNormalization: "ZERO_REVIEWED_DIGEST_PINS",
     baselineReviewedPins: Object.freeze([
       "fa50068bd98788f6d468cd9ea34ec447007d74cd979585fd321ce4867822d1b9",
       "919aa7c687be1481509a1c225537245d5490b6b1f20dd39b32557e6d49b78cce",
     ]),
     projectedReviewedPins: Object.freeze([
-      "2d1ac14340d97a1a57df16fce1deba65c6917e1d0a4486261ea4addb67586c14",
-      "cf668b71448ebd144bfde73419050ebd492ddaceccb1e6910f6448a2d44a0ecd",
+      "02235dfc734ecff195e297543b2a77d49479aabb7c2a38e3d608af2cf0fae55e",
+      "eb8830f832e972123b007a2955b3063b10dcd8fd13150dd5193898a6deb9cd0f",
     ]),
     baselineSha256:
       "c3444237f4b40759ad1452c25be965d565bd65214c3afd14b0d99ca7af04ea0e",
     baselineBytes: 1523721,
     baselineReplacements: Object.freeze([
+      Object.freeze([
+        "function validateLaunchKernelSelfTestCompatibility(\n  launchKernelVerification,\n  launchKernelUntrackedPaths,\n) {\n  const currentContract = \"CURRENT_CANDIDATE_57_PRESERVED_FOUR_ROUTE_V1\";\n  const expectedMemberPaths = [\n    \"docs/launch-operations-kernel.md\",\n    \"scripts/launch-operations-kernel/activation-bridge.mjs\",\n    \"scripts/launch-operations-kernel/activation-bridge.test.mjs\",\n    \"scripts/launch-operations-kernel/activation-e2e.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-authorization.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-authorization.schema.json\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-live-platform.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer-cli.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-materializer.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-runtime.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-isolation.d.mts\",\n    \"scripts/launch-operations-kernel/admin-v1-official-isolation.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json\",\n    \"scripts/launch-operations-kernel/admin-v1-official-runtime.mjs\",\n    \"scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs\",\n    \"scripts/launch-operations-kernel/canonical.mjs\",\n    \"scripts/launch-operations-kernel/cli.mjs\",\n    \"scripts/launch-operations-kernel/evidence.schema.json\",\n    \"scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.mjs\",\n    \"scripts/launch-operations-kernel/fresh-resource-plan-diagnostics.test.mjs\",\n    \"scripts/launch-operations-kernel/kernel.mjs\",\n    \"scripts/launch-operations-kernel/kernel.test.mjs\",\n    \"scripts/launch-operations-kernel/legacy-classifier.mjs\",\n    \"scripts/launch-operations-kernel/legacy-classifier.test.mjs\",\n    \"scripts/launch-operations-kernel/legacy-freeze.json\",\n    \"scripts/launch-operations-kernel/manifest.mjs\",\n    \"scripts/launch-operations-kernel/manifest.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-adapters.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-adapters.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-authorization.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-authorization.schema.json\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-authorization.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-checkpoint-store.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-credential-loader.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-live-platform.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-live-platform.test.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs\",\n    \"scripts/launch-operations-kernel/nonproduction-qualification-runner.test.mjs\",\n    \"scripts/launch-operations-kernel/recovery.test.mjs\",\n    \"scripts/launch-operations-kernel/source-policy.test.mjs\",\n  ];\n  if (\n    launchKernelVerification === null ||\n    typeof launchKernelVerification !== \"object\" ||\n    !Array.isArray(launchKernelVerification.member_paths) ||\n    !Array.isArray(launchKernelUntrackedPaths)\n  ) {\n    fail(\"SELF_TEST_LAUNCH_KERNEL_VERIFICATION:\" + currentContract);\n  }\n  const memberPaths = launchKernelVerification.member_paths;\n  const memberPathSet = new Set(memberPaths);\n  const untrackedPathSet = new Set(launchKernelUntrackedPaths);\n  const expectedMemberPathSet = new Set(expectedMemberPaths);\n  const expectedUntrackedPathSet = new Set([\n    LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,\n    ...expectedMemberPaths,\n  ]);\n  const manifestPathOccurrences = launchKernelUntrackedPaths.filter(\n    (repositoryPath) =>\n      repositoryPath === LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,\n  ).length;\n  if (\n    launchKernelVerification.verified !== true ||\n    launchKernelVerification.source_policy_verified !== true ||\n    launchKernelVerification.legacy_imports !== 0 ||\n    launchKernelVerification.live_routes !== 4 ||\n    launchKernelVerification.live_entrypoints !== 4 ||\n    launchKernelVerification.live_capability_files !== 13 ||\n    launchKernelVerification.credential_access_files !== 3 ||\n    launchKernelVerification.checkpoint_writer_files !== 3 ||\n    launchKernelVerification.member_count !== 57 ||\n    memberPaths.length !== 57 ||\n    memberPathSet.size !== 57 ||\n    launchKernelUntrackedPaths.length !== 58 ||\n    untrackedPathSet.size !== 58 ||\n    manifestPathOccurrences !== 1 ||\n    !exactSetEqual(memberPathSet, expectedMemberPathSet) ||\n    !exactSetEqual(untrackedPathSet, expectedUntrackedPathSet)\n  ) {\n    fail(\"SELF_TEST_LAUNCH_KERNEL_VERIFICATION:\" + currentContract);\n  }\n}\n",
+        "function validateLaunchKernelSelfTestCompatibility(\n  launchKernelVerification,\n  launchKernelUntrackedPaths,\n) {\n  if (\n    launchKernelVerification === null ||\n    typeof launchKernelVerification !== \"object\" ||\n    !Array.isArray(launchKernelVerification.member_paths) ||\n    !Array.isArray(launchKernelUntrackedPaths)\n  ) {\n    fail(\"SELF_TEST_LAUNCH_KERNEL_VERIFICATION\");\n  }\n  const memberPaths = launchKernelVerification.member_paths;\n  const memberPathSet = new Set(memberPaths);\n  const untrackedPathSet = new Set(launchKernelUntrackedPaths);\n  const expectedUntrackedPathSet = new Set(\n    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS,\n  );\n  const expectedMemberPathSet = new Set(\n    EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.filter(\n      (repositoryPath) =>\n        repositoryPath !== LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,\n    ),\n  );\n  const manifestPathOccurrences = launchKernelUntrackedPaths.filter(\n    (repositoryPath) =>\n      repositoryPath === LAUNCH_KERNEL_CANDIDATE_MANIFEST_PATH,\n  ).length;\n  if (\n    launchKernelVerification.verified !== true ||\n    launchKernelVerification.source_policy_verified !== true ||\n    launchKernelVerification.legacy_imports !== 0 ||\n    launchKernelVerification.live_routes !== 1 ||\n    launchKernelVerification.member_count !==\n      EXPECTED_LAUNCH_KERNEL_MEMBER_COUNT ||\n    memberPaths.length !== launchKernelVerification.member_count ||\n    memberPathSet.size !== memberPaths.length ||\n    launchKernelUntrackedPaths.length !==\n      launchKernelVerification.member_count + 1 ||\n    launchKernelUntrackedPaths.length !==\n      EXPECTED_LAUNCH_KERNEL_SELF_TEST_PATHS.length ||\n    untrackedPathSet.size !== launchKernelUntrackedPaths.length ||\n    manifestPathOccurrences !== 1 ||\n    !exactSetEqual(memberPathSet, expectedMemberPathSet) ||\n    !exactSetEqual(untrackedPathSet, expectedUntrackedPathSet)\n  ) {\n    fail(\"SELF_TEST_LAUNCH_KERNEL_VERIFICATION\");\n  }\n}\n",
+      ]),
       Object.freeze([
         "  useCredential: credentialCallback,\n",
         "  useCredential,\n",
@@ -204,13 +212,14 @@ const C1_CHILDREN = [
   },
   {
     path: "testing/readiness-coverage-matrix.test.mjs",
-    sha256: "5c571de84a3abd70fdd6c3c09d2e59346ce5b9055135e76ffea07969ea42decc",
-    imports: ["./static-governance-utils.mjs", "node:path"],
+    sha256: "3be23f69bc7a282acb82b672cd5d9315fb3652fb928831719814e58132ecf93d",
+    imports: ["../scripts/c08-child-receipts.mjs", "./static-governance-utils.mjs", "node:path"],
   },
   {
     path: "testing/static-test-safety-manifest.test.mjs",
-    sha256: "f13cb17d53f72e5d0080c79f1ad6bcf0a15afc02b0265f4b0239d666a04f5339",
+    sha256: "887008ccd5f7236812181cca495dc28acd216cce2a1438c5776aeee9450a63b2",
     imports: [
+      "../scripts/c08-child-receipts.mjs",
       "./static-governance-utils.mjs",
       "node:crypto",
       "node:fs",
@@ -229,8 +238,9 @@ const C2_2_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
-    sha256: "119a4ed999a9f2039d74110f2ecc516661bd5da330fcaedaab5094afad9d6baa",
+    sha256: "34ccde6852a1fc1b598128d53c4d1420029ad30d9215d2a2b568bd0918dc06c8",
     imports: [
+      "./authenticated-live-route-semantic-analyzer.mjs",
       "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
       "node:assert/strict",
       "node:crypto",
@@ -242,8 +252,10 @@ const C2_2_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
-    sha256: "e7c288c2deb21cfe0dbb29a222b51885cd52118dc7e3fb865c90967c939d1e17",
+    sha256: "2c3e0cdc2a5cd8ee947aa8f47291e6547d41bcf69fa9ef0cbbb702464b3d3090",
     imports: [
+      "./authenticated-live-route-semantic-analyzer.mjs",
+      "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
       "node:assert/strict",
       "node:crypto",
       "node:fs",
@@ -256,7 +268,7 @@ const C2_2_CHILDREN = [
 const V1_ADMIN_CHILDREN = [
   {
     path: "testing/admin-v1-launch-scope.test.mjs",
-    sha256: "6e381b4367f3d91701bb99684986a1f59f5e926fba97d4de947c615a54371851",
+    sha256: "773e346c06908590455eb61c5c6b0f5abd8375ccf4337f3a9f320ae1082b4616",
     safetyClass: "SAFE_STATIC_POLICY",
   },
   {
@@ -272,7 +284,7 @@ const EXPECTED_V1_ADMIN_CHILD_PATHS = [
 const V1_STAGING_CHILDREN = [
   {
     path: "testing/admin-v1-staging-readiness-source-policy.test.mjs",
-    sha256: "b953f7c4d54ae2f71aa2e8db2de04fd741648d56574042b3df46526e43e70702",
+    sha256: "ab37bfcbaf6700f5f902f433b8497b75bd8d321dc43d81a940abc42299f245a4",
     imports: [
       "./admin-v1-staging-readiness-core.mjs",
       "node:assert/strict",
@@ -301,8 +313,9 @@ const V1_RUNTIME_CHILDREN = [
   {
     path: "testing/admin-v1-staging-runtime-source-policy.test.mjs",
     argv: [],
-    sha256: "d9dfc486a1c0061d82fce0d98c77b509d4ed55260ae4a70c992c8ed875710707",
+    sha256: "d469d5fee3a0ea4b1ef55efe8d0fb063f7a773dbad6ee63258c048f01e1bfdd2",
     imports: [
+      "../scripts/c08-child-receipts.mjs",
       "./admin-v1-staging-runtime-core.mjs",
       "node:assert/strict",
       "node:crypto",
@@ -314,7 +327,7 @@ const V1_RUNTIME_CHILDREN = [
   {
     path: "testing/admin-v1-staging-runtime-evidence.test.mjs",
     argv: ["--schema-only"],
-    sha256: "90223def0018fccb5ad3307cd35581cd713a86bcb50a044f95fc6e5f17068b80",
+    sha256: "5dca578cd51fcf1dabfd424c95fc690c54bf83ecf08259bec7a7578b21dcf507",
     imports: [
       "./admin-v1-staging-runtime-core.mjs",
       "node:assert/strict",
@@ -334,7 +347,7 @@ const EXPECTED_V1_RUNTIME_CHILD_ARGV = new Map([
 const PHASE_COMPILER_CHILDREN = [
   {
     path: "testing/phase-compiler/phase-compiler.test.mjs",
-    sha256: "bb1906799e03fa632c3ee6fa7d018d89872bede715f3c7ad2250d0b2ff44b673",
+    sha256: "a61da1fd900a5fbbf624e2b6d9cc72f7ced39d072d5636d9389c45c8696e3aed",
     imports: [
       "node:assert/strict",
       "node:child_process",
@@ -359,7 +372,7 @@ const PHASE_COMPILER_CHILDREN = [
   },
   {
     path: "testing/phase-compiler/phase-compiler-security.test.mjs",
-    sha256: "3a074d7351248f7a2ce35a4a4131cd3b48bc39ecfe3810e0d9b70bf6f11af0bc",
+    sha256: "5557b54f4800cbd08e0ae512caa479d95d3994e4bbc641e2abb5cceef829c3a3",
     imports: [
       "node:assert/strict",
       "node:child_process",
@@ -433,21 +446,21 @@ const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
   {path: "testing/phase-compiler/canonical.mjs",sha256: "aa29758297cfcf1bddc0162ed7a5b155faf3bb52c572e0d86b9e307b3a7ed61b",imports: ["node:crypto","./error-catalog.mjs"],profile_sha256: "3a545a2ec20057a25c99e9a02bfa5235f3ea63e1f304bfaf71f4b6eb78184452",flags: []},
   {path: "testing/phase-compiler/cli.mjs",sha256: "8c8792bb682597b5222b2410959c8e1ed0f69b7c10293840fa05d1f7f9a3a6aa",imports: ["node:fs","node:fs/promises","node:path","node:url","./canonical.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./phase-spec.mjs","./semantic-validator.mjs"],profile_sha256: "29c4d9d9b7f42281fc63fdde1f06b2c0f5e485dbfc21cc74bf6eb01a1ef8e260",flags: ["FS_ACCESS","PROCESS_CONTROL"]},
   {path: "testing/phase-compiler/command-dependency-validator.mjs",sha256: "f33fa6ca9e8fdf089d803042ce2048586483416f07e3133f0eb7f95f094472be",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "238aa203dc683ca266176dc4f9d190b63d0bb757e054d9f2ad949ff8bf5058ce",flags: ["FIXED_GIT"]},
-  {path: "testing/phase-compiler/compiled-bundle-verifier.mjs",sha256: "d05e541df96152a57c5c711bd6e8485ae7e0841172c229c050c1ad2618820326",imports: ["node:crypto","node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./deterministic-renderer.mjs"],profile_sha256: "52458e4774e34b854700131c9b23a87e1248f89e1f82c6841c000cc03117fd5c",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/compiled-bundle-verifier.mjs",sha256: "07b9757b0589cb5786d1868f25e91b60939a38148c05ca2017a47f2ff1f41e21",imports: ["node:crypto","node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./deterministic-renderer.mjs"],profile_sha256: "6d4e8b6bde5e952c55e9c1481e8693fcbf5d7b5ab0c8db9ab2443d50ab2640f8",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/deterministic-renderer.mjs",sha256: "1851950670672f8f4a4123fd6ca0c818b34975a620d2374a51438c89211ce92e",imports: ["node:crypto","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./semantic-validator.mjs","./command-dependency-validator.mjs"],profile_sha256: "25c9ac99ccdf300e221d84a5e234c54ed4e2bc60f4b82ddb6ea0f99268149b28",flags: []},
   {path: "testing/phase-compiler/error-catalog.mjs",sha256: "f87435be017082c3a1b0edcacec0f6df6f114a062c5bb3fcc00c9f5161f8af7d",imports: [],profile_sha256: "f6e4e7745d7708c238a85b872d9a6707c9d32e505fc1786d657eab5d435b37fa",flags: []},
-  {path: "testing/phase-compiler/external-bundle-writer.mjs",sha256: "c1667e329745ac425e0bf919672dc78c5a88793d56a894a7270fe8e3fc38f9e0",imports: ["node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs"],profile_sha256: "6af2890397c50913c55961c6322162fdc75f9667fd06b17203d011c8a62fdae2",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/external-bundle-writer.mjs",sha256: "1e6a447ef0f83530762d7ccd926c53f2a672389b36eacdd10d893ea7c4f7075e",imports: ["node:child_process","node:fs","node:fs/promises","node:path","./canonical.mjs","./error-catalog.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs"],profile_sha256: "0737e00189e1e3b87762c6e3c291cc52e65b5710419f8d4397db922ed2f0b943",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/fixtures/failure-catalog.mjs",sha256: "000ae88e852cdf547782c53e9ec0f8b9d2f108fd6a8876e89bcb2c55e1ea4bc5",imports: ["../canonical.mjs","../command-dependency-validator.mjs"],profile_sha256: "70e83271d140ab323040420b447782c94b349f6d26b0843b9ca1d25d05f8ccbd",flags: []},
   {path: "testing/phase-compiler/fixtures/reference-phase-spec.json",sha256: "b81b6e90288daa27417e5058f4247b1107f197b9840a833febd99b898664d2e9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/fixtures/reference-repository-snapshot.json",sha256: "cf4efcbb41bdffe715fcf150da0d26305b78c115a8280bc8786b48e832a4f7a9",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/governance-validator.mjs",sha256: "be590a45117d7ed6d7119c1877bdb18ebb79c44cfd365734bd0028ca8b74b664",imports: ["typescript","./canonical.mjs","./error-catalog.mjs"],profile_sha256: "678fbe5d75118ecb6d8c3523b5cca94329dff2b370617f506afd94033f4f11f1",flags: []},
   {path: "testing/phase-compiler/operation-contract-validator.mjs",sha256: "04987d3f7b8f3f066fcfd4366b21e3badf13df412ca73f4e786f9914e97b9988",imports: ["./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs"],profile_sha256: "b3a01795343b01176a4a189acfe325cf294dcd2c89efd4622703d0e67134c6ee",flags: []},
   {path: "testing/phase-compiler/phase-compiler-determinism.test.mjs",sha256: "48861ed27d139171f96eb58220b86c293b69b26a020493f150bb6381a48d1c1f",imports: ["node:assert/strict","node:crypto","node:fs/promises","node:os","node:path","node:url","./canonical.mjs","./deterministic-renderer.mjs","./compiled-bundle-verifier.mjs","./command-dependency-validator.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./error-catalog.mjs","./operation-contract-validator.mjs"],profile_sha256: "225f25e5df533efb6cafce1012b593c0bf37407443f8634f231e8f5f970e927f",flags: ["FS_ACCESS","FS_MUTATION","PROCESS_CONTROL"]},
-  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "3a074d7351248f7a2ce35a4a4131cd3b48bc39ecfe3810e0d9b70bf6f11af0bc",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:os","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./semantic-validator.mjs"],profile_sha256: "9f358d7ef9a462a4f6d9ec95e4563200d7d72f5c085b051f8090c6ea28bd49d6",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","PROCESS_CONTROL","SHELL_FALSE"]},
-  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "bb1906799e03fa632c3ee6fa7d018d89872bede715f3c7ad2250d0b2ff44b673",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:os","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "fdff73ec4d9fc2483933a9d69069a8e68649de464825572fe987069bf7cf932d",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler-security.test.mjs",sha256: "5557b54f4800cbd08e0ae512caa479d95d3994e4bbc641e2abb5cceef829c3a3",imports: ["node:assert/strict","node:child_process","node:fs","node:fs/promises","node:os","node:path","node:url","node:util","./canonical.mjs","./cli.mjs","./compiled-bundle-verifier.mjs","./deterministic-renderer.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./external-bundle-writer.mjs","./fixtures/failure-catalog.mjs","./semantic-validator.mjs"],profile_sha256: "56c4d47d34680d0b18b69d3b08f7673f5ef5b8d0bd4a20f12c998a3f08c4c6ff",flags: ["CHILD_PROCESS","FIXED_GIT","FS_ACCESS","FS_MUTATION","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/phase-compiler.test.mjs",sha256: "a61da1fd900a5fbbf624e2b6d9cc72f7ced39d072d5636d9389c45c8696e3aed",imports: ["node:assert/strict","node:child_process","node:crypto","node:fs/promises","node:os","node:path","node:util","node:url","./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./fixtures/failure-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./repository-snapshot-adapter.mjs","./schema-validator.mjs","./semantic-validator.mjs"],profile_sha256: "cef8b41cedd6f8ae1785288624fc9e9ff9a57bc0a67311bd2229d317350be6fb",flags: ["CHILD_PROCESS","DYNAMIC_IMPORT","FIXED_GIT","FS_ACCESS","FS_MUTATION","LOCAL_TMP","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/phase-spec.mjs",sha256: "5935d634bf3194304ee99813ba824f7d8154fb7c281615ab7d4af7a679a538b8",imports: ["./phase-spec.schema.json","./canonical.mjs","./error-catalog.mjs","./schema-validator.mjs"],profile_sha256: "51585096653727afb897a56ebff57b8d6321bc4d9bd3b5c52d86b4df0c635e91",flags: []},
   {path: "testing/phase-compiler/phase-spec.schema.json",sha256: "e954f42cb28ccfb56e168eb9027f98ff870db813a5d6c8a5ff409afb7d19a404",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
-  {path: "testing/phase-compiler/repository-snapshot-adapter.mjs",sha256: "fcc627114e417a3a916027ba4ce73ba3fa4a4a3f7b07fe84db79f2552df9732c",imports: ["node:child_process","node:fs","node:fs/promises","node:path","node:url","./repository-snapshot.schema.json","./command-dependency-validator.mjs","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "08f777f9eb7734059780049d74476cebfd2e9be9abb9718d5350fda8a8179d8a",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
+  {path: "testing/phase-compiler/repository-snapshot-adapter.mjs",sha256: "c5cce667dd888afa281e596aa3c3300966bfc994b9e2c346e337a8581a820a2e",imports: ["node:child_process","node:fs","node:fs/promises","node:path","node:url","./repository-snapshot.schema.json","./command-dependency-validator.mjs","./canonical.mjs","./error-catalog.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "8b314e9f5ffab0644e06eca7ecc149874b75ea2ebcd5f890b41a34e7e28cb564",flags: ["CHILD_PROCESS","FIXED_PYTHON","FS_ACCESS","PROCESS_CONTROL","SHELL_FALSE"]},
   {path: "testing/phase-compiler/repository-snapshot.schema.json",sha256: "eea888ad3a60e1caf745c7621ce0b6e3a07c9d0b8ae308df4d24f4dd08b9dc98",imports: null,profile_sha256: "e2b98ccf293ab501c79fbcc587aaee1b6a8ca316258cb7c226c8a1c4ea1675bb",flags: []},
   {path: "testing/phase-compiler/schema-validator.mjs",sha256: "72f28acea6db9e0a0a72ee482ee5160d9821a4448b5935fd08d05a0e7d7c2e12",imports: ["./canonical.mjs","./error-catalog.mjs"],profile_sha256: "0330bab05eb134c1635266a2065ef88fba0efda8202c089d4575569ef2d8ff0e",flags: []},
   {path: "testing/phase-compiler/semantic-validator.mjs",sha256: "ecb35fe037720dfd13d090690d94166fe1994fd1166371e9adee762a03f09b94",imports: ["./repository-snapshot.schema.json","./canonical.mjs","./command-dependency-validator.mjs","./error-catalog.mjs","./governance-validator.mjs","./operation-contract-validator.mjs","./phase-spec.mjs","./schema-validator.mjs"],profile_sha256: "c7bccae838ee32b53698650b31fd135b518bce123ff3f65e1dd6f24de46c7f9f",flags: []},
@@ -455,7 +468,7 @@ const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
 const C2_1_CHILDREN = [
   {
     path: "testing/authenticated-live-route-semantic-analyzer.test.mjs",
-    sha256: "9affd30884f9ec78dc15621f97effcee9ee96aad3e74c280a6a0f3202673ea84",
+    sha256: "3b480e3c4e99535704f0e46a5e4063341861439bf077c3096d3e353ecd4b3a33",
     imports: [
       "./authenticated-live-route-semantic-analyzer.mjs",
       "node:assert/strict",
@@ -468,8 +481,9 @@ const C2_1_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-semantic-branch-ledger.test.mjs",
-    sha256: "f17436ce8a6c693cc74106455a9556317fdc222c04b07c502095bb63ef7ee717",
+    sha256: "7cfbc6e39784d10b22c458a23494854f6dd588d221b90b63e202de1a0c038fa8",
     imports: [
+      "./authenticated-live-route-semantic-analyzer.mjs",
       "node:assert/strict",
       "node:crypto",
       "node:fs",
@@ -481,14 +495,14 @@ const C2_1_CHILDREN = [
 ];
 const C2_1_ANALYZER = {
   path: "testing/authenticated-live-route-semantic-analyzer.mjs",
-  sha256: "37d14d7880338a4cde62befa1d36753c03b398c8a441271ba6bb40f1390675b4",
+  sha256: "f12151bd9b126e5519ffef5cbf7e0311f83277d1bb395dfbfa022f4728fa4ea4",
   imports: ["node:crypto", "typescript"],
 };
 const C2_2_ANALYZER = {
   path:
     "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
-  sha256: "4db51f950265915389878b0e92396e686af89006620738fee93690e5f793ecdc",
-  imports: ["node:crypto", "typescript"],
+  sha256: "3321bcab06f1413151b1159973ca1eac1a45cb864bec478065f165c977c122ca",
+  imports: ["./authenticated-live-route-semantic-analyzer.mjs", "node:crypto", "typescript"],
 };
 const C2_1_ROUTE_PATHS = [
   "app/api/admin/audit-logs/route.ts",
@@ -2221,7 +2235,10 @@ function validateC2ChildSource(child) {
     : C2_1_LEDGER_READ_PATHS;
   validateReadExactC2Source(parsed.sourceFile, parsed.source, expectedPaths);
   const localEdges = child.imports.filter((edge) => edge.startsWith("."));
-  if (child.path.includes("semantic-analyzer.test")) {
+  if (
+    child.path === "testing/authenticated-live-route-semantic-analyzer.test.mjs" ||
+    child.path === "testing/authenticated-live-route-semantic-branch-ledger.test.mjs"
+  ) {
     if (
       !exactSet(localEdges, ["./authenticated-live-route-semantic-analyzer.mjs"])
     ) {
@@ -2245,18 +2262,20 @@ function validateC2_2ChildSource(child) {
     { family: "C2_2", wrapperName: "readExactC2_2" },
   );
   const localEdges = child.imports.filter((edge) => edge.startsWith("."));
-  if (child.path.includes("candidate-analyzer.test")) {
-    if (
-      !exactSet(localEdges, [
-        "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
-      ])
-    ) {
-      throw new GovernanceError("RUNNER_C2_2_CLOSURE");
-    }
-    validateC2ModuleSource(C2_2_ANALYZER, "C2_2");
-  } else if (localEdges.length !== 0) {
+  const expectedLocalEdges =
+    child.path ===
+      "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs" ||
+    child.path ===
+      "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs"
+      ? [
+          "./authenticated-live-route-semantic-analyzer.mjs",
+          "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
+        ]
+      : null;
+  if (!expectedLocalEdges || !exactSet(localEdges, expectedLocalEdges)) {
     throw new GovernanceError("RUNNER_C2_2_CLOSURE");
   }
+  validateC2ModuleSource(C2_2_ANALYZER, "C2_2");
 }
 
 function validateManifestForExecution() {
@@ -3491,7 +3510,18 @@ function installLegacyV1RuntimeStableProjection(
         Buffer.from(projection.baselineGzipBase64, "base64"),
       );
     } else {
-      const currentBytes = originalReadFileSync(candidatePath);
+      let currentBytes = originalReadFileSync(candidatePath);
+      if (repositoryPath === "testing/admin-v1-staging-runtime-orchestrator.mjs") {
+        const c08ExactDeltas = [{"before":"import { spawnSync } from \"node:child_process\";","after":"import { spawnSync } from \"node:child_process\";\nimport { c08TrustedContext, consumeC08Output, C08_TERMINAL } from \"../scripts/c08-child-receipts.mjs\";"},{"before":"      const output = requireChildSuccess(\n        runChild(NODE_EXECUTABLE, [\n          path.join(repositoryRoot, repositoryPath),\n        ], { cwd: repositoryRoot }),\n        \"DELTA20_FINAL_GOVERNANCE_CHECK\",\n      );\n      if (\n        !output.startsWith(expectedPrefix) ||\n        !output.endsWith(\"failures=0 internal_failures=0\\n\")\n      ) {","after":"      let c08Context = null;\n      if (repositoryPath === \"testing/readiness-coverage-matrix.test.mjs\") {\n        const readBound = (relativePath) => readRegularFile(path.join(repositoryRoot, relativePath));\n        const matrixPath = \"testing/readiness-coverage-matrix.json\";\n        const parserBytes = readBound(\"scripts/c08-child-receipts.mjs\");\n        const matrixBytes = readBound(matrixPath);\n        c08Context = c08TrustedContext(\n          parseJsonBuffer(matrixBytes, \"C08_MATRIX_JSON\"),\n          parseJsonBuffer(readBound(\"testing/static-test-safety-manifest.json\"), \"C08_MANIFEST_JSON\").c08_child_receipt_contract,\n          {\n            producer: sha256(readBound(\"testing/static-governance-utils.mjs\")),\n            caller: sha256(readBound(\"testing/readiness-coverage-matrix.test.mjs\")),\n            matrix: sha256(matrixBytes),\n            parser: { bytes: parserBytes.byteLength, sha256: sha256(parserBytes) },\n          },\n        );\n      }\n      const output = requireChildSuccess(\n        runChild(NODE_EXECUTABLE, [\n          path.join(repositoryRoot, repositoryPath),\n        ], { cwd: repositoryRoot }),\n        \"DELTA20_FINAL_GOVERNANCE_CHECK\",\n      );\n      if (\n        c08Context !== null\n          ? !consumeC08Output(output, c08Context.plan, c08Context.trustedBindings, C08_TERMINAL)\n          : !output.startsWith(expectedPrefix) ||\n            !output.endsWith(\"failures=0 internal_failures=0\\n\")\n      ) {"}];
+        let restored = currentBytes.toString("utf8");
+        for (const delta of [...c08ExactDeltas].reverse()) {
+          if (restored.split(delta.after).length !== 2) {
+            throw new Error("C08_EXACT_REVERSAL_CARDINALITY");
+          }
+          restored = restored.replace(delta.after, delta.before);
+        }
+        currentBytes = Buffer.from(restored, "utf8");
+      }
       let currentSource;
       let currentIdentityBytes = currentBytes;
       if (
@@ -3811,11 +3841,11 @@ function runScript(
       absoluteScript,
       ...scriptArguments,
     ];
+    const brokerOptions = readinessBrokerOptions(environment);
     const child = spawn(process.execPath, argv, {
       cwd,
-      env: environment,
+      ...brokerOptions,
       shell: false,
-      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = Buffer.alloc(0);
     let stderr = Buffer.alloc(0);
@@ -3906,7 +3936,6 @@ async function runCore(core) {
       entry.path,
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
-        preloads: [LEGACY_CORE_PRELOAD_URL],
         environment: CORE_SAFE_ENVIRONMENT,
       },
     );
@@ -3961,6 +3990,21 @@ async function runCore(core) {
   );
 }
 
+function expectedC08Context() {
+  const matrixPath = "testing/readiness-coverage-matrix.json";
+  const parser = fileIdentity("scripts/c08-child-receipts.mjs");
+  return c08TrustedContext(
+    readStrictJson(matrixPath),
+    readStrictJson(MANIFEST_PATH).c08_child_receipt_contract,
+    {
+      producer: fileIdentity("testing/static-governance-utils.mjs").sha256,
+      caller: fileIdentity("testing/readiness-coverage-matrix.test.mjs").sha256,
+      matrix: fileIdentity(matrixPath).sha256,
+      parser: { bytes: parser.bytes, sha256: parser.sha256 },
+    },
+  );
+}
+
 async function runC1Policy(c1Policy) {
   const totalStarted = performance.now();
   const results = [];
@@ -3970,6 +4014,7 @@ async function runC1Policy(c1Policy) {
     if (remaining <= 0) {
       throw new GovernanceError("RUNNER_TOTAL_TIMEOUT");
     }
+    const c08Context = child.path === "testing/readiness-coverage-matrix.test.mjs" ? expectedC08Context() : null;
     const authorizedBefore = authorizedSnapshot();
     const repositoryBefore = repositoryStateDigest();
     const result = await runScript(
@@ -3994,7 +4039,8 @@ async function runC1Policy(c1Policy) {
       !result.timedOut &&
       !result.spawnError &&
       authorizedUnchanged &&
-      repositoryUnchanged;
+      repositoryUnchanged &&
+      (c08Context === null || c08ResultPass(result, c08Context, authorizedUnchanged && repositoryUnchanged));
     results.push({ path: child.path, passed });
     console.log(
       "STATIC_C1_POLICY path=" +
@@ -4051,7 +4097,6 @@ async function runC2Policy(c2Policy) {
       child.path,
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
-        preloads: [LEGACY_ROUTE_SOURCE_PRELOAD_URL],
         environment: C2_1_SAFE_ENVIRONMENT,
       },
     );
@@ -4121,7 +4166,6 @@ async function runC2_2Policy(c2_2Policy) {
       child.path,
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
-        preloads: [LEGACY_ROUTE_SOURCE_PRELOAD_URL],
         environment: C2_2_SAFE_ENVIRONMENT,
       },
     );
@@ -4194,8 +4238,8 @@ async function runV1AdminPolicy(v1AdminPolicy) {
       Math.min(PER_CHILD_TIMEOUT_MS, remaining),
       {
         preloads: hermetic
-          ? [LEGACY_ROUTE_SOURCE_PRELOAD_URL, TYPESCRIPT_TEST_LOADER_PATH]
-          : [LEGACY_ROUTE_SOURCE_PRELOAD_URL],
+          ? [TYPESCRIPT_TEST_LOADER_PATH]
+          : [],
         environment: V1_ADMIN_SAFE_ENVIRONMENT,
       },
     );
@@ -4337,11 +4381,7 @@ async function runV1RuntimePolicy(v1RuntimePolicy) {
         child.path,
         childTimeoutMs,
         {
-          preloads:
-            child.path ===
-            "testing/admin-v1-staging-runtime-source-policy.test.mjs"
-              ? [preloadUrl]
-              : [SANDBOX_PATH],
+          preloads: [SANDBOX_PATH],
           scriptArguments: child.argv,
           environment: V1_RUNTIME_SAFE_ENVIRONMENT,
         },

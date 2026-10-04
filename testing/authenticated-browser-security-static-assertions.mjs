@@ -33,11 +33,44 @@ const INTEGRATION_BASELINE =
 const INTEGRATION_TREE = "2503e7cf964a4e5bc3f6121aa04dfc5f2e3128e1";
 const HISTORICAL_ROUTE_INVENTORY_DIGEST =
   "fa4f5aec336d66511f3811864961894a4132611a79c769bfb0635feca39139ed";
+// Historical phase counts are retained as evidence, not applied to current governance.
+const HISTORICAL_GOVERNANCE_EXPECTATIONS = Object.freeze({
+  matrix_entry_count: 69,
+  matrix_blocking: 28,
+  matrix_nonblocking: 41,
+  matrix_partial_static: 1,
+  historical_unqualified_admin_routes: 27,
+  registry_live_route_workstream: "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
+  registry_live_route_entries: 28,
+  registry_live_route_partial_static: 1,
+  registry_live_route_gap: "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED",
+  registry_live_route_state: "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+  safety_entries: 115,
+  safety_run_core: 5,
+  safety_run_policy: 6,
+  safety_validate_only: 18,
+  safety_deny: 86,
+});
+const CURRENT_ADMIN_V1_REGISTRY_COMMIT =
+  "ef5cbe7aede041d3fd009126de152b4777d160a5";
+const CURRENT_ADMIN_V1_CRITICAL_STATE =
+  "V1_ADMIN_STAGING_ENV_DATABASE_STORAGE_READINESS_INTEGRATED_DEPLOYED_RUNTIME_REQUIRED";
+const CURRENT_ADMIN_V1_DEFERRED_STATE = "V1_ADMIN_DEFERRED_FAIL_CLOSED";
+const CURRENT_ADMIN_V1_RUNTIME_GAP =
+  "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_EVIDENCE_REQUIRED";
 const TERMINAL_ASSURANCE_RESULT =
   "PASS_TERMINAL_AUTHENTICATED_BROWSER_ASSURANCE";
-const EXPECTED_SOURCE_SHA256 = Object.freeze({
+const HISTORICAL_EXPECTED_SOURCE_SHA256 = Object.freeze({
   [SHARED_PATH]:
     "e94b4eda5a36f05084b6171ed95634c3e04b3da9c21abb3b186491421bfc3ab2",
+  [DISCOVERY_QUEUE_PATH]:
+    "dc199c25aa6527bb473ac15080d2cee956185f4fe33f412251b8aebbac856429",
+  [DISCOVERY_DETAIL_PATH]:
+    "ab72c573a7cdef9b0ee245e75be2c3052b3836f0676f9c1b776f1ba46c6ccccd",
+});
+const CURRENT_SOURCE_SHA256 = Object.freeze({
+  [SHARED_PATH]:
+    "ea4bda4589d2fc347508cb2a3ab9e9ff387a03a723201f99edb2b96ab853f868",
   [DISCOVERY_QUEUE_PATH]:
     "dc199c25aa6527bb473ac15080d2cee956185f4fe33f412251b8aebbac856429",
   [DISCOVERY_DETAIL_PATH]:
@@ -829,7 +862,7 @@ function classTokens(opening) {
 
 function verifySourceCandidateIdentities() {
   for (const [repositoryPath, expectedSha256] of Object.entries(
-    EXPECTED_SOURCE_SHA256,
+    CURRENT_SOURCE_SHA256,
   )) {
     requireContract(
       identity(repositoryPath).sha256 === expectedSha256,
@@ -2163,6 +2196,15 @@ function verifyGovernance() {
       entry.surface_kind === "route" &&
       entry.path !== AUDIT_PATH,
   );
+  const currentAdminRoutes = matrix.entries.filter(
+    (entry) => entry.public_or_admin === "ADMIN" && entry.surface_kind === "route",
+  );
+  const currentCriticalRows = currentAdminRoutes.filter(
+    (entry) => entry.coverage_state === CURRENT_ADMIN_V1_CRITICAL_STATE,
+  );
+  const currentDeferredRows = currentAdminRoutes.filter(
+    (entry) => entry.coverage_state === CURRENT_ADMIN_V1_DEFERRED_STATE,
+  );
   requireContract(
     matrix.entries.length === 69 &&
       matrix.route_inventory_digest === appSurfaceDigest() &&
@@ -2182,44 +2224,72 @@ function verifyGovernance() {
             "testing/responsive-qa.spec.ts",
           ]),
       ) &&
-      auditEntry?.coverage_state === "PARTIAL_STATIC" &&
-      auditEntry.launch_blocking === true &&
-      exactArray(
-        auditEntry.static_evidence_paths,
-        AUTHENTICATED_STATIC_EVIDENCE_PATHS,
-      ) &&
+      auditEntry?.coverage_state === CURRENT_ADMIN_V1_DEFERRED_STATE &&
+      auditEntry.launch_blocking === false &&
+      auditEntry.gap_code_or_null === null &&
+      exactArray(auditEntry.static_evidence_paths, [
+        SELF_PATH,
+        EVIDENCE_PATH,
+        "testing/admin-v1-launch-scope.json",
+        "testing/admin-v1-launch-scope.test.mjs",
+      ]) &&
+      currentAdminRoutes.length === 28 &&
       otherAuthenticatedRoutes.length === 27 &&
-      otherAuthenticatedRoutes.every(
+      currentCriticalRows.length === 7 &&
+      currentDeferredRows.length === 21 &&
+      currentCriticalRows.every(
         (entry) =>
-          entry.coverage_state === "NO_STATIC_EVIDENCE" &&
-          entry.static_evidence_paths.length === 0,
+          entry.launch_blocking === true &&
+          entry.gap_code_or_null === CURRENT_ADMIN_V1_RUNTIME_GAP &&
+          exactArray(entry.static_evidence_paths, [
+            "testing/admin-v1-launch-scope.json",
+            "testing/admin-v1-launch-scope.test.mjs",
+            "testing/admin-v1-launch-critical-hermetic.test.mjs",
+            "testing/admin-v1-staging-readiness-source-policy.test.mjs",
+            "testing/admin-v1-staging-readiness-evidence.json",
+            "testing/admin-v1-staging-readiness-evidence.test.mjs",
+          ]),
+      ) &&
+      currentDeferredRows.every(
+        (entry) =>
+          entry.launch_blocking === false &&
+          entry.gap_code_or_null === null &&
+          entry.static_evidence_paths.includes(
+            "testing/admin-v1-launch-scope.test.mjs",
+          ),
       ) &&
       matrix.entries.filter(
         (entry) => entry.coverage_state === "PARTIAL_STATIC",
-      ).length === 1 &&
+      ).length === 0 &&
       matrix.entries.filter(
         (entry) =>
           entry.coverage_state ===
           "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED",
       ).length === 18 &&
-      matrix.entries.filter((entry) => entry.launch_blocking).length === 28 &&
-      matrix.entries.filter((entry) => !entry.launch_blocking).length === 41,
+      matrix.entries.filter((entry) => entry.launch_blocking).length === 7 &&
+      matrix.entries.filter((entry) => !entry.launch_blocking).length === 62,
     "AUTH_STATIC_MATRIX",
   );
 
   const browserWorkstream = registry.workstreams.find(
     (entry) => entry.id === "AUTHENTICATED_BROWSER_RUNTIME",
   );
-  const routeWorkstream = registry.workstreams.find(
-    (entry) => entry.id === "AUTHENTICATED_LIVE_ROUTE_RUNTIME",
+  const criticalWorkstream = registry.workstreams.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_LAUNCH_CRITICAL",
+  );
+  const deferredWorkstream = registry.workstreams.find(
+    (entry) => entry.id === "AUTHENTICATED_ADMIN_V1_DEFERRED",
   );
   requireContract(
-    registry.source_commit === INTEGRATION_BASELINE &&
+    registry.source_commit === CURRENT_ADMIN_V1_REGISTRY_COMMIT &&
       registry.source_matrix.sha256 === identity(MATRIX_PATH).sha256 &&
       registry.source_matrix.git_blob === identity(MATRIX_PATH).git_blob &&
       registry.source_matrix.bytes === identity(MATRIX_PATH).bytes &&
       registry.source_matrix.lines === identity(MATRIX_PATH).lines &&
-      registry.source_matrix.launch_blocking_count === 28 &&
+      registry.source_matrix.route_inventory_digest ===
+        matrix.route_inventory_digest &&
+      registry.source_matrix.entry_count === 69 &&
+      registry.source_matrix.launch_blocking_count === 7 &&
       registry.overall_decision === "NO_GO_PENDING_SEPARATE_AUTHORITIES" &&
       registry.current_authority === "STATIC_ONLY" &&
       registry.execution_authorized === false &&
@@ -2227,17 +2297,24 @@ function verifyGovernance() {
       registry.planning_artifacts[3].path === PLAN_PATH &&
       registry.planning_artifacts[3].state ===
         "FINAL_AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_INTEGRATED" &&
-      browserWorkstream.gap_code ===
+      browserWorkstream?.gap_code ===
         "AUTHENTICATED_BROWSER_EVIDENCE_INTEGRATED" &&
       browserWorkstream.state === "EVIDENCE_COMPLETE_PENDING_NEXT_WORKSTREAM" &&
       browserWorkstream.next_gate ===
         "SEPARATE_PLANNING_REVIEW_AUTHENTICATED_LIVE_ROUTE_RUNTIME" &&
       browserWorkstream.entry_count === 18 &&
-      routeWorkstream.entry_count === 28 &&
-      routeWorkstream.partial_static_count === 1 &&
-      routeWorkstream.gap_code ===
-        "AUTHENTICATED_LIVE_ROUTE_EVIDENCE_REQUIRED" &&
-      routeWorkstream.state === "BLOCKED_SEPARATE_AUTHORITY_REQUIRED",
+      criticalWorkstream?.entry_count === 7 &&
+      criticalWorkstream.gap_code === CURRENT_ADMIN_V1_RUNTIME_GAP &&
+      criticalWorkstream.state ===
+        "STAGING_ENV_DATABASE_STORAGE_READINESS_COMPLETE_DEPLOYED_RUNTIME_REQUIRED" &&
+      criticalWorkstream.next_gate ===
+        "ADMIN_V1_STAGING_DEPLOYMENT_AND_AUTHENTICATED_RUNTIME_VALIDATION" &&
+      criticalWorkstream.execution_authorized === false &&
+      deferredWorkstream?.entry_count === 21 &&
+      deferredWorkstream.gap_code === CURRENT_ADMIN_V1_DEFERRED_STATE &&
+      deferredWorkstream.state === "SAFELY_DISABLED_FOR_V1_LAUNCH" &&
+      deferredWorkstream.next_gate === "SEPARATE_FUTURE_AUTHORITY_REQUIRED" &&
+      deferredWorkstream.execution_authorized === false,
     "AUTH_STATIC_REGISTRY",
   );
 
@@ -2250,16 +2327,16 @@ function verifyGovernance() {
     (entry) => entry.path === AUTHENTICATED_BROWSER_RUNTIME_EVIDENCE_PATH,
   );
   requireContract(
-    safety.entries.length === 115 &&
+    safety.entries.length === 166 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_CORE")
         .length === 5 &&
       safety.entries.filter((entry) => entry.ci_disposition === "RUN_POLICY")
-        .length === 6 &&
+        .length === 20 &&
       safety.entries.filter(
         (entry) => entry.ci_disposition === "VALIDATE_ONLY",
-      ).length === 18 &&
+      ).length === 49 &&
       safety.entries.filter((entry) => entry.ci_disposition === "DENY")
-        .length === 86 &&
+        .length === 92 &&
       selfEntry?.role === "EXECUTABLE" &&
       selfEntry.safety_class === "SAFE_STATIC_CORE" &&
       selfEntry.ci_disposition === "RUN_CORE" &&

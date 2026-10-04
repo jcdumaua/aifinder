@@ -1,8 +1,10 @@
+import * as brokerNativeFs from "node:fs";
 import { spawnSync } from "node:child_process";
 import {
   readFileSync,
   lstatSync,
   realpathSync,
+  readdirSync,
 } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -42,18 +44,245 @@ import {
   validateConcreteAuthorizationRecord,
 } from "./nonproduction-qualification-authorization.mjs";
 import {
-  ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   validateAdminV1OfficialAuthorization,
   createAdminV1OfficialJournal,
   classifyAdminV1OfficialRecoveryState,
+  readAdminV1OfficialIsolatedBundle,
+  readAdminV1OfficialRecoveryFile,
+  validateAdminV1OfficialRetentionRecoveryRecord,
 } from "./admin-v1-official-runtime.mjs";
 import {
   loadAdminV1OfficialCredentials,
   createAdminV1OfficialConcreteTransport,
   runConcreteAdminV1OfficialRuntime,
+  recoverConcreteAdminV1OfficialRetention,
 } from "./admin-v1-official-live-platform.mjs";
+import {
+  OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  validateOfficialIsolationAuthorization,
+} from "./admin-v1-official-isolation.mjs";
+
+// BEGIN A20_FIXED_FD_BROKER_CLIENT
+
+const BROKER_REQUEST_LIMIT = 16 * 1024;
+const BROKER_RESPONSE_LIMIT = 8 * 1024 * 1024;
+const BROKER_STREAM_LIMIT = 4 * 1024 * 1024;
+const BROKER_DEADLINE_MS = 25_000;
+const brokerPauseWord = new Int32Array(new SharedArrayBuffer(4));
+const brokerPoisonedTransports = new WeakSet();
+const brokerDescriptorHandles = new Map();
+const BROKER_RESULT_KEYS = [
+  "classification", "family", "git_pid", "id", "overflow", "schema",
+  "signal", "status", "stderr_base64", "stdout_base64", "timeout",
+];
+const BROKER_CONTEXT_KEYS = ["git_dir", "object_directory", "repository_root", "work_tree_root"];
+const BROKER_SIGNAL_NAMES = new Set([
+  "SIGABRT", "SIGALRM", "SIGBUS", "SIGCHLD", "SIGCONT", "SIGEMT", "SIGFPE",
+  "SIGHUP", "SIGILL", "SIGINFO", "SIGINT", "SIGIO", "SIGIOT", "SIGKILL",
+  "SIGPIPE", "SIGPOLL", "SIGPROF", "SIGPWR", "SIGQUIT", "SIGSEGV", "SIGSTKFLT",
+  "SIGSTOP", "SIGSYS", "SIGTERM", "SIGTRAP", "SIGTSTP", "SIGTTIN", "SIGTTOU",
+  "SIGURG", "SIGUSR1", "SIGUSR2", "SIGVTALRM", "SIGWINCH", "SIGXCPU", "SIGXFSZ",
+]);
+
+class BrokerClientError extends Error {
+  constructor() {
+    super("A20_GIT_BROKER_CLIENT_FAILED");
+    this.name = "BrokerClientError";
+    this.code = "A20_GIT_BROKER_CLIENT_FAILED";
+  }
+}
+
+function brokerFailure() { throw new BrokerClientError(); }
+function brokerNow() { return Number(process.hrtime.bigint() / 1_000_000n); }
+function brokerPause() { Atomics.wait(brokerPauseWord, 0, 0, 1); }
+function brokerObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function brokerExactKeys(value, expected) {
+  return brokerObject(value) && Object.keys(value).sort().join("\0") === expected.join("\0");
+}
+function brokerCanonical(value, depth = 0) {
+  if (depth > 32) brokerFailure();
+  if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) brokerFailure();
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return "[" + value.map((item) => brokerCanonical(item, depth + 1)).join(",") + "]";
+  if (!brokerObject(value)) brokerFailure();
+  return "{" + Object.keys(value).sort().map((key) =>
+    JSON.stringify(key) + ":" + brokerCanonical(value[key], depth + 1)).join(",") + "}";
+}
+
+export function brokerMode(env = process.env ?? {}) {
+  const mode = env.AIFINDER_GIT_BROKER_MODE;
+  if (mode === undefined) return false;
+  if (mode !== "1") brokerFailure();
+  return true;
+}
+
+function brokerNativeNonblocking(fd) {
+  if (fd !== 3 && fd !== 4) brokerFailure();
+  let handle = brokerDescriptorHandles.get(fd);
+  if (handle === undefined) {
+    // Fixed inherited FIFOs only: no connect, listen, readStart, or process helper.
+    const binding = process.binding("pipe_wrap");
+    handle = new binding.Pipe(binding.constants.SOCKET);
+    if (handle.open(fd) !== 0) brokerFailure();
+    brokerDescriptorHandles.set(fd, handle);
+  }
+  if (handle.fd !== fd || handle.setBlocking(false) !== 0) brokerFailure();
+}
+
+export function brokerDescriptors(env = process.env ?? {}, fs = brokerNativeFs, nonblocking = brokerNativeNonblocking) {
+  if (!brokerMode(env)) return null;
+  if (env.AIFINDER_GIT_BROKER_REQUEST_FD !== "3" || env.AIFINDER_GIT_BROKER_RESPONSE_FD !== "4") brokerFailure();
+  if (fs === brokerNativeFs && nonblocking !== brokerNativeNonblocking) brokerFailure();
+  try {
+    const before = [fs.fstatSync(3), fs.fstatSync(4)];
+    if (!before.every((info) => info.isFIFO())) brokerFailure();
+    if (typeof nonblocking !== "function") brokerFailure();
+    nonblocking(3);
+    nonblocking(4);
+    for (const [index, fd] of [3, 4].entries()) {
+      const after = fs.fstatSync(fd);
+      if (!after.isFIFO() || ["dev", "ino", "mode"].some((key) => before[index][key] !== after[key])) brokerFailure();
+    }
+  } catch { brokerFailure(); }
+  return { requestFd: 3, responseFd: 4 };
+}
+
+function brokerCheckDeadline(now, deadline) {
+  const current = now();
+  if (!Number.isFinite(current) || current >= deadline) brokerFailure();
+}
+function brokerWouldRetry(error) {
+  return error?.code === "EAGAIN" || error?.code === "EWOULDBLOCK" || error?.code === "EINTR";
+}
+function brokerReadExact(fs, fd, length, now, pause, deadline) {
+  if (!Number.isSafeInteger(length) || length <= 0 || length > BROKER_RESPONSE_LIMIT) brokerFailure();
+  const bytes = Buffer.alloc(length);
+  let offset = 0;
+  while (offset < length) {
+    brokerCheckDeadline(now, deadline);
+    let count;
+    try { count = fs.readSync(fd, bytes, offset, length - offset, null); }
+    catch (error) {
+      if (!brokerWouldRetry(error)) brokerFailure();
+      pause();
+      continue;
+    }
+    if (!Number.isSafeInteger(count) || count <= 0 || count > length - offset) brokerFailure();
+    offset += count;
+  }
+  return bytes;
+}
+function brokerReadFrame(fs, fd, now, pause, deadline) {
+  const header = brokerReadExact(fs, fd, 4, now, pause, deadline);
+  const length = header.readUInt32BE(0);
+  if (length <= 0 || length > BROKER_RESPONSE_LIMIT) brokerFailure();
+  const bytes = brokerReadExact(fs, fd, length, now, pause, deadline);
+  let text, value;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    value = JSON.parse(text);
+  } catch { brokerFailure(); }
+  if (!Buffer.from(text, "utf8").equals(bytes) || brokerCanonical(value) !== text) brokerFailure();
+  return value;
+}
+function brokerWriteFrame(fs, fd, request, now, pause, deadline) {
+  const body = Buffer.from(brokerCanonical(request), "utf8");
+  if (body.length <= 0 || body.length > BROKER_REQUEST_LIMIT) brokerFailure();
+  const header = Buffer.alloc(4);
+  header.writeUInt32BE(body.length);
+  const bytes = Buffer.concat([header, body]);
+  let offset = 0;
+  while (offset < bytes.length) {
+    brokerCheckDeadline(now, deadline);
+    let count;
+    try { count = fs.writeSync(fd, bytes, offset, bytes.length - offset, null); }
+    catch (error) {
+      if (!brokerWouldRetry(error)) brokerFailure();
+      pause();
+      continue;
+    }
+    if (!Number.isSafeInteger(count) || count <= 0 || count > bytes.length - offset) brokerFailure();
+    offset += count;
+  }
+}
+function brokerDecodeStream(value) {
+  if (typeof value !== "string" || value.length > 4 * Math.ceil(BROKER_STREAM_LIMIT / 3)) brokerFailure();
+  const bytes = Buffer.from(value, "base64");
+  if (bytes.length > BROKER_STREAM_LIMIT || bytes.toString("base64") !== value) brokerFailure();
+  return bytes;
+}
+function brokerResult(value, id, family) {
+  if (!brokerExactKeys(value, BROKER_RESULT_KEYS) || value.schema !== "A20_GIT_RESPONSE_V1" || value.id !== id || value.family !== family) brokerFailure();
+  if (!(value.status === null || (Number.isSafeInteger(value.status) && value.status >= 0 && value.status <= 255))) brokerFailure();
+  if (!(value.signal === null || BROKER_SIGNAL_NAMES.has(value.signal))) brokerFailure();
+  if (!((value.status !== null && value.signal === null) || (value.status === null && value.signal !== null))) brokerFailure();
+  if (!Number.isSafeInteger(value.git_pid) || value.git_pid <= 0 || typeof value.timeout !== "boolean" || typeof value.overflow !== "boolean") brokerFailure();
+  const cleanFlags = !value.timeout && !value.overflow;
+  let coherent = false;
+  switch (value.classification) {
+    case "PASS": coherent = value.status === 0 && value.signal === null && cleanFlags; break;
+    case "GIT_NONZERO": coherent = value.status !== null && value.status > 0 && value.signal === null && cleanFlags; break;
+    case "GIT_SIGNAL": coherent = value.status === null && value.signal !== null && cleanFlags; break;
+    case "GIT_TIMEOUT": coherent = value.timeout && !value.overflow && (value.status === null || value.signal === null); break;
+    case "GIT_OUTPUT_OVERFLOW": coherent = value.overflow; break;
+    default: brokerFailure();
+  }
+  if (!coherent) brokerFailure();
+  const stdout = brokerDecodeStream(value.stdout_base64);
+  const stderr = brokerDecodeStream(value.stderr_base64);
+  let error = null;
+  if (value.timeout || value.overflow) {
+    error = new Error(value.overflow ? "A20_GIT_OUTPUT_OVERFLOW" : "A20_GIT_TIMEOUT");
+    error.code = value.overflow ? "ENOBUFS" : "ETIMEDOUT";
+  }
+  return { status: value.status, signal: value.signal, pid: value.git_pid, stdout, stderr,
+    error, timeout: value.timeout, overflow: value.overflow, classification: value.classification };
+}
+
+export function brokerRequest(family, params, context, {
+  env = process.env ?? {}, fs = brokerNativeFs, now = brokerNow, pause = brokerPause, nonblocking = brokerNativeNonblocking,
+} = {}) {
+  if (!brokerMode(env)) return null;
+  try {
+    if (brokerPoisonedTransports.has(fs)) brokerFailure();
+    const descriptors = brokerDescriptors(env, fs, nonblocking);
+    if (typeof family !== "string" || !/^[A-Z][A-Z0-9_]{0,95}$/u.test(family) || !brokerObject(params) || !brokerExactKeys(context, BROKER_CONTEXT_KEYS)) brokerFailure();
+    const started = now();
+    if (!Number.isFinite(started) || typeof pause !== "function") brokerFailure();
+    const deadline = started + BROKER_DEADLINE_MS;
+    const grant = brokerReadFrame(fs, descriptors.responseFd, now, pause, deadline);
+    if (!brokerExactKeys(grant, ["id", "schema"]) || grant.schema !== "A20_GIT_GRANT_V1" || !Number.isSafeInteger(grant.id) || grant.id <= 0 || grant.id > 512) brokerFailure();
+    // Broker owns the session-monotonic counter across sequential processes.
+    brokerWriteFrame(fs, descriptors.requestFd, { schema: "A20_GIT_REQUEST_V1", id: grant.id, family, params, context }, now, pause, deadline);
+    const result = brokerReadFrame(fs, descriptors.responseFd, now, pause, deadline);
+    const reconstructed = brokerResult(result, grant.id, family);
+    brokerCheckDeadline(now, deadline);
+    return reconstructed;
+  } catch {
+    if (fs !== null && (typeof fs === "object" || typeof fs === "function")) brokerPoisonedTransports.add(fs);
+    brokerFailure();
+  }
+}
+
+export function readinessBrokerOptions(environment, { env = process.env ?? {}, fs = brokerNativeFs, nonblocking = brokerNativeNonblocking } = {}) {
+  const childEnvironment = { ...environment };
+  const descriptors = brokerDescriptors(env, fs, nonblocking);
+  if (descriptors === null) return { env: childEnvironment, stdio: ["ignore", "pipe", "pipe"] };
+  childEnvironment.AIFINDER_GIT_BROKER_MODE = "1";
+  childEnvironment.AIFINDER_GIT_BROKER_REQUEST_FD = "3";
+  childEnvironment.AIFINDER_GIT_BROKER_RESPONSE_FD = "4";
+  return { env: childEnvironment, stdio: ["ignore", "pipe", "pipe", descriptors.requestFd, descriptors.responseFd] };
+}
+// END A20_FIXED_FD_BROKER_CLIENT
 
 const REPOSITORY_ROOT = "/Users/jamescarlodumaua/aifinder";
 const MANIFEST_RELATIVE_PATH =
@@ -78,26 +307,38 @@ const PRE_EFFECT_GIT_SANDBOX_PROFILE = [
   '(allow process-exec (literal "/usr/bin/git"))',
   '(allow process-exec (literal "/Library/Developer/CommandLineTools/usr/bin/git"))',
 ].join("");
+export function createCommonGitControls() {
+  return Object.freeze({
+    configArgs: Object.freeze([
+      "-c", "maintenance.auto=false",
+      "-c", "maintenance.autoDetach=false",
+      "-c", "gc.auto=0",
+      "-c", "gc.autoPackLimit=0",
+      "-c", "gc.autoDetach=false",
+      "-c", "core.hooksPath=/dev/null",
+      "-c", "core.fsmonitor=false",
+      "-c", "credential.helper=",
+      "-c", "credential.interactive=false",
+    ]),
+    environment: Object.freeze({
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_SYSTEM: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      GIT_TERMINAL_PROMPT: "0",
+      GIT_ASKPASS: "/usr/bin/false",
+      SSH_ASKPASS: "/usr/bin/false",
+      GIT_OPTIONAL_LOCKS: "0",
+      LC_ALL: "C",
+    }),
+  });
+}
+
 const PRE_EFFECT_GIT_ENVIRONMENT = Object.freeze({
-  GIT_ASKPASS: "/usr/bin/false",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-  GIT_CONFIG_NOSYSTEM: "1",
-  GIT_CONFIG_SYSTEM: "/dev/null",
+  ...createCommonGitControls().environment,
   GIT_NO_REPLACE_OBJECTS: "1",
-  GIT_OPTIONAL_LOCKS: "0",
-  GIT_TERMINAL_PROMPT: "0",
-  LC_ALL: "C",
-  SSH_ASKPASS: "/usr/bin/false",
 });
 const PRE_EFFECT_GIT_CONFIG = Object.freeze([
-  "-c",
-  "core.fsmonitor=false",
-  "-c",
-  "core.hooksPath=/dev/null",
-  "-c",
-  "credential.helper=",
-  "-c",
-  "credential.interactive=false",
+  ...createCommonGitControls().configArgs,
   "-c",
   "diff.external=",
   "-c",
@@ -352,7 +593,7 @@ function authorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
   }
 }
 
-function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
+function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs, recovery = false) {
   try {
     if (
       !supervisorTrust || typeof supervisorTrust !== "object" ||
@@ -364,6 +605,7 @@ function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
         "credential_source_policy",
         "operation_class",
         "repository_observation",
+        ...(recovery ? ["retention_recovery"] : []),
         "supervisor_policy_sha256",
         "supervisor_sha256",
         "verified",
@@ -381,6 +623,8 @@ function officialAuthorizationFromSupervisorTrust(supervisorTrust, nowEpochMs) {
       !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_sha256) ||
       !/^[0-9a-f]{64}$/u.test(supervisorTrust.supervisor_policy_sha256)
     ) throw new Error("SHAPE");
+    if (recovery && (supervisorTrust.authorization?.schema_version !== 2 ||
+      !exactRecoveryMarker(supervisorTrust.retention_recovery))) throw new Error("RECOVERY_TRUST");
     const authorizationBytes = Buffer.from(supervisorTrust.authorization_bytes);
     const authorizationText = new TextDecoder("utf-8", { fatal: true }).decode(
       authorizationBytes,
@@ -418,6 +662,7 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
   authorization_record,
   dependencies,
   git_execution_context,
+  retention_recovery = false,
 }) {
   const authorization = validateAdminV1OfficialAuthorization(
     authorization_record,
@@ -447,12 +692,9 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
   if (!exactObject(repository, authorization.repository)) {
     throw new ConcreteRunnerError("OFFICIAL_REPOSITORY_MISMATCH");
   }
-  const temporaryCommit = await dependencies.verifyTemporaryCommit(
-    authorization,
-    git_execution_context,
-  );
-  if (temporaryCommit?.verified !== true) {
-    throw new ConcreteRunnerError("OFFICIAL_TEMPORARY_COMMIT_MISMATCH");
+  if (!retention_recovery) {
+    const temporaryCommit = await dependencies.verifyTemporaryCommit(authorization, git_execution_context);
+    if (temporaryCommit?.verified !== true) throw new ConcreteRunnerError("OFFICIAL_TEMPORARY_COMMIT_MISMATCH");
   }
   for (const routePath of Object.keys(authorization.route_source_sha256)) {
     if (
@@ -464,19 +706,61 @@ export async function verifyAdminV1OfficialPreEffectAuthorization({
     await dependencies.hashOfficialAuthorizationSchema() !==
       authorization.authorization_schema_sha256 ||
     canonicalJson(authorization.contract_sha256) !==
-      canonicalJson(ADMIN_V1_OFFICIAL_CONTRACT_SHA256)
+      canonicalJson(authorization.schema_version === 2
+        ? ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 : ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V1)
   ) throw new ConcreteRunnerError("OFFICIAL_CONTRACT_MISMATCH");
-  const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
-  if (prior?.status !== "ABSENT") {
-    throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
+  if (!retention_recovery) {
+    const prior = await dependencies.verifyNoPriorOfficialRecovery(authorization);
+    if (authorization.schema_version === 2 && prior?.status === "SPENT") throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+    if (prior?.status !== "ABSENT") throw new ConcreteRunnerError("OFFICIAL_PRIOR_RECOVERY_PENDING");
   }
   return Object.freeze({
     verified: true,
     operation_class: authorization.operation_class,
     candidate_identity_sha256: authorization.candidate_identity_sha256,
     manifest_sha256: authorization.manifest_sha256,
-    token_spent: false,
+    token_spent: retention_recovery,
   });
+}
+
+const OFFICIAL_RETENTION_RECEIPT_KEYS = Object.freeze([
+  "policy", "phase", "deployment_id", "environment_record_ids", "environment_keys",
+  "data_zero_residual", "external_retained_exact", "unrelated_preserved",
+]);
+
+function exactOfficialRetentionReceipt(receipt, authorization) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return false;
+  const descriptors = Object.getOwnPropertyDescriptors(receipt);
+  if (Reflect.ownKeys(descriptors).length !== OFFICIAL_RETENTION_RECEIPT_KEYS.length ||
+      !OFFICIAL_RETENTION_RECEIPT_KEYS.every((key) => Object.hasOwn(descriptors, key) &&
+        Object.hasOwn(descriptors[key], "value") && descriptors[key].enumerable === true)) return false;
+  const ids = receipt.environment_record_ids;
+  return authorization.schema_version === 2 &&
+    authorization.execution.provider_cleanup_policy === "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" &&
+    receipt.policy === authorization.execution.provider_cleanup_policy &&
+    receipt.phase === "COMPLETE" && /^dpl_[A-Za-z0-9]+$/u.test(receipt.deployment_id ?? "") &&
+    Array.isArray(ids) && ids.length === 7 && ids.every((id) => typeof id === "string" &&
+      id.length > 0 && id.length <= 128 && /^[\x21-\x7e]+$/u.test(id)) &&
+    new Set(ids).size === 7 && Array.isArray(receipt.environment_keys) &&
+    exactObject(receipt.environment_keys, OFFICIAL_PREVIEW_ENVIRONMENT_KEYS) &&
+    exactObject(receipt.environment_keys, authorization.execution.environment_keys) &&
+    receipt.data_zero_residual === true && receipt.external_retained_exact === true &&
+    receipt.unrelated_preserved === true;
+}
+
+export function classifyAdminV1OfficialPriorJournal(existing, schemaVersion = 1) {
+  if (existing === null) return { status: "ABSENT" };
+  if (schemaVersion !== 1 && schemaVersion !== 2) return { status: "MISMATCH" };
+  if (schemaVersion === 1 && existing?.retired === true) return { status: "RETIRED" };
+  try {
+    const classification = classifyAdminV1OfficialRecoveryState(existing);
+    if (schemaVersion === 2 && classification === "RETENTION_COMPLETE") return { status: "SPENT" };
+    if (existing?.retired === true) return { status: "RETIRED" };
+    if (classification === "CLEANUP_COMPLETE") return { status: "SPENT" };
+    return { status: "RECOVERY_PENDING" };
+  } catch {
+    return { status: "MISMATCH" };
+  }
 }
 
 function safeOfficialCode(error) {
@@ -491,6 +775,8 @@ function safeOfficialCode(error) {
     "OFFICIAL_CREDENTIAL_SOURCE_MISMATCH",
     "OFFICIAL_CONCRETE_TRANSPORT_MISSING",
     "OFFICIAL_PRIOR_RECOVERY_PENDING",
+    "OFFICIAL_RECOVERY_STATE_INVALID",
+    "OFFICIAL_RECOVERY_CONTEXT_INVALID",
     "OFFICIAL_RECOVERY_PENDING",
     "OFFICIAL_REPOSITORY_MISMATCH",
     "OFFICIAL_ROUTE_SOURCE_MISMATCH",
@@ -500,6 +786,107 @@ function safeOfficialCode(error) {
     "OFFICIAL_TEMPORARY_COMMIT_MISMATCH",
   ]);
   return allowed.has(error?.code) ? error.code : "OFFICIAL_RUNTIME_FAILED_CLOSED";
+}
+
+
+function exactRecoveryMarker(marker) {
+  return marker && typeof marker === "object" && !Array.isArray(marker) &&
+    Object.keys(marker).sort().join("\0") === ["journal_sha256", "mode"].sort().join("\0") &&
+    marker.mode === "OFFICIAL_RETENTION_RECOVERY_V1" && /^[0-9a-f]{64}$/u.test(marker.journal_sha256 ?? "");
+}
+
+const OFFICIAL_RECOVERY_READONLY_FS = Object.freeze({ lstatSync, realpathSync, readdirSync });
+
+export function readExistingOfficialRecoveryAdmission(authorization, marker, filesystem = OFFICIAL_RECOVERY_READONLY_FS) {
+  try {
+    if (!exactRecoveryMarker(marker) || authorization.schema_version !== 2) throw new Error("MODE");
+    const root = authorization.execution.journal_directory;
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const metadata = filesystem.lstatSync(root);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner ||
+        (metadata.mode & 0o777) !== 0o700 || filesystem.realpathSync(root) !== root) throw new Error("ROOT");
+    try {
+      filesystem.lstatSync(path.join(root, "admin-v1-official-runtime-retired.json"));
+      throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+    } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    const identityBytes = readAdminV1OfficialRecoveryFile({ target: path.join(root, "admin-v1-official-runtime-identity.json"), owner,
+      ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+    const identity = { schema_version: 1, identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id } };
+    if (identityBytes.toString("utf8") !== `${canonicalJson(identity)}\n`) throw new Error("IDENTITY");
+    const bytes = readAdminV1OfficialRecoveryFile({ target: path.join(root, "admin-v1-official-runtime-journal.json"), owner,
+      ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+    if (sha256Hex(bytes) !== marker.journal_sha256) throw new Error("CHANGED");
+    const document = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    if (bytes.toString("utf8") !== `${canonicalJson(document)}\n`) throw new Error("CANONICAL");
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: document }, authorization);
+    return Object.freeze({ ...marker });
+  } catch (error) {
+    if (error?.code === "OFFICIAL_AUTHORIZATION_SPENT") throw error;
+    throw new ConcreteRunnerError("OFFICIAL_RECOVERY_STATE_INVALID");
+  }
+}
+
+export function verifyOfficialRecoveryGitContext(authorization, filesystem = OFFICIAL_RECOVERY_READONLY_FS) {
+  try {
+    const root = authorization.execution.journal_directory;
+    const owner = filesystem.lstatSync(authorization.repository.root).uid;
+    const gitDirectory = path.join(authorization.repository.root, ".git");
+    const objectDirectory = path.join(gitDirectory, "objects");
+    for (const target of [authorization.repository.root, gitDirectory, objectDirectory]) {
+      const metadata = filesystem.lstatSync(target);
+      if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner || filesystem.realpathSync(target) !== target) throw new Error("REPOSITORY");
+    }
+    const contextDirectory = path.join(root, ".qualification-git-context");
+    for (const [relative, names] of [["", ["HEAD", "config", "objects", "refs"]], ["objects", []], ["refs", ["heads"]], ["refs/heads", []]]) {
+      const target = path.join(contextDirectory, relative);const metadata = filesystem.lstatSync(target);
+      if (!metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== owner || (metadata.mode & 0o777) !== 0o500 ||
+          filesystem.realpathSync(target) !== target || !exactObject(filesystem.readdirSync(target).sort(), names)) throw new Error("DIRECTORY");
+    }
+    for (const [name, expected] of [["HEAD", "ref: refs/heads/qualification-context\n"], ["config", "[core]\n\tbare = true\n\trepositoryformatversion = 0\n"]]) {
+      const bytes = readAdminV1OfficialRecoveryFile({ target: path.join(contextDirectory, name), owner, mode: 0o400, maximum_bytes: 256,
+        ...(filesystem === OFFICIAL_RECOVERY_READONLY_FS ? {} : { filesystem }) });
+      if (bytes.toString("utf8") !== expected) throw new Error("FILE");
+    }
+    return Object.freeze({ git_dir: contextDirectory, object_directory: objectDirectory });
+  } catch { throw new ConcreteRunnerError("OFFICIAL_RECOVERY_CONTEXT_INVALID"); }
+}
+
+export async function dispatchAdminV1OfficialRetentionRecovery(argumentsList, dependencies = {}, supervisorTrust = dependencies.supervisor_trust) {
+  let credentials;
+  try {
+    if (!Array.isArray(argumentsList) || argumentsList.length !== 3 || argumentsList[0] !== "--recover-admin-v1-official-retention" ||
+        argumentsList[1] !== "--authorization" || !exactAuthorizationPath(argumentsList[2])) throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_REQUIRED");
+    const trusted = officialAuthorizationFromSupervisorTrust(supervisorTrust, dependencies.now_epoch_ms, true);
+    const context = await dependencies.openOfficialRecoveryExecutionContext(trusted.authorization, supervisorTrust.retention_recovery);
+    const assertPending = () => {
+      const record = context?.journal?.load();
+      if (record?.retired === true) throw new ConcreteRunnerError("OFFICIAL_AUTHORIZATION_SPENT");
+      validateAdminV1OfficialRetentionRecoveryRecord(record, trusted.authorization);
+    };
+    assertPending();
+    await verifyAdminV1OfficialPreEffectAuthorization({ authorization_record: trusted.authorization, dependencies,
+      git_execution_context: context.git_execution_context, retention_recovery: true });
+    await dependencies.verifyOfficialRecoveryAdmission(trusted.authorization, context);
+    assertPending();
+    credentials = await dependencies.readOfficialCredentials(trusted.authorization, trusted.credential_source_policy);
+    const result = await dependencies.runAuthorizedOfficialRecovery({ authorization: trusted.authorization, credentials, execution_context: context });
+    if (result?.classification !== "RETENTION_COMPLETE") throw new ConcreteRunnerError("OFFICIAL_RECOVERY_PENDING");
+    const durable = context.journal.load();
+    const completed = validateAdminV1OfficialRetentionRecoveryRecord(durable, trusted.authorization, { complete: true });
+    if (classifyAdminV1OfficialRecoveryState(durable) !== "RETENTION_COMPLETE" || !exactOfficialRetentionReceipt(result.retention, trusted.authorization) ||
+        !exactObject(result.retention, completed.state.retention) || result.qualification_requests !== completed.state.last_completed_qualification_ordinal ||
+        result.official_requests !== completed.state.last_completed_official_ordinal || result.runtime_sessions !== completed.state.runtime_sessions ||
+        result.runtime_retries !== completed.state.runtime_retries || result.runtime_replays !== completed.state.runtime_replays ||
+        result.zero_residual_owned_state !== false) throw new ConcreteRunnerError("OFFICIAL_RECOVERY_STATE_INVALID");
+    emit(dependencies, { status: "PASS", code: "RETENTION_COMPLETE", qualification_requests: result.qualification_requests,
+      official_requests: result.official_requests, runtime_sessions: result.runtime_sessions, runtime_retries: result.runtime_retries,
+      runtime_replays: result.runtime_replays, zero_residual_owned_state: false, retention: structuredClone(result.retention) });
+    return { exit_code: 0, code: "RETENTION_COMPLETE" };
+  } catch (error) {
+    const code = safeOfficialCode(error);emit(dependencies, { status: "FAIL", code });return { exit_code: 1, code };
+  } finally {
+    for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0);
+  }
 }
 
 export async function dispatchAdminV1OfficialRunner(
@@ -539,24 +926,32 @@ export async function dispatchAdminV1OfficialRunner(
       credentials,
       execution_context: executionContext,
     });
+    const isolated = trusted.authorization.schema_version === 2;
+    const completionCode = isolated ? "RETENTION_COMPLETE" : "OFFICIAL_RUNTIME_COMPLETE";
     if (
-      result?.classification === "OFFICIAL_RUNTIME_COMPLETE" &&
+      result?.classification === completionCode &&
       result.official_requests === 20 && result.qualification_requests === 6 &&
       result.runtime_sessions === 1 && result.runtime_retries === 0 &&
-      result.runtime_replays === 0 && result.zero_residual_owned_state === true
+      result.runtime_replays === 0 && result.zero_residual_owned_state === !isolated &&
+      (!isolated || exactOfficialRetentionReceipt(result.retention, trusted.authorization))
     ) {
       emit(dependencies, {
         status: "PASS",
-        code: "OFFICIAL_RUNTIME_COMPLETE",
+        code: completionCode,
         qualification_requests: 6,
         official_requests: 20,
         runtime_sessions: 1,
         runtime_retries: 0,
         runtime_replays: 0,
+        ...(isolated ? {
+          zero_residual_owned_state: false,
+          retention: structuredClone(result.retention),
+        } : {}),
       });
-      return { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" };
+      return { exit_code: 0, code: completionCode };
     }
-    if (result?.classification === "RECOVERY_PENDING") {
+    if (result?.classification === "RECOVERY_PENDING" ||
+        isolated && result?.classification === "RETENTION_PENDING") {
       emit(dependencies, { status: "FAIL", code: "OFFICIAL_RECOVERY_PENDING" });
       return { exit_code: 1, code: "OFFICIAL_RECOVERY_PENDING" };
     }
@@ -586,6 +981,9 @@ export async function dispatchConcreteQualificationRunner(
       live_mutations: 0,
     });
     return { exit_code: 0, code: "PASS_SELF_TEST" };
+  }
+  if (Array.isArray(argumentsList) && argumentsList[0] === "--recover-admin-v1-official-retention") {
+    return dispatchAdminV1OfficialRetentionRecovery(argumentsList, dependencies, supervisorTrust);
   }
   if (Array.isArray(argumentsList) &&
     argumentsList[0] === "--run-admin-v1-official") {
@@ -703,6 +1101,39 @@ function exactGitExecutionContext(value) {
     realpathSync(value.object_directory) === value.object_directory;
 }
 
+export function runnerBrokerOperation(args) {
+  if (!Array.isArray(args) || args.some((value) => typeof value !== "string")) brokerFailure();
+  const fixed = {"RUNNER_REMOTE_GET_URL_ORIGIN":["remote","get-url","origin"],"RUNNER_SYMBOLIC_REF_HEAD":["symbolic-ref","--quiet","--short","HEAD"],"RUNNER_REV_PARSE_HEAD":["rev-parse","HEAD"],"RUNNER_REV_PARSE_ORIGIN_MAIN":["rev-parse","refs/remotes/origin/main"],"RUNNER_REV_LIST_AHEAD_BEHIND":["rev-list","--left-right","--count","HEAD...refs/remotes/origin/main"],"RUNNER_DIFF_CACHED_QUIET":["diff","--cached","--quiet","--exit-code"],"RUNNER_WORKTREE_LIST":["worktree","list","--porcelain"],"RUNNER_STATUS_PORCELAIN":["status","--porcelain=v1","--untracked-files=all","-z"],"RUNNER_DIFF_FILES_NAMES":["diff-files","--name-only","-z","--"],"RUNNER_LS_FILES_OTHERS":["ls-files","--others","--exclude-standard","-z","--"]};
+  for (const [family, operation] of Object.entries(fixed)) {
+    if (args.length === operation.length && operation.every((value, index) => args[index] === value)) return { family, params: {} };
+  }
+  const shape = (operation, pattern, family) => {
+    if (args.length !== operation.length + 1 || !operation.every((value, index) => args[index] === value)) return null;
+    const match = pattern.exec(args.at(-1));
+    return match ? { family, params: { commit: match[1] } } : null;
+  };
+  const selected = shape(["cat-file", "-e"], /^([0-9a-f]{40})\^\{commit\}$/u, "RUNNER_CAT_FILE_COMMIT") ??
+    shape(["rev-list", "--parents", "-n", "1"], /^([0-9a-f]{40})$/u, "RUNNER_REV_LIST_SINGLE_PARENT") ??
+    shape(["diff-tree", "--no-commit-id", "--name-only", "-r"], /^([0-9a-f]{40})$/u, "RUNNER_DIFF_TREE_NAMES") ??
+    shape(["show", "-s", "--format=%T"], /^([0-9a-f]{40})$/u, "RUNNER_SHOW_TREE");
+  if (selected) return selected;
+  if (args.length === 2 && args[0] === "show") {
+    const match = /^([0-9a-f]{40}):(.+)$/u.exec(args[1]);
+    if (match) {
+      const relative = match[2];
+      const folded = relative.toLowerCase();
+      const leaf = path.posix.basename(folded);
+      if (relative.length > 4096 || /[\u0000-\u001f\u007f\\]/u.test(relative) ||
+          relative.startsWith("/") || relative.split("/").some((part) => !part || part === "." || part === "..") ||
+          path.posix.normalize(relative) !== relative || folded.split("/").includes(".git") ||
+          PROTECTED_DRAFT_PATHS.includes(folded) || leaf === ".env" ||
+          (leaf.startsWith(".env.") && path.posix.basename(relative) !== ".env.example")) brokerFailure();
+      return { family: "RUNNER_SHOW_BLOB", params: { commit: match[1], path: relative } };
+    }
+  }
+  brokerFailure();
+}
+
 function runGitReadOnly(
   repositoryRoot,
   args,
@@ -736,10 +1167,20 @@ function runGitReadOnly(
               GIT_WORK_TREE: workTreeRoot,
             }),
       };
-  const result = spawnSync("/usr/bin/sandbox-exec", [
+  let result;
+  if (brokerMode()) {
+    const operation = runnerBrokerOperation(args);
+    result = brokerRequest(operation.family, operation.params, {
+      repository_root: repositoryRoot,
+      git_dir: gitExecutionContext?.git_dir ?? null,
+      object_directory: gitExecutionContext?.object_directory ?? null,
+      work_tree_root: workTreeRoot,
+    });
+  } else {
+    result = spawnSync("/usr/bin/sandbox-exec", [
     "-p",
     PRE_EFFECT_GIT_SANDBOX_PROFILE,
-    "/usr/bin/git",
+    "/Library/Developer/CommandLineTools/usr/bin/git",
     "--no-replace-objects",
     ...PRE_EFFECT_GIT_CONFIG,
     "--no-optional-locks",
@@ -753,8 +1194,13 @@ function runGitReadOnly(
     timeout: GIT_TIMEOUT_MS,
     windowsHide: true,
   });
+  }
   if (
     !result ||
+    result.error ||
+    result.signal ||
+    result.timeout ||
+    result.overflow ||
     !(result.status === 0 || (allowExitOne && result.status === 1)) ||
     !(result.stdout instanceof Uint8Array) ||
     !(result.stderr instanceof Uint8Array) ||
@@ -1213,6 +1659,7 @@ export function createConcreteRunnerDependencies({
   officialTransport = null,
   readCredentialEnvironment = readConcreteCredentialEnvironment,
   resolveCredentialEnvironment = resolveConcreteCredentialEnvironment,
+  readOfficialBundle = readAdminV1OfficialIsolatedBundle,
   nowEpochMs = Date.now(),
   writeOutput,
 } = {}) {
@@ -1289,6 +1736,25 @@ export function createConcreteRunnerDependencies({
       officialContexts.set(authorization.authorization_id_sha256, context);
       return context;
     },
+    openOfficialRecoveryExecutionContext(authorization, marker) {
+      const admission = readExistingOfficialRecoveryAdmission(authorization, marker);
+      const gitExecutionContext = verifyOfficialRecoveryGitContext(authorization);
+      const journal = createAdminV1OfficialJournal({ directory: authorization.execution.journal_directory,
+        identity: { authorization_id_sha256: authorization.authorization_id_sha256, run_id: authorization.run_id }, existing_only: true });
+      return Object.freeze({ journal, git_execution_context: gitExecutionContext, retention_recovery: admission });
+    },
+    verifyOfficialRecoveryAdmission(authorization, context) {
+      readExistingOfficialRecoveryAdmission(authorization, context.retention_recovery);
+      if (!exactObject(verifyOfficialRecoveryGitContext(authorization), context.git_execution_context)) {
+        throw new ConcreteRunnerError("OFFICIAL_RECOVERY_CONTEXT_INVALID");
+      }
+    },
+    async runAuthorizedOfficialRecovery({ authorization, credentials, execution_context }) {
+      try {
+        const transport = officialTransport ?? createAdminV1OfficialConcreteTransport({ execution_context });
+        return await recoverConcreteAdminV1OfficialRetention({ authorization, credentials, execution_context, transport, now_epoch_ms: nowEpochMs });
+      } finally { for (const value of Object.values(credentials ?? {})) if (value instanceof Uint8Array) value.fill(0); }
+    },
     verifyNoPriorOfficialRecovery(authorization) {
       const context = officialContexts.get(authorization.authorization_id_sha256);
       if (!context) return { status: "MISMATCH" };
@@ -1298,15 +1764,7 @@ export function createConcreteRunnerDependencies({
       } catch {
         return { status: "MISMATCH" };
       }
-      if (existing === null) return { status: "ABSENT" };
-      if (existing.retired === true) return { status: "RETIRED" };
-      try {
-        const classification = classifyAdminV1OfficialRecoveryState(existing);
-        if (classification === "CLEANUP_COMPLETE") return { status: "SPENT" };
-        return { status: "RECOVERY_PENDING" };
-      } catch {
-        return { status: "MISMATCH" };
-      }
+      return classifyAdminV1OfficialPriorJournal(existing, authorization.schema_version);
     },
     async readLiveCredentials(authorization, credentialSourcePolicy) {
       const environment = readCredentialEnvironment({ repositoryRoot });
@@ -1334,6 +1792,33 @@ export function createConcreteRunnerDependencies({
       });
     },
     async readOfficialCredentials(authorization, credentialSourcePolicy) {
+      if (authorization?.schema_version === 2) {
+        validateAdminV1OfficialAuthorization(authorization, { now_epoch_ms: nowEpochMs });
+        validateOfficialIsolationAuthorization(authorization, nowEpochMs);
+        const root = authorization.execution.journal_directory;
+        const directory = lstatSync(root);
+        if (!directory.isDirectory() || directory.isSymbolicLink() ||
+          directory.uid !== lstatSync(authorization.repository.root).uid ||
+          (directory.mode & 0o777) !== 0o700 || realpathSync(root) !== root) {
+          throw new ConcreteRunnerError("OFFICIAL_ISOLATED_ROOT_INVALID");
+        }
+        let bundle;
+        try {
+          bundle = await readOfficialBundle({
+            authorization, now_epoch_ms: nowEpochMs,
+          });
+          return loadAdminV1OfficialCredentials({
+            authorization,
+            credential_bundle: bundle,
+            credential_source_policy: credentialSourcePolicy,
+            now_epoch_ms: nowEpochMs,
+          });
+        } finally {
+          for (const value of Object.values(bundle?.values ?? {})) {
+            if (value instanceof Uint8Array) value.fill(0);
+          }
+        }
+      }
       const environment = readCredentialEnvironment({ repositoryRoot });
       const resolved = resolveCredentialEnvironment({
         environment,

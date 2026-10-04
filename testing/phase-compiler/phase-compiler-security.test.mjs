@@ -592,10 +592,17 @@ async function main() {
     assert.equal(oversizedErr.read(), '');
 
     const canaryExecutable = '/usr/bin/git';
-    await access(canaryExecutable, constants.X_OK);
-    const canaryExecutableStat = await lstat(canaryExecutable);
+    const canaryExecutableStat = await lstat(canaryExecutable, { bigint: true });
     assert.equal(canaryExecutableStat.isFile(), true);
     assert.equal(canaryExecutableStat.isSymbolicLink(), false);
+    assert.equal(canaryExecutableStat.uid, 0n);
+    assert.equal(canaryExecutableStat.gid, 0n);
+    assert.equal(canaryExecutableStat.mode & 0o7777n, 0o755n);
+    const canaryExecutableAfter = await lstat(canaryExecutable, { bigint: true });
+    for (const field of ['dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeNs', 'ctimeNs']) {
+      assert.equal(typeof canaryExecutableStat[field], 'bigint');
+      assert.equal(canaryExecutableAfter[field], canaryExecutableStat[field]);
+    }
     const canarySpec = structuredClone(spec);
     canarySpec.phase_id = 'P04';
     canarySpec.workstream = 'SYNTHETIC_COMMAND_NON_EXECUTION_CANARY';
@@ -696,8 +703,9 @@ async function main() {
       assert.equal(/process\.env|\bfetch\s*\(/u.test(source), false, moduleName);
       if (!['external-bundle-writer.mjs', 'compiled-bundle-verifier.mjs'].includes(moduleName)) assert.equal(/node:child_process/u.test(source), false, moduleName);
       else if (moduleName === 'external-bundle-writer.mjs') {
-        assert.equal((source.match(/spawn\('\/usr\/bin\/python3'/gu) ?? []).length, 1);
-        assert.match(source, /spawn\('\/usr\/bin\/python3', \['-I', '-S', '-c', BOUND_PARENT_PROGRAM, \.\.\.args\]/u);
+        assert.equal(source.includes("const PYTHON_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python' : '/usr/bin/python3';"), true);
+        assert.equal((source.match(/spawn\(PYTHON_EXECUTABLE/gu) ?? []).length, 1);
+        assert.match(source, /spawn\(PYTHON_EXECUTABLE, \['-I', '-S', '-c', BOUND_PARENT_PROGRAM, \.\.\.args\]/u);
         assert.match(source, /code === 72[^\n]+COMPILER_CAPABILITY_UNAVAILABLE/u);
         assert.match(source, /child\.on\('error',[^\n]+COMPILER_CAPABILITY_UNAVAILABLE/u);
         assert.match(source, /env: \{ LANG: 'C', LC_ALL: 'C', PATH: '\/usr\/bin:\/bin' \}/u);
@@ -706,7 +714,8 @@ async function main() {
         assert.equal(source.includes('}, 5000);'), true);
         assert.match(source, /shell: false/u);
       } else {
-        assert.equal((source.match(/spawn\('\/usr\/bin\/python3'/gu) ?? []).length, 1);
+        assert.equal(source.includes("const PYTHON_EXECUTABLE = process.platform === 'darwin' ? '/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python' : '/usr/bin/python3';"), true);
+        assert.equal((source.match(/spawn\(PYTHON_EXECUTABLE/gu) ?? []).length, 1);
         assert.match(source, /stdio: \['ignore', 'pipe', 'pipe', binding\.handle\.fd\]/u);
         assert.match(source, /env: \{ LANG: 'C', LC_ALL: 'C', PATH: '\/usr\/bin:\/bin' \}/u);
         assert.match(source, /outputBytes > maximumOutputBytes/u);
@@ -723,7 +732,7 @@ async function main() {
   }
   assert.equal(await lstat(tempRoot).catch(() => null), null);
   assert.equal(compiledCommandsExecuted, 0);
-  process.stdout.write('PASS_PHASE_COMPILER_SECURITY gate=7 external_new_only=true bound_parent_fd=nofollow-directory-identity-stable parent_replacement=before,temp,publish,zip-fail-closed-and-no-write writer_zip_window_aba=FAIL_CLOSED verifier_directory_aba=FAIL_CLOSED verifier_zip_aba=FAIL_CLOSED sibling_temp_verified=true atomic_no_replace_publish=true native_helper=fixed-isolated-bounded-dirfd-protocol dir_mode=0700 file_mode=0600 links=1 competitor_replacement_no_clobber=true retained_failed_temp=true path_symlink_hardlink_mode_tamper=PASS marker_checksum_set_tamper=PASS descriptor_bound_reads=true malformed_artifacts=in-memory,directory,cli-fail-closed inspection_text=unicode-controls-format,bidi,nfc,template,marker,token,structural-markdown,html,json,shell,closed-v1-question-templates,exact-template-subject-phrases,closed-v1-title-subjects-and-heads,colon-and-unbounded-dot-closed,host-uri-role-approval-secret-environment-action-prompt-meta-out-of-vocabulary-all-fields-rejected-no-echo benign_prose=open,find,make,produce,read,written,Go,Next.js-accepted inspection_boundaries=complete-eight authority_predicate=multi-field-zero-effect zip_store_transport=PASS zip_name_path_bound=true zip_central_binding=PASS zip_size_bound=PASS cli=validate,compile,verify,explain,error-code-unknown cli_inputs=nofollow,bounded,post-identity spec_parse=duplicate-and-schema-stable command_canary=absolute-git-x-ok-exact-cwd-target-not-executed cli_repo_root=fixed sanitized_failures=true temp_cleanup=true compiled_commands_executed=0\n');
+  process.stdout.write('PASS_PHASE_COMPILER_SECURITY gate=7 external_new_only=true bound_parent_fd=nofollow-directory-identity-stable parent_replacement=before,temp,publish,zip-fail-closed-and-no-write writer_zip_window_aba=FAIL_CLOSED verifier_directory_aba=FAIL_CLOSED verifier_zip_aba=FAIL_CLOSED sibling_temp_verified=true atomic_no_replace_publish=true native_helper=fixed-isolated-bounded-dirfd-protocol dir_mode=0700 file_mode=0600 links=1 competitor_replacement_no_clobber=true retained_failed_temp=true path_symlink_hardlink_mode_tamper=PASS marker_checksum_set_tamper=PASS descriptor_bound_reads=true malformed_artifacts=in-memory,directory,cli-fail-closed inspection_text=unicode-controls-format,bidi,nfc,template,marker,token,structural-markdown,html,json,shell,closed-v1-question-templates,exact-template-subject-phrases,closed-v1-title-subjects-and-heads,colon-and-unbounded-dot-closed,host-uri-role-approval-secret-environment-action-prompt-meta-out-of-vocabulary-all-fields-rejected-no-echo benign_prose=open,find,make,produce,read,written,Go,Next.js-accepted inspection_boundaries=complete-eight authority_predicate=multi-field-zero-effect zip_store_transport=PASS zip_name_path_bound=true zip_central_binding=PASS zip_size_bound=PASS cli=validate,compile,verify,explain,error-code-unknown cli_inputs=nofollow,bounded,post-identity spec_parse=duplicate-and-schema-stable command_canary=absolute-git-root-owned-0755-stable-metadata-exact-cwd-target-not-executed cli_repo_root=fixed sanitized_failures=true temp_cleanup=true compiled_commands_executed=0\n');
 }
 
 try {

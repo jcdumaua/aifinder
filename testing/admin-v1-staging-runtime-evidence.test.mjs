@@ -1416,7 +1416,12 @@ function mutationResults(schema, evidence) {
     ["authorization.dynamic_target_confirmation", false],
     ["authorization.confirmation_count", 0],
     ["authorization.approval_token_persisted", true],
-    ["publication.lifecycle", "RUNTIME_COMPLETE"],
+    [
+      "publication.lifecycle",
+      evidence.publication.lifecycle === "PRE_RUNTIME"
+        ? "RUNTIME_COMPLETE"
+        : "PRE_RUNTIME",
+    ],
     ["publication.qualification.journal_retained", false],
     ["predecessor.phase_33na_passed", true],
     ["predecessor.phase_33na_final_dependency_evidence_ratified", false],

@@ -1,6 +1,8 @@
 import path from "node:path";
 import {
   GovernanceError,
+  createHashCapture,
+  fileIdentity,
   appSurfaceDigest,
   appSurfaceInventory,
   categoricalFailure,
@@ -9,6 +11,16 @@ import {
   stableSortedPaths,
   worktreeGitIdentity,
 } from "./static-governance-utils.mjs";
+
+import { c08TrustedContext } from "../scripts/c08-child-receipts.mjs";
+
+let hashCapture = null;
+let hashFrameAttempted = false;
+function emitHashFrame() {
+  if (hashFrameAttempted) throw new GovernanceError("READ_ONLY_GIT_FAILED");
+  hashFrameAttempted = true;
+  console.log(hashCapture ? hashCapture.finishFrame() : "C08_CHILD_RECEIPTS_V2 null");
+}
 
 const MATRIX_PATH = "testing/readiness-coverage-matrix.json";
 const MANIFEST_PATH = "testing/static-test-safety-manifest.json";
@@ -263,14 +275,24 @@ function validateMatrix() {
     "MATRIX_PATH_ORDER",
   );
   assert(compareExactPathSets(paths, inventory).equal, "MATRIX_INVENTORY");
+  const parserIdentity = fileIdentity("scripts/c08-child-receipts.mjs");
+  const context = c08TrustedContext(matrix, manifest.c08_child_receipt_contract, {
+    producer: fileIdentity("testing/static-governance-utils.mjs").sha256,
+    caller: fileIdentity("testing/readiness-coverage-matrix.test.mjs").sha256,
+    matrix: fileIdentity(MATRIX_PATH).sha256,
+    parser: { bytes: parserIdentity.bytes, sha256: parserIdentity.sha256 },
+  });
+  const receiptSink = { rows: [], put(row) { this.rows.push(row); return true; } };
+  hashCapture = createHashCapture(context.plan, context.trustedBindings, receiptSink);
+
   for (const repositoryPath of inventory) {
     assert(
-      /^git:[0-9a-f]{40}$/.test(worktreeGitIdentity(repositoryPath)),
+      /^git:[0-9a-f]{40}$/.test(worktreeGitIdentity(repositoryPath, hashCapture)),
       "MATRIX_ROUTE_IDENTITY_FORMAT",
     );
   }
   assert(
-    matrix.route_inventory_digest === appSurfaceDigest(),
+    matrix.route_inventory_digest === appSurfaceDigest(hashCapture),
     "MATRIX_ROUTE_DIGEST",
   );
 
@@ -832,10 +854,14 @@ function validateMatrix() {
 
 try {
   const result = validateMatrix();
+  emitHashFrame();
   console.log(
     `PASS_READINESS_COVERAGE_MATRIX entries=${result.entries} public=${result.publicCount} admin=${result.adminCount} current_governance=${result.currentGovernance} v1_admin_staging_dependency_ready=${result.v1AdminHermetic} v1_admin_runtime_validated=${result.v1AdminRuntimeValidated} v1_admin_deferred=${result.v1AdminDeferred} launch_blocking=${result.launchBlocking} unblocked=${result.entries - result.launchBlocking} gaps=${result.gaps} public_launch=NO_GO failures=0 internal_failures=0`,
   );
 } catch (caught) {
+  if (!hashFrameAttempted) {
+    try { emitHashFrame(); } catch { caught = new GovernanceError("READ_ONLY_GIT_FAILED"); }
+  }
   if (caught instanceof GovernanceError) {
     categoricalFailure(caught.stage);
     console.log("FAIL_READINESS_COVERAGE_MATRIX failures=1 internal_failures=0");

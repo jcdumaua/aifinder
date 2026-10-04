@@ -22,7 +22,7 @@ const FIXED_MANIFEST_PATH =
 const MANIFEST_MODULE_PATH =
   "scripts/launch-operations-kernel/manifest.mjs";
 const CANDIDATE_VERSION =
-  "admin-v1-official-runtime-post-publication-activation-bridge-v1";
+  "CURRENT_CANDIDATE_57_PRESERVED_FOUR_ROUTE_V1";
 const COMPLETION_MARKER =
   "ADMIN_V1_OFFICIAL_RUNTIME_POST_PUBLICATION_ACTIVATION_BRIDGE_CANDIDATE_V1";
 const CONCRETE_RUNNER_PATH =
@@ -109,6 +109,7 @@ const INDEPENDENTLY_REVIEWED_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
+  "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -150,6 +151,7 @@ const INDEPENDENTLY_REVIEWED_SEMANTIC_SOURCE_PATHS = Object.freeze([
   FIRST_ENVIRONMENT_RUNTIME_TEST_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
   FIRST_ENVIRONMENT_SUPERVISOR_TEST_PATH,
+  "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs",
   OFFICIAL_LIVE_PLATFORM_PATH,
   OFFICIAL_LIVE_PLATFORM_TEST_PATH,
   OFFICIAL_RUNNER_TEST_PATH,
@@ -192,6 +194,9 @@ const PRIVILEGED_IMPORT_TARGETS = new Set([
   FIRST_ENVIRONMENT_SUPERVISOR_PATH,
 ]);
 const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
+  [FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH, new Set([
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
+  ])],
   [FIRST_ENVIRONMENT_PLATFORM_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
@@ -222,6 +227,7 @@ const PRIVILEGED_IMPORT_ALLOWLIST = new Map([
   ])],
   [FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_TEST_PATH, new Set([
     FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH,
+    FIRST_ENVIRONMENT_RUNTIME_PATH,
   ])],
   [FIRST_ENVIRONMENT_SUPERVISOR_PATH, new Set([
     FIRST_ENVIRONMENT_RUNTIME_PATH,
@@ -346,11 +352,13 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ])],
   [OFFICIAL_AUTHORIZATION_PATH, new Set(["node:fs", "node:path"])],
   [OFFICIAL_AUTHORIZATION_TEST_PATH, new Set(["node:assert/strict"])],
+  [OFFICIAL_LIVE_PLATFORM_PATH, new Set(["node:crypto"])],
+  [OFFICIAL_LIVE_PLATFORM_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_CONCRETE_BRIDGE_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_RUNNER_TEST_PATH, new Set(["node:assert/strict"])],
   [
     OFFICIAL_RUNTIME_PATH,
-    new Set(["node:fs", "node:path"]),
+    new Set(["node:crypto", "node:fs", "node:path"]),
   ],
   [
     OFFICIAL_RUNTIME_TEST_PATH,
@@ -448,7 +456,7 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ],
   [
     "scripts/launch-operations-kernel/source-policy.test.mjs",
-    new Set(["node:assert/strict", "node:crypto", "node:fs", "node:path"]),
+    new Set(["node:assert/strict", "node:child_process", "node:crypto", "node:fs", "node:os", "node:path"]),
   ],
 ]);
 const requireDependency = createRequire(import.meta.url);
@@ -567,7 +575,10 @@ function classifyMember(relativePath) {
   if (relativePath.endsWith(".test.mjs")) {
     return { role: "TEST", surface: "verification" };
   }
-  if (relativePath.endsWith(".schema.json")) {
+  if (
+    relativePath === "scripts/launch-operations-kernel/admin-v1-official-isolation.d.mts" ||
+    relativePath.endsWith(".schema.json")
+  ) {
     return { role: "SCHEMA", surface: "evidence" };
   }
   if (relativePath.endsWith("legacy-freeze.json")) {
@@ -932,6 +943,77 @@ function canonicalLocalModuleTarget(relativePath, moduleSpecifier) {
 
 function sourceSyntaxFacts(relativePath, source) {
   const ts = loadTypescriptDependency();
+  const transportBegin = "// BEGIN A20_FIXED_FD_BROKER_CLIENT";
+  const transportEnd = "// END A20_FIXED_FD_BROKER_CLIENT";
+  const transportStart = source.indexOf(transportBegin);
+  const transportEndMarker = source.indexOf(transportEnd);
+  const transportFinish = transportEndMarker + transportEnd.length;
+  const transportRegion = source.slice(transportStart, transportFinish);
+  // ASCII membership makes this exact character count an exact UTF-8 byte count.
+  const reviewedTransportRange = relativePath === CONCRETE_RUNNER_PATH &&
+    transportStart >= 0 && transportEndMarker > transportStart &&
+    source.lastIndexOf(transportBegin) === transportStart &&
+    source.lastIndexOf(transportEnd) === transportEndMarker &&
+    transportRegion.length === 10641 && /^[\x00-\x7f]*$/u.test(transportRegion) &&
+    sha256Hex(transportRegion) ===
+      "936839731b7fc4c57cd1ac7fdc7135da378c5eee814528e64092c73c19f49147"
+    ? { start: transportStart, finish: transportFinish }
+    : null;
+  const reviewedTransportNode = (node) => reviewedTransportRange !== null &&
+    node.pos >= reviewedTransportRange.start &&
+    node.end <= reviewedTransportRange.finish;
+  const transportTestBegin = "// BEGIN PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+  const transportTestEnd = "// END PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+  const transportTestStart = source.indexOf(transportTestBegin);
+  const transportTestEndMarker = source.indexOf(transportTestEnd);
+  const transportTestFinish = transportTestEndMarker + transportTestEnd.length;
+  const transportTestRegion = source.slice(transportTestStart, transportTestFinish);
+  const reviewedTransportTestRange = relativePath ===
+    "scripts/launch-operations-kernel/source-policy.test.mjs" &&
+    transportTestStart >= 0 && transportTestEndMarker > transportTestStart &&
+    source.lastIndexOf(transportTestBegin) === transportTestStart &&
+    source.lastIndexOf(transportTestEnd) === transportTestEndMarker &&
+    transportTestRegion.length === 10378 && /^[\x00-\x7f]*$/u.test(transportTestRegion) &&
+    sha256Hex(transportTestRegion) ===
+      "a02c5479514e93aafb7a1911d980cfffbf9089d0040cdabb6f048e5caeb16593"
+    ? { start: transportTestStart, finish: transportTestFinish } : null;
+  const reviewedTransportTestNode = (node) => reviewedTransportTestRange !== null &&
+    node.pos >= reviewedTransportTestRange.start && node.end <= reviewedTransportTestRange.finish;
+  const reviewedIsolationDescriptorGuard =
+    relativePath ===
+      "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs" &&
+    sha256Hex(source) ===
+      "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c";
+  // Permit descriptor reflection only inside the exact reviewed receipt validator.
+  const retentionReceiptBegin = "function exactOfficialRetentionReceipt(receipt, authorization) {";
+  const retentionReceiptEnd = "\n}\n\nexport function classifyAdminV1OfficialPriorJournal";
+  const retentionReceiptStart = source.indexOf(retentionReceiptBegin);
+  const retentionReceiptEndMarker = source.indexOf(retentionReceiptEnd, retentionReceiptStart);
+  const retentionReceiptFinish = retentionReceiptEndMarker + 2;
+  const retentionReceiptRegion = source.slice(retentionReceiptStart, retentionReceiptFinish);
+  const reviewedRetentionReceiptRange = relativePath === CONCRETE_RUNNER_PATH &&
+    retentionReceiptStart >= 0 && retentionReceiptEndMarker > retentionReceiptStart &&
+    source.lastIndexOf(retentionReceiptBegin) === retentionReceiptStart &&
+    source.lastIndexOf(retentionReceiptEnd) === retentionReceiptEndMarker &&
+    retentionReceiptRegion.length === 1408 && /^[\x00-\x7f]*$/u.test(retentionReceiptRegion) &&
+    sha256Hex(retentionReceiptRegion) === "3924dc9e8ad16b1fc58cd3107bf67cb707f6be88733c3e909868fb92f368be37"
+    ? { start: retentionReceiptStart, finish: retentionReceiptFinish } : null;
+  const reviewedRetentionReceiptNode = (node) => reviewedRetentionReceiptRange !== null &&
+    node.pos >= reviewedRetentionReceiptRange.start && node.end <= reviewedRetentionReceiptRange.finish;
+  const preflightObservationBegin = "    const observationValid = isolated";
+  const preflightObservationEnd = "\n    if (\n      !observationValid ||";
+  const preflightObservationStart = source.indexOf(preflightObservationBegin);
+  const preflightObservationFinish = source.indexOf(preflightObservationEnd, preflightObservationStart);
+  const preflightObservationRegion = source.slice(preflightObservationStart, preflightObservationFinish);
+  const reviewedPreflightObservationRange = relativePath === OFFICIAL_LIVE_PLATFORM_PATH &&
+    preflightObservationStart >= 0 && preflightObservationFinish > preflightObservationStart &&
+    source.lastIndexOf(preflightObservationBegin) === preflightObservationStart &&
+    source.lastIndexOf(preflightObservationEnd) === preflightObservationFinish &&
+    preflightObservationRegion.length === 614 && /^[\x00-\x7f]*$/u.test(preflightObservationRegion) &&
+    sha256Hex(preflightObservationRegion) === "4dfcfcd6b4ec03caf05016115068faf5771eec116a5d6651c0fd8e1ad3604026"
+    ? { start: preflightObservationStart, finish: preflightObservationFinish } : null;
+  const reviewedPreflightObservationNode = (node) => reviewedPreflightObservationRange !== null &&
+    node.pos >= reviewedPreflightObservationRange.start && node.end <= reviewedPreflightObservationRange.finish;
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -944,9 +1026,67 @@ function sourceSyntaxFacts(relativePath, source) {
   )) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
+  const brokerNativeFsIdentifiers = [];
+  const exactBrokerNativeFsImports = [];
+  function collectBrokerNativeFsIdentifiers(node) {
+    if (ts.isIdentifier(node) && node.text === "brokerNativeFs") {
+      brokerNativeFsIdentifiers.push(node);
+    }
+    ts.forEachChild(node, collectBrokerNativeFsIdentifiers);
+  }
+  for (const statement of sourceFile.statements) {
+    collectBrokerNativeFsIdentifiers(statement);
+    if (!ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteralLike(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "node:fs") continue;
+    const clause = statement.importClause;
+    const bindings = clause?.namedBindings;
+    if (clause !== undefined && clause.isTypeOnly === false &&
+      clause.name === undefined && bindings !== undefined &&
+      ts.isNamespaceImport(bindings) && bindings.name.text === "brokerNativeFs" &&
+      statement.attributes === undefined && statement.modifiers === undefined) {
+      exactBrokerNativeFsImports.push({ declaration: statement, binding: bindings.name });
+    }
+  }
+  // The fixed region contains three defaults and one native-admission guard.
+  // Every other identifier occurrence invalidates the single import attestation;
+  // all nodes still undergo the ordinary capability walk below.
+  const reviewedBrokerNativeFsImport = reviewedTransportRange !== null &&
+    exactBrokerNativeFsImports.length === 1 && brokerNativeFsIdentifiers.length === 5 &&
+    brokerNativeFsIdentifiers.every((node) =>
+      node === exactBrokerNativeFsImports[0].binding || reviewedTransportNode(node))
+    ? exactBrokerNativeFsImports[0].declaration
+    : null;
+  const transportTestImports = new Map([
+    ["node:child_process", 'import { spawn, spawnSync } from "node:child_process";'],
+    ["node:fs", 'import { closeSync, constants, mkdtempSync, openSync, readFileSync, rmSync, writeSync } from "node:fs";'],
+    ["node:os", 'import { tmpdir } from "node:os";'],
+  ]);
+  const transportTestImportedBindings = new Set([
+    "spawn", "spawnSync", "closeSync", "constants", "mkdtempSync", "openSync", "rmSync", "writeSync", "tmpdir",
+  ]);
+  const transportTestImportNodes = new Set();
+  let transportTestImportsValid = reviewedTransportTestRange !== null;
+  if (transportTestImportsValid) {
+    for (const [specifier, text] of transportTestImports) {
+      const matches = sourceFile.statements.filter((statement) => ts.isImportDeclaration(statement) &&
+        ts.isStringLiteralLike(statement.moduleSpecifier) && statement.moduleSpecifier.text === specifier);
+      if (matches.length !== 1 || matches[0].getText(sourceFile) !== text) transportTestImportsValid = false;
+      else transportTestImportNodes.add(matches[0]);
+    }
+    function confineTransportTestImports(node) {
+      if (ts.isIdentifier(node) && transportTestImportedBindings.has(node.text) && !reviewedTransportTestNode(node)) {
+        const owner = node.parent;
+        if (!ts.isImportSpecifier(owner) || !transportTestImportNodes.has(owner.parent.parent.parent)) transportTestImportsValid = false;
+      }
+      ts.forEachChild(node, confineTransportTestImports);
+    }
+    for (const statement of sourceFile.statements) confineTransportTestImports(statement);
+  }
   const moduleSpecifiers = [];
   let computedDynamicImport = false;
   let runtimeCodeConstruction = false;
+  if (reviewedTransportTestRange !== null && !transportTestImportsValid) runtimeCodeConstruction = true;
   let filesystemMutation = false;
   let network = false;
   let environment = false;
@@ -1387,6 +1527,7 @@ function sourceSyntaxFacts(relativePath, source) {
       "isFunctionDeclaration",
       "isIdentifier",
       "isImportDeclaration",
+      "isImportSpecifier",
       "isIfStatement",
       "isMetaProperty",
       "isNamedImports",
@@ -1617,6 +1758,7 @@ function sourceSyntaxFacts(relativePath, source) {
           "collectConstantDeclarations",
           "collectIdentityAttestation",
           "collectModuleLoaderDeclarations",
+          "inspectAuthorizationFs",
           "visit",
         ]);
         const isDeclaration =
@@ -2080,7 +2222,17 @@ function sourceSyntaxFacts(relativePath, source) {
           ? memberName(parent)
           : null;
       if (directMember === "env") {
-        environment = true;
+        if (!reviewedTransportNode(parent)) environment = true;
+      } else if (directMember === "hrtime" && reviewedTransportNode(parent)) {
+        // The exact region uses only bounded monotonic deadline bookkeeping.
+      } else if (directMember === "binding" && reviewedTransportNode(parent) &&
+        ts.isCallExpression(parent.parent) && parent.parent.expression === parent &&
+        parent.parent.arguments.length === 1 &&
+        stringValue(parent.parent.arguments[0]) === "pipe_wrap") {
+        // Exact pinned code opens only validated FIFO descriptors 3/4 and sets
+        // nonblocking status. No general native binding or process exemption.
+      } else if (["execPath", "platform", "kill"].includes(directMember) && reviewedTransportTestNode(parent) && transportTestImportsValid) {
+        // Exact reviewed finite test children only; production receives no allowance.
       } else if (
         directMember === null ||
         !exactReviewedProcessUse(node, parent, directMember)
@@ -2102,13 +2254,17 @@ function sourceSyntaxFacts(relativePath, source) {
     ) {
       runtimeCodeConstruction = true;
     }
-    if (ts.isIdentifier(node) && node.text === "Reflect") {
+    if (ts.isIdentifier(node) && node.text === "Reflect" &&
+        !reviewedIsolationDescriptorGuard && !reviewedRetentionReceiptNode(node)) {
       runtimeCodeConstruction = true;
     }
     if (
       (ts.isPropertyAccessExpression(node) ||
         ts.isElementAccessExpression(node)) &&
-      runtimeConstructionMembers.has(memberName(node))
+      runtimeConstructionMembers.has(memberName(node)) &&
+      !((reviewedIsolationDescriptorGuard || reviewedRetentionReceiptNode(node) ||
+        reviewedPreflightObservationNode(node)) &&
+        memberName(node) === "getOwnPropertyDescriptors")
     ) {
       runtimeCodeConstruction = true;
     }
@@ -2168,11 +2324,11 @@ function sourceSyntaxFacts(relativePath, source) {
           clause === undefined ||
           clause.name !== undefined ||
           bindings === undefined ||
-          ts.isNamespaceImport(bindings)
+          (ts.isNamespaceImport(bindings) && node !== reviewedBrokerNativeFsImport)
         ) {
           filesystemMutation = true;
         } else if (ts.isNamedImports(bindings)) {
-          if (bindings.elements.some((element) =>
+          if (!(transportTestImportsValid && transportTestImportNodes.has(node)) && bindings.elements.some((element) =>
             fsMutationSet.has((element.propertyName ?? element.name).text)
           )) {
             filesystemMutation = true;
@@ -2192,7 +2348,10 @@ function sourceSyntaxFacts(relativePath, source) {
         const specifier = node.arguments.length >= 1
           ? stringValue(node.arguments[0])
           : null;
-        if (specifier === null) {
+        if (specifier === null && reviewedTransportTestNode(node) && transportTestImportsValid) {
+          // Pinned test code hard-checks reviewed client bytes before evaluating
+          // its fixed data module. Arbitrary supplied source receives no allowance.
+        } else if (specifier === null) {
           computedDynamicImport = true;
         } else {
           recordModule(specifier);
@@ -2228,7 +2387,16 @@ function sourceSyntaxFacts(relativePath, source) {
           : ts.isElementAccessExpression(node.expression)
             ? constantStringValue(node.expression.argumentExpression)
           : null;
-      if (calledName !== null && fsMutationSet.has(calledName)) {
+      if (calledName !== null && fsMutationSet.has(calledName) &&
+          !(calledName === "writeSync" && reviewedTransportNode(node)) &&
+          !(reviewedTransportTestNode(node) && transportTestImportsValid &&
+            ["mkdtempSync", "openSync", "writeSync", "rmSync"].includes(calledName)) &&
+          !(calledName === "open" && reviewedTransportNode(node) &&
+            ts.isPropertyAccessExpression(node.expression) &&
+            ts.isIdentifier(node.expression.expression) &&
+            node.expression.expression.text === "handle" &&
+            node.arguments.length === 1 && ts.isIdentifier(node.arguments[0]) &&
+            node.arguments[0].text === "fd")) {
         filesystemMutation = true;
       }
       if (
@@ -2263,7 +2431,8 @@ function sourceSyntaxFacts(relativePath, source) {
       ts.isPropertyAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "process" &&
-      node.name.text === "env"
+      node.name.text === "env" &&
+      !reviewedTransportNode(node)
     ) {
       environment = true;
     }
@@ -2271,7 +2440,8 @@ function sourceSyntaxFacts(relativePath, source) {
       ts.isElementAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "process" &&
-      constantStringValue(node.argumentExpression) === "env"
+      constantStringValue(node.argumentExpression) === "env" &&
+      !reviewedTransportNode(node)
     ) {
       environment = true;
     }
@@ -2390,6 +2560,36 @@ function sourceSyntaxFacts(relativePath, source) {
     return true;
   };
   visit(sourceFile);
+  if (relativePath === FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH) {
+    const allowed = new Set([
+      "closeSync", "constants", "fstatSync", "lstatSync",
+      "openSync", "readFileSync", "realpathSync",
+    ]);
+    let valid = true;
+    let opens = 0;
+    let openReferences = 0;
+    const inspectAuthorizationFs = (node) => {
+      if (ts.isImportDeclaration(node) && node.moduleSpecifier.text === "node:fs") {
+        const clause = node.importClause;
+        const bindings = clause?.namedBindings;
+        if (clause?.name || !bindings || !ts.isNamedImports(bindings) ||
+          bindings.elements.some((entry) =>
+            entry.propertyName || !allowed.has(entry.name.text))) valid = false;
+      }
+      if (ts.isIdentifier(node) && node.text === "openSync") openReferences += 1;
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
+        node.expression.text === "openSync") {
+        opens += 1;
+        if (node.arguments.length !== 2 ||
+          node.arguments[0].getText(sourceFile) !== "target" ||
+          node.arguments[1].getText(sourceFile) !==
+            "constants.O_RDONLY | constants.O_NOFOLLOW") valid = false;
+      }
+      ts.forEachChild(node, inspectAuthorizationFs);
+    };
+    inspectAuthorizationFs(sourceFile);
+    if (!valid || opens !== 1 || openReferences !== 2) runtimeCodeConstruction = true;
+  }
   if (computedDynamicImport) {
     throw new ManifestError("SOURCE_POLICY_FORBIDDEN_CAPABILITY");
   }
@@ -2545,6 +2745,14 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
   if (capabilities.other_forbidden_module || capabilities.legacy_import) {
     return false;
   }
+  if (relativePath === "scripts/launch-operations-kernel/source-policy.test.mjs") {
+    const begin = "// BEGIN PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+    const end = "// END PR4_CR2_BOUNDED_TRANSPORT_TESTS";
+    const start = source.indexOf(begin), finish = source.indexOf(end) + end.length;
+    return capabilities.child_process && !capabilities.filesystem_mutation &&
+      !capabilities.network && !capabilities.environment && start >= 0 && finish > start &&
+      sha256Hex(source.slice(start, finish)) === "a02c5479514e93aafb7a1911d980cfffbf9089d0040cdabb6f048e5caeb16593";
+  }
   if (relativePath === CONCRETE_RUNNER_PATH) {
     return (
       capabilities.child_process &&
@@ -2600,6 +2808,12 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       !source.includes("adapter.readEnvironment") &&
       !source.includes("adapter.updateEnvironment") &&
       !source.includes("adapter.deleteEnvironment") &&
+      source.includes("createAdminV1OfficialFirstEnvironmentExpiryGuard") &&
+      source.includes("now_epoch_ms : Date.now()") &&
+      source.includes("if (now >= expires)") &&
+      source.includes("FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE") &&
+      source.includes("sensitive = await load_sensitive();\n      guard();") &&
+      source.includes('state.stage = "AUTHORIZATION_SPENT";\n    await journal.publish(publicState(state));\n    guard();') &&
       source.includes(
         '"admin-v1-official-first-environment-runtime-journal.json"',
       ) &&
@@ -2619,6 +2833,8 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("createAdminV1OfficialFirstEnvironmentNativeTransport") &&
       source.includes('`https://api.vercel.com${request.descriptor.path}`') &&
       source.includes("FIRST_ENVIRONMENT_NATIVE_TRANSPORT_DENIED") &&
+      source.includes("allow_hermetic_test === true && fetch_impl === globalThis.fetch") &&
+      source.includes("guard();\n      let response;\n      try {\n        response = await fetch_impl(url, options);") &&
       source.includes('operation: "create_environment"') &&
       source.includes('method: "POST"') &&
       source.includes(
@@ -2736,7 +2952,10 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
   if (relativePath === FIRST_ENVIRONMENT_KEYCHAIN_LAUNCHER_PATH) {
     return (
       capabilities.child_process &&
-      !capabilities.filesystem_mutation &&
+      capabilities.filesystem_mutation &&
+      source.includes("readAuthorizationInterval(parsed.authorizationPath, parsed.mode)") &&
+      source.includes("guard();\n    spendInvocation(parsed, dependencies);") &&
+      source.includes("guard();\n    const child = spawnProcess(") &&
       !capabilities.network &&
       capabilities.environment &&
       !broadGit &&
@@ -2792,6 +3011,9 @@ function concreteCapabilityAllowed(relativePath, source, capabilities) {
       source.includes("environment = process.env") &&
       source.includes("fetch_impl = globalThis.fetch") &&
       source.includes("createAdminV1OfficialFirstEnvironmentNativeDependencies") &&
+      source.includes("const candidate = await verifyCandidate(authorization);\n    guard();") &&
+      source.includes("inspectAdminV1OfficialFirstEnvironmentRepository(repositoryRoot));\n    guard();") &&
+      source.includes("await dependencies.prepare_provider_auth(authorization);\n          guard();") &&
       !source.includes("ADMIN_V1_OFFICIAL_RUNTIME_V1")
     );
   }

@@ -997,7 +997,7 @@ await focusedCheck("exact nonempty environment inventory without pagination prov
         envs: [{
           id: "env-owned",
           key: authorization.execution.environment_keys[0],
-          type: "encrypted",
+          type: "sensitive",
           target: ["preview"],
           gitBranch: authorization.execution.branch_name,
         }],
@@ -1109,7 +1109,7 @@ function createEnvironmentReadbackProbe({
   readbackBody = {
     id: "env-created-exact",
     key: authorization.execution.environment_keys[0],
-    type: "encrypted",
+    type: "sensitive",
     target: ["preview"],
     gitBranch: authorization.execution.branch_name,
   },
@@ -1325,7 +1325,7 @@ for (const [name, mutate] of [
     const record = {
       id: "env-created-exact",
       key: authorization.execution.environment_keys[0],
-      type: "encrypted",
+      type: "sensitive",
       target: ["preview"],
       gitBranch: authorization.execution.branch_name,
     };

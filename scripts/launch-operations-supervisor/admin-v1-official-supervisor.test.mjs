@@ -1,6 +1,15 @@
+import {
+  ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2,
+  officialStorageCleanupSteps,
+  validateAdminV1OfficialRetentionRecoveryRecord,
+} from "../launch-operations-kernel/admin-v1-official-runtime.mjs";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   validateOfficialAuthorizationForSupervisor,
+  verifyOfficialRetentionRecoveryBeforeImport,
+  verifyOfficialRunUnspentBeforeImport,
 } from "./nonproduction-qualification-supervisor.mjs";
 
 const PUBLISHED_HEAD = "5071f818e6c6aeadbfa708fc937a7ce7e30968eb";
@@ -32,6 +41,7 @@ const CONTRACT_KEYS = [
   "qualification_ledger",
   "target_routes",
 ];
+const V2_CONTRACT_KEYS = ["action_costs", ...CONTRACT_KEYS];
 const CREDENTIAL_POLICY = {
   GITHUB: "AVAILABLE_EXISTING_GITHUB_CLI_SOURCE",
   VERCEL: "AVAILABLE_EXISTING_VERCEL_CLI_SOURCE",
@@ -74,6 +84,10 @@ function policy() {
         "scripts/launch-operations-kernel/admin-v1-official-runtime-authorization.schema.json",
       authorization_schema_sha256: sha("4"),
       contract_sha256: Object.fromEntries(CONTRACT_KEYS.map((entry) => [entry, sha("5")])),
+      contract_sha256_v2: {
+        ...Object.fromEntries(CONTRACT_KEYS.map((entry) => [entry, sha("5")])),
+        action_costs: sha("d"), budgets: ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2.budgets,
+      },
       credential_source_policy: CREDENTIAL_POLICY,
       route_source_sha256: Object.fromEntries(ROUTE_PATHS.map((entry) => [entry, sha("6")])),
       repository_contract: {
@@ -182,6 +196,451 @@ assert.throws(
   (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID",
 );
 
+const v2CanonicalJson = (value) => {
+  if (Array.isArray(value)) return `[${value.map(v2CanonicalJson).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.keys(value)
+    .sort((left, right) => left.localeCompare(right, "en"))
+    .map((key) => `${JSON.stringify(key)}:${v2CanonicalJson(value[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+};
+const v2Sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const V2_ISOLATION_CONTRACT = {
+  schema_version: 2,
+  operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
+  mode: "NEW_EMPTY_TEST_ONLY_PROJECT_V1",
+  provider_cleanup_policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1",
+  origin_relation: "HTTPS_PROJECT_REF_DOT_SUPABASE_DOT_CO_V1",
+  allow_custom_origin: false,
+  excluded_project_ref: "mtpisopvdxuvmpzbzqjw",
+  excluded_origin: "https://mtpisopvdxuvmpzbzqjw.supabase.co",
+  environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+    "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF"],
+  credential_bundle_schema_version: 1,
+  credential_bundle_provenance_source: "OWNER_BOUND_ISOLATED_BUNDLE_V1",
+  credential_value_names: ["admin_password", "admin_session_secret", "github_token",
+    "supabase_anon_key", "supabase_service_role_key", "supabase_url", "vercel_token"],
+  credential_value_max_bytes: 16384,
+  provisioning_receipt_schema_version: 1,
+  provenance_receipt_schema_version: 1,
+  expected_preview_project_id: "prj_BPaQVKdElriAhxabhoTkg8LysQ5R",
+  expected_preview_team_id: "team_9POJYxNnjIBbrQ19My8M5yG3",
+  preview_environment_plan: [
+    ["ADMIN_PASSWORD", "credential:admin_password"],
+    ["ADMIN_SESSION_SECRET", "credential:admin_session_secret"],
+    ["NEXT_PUBLIC_SUPABASE_URL", "credential:supabase_url"],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", "credential:supabase_anon_key"],
+    ["SUPABASE_SERVICE_ROLE_KEY", "credential:supabase_service_role_key"],
+    ["AIFINDER_VALIDATION_RUN_ID", "authorization:run_id"],
+    ["AIFINDER_VALIDATION_PROJECT_REF", "authorization:isolation.project_ref"],
+  ],
+  retention_trigger: "SUCCESS_AFTER_OFFICIAL_LEDGER_AND_POSTSTATE_V1",
+  pre_commit_failure_policy: "DELETE_EXACT_RUN_OWNED_EXTERNAL_RESOURCES_V1",
+  post_commit_policy: "RETAIN_EXACT_RUN_OWNED_PREVIEW_AND_SEVEN_ENVIRONMENTS_V1",
+  retention_complete_lifecycle: "RETENTION_COMPLETE",
+  retention_pending_lifecycle: "RETENTION_PENDING",
+  retained_preview_count: 1,
+  retained_environment_count: 7,
+  final_retention_verification: "REVERIFY_EXACT_IDS_AFTER_DATA_AND_EPHEMERAL_CLEANUP_V1",
+  automatic_post_success_delete: false,
+  later_destructive_cleanup_requires_owner_authority: true,
+};
+function oneUseV2(value) {
+  const { one_use_authorization_sha256: ignored, ...fields } = value;
+  void ignored;
+  return v2Sha256(v2CanonicalJson({
+    domain: "AIFINDER_ADMIN_V1_OFFICIAL_ONE_USE_AUTHORIZATION_V2", ...fields,
+  }));
+}
+function v2Authorization() {
+  const value = authorization();
+  value.schema_version = 2;
+  value.contract_sha256 = structuredClone(policy().official_runtime.contract_sha256_v2);
+  value.isolation_contract_sha256 = v2Sha256(v2CanonicalJson(V2_ISOLATION_CONTRACT));
+  value.execution.environment_keys = [...V2_ISOLATION_CONTRACT.environment_keys];
+  value.execution.provider_cleanup_policy = V2_ISOLATION_CONTRACT.provider_cleanup_policy;
+  value.execution.isolation = {
+    mode: V2_ISOLATION_CONTRACT.mode,
+    project_ref: "offline-pr4-v2",
+    origin: "https://offline-pr4-v2.supabase.co",
+    provisioning_receipt_sha256: sha("1"),
+    schema_contract_sha256: sha("2"),
+    credential_bundle_path: `${value.execution.journal_directory}/isolated-credentials.json`,
+    credential_bundle_provenance_sha256: sha("3"),
+    validation_run_id: value.run_id,
+    expected_preview_project_id: value.execution.preview_project_id,
+    expected_preview_team_id: value.execution.preview_team_id,
+  };
+  value.one_use_authorization_sha256 = oneUseV2(value);
+  return value;
+}
+const v2Policy = policy();
+v2Policy.official_runtime.isolation_contract_sha256 =
+  v2Sha256(v2CanonicalJson(V2_ISOLATION_CONTRACT));
+assert.equal(validateOfficialAuthorizationForSupervisor(
+  v2Authorization(), v2Policy, Date.parse("2026-08-21T12:00:00.000Z"),
+).schema_version, 2, "COMPLETE_CLOSED_V2_PREIMPORT_ACCEPTED");
+assert.deepEqual(Object.keys(valid.contract_sha256).sort(), CONTRACT_KEYS);
+assert.deepEqual(Object.keys(v2Authorization().contract_sha256).sort(), V2_CONTRACT_KEYS);
+const v1SevenKey = authorization();
+v1SevenKey.contract_sha256.action_costs = sha("d");
+const v1SevenKeyPolicy = policy();
+v1SevenKeyPolicy.official_runtime.contract_sha256 = structuredClone(v1SevenKey.contract_sha256);
+assert.throws(() => validateOfficialAuthorizationForSupervisor(
+  v1SevenKey, v1SevenKeyPolicy, Date.parse("2026-08-21T12:00:00.000Z"),
+), (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID");
+let v2Negatives = 0;
+function rejectV2(change, policyChange = () => {}, refreshDigest = true) {
+  const value = v2Authorization(); const reviewed = structuredClone(v2Policy);
+  change(value); policyChange(reviewed);
+  // Refresh the semantic digest so structural/binding negatives test the actual admission.
+  if (refreshDigest && value.one_use_authorization_sha256 !== sha("f")) {
+    value.one_use_authorization_sha256 = oneUseV2(value);
+  }
+  assert.throws(() => validateOfficialAuthorizationForSupervisor(
+    value, reviewed, Date.parse("2026-08-21T12:00:00.000Z"),
+  ), (error) => error?.code === "SUPERVISOR_AUTHORIZATION_INVALID");
+  v2Negatives++;
+}
+for (const field of ["isolation_contract_sha256", "supervisor_sha256",
+  "supervisor_policy_sha256", "authorization_schema_sha256", "candidate_identity_sha256",
+  "manifest_sha256", "compatibility_support_sha256", "route_source_sha256", "contract_sha256"]) {
+  rejectV2((value) => { delete value[field]; });
+}
+rejectV2((value) => { value.extra = true; });
+rejectV2((value) => { value.repository.extra = true; });
+rejectV2((value) => { value.execution.extra = true; });
+rejectV2((value) => { value.execution.isolation.extra = true; });
+rejectV2((value) => { value.schema_version = 1; });
+rejectV2((value) => { value.execution = authorization().execution; });
+rejectV2((value) => { value.authorization_schema_sha256 = sha("f"); });
+rejectV2((value) => { value.isolation_contract_sha256 = sha("f"); });
+rejectV2((value) => { value.contract_sha256.budgets = sha("f"); });
+rejectV2((value) => { value.candidate_identity_sha256 = sha("f"); });
+rejectV2((value) => { value.manifest_sha256 = sha("f"); });
+rejectV2((value) => { value.compatibility_support_sha256[SUPPORT_PATHS[0]] = sha("f"); });
+rejectV2((value) => { value.route_source_sha256[ROUTE_PATHS[0]] = sha("f"); });
+rejectV2((value) => { value.repository.root = "/private/tmp/aifinder"; });
+rejectV2((value) => { value.repository.remote_main = "f".repeat(40); });
+rejectV2((value) => { value.one_use_authorization_sha256 = sha("f"); });
+rejectV2((value) => { value.created_at = "2026-08-21T12:00:00Z"; });
+rejectV2((value) => { value.execution.isolation.origin = "https://other.supabase.co"; });
+rejectV2((value) => { value.execution.isolation.origin = V2_ISOLATION_CONTRACT.excluded_origin; });
+rejectV2((value) => {
+  value.execution.isolation.project_ref = V2_ISOLATION_CONTRACT.excluded_project_ref;
+  value.execution.isolation.origin = V2_ISOLATION_CONTRACT.excluded_origin;
+});
+rejectV2((value) => { value.execution.isolation.origin += "/"; });
+rejectV2((value) => { value.execution.isolation.project_ref = "A"; });
+rejectV2((value) => { value.execution.isolation.validation_run_id = "0".repeat(36); });
+rejectV2((value) => { value.execution.provider_cleanup_policy = "DELETE"; });
+rejectV2((value) => { value.execution.environment_keys.reverse(); });
+rejectV2((value) => { value.execution.branch_name += "-other"; });
+rejectV2((value) => { value.execution.journal_directory += "-other"; });
+rejectV2((value) => { value.execution.storage_name = "admin/other.png"; });
+rejectV2((value) => { value.execution.temporary_commit_sha = sha("f"); });
+rejectV2((value) => { delete value.contract_sha256.action_costs; }, (reviewed) => {
+  delete reviewed.official_runtime.contract_sha256_v2.action_costs;
+});
+rejectV2(() => {}, (reviewed) => { delete reviewed.official_runtime.contract_sha256_v2; });
+rejectV2(() => {}, (reviewed) => {
+  reviewed.official_runtime.contract_sha256_v2 =
+    structuredClone(reviewed.official_runtime.contract_sha256);
+});
+rejectV2((value) => { value.contract_sha256.extra = sha("a"); }, (reviewed) => {
+  reviewed.official_runtime.contract_sha256_v2.extra = sha("a");
+});
+rejectV2((value) => { value.contract_sha256.action_costs = sha("f"); });
+rejectV2((value) => { value.contract_sha256.action_costs = "invalid"; }, (reviewed) => {
+  reviewed.official_runtime.contract_sha256_v2.action_costs = "invalid";
+});
+rejectV2(() => {}, (reviewed) => {
+  reviewed.official_runtime.contract_sha256 =
+    structuredClone(reviewed.official_runtime.contract_sha256_v2);
+  delete reviewed.official_runtime.contract_sha256_v2;
+});
+// Both maps agree after mutation; only the signed one-use binding rejects replay.
+for (const key of ["action_costs", "budgets"]) {
+  rejectV2((value) => { value.contract_sha256[key] = sha("f"); }, (reviewed) => {
+    reviewed.official_runtime.contract_sha256_v2[key] = sha("f");
+  }, false);
+}
+rejectV2((value) => { value.isolation_contract_sha256 = sha("f"); }, (reviewed) => {
+  reviewed.official_runtime.isolation_contract_sha256 = sha("f");
+}, false);
+process.stdout.write(`PASS_PR4_V2_PREIMPORT closed19=true repository11=true execution13=true isolation10=true v1_contract_keys=6 v2_contract_keys=7 negatives=${v2Negatives} real_effects=0\n`);
+
 process.stdout.write(
   "PASS_ADMIN_V1_OFFICIAL_SUPERVISOR assertions=7 current_baseline=true exact_class=true pre_import_node_primitives_only=true failures=0 internal_failures=0\n",
 );
+
+function recoveryDocument(auth) {
+  const ids = Array.from({ length: 7 }, (_, index) => `env-retained-${index + 1}`);
+  return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
+    state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
+      runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      recovery_usage: Object.fromEntries(Object.keys(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2).map(key => [key, 0])),
+      last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
+      last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
+      owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
+        submissions: [{ row_id: "submission-owned", version: "v1" }], tools: [{ row_id: "tool-owned", version: "v1" }],
+        audit_rows: [{ row_id: "audit-owned", version: "v1" }], logo: { object_id: "logo-owned", version: "v1" } },
+      effects: { submitted_tools: 3, tools: 2, audits: 9, approval_rpc: 1, logo_objects: 1, grant_prepare: 1, grant_revoke: 1 },
+      evidence: [], failure: null, cleanup: ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"], zero_residual: false,
+      retention: { policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMMITTED", deployment_id: "dpl_RetainedV2",
+        environment_record_ids: [...ids], environment_keys: [...auth.execution.environment_keys], data_zero_residual: true,
+        external_retained_exact: false, unrelated_preserved: false } } };
+}
+
+function recoveryFilesystem(auth, document = recoveryDocument(auth)) {
+  const root = auth.execution.journal_directory; const git = `${root}/.qualification-git-context`;
+  const nodes = new Map(); const opened = new Map(); const operations = []; let next = 10;
+  const directory = (name, names, mode) => nodes.set(name, { names, mode, inode: nodes.size + 1 });
+  const file = (name, value, mode = 0o600) => nodes.set(name, { bytes: Buffer.from(value), mode, inode: nodes.size + 1 });
+  directory(auth.repository.root, [".git"], 0o755);directory(`${auth.repository.root}/.git`, ["objects"], 0o755);
+  directory(`${auth.repository.root}/.git/objects`, [], 0o755);directory(root, [], 0o700);
+  file(`${root}/admin-v1-official-runtime-identity.json`, `${canonicalRecovery({schema_version:1,identity:document.identity})}\n`);
+  file(`${root}/admin-v1-official-runtime-journal.json`, `${canonicalRecovery(document)}\n`);
+  directory(git, ["HEAD", "config", "objects", "refs"], 0o500);directory(`${git}/objects`, [], 0o500);
+  directory(`${git}/refs`, ["heads"], 0o500);directory(`${git}/refs/heads`, [], 0o500);
+  file(`${git}/HEAD`, "ref: refs/heads/qualification-context\n", 0o400);
+  file(`${git}/config`, "[core]\n\tbare = true\n\trepositoryformatversion = 0\n", 0o400);
+  const metadata = (name) => {
+    const node = nodes.get(name);if (!node) throw Object.assign(new Error("ABSENT"), { code: "ENOENT" });
+    return { dev: 1, ino: node.inode, uid: node.uid ?? 501, gid: 20, nlink: node.nlink ?? 1, mode: node.mode,
+      size: node.bytes?.length ?? 0, mtimeMs: 1, ctimeMs: node.ctime ?? 1, mtimeNs: "1", ctimeNs: String(node.ctime ?? 1),
+      isFile: () => Boolean(node.bytes), isDirectory: () => Boolean(node.names), isSymbolicLink: () => node.symlink === true };
+  };
+  return { nodes, operations, filesystem: {
+    constants: { O_RDONLY: 0, O_NOFOLLOW: 256 },
+    lstatSync(name) { operations.push(["lstat", name]);return metadata(name); },
+    realpathSync(name) { metadata(name);return nodes.get(name).realpath ?? name; },
+    readdirSync(name) { return [...nodes.get(name).names]; },
+    openSync(name, flags) { assert.equal(flags, 256);operations.push(["open", name]);metadata(name);const fd = next++;opened.set(fd, name);return fd; },
+    fstatSync(fd) { return metadata(opened.get(fd)); },
+    readFileSync(fd) { assert.equal(typeof fd, "number");return Buffer.from(nodes.get(opened.get(fd)).bytes); },
+    closeSync(fd) { assert.equal(opened.delete(fd), true); },
+  } };
+}
+
+const canonicalRecovery = v2CanonicalJson;
+const recoveryAuth = v2Authorization();
+for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
+  const document = recoveryDocument(recoveryAuth);document.state.lifecycle = lifecycle;const p = recoveryFilesystem(recoveryAuth, document);
+  const admitted = verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem);
+  assert.deepEqual(admitted, { mode: "OFFICIAL_RETENTION_RECOVERY_V1", journal_sha256: v2Sha256(`${canonicalRecovery(document)}\n`) });
+  assert.throws(() => verifyOfficialRunUnspentBeforeImport(recoveryAuth, p.filesystem), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
+}
+let recoveryPreImportNegatives = 0;
+for (const change of [(d) => { d.state.retention.data_zero_residual = false; }, (d) => { d.state.cleanup.pop(); }]) {
+  const document = recoveryDocument(recoveryAuth);change(document);
+  const p = recoveryFilesystem(recoveryAuth, document);
+  assert.equal(verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem).journal_sha256,
+    v2Sha256(`${canonicalRecovery(document)}\n`));
+}
+for (const change of [
+  (p, d) => { d.state.retention.phase = "ARMED"; }, (p, d) => { d.state.lifecycle = "CLEANUP_COMPLETE"; },
+  (p, d) => { d.state.retention.phase = "COMPLETE";d.state.lifecycle = "RETENTION_COMPLETE"; },
+  (p, d) => { d.extra = true; }, (p, d) => { d.identity.extra = true; },
+  (p, d) => { d.state.token_spent = false; }, (p, d) => { d.state.runtime_sessions = 2; },
+  (p, d) => { d.state.runtime_replays = 1; }, (p, d) => { d.state.last_completed_official_ordinal = 19; },
+  (p, d) => { delete d.state.runtime_retries; }, (p, d) => { d.state.retention.extra = true; },
+  (p, d) => { d.state.retention.environment_record_ids[6] = d.state.retention.environment_record_ids[0]; },
+  (p, d) => { d.state.retention.environment_keys.reverse(); }, (p, d) => { d.state.retention.data_zero_residual = "false"; },
+  (p, d) => { d.state.effects.grant_revoke = 0; }, (p, d) => { d.state.cleanup.push("DELETE_ENVIRONMENT_1"); },
+  (p, d) => { d.state.owned.logo = {}; },
+  (p, d) => { d.state.owned.logo = { object_id: "owned", version: "v1", extra: true }; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).nlink = 2; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).uid = 0; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).mode = 0o644; },
+  (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).symlink = true; },
+  (p) => { p.nodes.set(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-retired.json`, {bytes:Buffer.from("{}"),mode:0o600,inode:100}); },
+]) {
+  const d = recoveryDocument(recoveryAuth);const p = recoveryFilesystem(recoveryAuth, d);change(p, d);
+  p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).bytes = Buffer.from(`${canonicalRecovery(d)}\n`);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem));recoveryPreImportNegatives++;
+}
+for (const name of ["admin-v1-official-runtime-journal.json", "admin-v1-official-runtime-identity.json"]) {
+  const p = recoveryFilesystem(recoveryAuth);p.nodes.delete(`${recoveryAuth.execution.journal_directory}/${name}`);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem));recoveryPreImportNegatives++;
+}
+const missingRecoveryRoot = recoveryFilesystem(recoveryAuth);missingRecoveryRoot.nodes.delete(recoveryAuth.execution.journal_directory);
+assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, missingRecoveryRoot.filesystem));
+assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(authorization(), recoveryFilesystem(recoveryAuth).filesystem));
+console.log(`PASS_RETENTION_RECOVERY_PREIMPORT pending_routes=2 normal_spent_guard=preserved no_follow=true negatives=${recoveryPreImportNegatives + 2} credentials=0 provider_calls=0`);
+
+// Exercise the runtime's actual storage state machine with synthetic effect
+// responses. Capture each published progress state, including uncertain revoke
+// and already-absent reconciliation, then feed canonical bytes to the independent
+// pre-import validator. No candidate runner, credential loader or provider runs.
+function runtimeStorageDocuments({ absent = false, deleteFailure = false, includeReservations = false } = {}) {
+  const document = recoveryDocument(recoveryAuth);
+  const state = document.state;
+  state.retention.data_zero_residual = false;
+  state.cleanup = [];
+  state.effects.grant_prepare = 0;
+  state.effects.grant_revoke = 0;
+  const snapshots = [];
+  const drive = (steps, absentRead = false) => {
+    let step = steps.next();
+    while (!step.done) {
+      if (step.value.publish) {
+        snapshots.push(structuredClone(document));
+        if (absent && !absentRead && state.recovery_storage.phase === "DELETE_ATTEMPTED") return;
+        step = steps.next();
+        continue;
+      }
+      const { operation, input } = step.value;
+      const counter = {
+        storage_read_owned_version: "storage_reads",
+        prepare_storage_cleanup_grant: "grant_prepare_rpc_calls",
+        delete_storage_exact_version: "storage_delete_attempts",
+        revoke_storage_cleanup_grant: "grant_revoke_rpc_calls",
+      }[operation];
+      assert.ok(counter, operation);
+      state.recovery_usage[counter]++;
+      // The executor publishes its debit before dispatching the effect. These
+      // records model a crash after reservation and before a result is known.
+      if (includeReservations && state.recovery_storage) snapshots.push(structuredClone(document));
+      if (deleteFailure && operation === "delete_storage_exact_version") {
+        step = steps.throw(new Error("SYNTHETIC_DELETE_FAILURE"));
+      } else {
+        const result = {
+          storage_read_owned_version: absentRead ? { status: "ABSENT" } : { status: "EXACT", version: "v1" },
+          prepare_storage_cleanup_grant: { status: "PREPARED", grant_id: input.grant_id },
+          delete_storage_exact_version: { status: "DELETED_EXACT" },
+          revoke_storage_cleanup_grant: { status: "REVOKED_EXACT" },
+        }[operation];
+        step = steps.next(result);
+      }
+    }
+  };
+  if (deleteFailure) {
+    assert.throws(() => drive(officialStorageCleanupSteps(state, recoveryAuth)), /SYNTHETIC_DELETE_FAILURE/u);
+  } else {
+    drive(officialStorageCleanupSteps(state, recoveryAuth));
+    if (absent) drive(officialStorageCleanupSteps(state, recoveryAuth), true);
+  }
+  return snapshots;
+}
+
+const storageDocuments = runtimeStorageDocuments();
+assert.deepEqual(storageDocuments.map(d => d.state.recovery_storage.phase),
+  ["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "DELETION_COMPLETE", "REVOKE_ATTEMPTED", "REVOKED"]);
+const absentDocuments = runtimeStorageDocuments({ absent: true });
+const failedDeleteDocuments = runtimeStorageDocuments({ deleteFailure: true });
+const reservedDocuments = runtimeStorageDocuments({ includeReservations: true });
+assert.ok(reservedDocuments.some(d => d.state.recovery_storage.phase === "PREPARING" &&
+  d.state.recovery_usage.grant_prepare_rpc_calls === 1 && d.state.effects.grant_prepare === 0));
+assert.ok(reservedDocuments.some(d => d.state.recovery_storage.phase === "REVOKE_ATTEMPTED" &&
+  d.state.recovery_usage.grant_revoke_rpc_calls === 1 && d.state.effects.grant_revoke === 0));
+const storageFailures = [];
+let storagePositives = 0;
+let storageNegatives = 0;
+function storageCheck(name, action) {
+  try { action(); }
+  catch (error) { storageFailures.push(`${name}:${error.code ?? error.message}`); }
+}
+function admitStorageDocument(document) {
+  const p = recoveryFilesystem(recoveryAuth, document);
+  const admitted = verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem);
+  assert.deepEqual(admitted, { mode: "OFFICIAL_RETENTION_RECOVERY_V1",
+    journal_sha256: v2Sha256(`${canonicalRecovery(document)}\n`) });
+  assert.deepEqual(p.operations.filter(([op]) => op === "open").map(([, name]) => name), [
+    `${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-identity.json`,
+    `${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`,
+  ]);
+}
+for (const [index, document] of [...storageDocuments, ...absentDocuments, ...failedDeleteDocuments, ...reservedDocuments].entries()) {
+  const name = `${index}-${document.state.recovery_storage.phase}-${document.state.recovery_storage.deletion}`;
+  storageCheck(name, () => {
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: document }, recoveryAuth);
+    admitStorageDocument(document);
+    storagePositives++;
+  });
+}
+const completedStorage = structuredClone(storageDocuments.at(-1));
+completedStorage.state.retention.data_zero_residual = true;
+storageCheck("data-zero-residual-revoked", () => { admitStorageDocument(completedStorage); storagePositives++; });
+
+const storageMutations = [
+  ["legacy-unversioned", 0, s => { delete s.recovery_storage.contract; delete s.recovery_storage.deletion; }],
+  ["extra-key", 0, s => { s.recovery_storage.extra = true; }],
+  ["null-storage", 0, s => { s.recovery_storage = null; }],
+  ["wrong-contract", 0, s => { s.recovery_storage.contract = "LEGACY"; }],
+  ["wrong-grant", 0, s => { s.recovery_storage.grant_id = "00000000-0000-8000-8000-000000000000"; }],
+  ["wrong-object", 0, s => { s.recovery_storage.object_id = "other"; }],
+  ["wrong-version", 0, s => { s.recovery_storage.version = "v2"; }],
+  ["missing-logo", 0, s => { s.owned.logo = null; }],
+  ["wrong-phase", 0, s => { s.recovery_storage.phase = "DONE"; }],
+  ["wrong-deletion", 0, s => { s.recovery_storage.deletion = "DELETED"; }],
+  ["early-deleted", 1, s => { s.recovery_storage.deletion = "DELETED_EXACT"; s.cleanup.push("DELETE_STORAGE_EXACT_VERSION"); s.recovery_usage.storage_delete_attempts = 1; }],
+  ["complete-pending", 3, s => { s.recovery_storage.deletion = "PENDING"; s.cleanup = []; }],
+  ["missing-delete-marker", 3, s => { s.cleanup = []; }],
+  ["extra-absent-marker", 3, s => { s.cleanup.push("STORAGE_DELETION_CONFIRMED_ABSENT"); }],
+  ["early-revoke-marker", 4, s => { s.cleanup.push("REVOKE_STORAGE_CLEANUP_GRANT"); }],
+  ["missing-revoke-marker", 5, s => { s.cleanup.pop(); }],
+  ["no-prepare-usage", 1, s => { s.recovery_usage.grant_prepare_rpc_calls = 0; s.effects.grant_prepare = 0; }],
+  ["delete-without-prepare", 0, s => { s.recovery_usage.storage_delete_attempts = 1; }],
+  ["revoke-without-prepare", 0, s => { s.recovery_usage.grant_revoke_rpc_calls = 1; }],
+  ["no-delete-usage", 3, s => { s.recovery_usage.storage_delete_attempts = 0; }],
+  ["no-revoke-usage", 5, s => { s.recovery_usage.grant_revoke_rpc_calls = 0; s.effects.grant_revoke = 0; }],
+  ["prepare-effect-over-one", 1, s => { s.effects.grant_prepare = 2; }],
+  ["revoke-effect-over-one", 5, s => { s.effects.grant_revoke = 2; }],
+  ["prepare-effect-over-usage", 0, s => { s.effects.grant_prepare = 1; }],
+  ["revoke-effect-over-usage", 1, s => { s.effects.grant_revoke = 1; }],
+  ["premature-zero-residual", 3, s => { s.retention.data_zero_residual = true; }],
+  ["duplicate-marker", 3, s => { s.cleanup.push(s.cleanup[0]); }],
+  ["preview-delete", 3, s => { s.cleanup.push("DELETE_PREVIEW"); }],
+  ["environment-delete", 3, s => { s.cleanup.push("DELETE_ENVIRONMENT_7"); }],
+  ["unknown-marker", 3, s => { s.cleanup.push("DELETE_STORAGE"); }],
+];
+function rejectStorageDocument(document) {
+  assert.throws(() => validateAdminV1OfficialRetentionRecoveryRecord(
+    { retired: false, value: document }, recoveryAuth), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+  const p = recoveryFilesystem(recoveryAuth, document);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem),
+    { code: "SUPERVISOR_RECOVERY_STATE_INVALID" });
+  storageNegatives++;
+}
+for (const [name, index, mutate] of storageMutations) {
+  storageCheck(name, () => {
+    const document = structuredClone(storageDocuments[index]);
+    mutate(document.state);
+    rejectStorageDocument(document);
+  });
+}
+storageCheck("absent-without-read", () => {
+  const document = structuredClone(absentDocuments.at(-1));
+  document.state.recovery_usage.storage_reads = 0;
+  rejectStorageDocument(document);
+});
+for (const key of ["grant_prepare_rpc_calls", "grant_revoke_rpc_calls", "storage_delete_attempts"]) {
+  storageCheck(`missing-storage-${key}`, () => {
+    const document = recoveryDocument(recoveryAuth);
+    document.state.recovery_usage[key] = 1;
+    rejectStorageDocument(document);
+  });
+}
+storageCheck("missing-storage-absent-marker", () => {
+  const document = recoveryDocument(recoveryAuth);
+  document.state.cleanup.push("STORAGE_DELETION_CONFIRMED_ABSENT");
+  rejectStorageDocument(document);
+});
+for (const change of [
+  p => { const read = p.filesystem.readFileSync; p.filesystem.readFileSync = fd => {
+    const bytes = read(fd); p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).inode++; return bytes;
+  }; },
+  p => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).bytes = Buffer.from(JSON.stringify(storageDocuments[0])); },
+]) {
+  storageCheck("replacement-or-noncanonical", () => {
+    const p = recoveryFilesystem(recoveryAuth, storageDocuments[0]);
+    change(p);
+    assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem),
+      { code: "SUPERVISOR_RECOVERY_STATE_INVALID" });
+    storageNegatives++;
+  });
+}
+console.log(`${storageFailures.length ? "FAIL" : "PASS"}_STORAGE_RECOVERY_PREIMPORT positives=${storagePositives} negatives=${storageNegatives} failures=${storageFailures.length} candidate_imports=0 credentials=0 network=0`);
+for (const failure of storageFailures) console.log(failure);
+if (storageFailures.length) process.exitCode = 1;

@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Ajv from "ajv";
-import { sha256Hex } from "./canonical.mjs";
+import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_CAPABILITY_BUDGET,
   ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_OPERATION_CLASS,
@@ -51,7 +51,7 @@ function authorization(requestOverrides = {}) {
       authorization_mode: "HERMETIC_TEST_ONLY",
       phase_identity: "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_HERMETIC_TEST_V1",
       reviewed_package_sha256: "1".repeat(64), reviewed_package_bytes: 1,
-      gemini_approval_token_sha256: "2".repeat(64), direct_james_approval_sha256: "3".repeat(64),
+      work_audit_sha256: "2".repeat(64), direct_james_approval_sha256: "3".repeat(64),
       authorization_id: "223e4567-e89b-42d3-a456-426614174001", run_id: RUN_ID,
       created_at: "2026-08-24T15:00:00.000Z", expires_at: "2026-08-24T17:00:00.000Z",
       candidate_identity_sha256: "4".repeat(64), manifest_sha256: "5".repeat(64), candidate_member_count: 55,
@@ -350,6 +350,90 @@ await check("success spends immediately before create and leaves expected residu
   assert.equal(journal.load().value.state.zero_residual, false);
 });
 
+await check("Work authorization rejects legacy, tampered and expired records before effects", async () => {
+  const schema = JSON.parse(readFileSync(path.join(ROOT,
+    "scripts/launch-operations-kernel/admin-v1-official-first-environment-authorization.schema.json"), "utf8"));
+  const validateSchema = new Ajv({ allErrors: true, schemaId: "auto" }).compile(schema);
+  const current = authorization();
+  assert.equal(current.schema_version, 2);
+  assert.equal(current.authorization_closure.work_audit_sha256, "2".repeat(64));
+  assert.equal(validateSchema(current), true);
+  const legacy = structuredClone(current);
+  legacy.schema_version = 1;
+  legacy.authorization_closure.gemini_approval_token_sha256 =
+    legacy.authorization_closure.work_audit_sha256;
+  delete legacy.authorization_closure.work_audit_sha256;
+  // A fully bound synthetic v1 record must stay unusable, not merely fail
+  // because a v2 digest was left attached to a renamed field.
+  legacy.review_approval_sha256 = sha256Hex(canonicalJson({
+    domain: "AIFINDER_FIRST_ENVIRONMENT_REVIEW_APPROVAL_V1",
+    value: {
+      phase_identity: legacy.authorization_closure.phase_identity,
+      reviewed_package_sha256: legacy.authorization_closure.reviewed_package_sha256,
+      reviewed_package_bytes: legacy.authorization_closure.reviewed_package_bytes,
+      gemini_approval_token_sha256: legacy.authorization_closure.gemini_approval_token_sha256,
+      direct_james_approval_sha256: legacy.authorization_closure.direct_james_approval_sha256,
+    },
+  }));
+  legacy.one_use_authorization_sha256 = sha256Hex(canonicalJson({
+    domain: "AIFINDER_FIRST_ENVIRONMENT_ONE_USE_AUTHORIZATION_V1",
+    value: {
+      authorization_id_sha256: legacy.authorization_id_sha256,
+      review_approval_sha256: legacy.review_approval_sha256,
+      run_id: legacy.run_id,
+      created_at: legacy.created_at,
+      expires_at: legacy.expires_at,
+      candidate_identity_sha256: legacy.candidate_identity_sha256,
+      manifest_sha256: legacy.manifest_sha256,
+      repository: legacy.repository,
+      authorization_closure: legacy.authorization_closure,
+    },
+  }));
+  assert.equal(validateSchema(legacy), false);
+  const mixed = structuredClone(current);
+  mixed.authorization_closure.gemini_approval_token_sha256 = "2".repeat(64);
+  assert.equal(validateSchema(mixed), false);
+  const cases = [legacy, mixed, { ...current, schema_version: 1 }];
+  for (const mutate of [
+    (value) => { delete value.authorization_closure.work_audit_sha256; },
+    (value) => { value.authorization_closure.work_audit_sha256 = "invalid"; },
+    (value) => { value.authorization_closure.work_audit_sha256 = "9".repeat(64); },
+    (value) => { delete value.authorization_closure.direct_james_approval_sha256; },
+    (value) => { value.authorization_closure.direct_james_approval_sha256 = "invalid"; },
+    (value) => { value.authorization_closure.direct_james_approval_sha256 = "9".repeat(64); },
+    (value) => { value.review_approval_sha256 = "9".repeat(64); },
+    (value) => { value.one_use_authorization_sha256 = "9".repeat(64); },
+    (value) => { value.authorization_closure.reviewed_package_bytes += 1; },
+    (value) => { value.authorization_closure.reviewed_package_sha256 = "9".repeat(64); },
+    (value) => { value.runtime_source_sha256 = "invalid"; },
+    (value) => { value.authorization_closure.capability_budget.environment_creates = 2; },
+    (value) => { value.authorization_closure.capability_budget.environment_identity_reads = 1; },
+    (value) => { value.authorization_closure.capability_budget.retries = 1; },
+    (value) => { value.expires_at = new Date(NOW).toISOString(); },
+  ]) {
+    const value = structuredClone(current);
+    mutate(value);
+    cases.push(value);
+  }
+  for (const value of cases) {
+    const journal = memoryJournal();
+    const adapter = createOnlyAdapter({ journal });
+    let loads = 0;
+    await assert.rejects(runAdminV1OfficialFirstEnvironmentRuntime({
+      authorization: value, adapter, journal,
+      load_sensitive: async () => { loads += 1; throw new Error("MUST_NOT_LOAD"); },
+      now_epoch_ms: NOW, allow_hermetic_test: true,
+    }), (error) => error?.code === (
+      Date.parse(value.expires_at) === NOW
+        ? "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED"
+        : "FIRST_ENVIRONMENT_AUTHORIZATION_INVALID"
+    ));
+    assert.equal(loads, 0);
+    assert.equal(journal.load(), null);
+    assert.deepEqual(adapter.calls, []);
+  }
+});
+
 await check("spent authorization cannot be reused", async () => {
   const journal = memoryJournal();
   await runAdminV1OfficialFirstEnvironmentRuntime({ authorization: authorization(), adapter: createOnlyAdapter({ journal }),
@@ -361,6 +445,24 @@ await check("spent authorization cannot be reused", async () => {
     now_epoch_ms: NOW, allow_hermetic_test: true }),
   (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_SPENT");
   assert.deepEqual(second.calls, []);
+});
+
+await check("new Work audit evidence cannot revive an already spent journal", async () => {
+  const original = authorization();
+  const changedAudit = authorization({ work_audit_sha256: "9".repeat(64) });
+  assert.equal(changedAudit.authorization_id_sha256, original.authorization_id_sha256);
+  assert.notEqual(changedAudit.one_use_authorization_sha256, original.one_use_authorization_sha256);
+  const journal = memoryJournal();
+  journal.publish({ token_spent: true, lifecycle: "EXECUTION_STARTED" });
+  const adapter = createOnlyAdapter({ journal });
+  let loads = 0;
+  await assert.rejects(runAdminV1OfficialFirstEnvironmentRuntime({
+    authorization: changedAudit, adapter, journal,
+    load_sensitive: async () => { loads += 1; throw new Error("MUST_NOT_LOAD"); },
+    now_epoch_ms: NOW, allow_hermetic_test: true,
+  }), (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_SPENT");
+  assert.equal(loads, 0);
+  assert.deepEqual(adapter.calls, []);
 });
 
 await check("credential failure remains unspent and retires no-effect", async () => {
@@ -682,6 +784,7 @@ await check("two zero observations permit only bounded governed disposition", as
 await check("native transport admits one exact POST only", async () => {
   const requests = [];
   const native = createAdminV1OfficialFirstEnvironmentNativeTransport({
+    authorization: authorization(), now_epoch_ms: NOW, allow_hermetic_test: true,
     provider_auth: Buffer.from("SYNTHETIC_PROVIDER_AUTH"),
     async fetch_impl(url, init) {
       requests.push({ url, method: init.method, body: init.body });
@@ -733,6 +836,238 @@ await check("failure evidence is bounded", async () => {
     failure_class: "BRANCH_ENV_CREATE_ONLY_FAILURE", operation: "create_environment",
     classification: "FAIL_PROVIDER_PERMISSION_DENIED",
   });
+});
+
+const CF18_EXPIRES = Date.parse("2026-08-24T17:00:00.000Z");
+
+await check("CF18 expiry during credential loading prevents create without spending", async () => {
+  let now = NOW;
+  const journal = memoryJournal();
+  const adapter = createOnlyAdapter({ journal });
+  const secret = Buffer.from("SYNTHETIC_CF18");
+  const result = await runAdminV1OfficialFirstEnvironmentRuntime({
+    authorization: authorization(), adapter, journal,
+    now_epoch_ms: NOW, clock: () => now, allow_hermetic_test: true,
+    async load_sensitive() {
+      await Promise.resolve();
+      now = CF18_EXPIRES;
+      return { environment_value: secret };
+    },
+  });
+  assert.deepEqual(adapter.calls, []);
+  assert.equal(result.classification, "FAIL_AUTHORIZATION_EXPIRED");
+  assert.equal(result.token_spent, false);
+  assert.equal(result.budgets.environment_creates, 0);
+  assert.equal(journal.load().value.state.provider_creates, 0);
+  assert(secret.every((byte) => byte === 0));
+});
+
+for (const [stage, spent, loads] of [
+  ["AUTHORIZATION_VERIFIED", false, 0],
+  ["CREDENTIAL_SOURCE_ACQUIRED", false, 1],
+  ["INTENT_CREATE_ENVIRONMENT", false, 1],
+  ["AUTHORIZATION_SPENT", true, 1],
+]) {
+  await check(`CF18 awaited journal expiry at ${stage} preserves actual spend`, async () => {
+    let now = NOW;
+    let credentialLoads = 0;
+    const journal = memoryJournal();
+    const publish = journal.publish;
+    journal.publish = async (state) => {
+      await Promise.resolve();
+      const result = publish(state);
+      if (state.stage === stage) now = CF18_EXPIRES;
+      return result;
+    };
+    const adapter = createOnlyAdapter();
+    const result = await runAdminV1OfficialFirstEnvironmentRuntime({
+      authorization: authorization(), adapter, journal,
+      now_epoch_ms: NOW, clock: () => now, allow_hermetic_test: true,
+      async load_sensitive() {
+        credentialLoads += 1;
+        return { environment_value: Buffer.from("SYNTHETIC_CF18") };
+      },
+    });
+    assert.deepEqual(adapter.calls, []);
+    assert.equal(credentialLoads, loads);
+    assert.equal(result.classification, "FAIL_AUTHORIZATION_EXPIRED");
+    assert.equal(result.token_spent, spent);
+    assert.equal(result.budgets.environment_creates, spent ? 1 : 0);
+    assert.equal(journal.load().value.state.token_spent, spent);
+    assert.equal(journal.load().value.state.provider_creates, 0);
+    assert.equal(result.resource_state, "PROVEN_NO_PROVIDER_EFFECT");
+  });
+}
+
+await check("CF18 invalid or unavailable runtime clock fails before credentials", async () => {
+  for (const clock of [
+    () => NaN, () => Infinity, () => undefined, () => 1.5,
+    () => { throw new Error("SYNTHETIC_CLOCK_UNAVAILABLE"); },
+  ]) {
+    let loads = 0;
+    const journal = memoryJournal();
+    const adapter = createOnlyAdapter();
+    await assert.rejects(runAdminV1OfficialFirstEnvironmentRuntime({
+      authorization: authorization(), adapter, journal,
+      now_epoch_ms: NOW, clock, allow_hermetic_test: true,
+      async load_sensitive() {
+        loads += 1;
+        return { environment_value: Buffer.from("SYNTHETIC_CF18") };
+      },
+    }), (error) => error?.code === "FIRST_ENVIRONMENT_CLOCK_INVALID");
+    assert.equal(loads, 0);
+    assert.deepEqual(adapter.calls, []);
+    assert.equal(journal.load(), null);
+  }
+});
+
+await check("CF18 LIVE runtime rejects an injected earlier timestamp or clock", async () => {
+  for (const override of [
+    { now_epoch_ms: NOW },
+    { clock: () => NOW },
+    { now_epoch_ms: NOW, clock: () => NOW, allow_hermetic_test: true },
+  ]) {
+    let loads = 0;
+    const adapter = createOnlyAdapter();
+    await assert.rejects(runAdminV1OfficialFirstEnvironmentRuntime({
+      authorization: {
+        ...authorization(),
+        authorization_closure: {
+          ...authorization().authorization_closure, authorization_mode: "LIVE",
+        },
+      },
+      adapter, journal: memoryJournal(), ...override,
+      async load_sensitive() {
+        loads += 1;
+        return { environment_value: Buffer.from("SYNTHETIC_CF18") };
+      },
+    }), (error) => error?.code === "FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE");
+    assert.equal(loads, 0);
+    assert.deepEqual(adapter.calls, []);
+  }
+});
+
+await check("CF18 native dispatch independently rejects exact expiry", async () => {
+  let now = NOW;
+  let requests = 0;
+  const transport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+    authorization: authorization(), now_epoch_ms: NOW,
+    clock: () => now, allow_hermetic_test: true,
+    provider_auth: Buffer.from("SYNTHETIC_CF18_PROVIDER"),
+    async fetch_impl() {
+      requests += 1;
+      return { status: 200, async text() { return '{"id":"env-cf18"}'; } };
+    },
+  });
+  now = CF18_EXPIRES;
+  await assert.rejects(transport.execute({
+    operation: "create_environment",
+    descriptor: {
+      service: "VERCEL", method: "POST",
+      path: "/v10/projects/prj_BPaQVKdElriAhxabhoTkg8LysQ5R/env?teamId=team_9POJYxNnjIBbrQ19My8M5yG3",
+      body: { key: "ADMIN_PASSWORD", value: "SYNTHETIC_CF18", type: "sensitive", target: ["production"] },
+    },
+  }), (error) => error?.code === "FIRST_ENVIRONMENT_AUTHORIZATION_EXPIRED");
+  assert.equal(requests, 0);
+});
+
+await check("CF18 valid progressing clock permits one mocked create only", async () => {
+  let now = NOW;
+  const journal = memoryJournal();
+  const adapter = createOnlyAdapter({ journal });
+  const result = await runAdminV1OfficialFirstEnvironmentRuntime({
+    authorization: authorization(), adapter, journal,
+    now_epoch_ms: NOW, clock: () => ++now, allow_hermetic_test: true,
+    async load_sensitive() {
+      now += 1000;
+      return { environment_value: Buffer.from("SYNTHETIC_CF18") };
+    },
+  });
+  assert.deepEqual(adapter.calls, ["createEnvironment"]);
+  assert.equal(result.classification, "PASS_TRUE_CREATE_ONLY_ENVIRONMENT_CREATED");
+  assert.equal(result.expected_residual, true);
+  assert.equal(result.zero_residual, false);
+  assert.equal(result.token_spent, true);
+  assert.deepEqual([
+    result.budgets.environment_creates, result.budgets.environment_identity_reads,
+    result.budgets.environment_updates, result.budgets.environment_deletes,
+    result.runtime_retries, result.runtime_replays,
+  ], [1, 0, 0, 0, 0, 0]);
+});
+
+await check("CF18 native request starts synchronously after its final fresh guard", async () => {
+  let armed = false;
+  let microtaskRan = false;
+  let requests = 0;
+  const transport = createAdminV1OfficialFirstEnvironmentNativeTransport({
+    authorization: authorization(), allow_hermetic_test: true,
+    clock() {
+      if (armed) queueMicrotask(() => { microtaskRan = true; });
+      return NOW;
+    },
+    provider_auth: Buffer.from("SYNTHETIC_CF18_PROVIDER"),
+    fetch_impl() {
+      assert.equal(microtaskRan, false);
+      requests += 1;
+      return Promise.resolve({
+        status: 200, async text() { return '{"id":"env-cf18"}'; },
+      });
+    },
+  });
+  armed = true;
+  const adapter = createAdminV1OfficialFirstEnvironmentAdapter({
+    authorization: authorization(), transport,
+  });
+  assert.deepEqual(await adapter.createEnvironment({
+    key: "ADMIN_PASSWORD", value: Buffer.from("SYNTHETIC_CF18"),
+  }), { status: "CREATED_EXACT", record_id: "env-cf18" });
+  assert.equal(requests, 1);
+  assert.equal(microtaskRan, true);
+});
+
+await check("CF18 native hermetic clocks cannot select the real provider transport", async () => {
+  assert.throws(() => createAdminV1OfficialFirstEnvironmentNativeTransport({
+    authorization: authorization(), allow_hermetic_test: true,
+    clock: () => NOW, provider_auth: Buffer.from("SYNTHETIC_CF18"),
+  }), (error) => error?.code === "FIRST_ENVIRONMENT_NATIVE_TRANSPORT_INPUT");
+  const pseudoLive = {
+    ...authorization(),
+    authorization_closure: { ...authorization().authorization_closure, authorization_mode: "LIVE" },
+  };
+  let requests = 0;
+  for (const override of [{ now_epoch_ms: NOW }, { clock: () => NOW },
+    { allow_hermetic_test: true, clock: () => NOW }]) {
+    assert.throws(() => createAdminV1OfficialFirstEnvironmentNativeTransport({
+      authorization: pseudoLive, ...override,
+      provider_auth: Buffer.from("SYNTHETIC_CF18"),
+      fetch_impl() { requests += 1; throw new Error("MUST_NOT_FETCH"); },
+    }), (error) => error?.code === "FIRST_ENVIRONMENT_LIVE_CLOCK_OVERRIDE");
+  }
+  assert.equal(requests, 0);
+});
+
+await check("CF18 clock failure after reservation retains spend and clears synthetic value", async () => {
+  let now = NOW;
+  const journal = memoryJournal();
+  const publish = journal.publish;
+  journal.publish = async (state) => {
+    await Promise.resolve();
+    publish(state);
+    if (state.stage === "AUTHORIZATION_SPENT") now = NaN;
+  };
+  const secret = Buffer.from("SYNTHETIC_CF18");
+  const adapter = createOnlyAdapter();
+  const result = await runAdminV1OfficialFirstEnvironmentRuntime({
+    authorization: authorization(), adapter, journal,
+    clock: () => now, allow_hermetic_test: true,
+    load_sensitive: async () => ({ environment_value: secret }),
+  });
+  assert.equal(result.classification, "FAIL_AUTHORIZATION_CLOCK_INVALID");
+  assert.equal(result.token_spent, true);
+  assert.equal(result.budgets.environment_creates, 1);
+  assert.equal(result.resource_state, "PROVEN_NO_PROVIDER_EFFECT");
+  assert.deepEqual(adapter.calls, []);
+  assert(secret.every((byte) => byte === 0));
 });
 
 if (failures.length > 0) {

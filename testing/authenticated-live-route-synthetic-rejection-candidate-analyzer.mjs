@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
+import * as currentSemanticAnalyzer from "./authenticated-live-route-semantic-analyzer.mjs";
 
 const QUALIFICATION_STATES = Object.freeze([
   "DEFERRED_CATCH_OUTCOME",
@@ -529,16 +530,19 @@ export function qualifyOutcome({
   }).overlay;
 }
 
-function requireExactSourceContract(c2_1_ledger, governanceFacts) {
+function requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedger) {
+  const currentDelta = c2_1_ledger?.source_lane === "CURRENT_SOURCE_STATIC_ONLY" ? 2 : 0;
+  const sourceContract = c2_1_ledger?.source_lane === "CURRENT_SOURCE_STATIC_ONLY"
+    ? historicalLedger?.source_contract : c2_1_ledger?.source_contract;
   if (
     c2_1_ledger?.summary?.routes !== 28 ||
     c2_1_ledger.summary.methods !== 37 ||
-    c2_1_ledger.summary.ifs !== 366 ||
+    c2_1_ledger.summary.ifs !== 366 + currentDelta ||
     c2_1_ledger.summary.catches_with_binding !== 31 ||
     c2_1_ledger.summary.catches_optional !== 12 ||
     c2_1_ledger.summary.catches !== 43 ||
-    c2_1_ledger.summary.nodes !== 409 ||
-    c2_1_ledger.summary.outcomes !== 775 ||
+    c2_1_ledger.summary.nodes !== 409 + currentDelta ||
+    c2_1_ledger.summary.outcomes !== 775 + currentDelta * 2 ||
     c2_1_ledger.summary.imported_opaque_methods !== 15 ||
     c2_1_ledger.summary.route_local_methods !== 22 ||
     c2_1_ledger.summary.runtime_qualified_nodes !== 0 ||
@@ -553,22 +557,23 @@ function requireExactSourceContract(c2_1_ledger, governanceFacts) {
       "6e15cd4bc24025892fe7d3985709e48ba56cb2198ea04fe21ec99b08ab2fe172" ||
     governanceFacts.node_set_digest !==
       "e93014829e190d478ee8d057289a12bc2703f990b795c3bbf5fdade838dd87d8" ||
-    c2_1_ledger.source_contract.route_contract_digest !==
+    sourceContract?.route_contract_digest !==
       governanceFacts.route_contract_digest ||
-    c2_1_ledger.source_contract.request_position_contract_digest !==
+    sourceContract?.request_position_contract_digest !==
       governanceFacts.request_position_digest
   ) fail("C2_2_SOURCE_LEDGER_IDENTITY");
 }
 
 function requireNodeOutcomeContract(c2_1_ledger) {
+  const currentDelta = c2_1_ledger.source_lane === "CURRENT_SOURCE_STATIC_ONLY" ? 2 : 0;
   const nodeById = new Map(c2_1_ledger.nodes.map((node) => [node.node_id, node]));
   const methodById = new Map(
     c2_1_ledger.methods.map((method) => [method.method_id, method]),
   );
   if (
-    nodeById.size !== 409 ||
+    nodeById.size !== 409 + currentDelta ||
     methodById.size !== 37 ||
-    new Set(c2_1_ledger.outcomes.map((outcome) => outcome.outcome_id)).size !== 775
+    new Set(c2_1_ledger.outcomes.map((outcome) => outcome.outcome_id)).size !== 775 + currentDelta * 2
   ) fail("C2_2_SOURCE_IDENTITY_SET");
   for (const outcome of c2_1_ledger.outcomes) {
     const node = nodeById.get(outcome.node_id);
@@ -594,12 +599,12 @@ function requireNodeOutcomeContract(c2_1_ledger) {
     else fail("C2_2_OWNERSHIP_SPLIT");
   }
   if (
-    split.uniqueIf + split.uniqueCatch !== 326 ||
+    split.uniqueIf + split.uniqueCatch !== 326 + currentDelta ||
     split.unattributedIf + split.unattributedCatch !== 83 ||
     split.shared !== 0
   ) fail("C2_2_OWNERSHIP_SPLIT");
   if (
-    split.uniqueIf !== 290 ||
+    split.uniqueIf !== 290 + currentDelta ||
     split.unattributedIf !== 76 ||
     split.uniqueCatch !== 36 ||
     split.unattributedCatch !== 7
@@ -683,11 +688,16 @@ export function qualifyCandidateOverlay({
   routeInputs,
   c2_1_ledger,
   governanceFacts,
+  historicalLedger,
 } = {}) {
   if (!c2_1_ledger || !governanceFacts) fail("C2_2_SOURCE_LEDGER_CONTRACT");
-  requireExactSourceContract(c2_1_ledger, governanceFacts);
+  requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedger);
   const { nodeById, methodById, split } = requireNodeOutcomeContract(c2_1_ledger);
   const { routePaths, parsedByPath } = routeContext(routeInputs, c2_1_ledger);
+  const currentLane = c2_1_ledger.source_lane === "CURRENT_SOURCE_STATIC_ONLY";
+  if (currentLane && canonicalJson(c2_1_ledger) !== canonicalJson(
+    currentSemanticAnalyzer.buildCurrentSourceView({ historicalLedger, routeInputs }),
+  )) fail("C2_2_CURRENT_SOURCE_VIEW_IDENTITY");
   const routeByPath = new Map(
     c2_1_ledger.routes.map((route) => [route.route_path, route]),
   );
@@ -764,7 +774,7 @@ export function qualifyCandidateOverlay({
     count: entry.count,
   }));
   const candidateOutcomes = candidates.length;
-  return {
+  const result = {
     schema_version: "AIFINDER_C2_2_SYNTHETIC_REJECTION_CANDIDATE_LEDGER_V1",
     phase: "33IA-33IZ",
     artifact_purpose:
@@ -806,8 +816,8 @@ export function qualifyCandidateOverlay({
     summary: {
       routes: 28,
       methods: 37,
-      nodes: 409,
-      outcomes: 775,
+      nodes: c2_1_ledger.nodes.length,
+      outcomes: c2_1_ledger.outcomes.length,
       unique_nodes: split.uniqueIf + split.uniqueCatch,
       unattributed_nodes: split.unattributedIf + split.unattributedCatch,
       unique_if_nodes: split.uniqueIf,
@@ -822,7 +832,7 @@ export function qualifyCandidateOverlay({
       candidate_count_contract: "DERIVED_FROM_OVERLAY",
       additional_deferred_unique_if_outcomes:
         split.uniqueIf * 2 - candidateOutcomes,
-      total_deferred_outcomes: 775 - candidateOutcomes,
+      total_deferred_outcomes: c2_1_ledger.outcomes.length - candidateOutcomes,
       opaque_imported_methods_deferred: methodDeferrals.length,
       status_histogram: statusHistogram,
       response_shape_histogram: responseShapeHistogram,
@@ -861,4 +871,22 @@ export function qualifyCandidateOverlay({
       overlay_digest: completeOverlayDigest,
     },
   };
+  if (currentLane) {
+    result.source_lane = "CURRENT_SOURCE_STATIC_ONLY";
+    result.phase = "CURRENT_SOURCE_STATIC_ONLY";
+    result.historical_provenance = {
+      repository_baseline: result.repository_baseline,
+      source_contract: result.source_contract,
+      source_coverage: c2_1_ledger.historical_source_coverage,
+    };
+    result.repository_baseline = null;
+    result.source_contract = {
+      current_semantic_view_digest: digest(canonicalJson(c2_1_ledger)),
+      route_contract_digest: c2_1_ledger.source_contract.route_contract_digest,
+      node_set_digest: digest(canonicalJson(c2_1_ledger.nodes)),
+      route_paths: routePaths, route_identities_verified: routePaths.length,
+      runtime_evidence: "NOT_RUN",
+    };
+  }
+  return result;
 }

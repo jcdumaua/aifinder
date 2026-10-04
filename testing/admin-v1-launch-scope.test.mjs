@@ -67,6 +67,38 @@ const EXPECTED_DEFERRED_ROUTES = Object.freeze([
   ["/api/admin/homepage-control/drafts", ["POST"], "app/api/admin/homepage-control/drafts/route.ts"],
 ]);
 
+const HISTORICAL_LAUNCH_LEDGER_SHA256 =
+  "3ca61f67bd1f7698818415f9693062a7e08849dec06d071bf1b954ace402d118";
+const CURRENT_ROUTE_GIT_BLOBS = Object.freeze({
+  "app/api/admin/login/route.ts": "16bdeb300fe46da9b65c5d72ef334de7ebf56947",
+  "app/api/admin/logout/route.ts": "b6fa65aae98acfcaf1dc546e0595e194caa57d37",
+  "app/api/admin/session/route.ts": "7d4caf5764b5bd9b6c9f423670cd82d63264d7ed",
+  "app/api/admin/csrf/route.ts": "5c0e077b712e58d1218f5aa071f61991bfe2020b",
+  "app/api/admin/tools/route.ts": "9f97f4842e610e862a4568113fcb76550646ab05",
+  "app/api/admin/submissions/route.ts": "1657fc967e6ad8bb23e3b08a9d0b3c726b7145b8",
+  "app/api/admin/upload-logo/route.ts": "b332f9089b326fe6f9f3b1e0f78eb4fa1ce194b9",
+  "app/api/admin/audit-logs/route.ts": "11f8351e53e47803546715445f35ce9259435401",
+  "app/api/admin/discovery/candidate-extraction/invoke/route.ts": "c660e53f8786b66ba8bf78508e142a469b06efb9",
+  "app/api/admin/discovery/candidate-staging-queue/[id]/decision/route.ts": "6c8ee8a3ff5b119a318be45ba9fc2a3110f40187",
+  "app/api/admin/discovery/candidate-staging-queue/route.ts": "d9b3689224647fd1eae0aaac23da99eea3227d59",
+  "app/api/admin/discovery/discovered-tools/[id]/approve/route.ts": "1c1307831fcc5b838dd64f0577e8b3b9a0a94f79",
+  "app/api/admin/discovery/discovered-tools/[id]/duplicate/route.ts": "04f1f0f11047f6a6f356d1b3232669fbb5d3c781",
+  "app/api/admin/discovery/discovered-tools/[id]/route.ts": "cf360feaf08db2b7cc804eb3f871c7409407bca8",
+  "app/api/admin/discovery/discovered-tools/bulk-status/route.ts": "5091d53ae2d678a760419e40525c6ff616804885",
+  "app/api/admin/discovery/discovered-tools/route.ts": "d6de0af1e87e5b9721c48c7019168e67e1c11143",
+  "app/api/admin/discovery/intake/route.ts": "14d3cf6bb4e2bf0dfecd7ac4b466b45bc35ef3a8",
+  "app/api/admin/discovery/runs/[id]/candidate-preview/route.ts": "8fb23a80f7ae8c49077ff9921ee765a1f5739f29",
+  "app/api/admin/discovery/runs/manual/claim/route.ts": "701661fdf77dee2130c885cdae93e89ba9076a80",
+  "app/api/admin/discovery/runs/manual/route.ts": "064260ec939084610785d64a6c917bd04e3bfdc4",
+  "app/api/admin/discovery/runs/route.ts": "ace39a99c6f7ca6534096b8ca0ade9af9851fd51",
+  "app/api/admin/discovery/sources/[id]/route.ts": "b68d4b10f6fa54a25efb8b7cc1ff985dbd96087a",
+  "app/api/admin/discovery/sources/route.ts": "bc2362372282deb204088a09215133041009a08f",
+  "app/api/admin/homepage-control/drafts/[id]/mark-preview/route.ts": "8bb834400171b9ac74f103696ecafb7ddc303d0c",
+  "app/api/admin/homepage-control/drafts/[id]/preview-checklist/route.ts": "2f89ddbc194d3dbe33b5b0dd0eea59aa59772099",
+  "app/api/admin/homepage-control/drafts/[id]/publish/route.ts": "c00c6c77855cd0e85b717de32574406436fe3f8d",
+  "app/api/admin/homepage-control/drafts/[id]/route.ts": "787fce8ed3270bc52e4204b07943f793e275a776",
+  "app/api/admin/homepage-control/drafts/route.ts": "8dfd5919285f0f70cd662b33b0e6384a5b1f95ab",
+});
 function absolute(relativePath) {
   const resolved = path.resolve(ROOT, relativePath);
   assert(resolved.startsWith(`${ROOT}${path.sep}`));
@@ -477,8 +509,20 @@ const checks = [
     assert(criticalPaths.every((pathname) => !deferredPaths.includes(pathname)));
   },
   () => {
-    for (const entry of [...ledger.critical_api_routes, ...ledger.deferred_c2_routes]) {
-      assert.equal(gitBlob(bytes(entry.source_path)), entry.baseline_git_blob);
+    assert.equal(
+      createHash("sha256").update(bytes(LEDGER_PATH)).digest("hex"),
+      HISTORICAL_LAUNCH_LEDGER_SHA256,
+    );
+    const routes = [...ledger.critical_api_routes, ...ledger.deferred_c2_routes];
+    assert.deepEqual(
+      Object.keys(CURRENT_ROUTE_GIT_BLOBS).sort(),
+      routes.map((entry) => entry.source_path).sort(),
+    );
+    for (const entry of routes) {
+      assert.equal(
+        gitBlob(bytes(entry.source_path)),
+        CURRENT_ROUTE_GIT_BLOBS[entry.source_path],
+      );
     }
     assert.equal(ledger.sources.proxy.baseline_git_blob, "d416002fe6a7eef9c0790f5b3680738350d87fb8");
     assert.equal(ledger.sources.admin_ui.baseline_git_blob, "4fb4d58b32cfd8932f5b4d75914d9c1d12fd4620");
@@ -560,7 +604,13 @@ const checks = [
   },
   () => {
     const conditional = Object.entries(ledger.conditional_route_baseline_blobs);
-    for (const [relativePath, blob] of conditional) assert.equal(gitBlob(bytes(relativePath)), blob);
+    for (const [relativePath, blob] of conditional) {
+      // The ledger remains a frozen historical record; current source has its own exact pin.
+      if (relativePath === "app/api/admin/session/route.ts") {
+        assert.equal(blob, "410e0f2f42c1b0c696dd49305704f1daa36e9ffa");
+        assert.equal(gitBlob(bytes(relativePath)), CURRENT_ROUTE_GIT_BLOBS[relativePath]);
+      } else assert.equal(gitBlob(bytes(relativePath)), blob);
+    }
   },
   () => {
     const matrix = strictJson(bytes("testing/readiness-coverage-matrix.json"));

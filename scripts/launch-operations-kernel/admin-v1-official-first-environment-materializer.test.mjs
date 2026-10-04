@@ -38,7 +38,7 @@ function request(overrides = {}) {
       "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_CREATE_ONLY_FUTURE_LIVE_V1",
     reviewed_package_sha256: sha("1"),
     reviewed_package_bytes: 15841,
-    gemini_approval_token_sha256: sha("2"),
+    work_audit_sha256: sha("2"),
     direct_james_approval_sha256: sha("3"),
     authorization_id: AUTHORIZATION_ID,
     run_id: RUN_ID,
@@ -84,10 +84,39 @@ function request(overrides = {}) {
   };
 }
 
-const first = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
-  request: request(),
-  now_epoch_ms: NOW,
+let first;
+assert.doesNotThrow(() => {
+  first = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: request(),
+    now_epoch_ms: NOW,
+  });
+}, "Work audit evidence and direct owner approval admit a hermetic record");
+assert.equal(first.schema_version, 2);
+assert.equal(first.authorization_closure.work_audit_sha256, sha("2"));
+assert.equal(Object.hasOwn(first.authorization_closure, "gemini_approval_token_sha256"), false);
+
+const legacyRequest = request();
+delete legacyRequest.work_audit_sha256;
+legacyRequest.gemini_approval_token_sha256 = sha("2");
+for (const deniedRequest of [
+  legacyRequest,
+  request({ gemini_approval_token_sha256: sha("2") }),
+  request({ work_audit_sha256: undefined }),
+  request({ work_audit_sha256: "invalid" }),
+  request({ direct_james_approval_sha256: undefined }),
+  request({ direct_james_approval_sha256: "invalid" }),
+  request({ expires_at: "2026-08-25T06:00:00.000Z" }),
+]) {
+  assert.throws(() => createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+    request: deniedRequest, now_epoch_ms: NOW,
+  }), (error) => error?.code === "FIRST_ENVIRONMENT_MATERIALIZER_INPUT");
+}
+const changedAudit = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
+  request: request({ work_audit_sha256: sha("9") }), now_epoch_ms: NOW,
 });
+assert.notEqual(changedAudit.review_approval_sha256, first.review_approval_sha256);
+assert.notEqual(changedAudit.one_use_authorization_sha256, first.one_use_authorization_sha256);
+assert.equal(changedAudit.authorization_id_sha256, first.authorization_id_sha256);
 const second = createAdminV1OfficialFirstEnvironmentAuthorizationRecord({
   request: request(),
   now_epoch_ms: NOW,
@@ -109,7 +138,7 @@ assert.equal(
   currentDeployment.authorization_closure.deployment.deployment_id,
   CURRENT_DEPLOYMENT_ID,
 );
-assert.equal(first.schema_version, 1);
+assert.equal(first.schema_version, 2);
 assert.equal(
   first.operation_class,
   "ADMIN_V1_OFFICIAL_FIRST_ENVIRONMENT_TRUE_CREATE_ONLY_RUNTIME_V1",

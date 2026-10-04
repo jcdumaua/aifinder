@@ -968,9 +968,7 @@ await check("concurrent BEGIN and stale predecessor writes admit one authoritati
   }
 });
 
-const filePath = path.join(root, "qualification-journal.json");
-if (existsSync(filePath) && lstatSync(filePath).isFile()) unlinkSync(filePath);
-rmdirSync(root);
+removeCheckpointRoot(root);
 
 if (failures.length > 0) {
   console.log(

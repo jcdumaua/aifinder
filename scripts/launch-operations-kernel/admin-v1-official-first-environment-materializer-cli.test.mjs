@@ -32,13 +32,13 @@ const APPROVAL_TEXT = "Synthetic James approval fixture.\n";
 
 function observation(overrides = {}) {
   return {
-    request_schema_version: 1,
+    request_schema_version: 2,
     authorization_mode: "HERMETIC_TEST_ONLY",
     phase_identity:
       "ADMIN_V1_OFFICIAL_RUNTIME_FIRST_ENVIRONMENT_CREATE_ONLY_FUTURE_LIVE_V1",
     reviewed_package_sha256: sha("1"),
     reviewed_package_bytes: 15841,
-    gemini_approval_token_sha256: sha("2"),
+    work_audit_sha256: sha("2"),
     direct_james_approval_sha256: sha256(APPROVAL_TEXT),
     requested_validity_seconds: 7200,
     candidate_identity_sha256: sha("4"),
@@ -184,6 +184,38 @@ try {
   assert.equal(result.provider_calls, 0);
   assert.equal(result.network_calls, 0);
   const positiveRecord = JSON.parse(readFileSync(result.output_path, "utf8"));
+  assert.equal(positiveRecord.schema_version, 2);
+  assert.equal(positiveRecord.authorization_closure.work_audit_sha256, sha("2"));
+  const legacyRequest = observation({ request_schema_version: 1 });
+  delete legacyRequest.work_audit_sha256;
+  legacyRequest.gemini_approval_token_sha256 = sha("2");
+  for (const deniedRequest of [
+    legacyRequest,
+    observation({ request_schema_version: 1 }),
+    observation({ gemini_approval_token_sha256: sha("2") }),
+  ]) {
+    const denied = makeFixture({ request: deniedRequest });
+    roots.push(denied.root);
+    assertCode(() => dispatch(denied), "FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID");
+    assert.deepEqual(readdirSync(denied.directory).sort(), ["approval.txt", "request.json"]);
+  }
+  for (const [field, value, expectedCode] of [
+    ["work_audit_sha256", undefined, "FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID"],
+    ["work_audit_sha256", "invalid", "FIRST_ENVIRONMENT_MATERIALIZER_INPUT"],
+    ["direct_james_approval_sha256", undefined, "FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID"],
+    ["direct_james_approval_sha256", "invalid", "FIRST_ENVIRONMENT_NATIVE_APPROVAL_DIGEST_MISMATCH"],
+    ["direct_james_approval_sha256", sha("9"), "FIRST_ENVIRONMENT_NATIVE_APPROVAL_DIGEST_MISMATCH"],
+    ["review_approval_sha256", sha("9"), "FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID"],
+    ["one_use_authorization_sha256", sha("9"), "FIRST_ENVIRONMENT_NATIVE_REQUEST_INVALID"],
+  ]) {
+    const request = observation();
+    if (value === undefined) delete request[field];
+    else request[field] = value;
+    const denied = makeFixture({ request });
+    roots.push(denied.root);
+    assertCode(() => dispatch(denied), expectedCode);
+    assert.deepEqual(readdirSync(denied.directory).sort(), ["approval.txt", "request.json"]);
+  }
   assert.equal(positiveRecord.transport_source_sha256, sha("8"));
   assert.equal(
     positiveRecord.authorization_closure.transport_dependency_source_sha256,

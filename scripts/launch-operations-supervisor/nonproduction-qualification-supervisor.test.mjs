@@ -910,7 +910,12 @@ await check("Official class is verified before the same post-trust runner import
       operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
       authorization_schema_path: schemaPath,
       authorization_schema_sha256: sha256(readFileSync(path.join(test.root, schemaPath))),
+      isolation_contract_sha256: "700cf951450811b04a2e1ed43625fe326b74b3e329ea877548dc0d2dad3071fe",
       contract_sha256: Object.fromEntries(contractKeys.map((entry) => [entry, sha("5")])),
+      contract_sha256_v2: {
+        ...Object.fromEntries(contractKeys.map((entry) => [entry, sha("5")])),
+        action_costs: sha("7"), budgets: sha("8"),
+      },
       credential_source_policy: officialCredentialPolicy,
       route_source_sha256: Object.fromEntries(routePaths.map((relativePath) => [
         relativePath,
@@ -931,6 +936,11 @@ await check("Official class is verified before the same post-trust runner import
       },
       access_mode: "SELF_PROJECT_OIDC",
     };
+    const sessionPath = "app/api/admin/session/route.ts";
+    const currentSession = readFileSync(sessionPath);
+    writeFileSync(path.join(test.root, sessionPath), currentSession);
+    const currentPolicy = JSON.parse(readFileSync("scripts/launch-operations-supervisor/supervisor-policy.json", "utf8"));
+    test.policy.official_runtime.route_source_sha256[sessionPath] = currentPolicy.official_runtime.route_source_sha256[sessionPath];
     writeCanonical(test.policyPath, test.policy);
     const officialAuthorization = {
       schema_version: 1,
@@ -1049,9 +1059,118 @@ await check("Official class is verified before the same post-trust runner import
       runtime_retries: 0,
       runtime_replays: 0,
     }]);
+    // The current reviewed binding admits exact source, but not even one appended byte.
+    writeFileSync(path.join(test.root, sessionPath), Buffer.concat([currentSession, Buffer.from(" ")]));
+    assert.throws(() => verifyPreImportSupervisorTrust({
+      authorization_path: test.authorizationPath, repository_root: test.root,
+      supervisor_path: test.supervisorPath, policy_path: test.policyPath,
+      now_epoch_ms: Date.parse("2030-01-01T00:30:00.000Z"),
+      inspect_repository: () => structuredClone(officialRepository),
+    }), { code: "SUPERVISOR_ROUTE_SOURCE_MISMATCH" });
+    writeFileSync(path.join(test.root, sessionPath), currentSession);
+    for (const change of [
+      (reviewed) => { delete reviewed.official_runtime.contract_sha256_v2; },
+      (reviewed) => { delete reviewed.official_runtime.contract_sha256_v2.action_costs; },
+      (reviewed) => { reviewed.official_runtime.contract_sha256_v2.extra = sha("a"); },
+      (reviewed) => { reviewed.official_runtime.contract_sha256_v2.action_costs = "invalid"; },
+      (reviewed) => { reviewed.official_runtime.contract_sha256.action_costs = sha("a"); },
+    ]) {
+      const invalid = structuredClone(test.policy);
+      change(invalid);
+      writeCanonical(test.policyPath, invalid);
+      assert.throws(() => verifyPreImportSupervisorTrust({
+        authorization_path: test.authorizationPath, repository_root: test.root,
+        supervisor_path: test.supervisorPath, policy_path: test.policyPath,
+        now_epoch_ms: Date.parse("2030-01-01T00:30:00.000Z"),
+        inspect_repository: () => structuredClone(officialRepository),
+      }), (error) => error?.code === "SUPERVISOR_POLICY_INVALID");
+    }
   } finally {
     rmSync(test.root, { recursive: true, force: true });
   }
+});
+
+await check("official retained completion admits exact v2 receipt and preserves v1 output", async () => {
+  assert.equal(typeof supervisorModule.sanitizedRunnerOutput, "function");
+  const normalize = supervisorModule.sanitizedRunnerOutput;
+  const execution = {
+    provider_cleanup_policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1",
+    environment_keys: ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+      "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF"],
+  };
+  const authorization = { schema_version: 2, operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1", execution };
+  const completion = {
+    status: "PASS", code: "RETENTION_COMPLETE", qualification_requests: 6,
+    official_requests: 20, runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+    zero_residual_owned_state: false,
+    retention: {
+      policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMPLETE",
+      deployment_id: "dpl_RetainedV2", environment_record_ids: ["env-1", "env-2", "env-3",
+        "env-4", "env-5", "env-6", "env-7"],
+      environment_keys: [...execution.environment_keys], data_zero_residual: true,
+      external_retained_exact: true, unrelated_preserved: true,
+    },
+  };
+  const v1 = { schema_version: 1, operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1" };
+  assert.deepEqual(normalize({ code: "OFFICIAL_RUNTIME_COMPLETE" }, v1), {
+    status: "PASS", code: "OFFICIAL_RUNTIME_COMPLETE", qualification_requests: 6,
+    official_requests: 20, runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+  });
+  assert.deepEqual(normalize(completion, authorization), completion);
+  for (const change of [
+    (value) => { value.code = "OFFICIAL_RUNTIME_COMPLETE"; },
+    (value) => { value.code = "UNAUTHORIZED_SUCCESS"; },
+    (value) => { value.status = "FAIL"; },
+    (value) => { value.official_requests = 19; },
+    (value) => { value.qualification_requests = 5; },
+    (value) => { value.runtime_sessions = 2; },
+    (value) => { value.runtime_retries = 1; },
+    (value) => { value.runtime_replays = 1; },
+    (value) => { value.zero_residual_owned_state = true; },
+    (value) => { delete value.retention; },
+    (value) => { value.retention.extra = true; },
+    (value) => { value.retention.phase = "COMMITTED"; },
+    (value) => { value.retention.policy = "DELETE"; },
+    (value) => { value.retention.deployment_id = ""; },
+    (value) => { value.retention.environment_record_ids[6] = "env-1"; },
+    (value) => { value.retention.environment_record_ids.pop(); },
+    (value) => { value.retention.environment_record_ids[0] = "invalid id"; },
+    (value) => { value.retention.environment_keys.reverse(); },
+    (value) => { value.retention.data_zero_residual = false; },
+    (value) => { value.retention.external_retained_exact = false; },
+    (value) => { value.retention.unrelated_preserved = false; },
+  ]) {
+    const invalid = structuredClone(completion);
+    change(invalid);
+    assert.deepEqual(normalize(invalid, authorization), { status: "FAIL", code: "CONCRETE_RUNNER_FAILED" });
+  }
+  assert.deepEqual(normalize(completion, v1), { status: "FAIL", code: "CONCRETE_RUNNER_FAILED" });
+  const wrongPolicy = structuredClone(authorization);
+  wrongPolicy.execution.provider_cleanup_policy = "DELETE";
+  assert.deepEqual(normalize(completion, wrongPolicy), { status: "FAIL", code: "CONCRETE_RUNNER_FAILED" });
+  assert.equal(typeof supervisorModule.admitSupervisorRunnerResult, "function");
+  const admit = supervisorModule.admitSupervisorRunnerResult;
+  const retainedResult = { exit_code: 0, code: "RETENTION_COMPLETE" };
+  assert.deepEqual(admit(retainedResult, authorization, normalize(completion, authorization)), retainedResult);
+  assert.deepEqual(admit({ exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" }, v1, null),
+    { exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" });
+  const malformed = structuredClone(completion);
+  malformed.retention.environment_record_ids[6] = "env-1";
+  assert.deepEqual(admit(retainedResult, authorization, normalize(malformed, authorization)),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit(retainedResult, authorization, null),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit({ exit_code: 0, code: "OFFICIAL_RUNTIME_COMPLETE" }, authorization, completion),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit({ exit_code: 1, code: "RETENTION_COMPLETE" }, authorization, completion),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit({ exit_code: "0", code: "RETENTION_COMPLETE" }, authorization, completion),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit(undefined, authorization, completion),
+    { exit_code: 1, code: "CONCRETE_RUNNER_FAILED" });
+  assert.deepEqual(admit({ exit_code: 1, code: "OFFICIAL_RECOVERY_PENDING" }, authorization, null),
+    { exit_code: 1, code: "OFFICIAL_RECOVERY_PENDING" });
 });
 
 if (failures.length > 0) {
