@@ -425,6 +425,12 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   assert.throws(() => verifyOfficialRunUnspentBeforeImport(recoveryAuth, p.filesystem), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
 }
 let recoveryPreImportNegatives = 0;
+for (const change of [(d) => { d.state.retention.data_zero_residual = false; }, (d) => { d.state.cleanup.pop(); }]) {
+  const document = recoveryDocument(recoveryAuth);change(document);
+  const p = recoveryFilesystem(recoveryAuth, document);
+  assert.equal(verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem).journal_sha256,
+    v2Sha256(`${canonicalRecovery(document)}\n`));
+}
 for (const change of [
   (p, d) => { d.state.retention.phase = "ARMED"; }, (p, d) => { d.state.lifecycle = "CLEANUP_COMPLETE"; },
   (p, d) => { d.state.retention.phase = "COMPLETE";d.state.lifecycle = "RETENTION_COMPLETE"; },
@@ -433,8 +439,10 @@ for (const change of [
   (p, d) => { d.state.runtime_replays = 1; }, (p, d) => { d.state.last_completed_official_ordinal = 19; },
   (p, d) => { delete d.state.runtime_retries; }, (p, d) => { d.state.retention.extra = true; },
   (p, d) => { d.state.retention.environment_record_ids[6] = d.state.retention.environment_record_ids[0]; },
-  (p, d) => { d.state.retention.environment_keys.reverse(); }, (p, d) => { d.state.retention.data_zero_residual = false; },
-  (p, d) => { d.state.cleanup.pop(); }, (p, d) => { d.state.cleanup.push("DELETE_ENVIRONMENT_1"); },
+  (p, d) => { d.state.retention.environment_keys.reverse(); }, (p, d) => { d.state.retention.data_zero_residual = "false"; },
+  (p, d) => { d.state.effects.grant_revoke = 0; }, (p, d) => { d.state.cleanup.push("DELETE_ENVIRONMENT_1"); },
+  (p, d) => { d.state.owned.logo = {}; },
+  (p, d) => { d.state.owned.logo = { object_id: "owned", version: "v1", extra: true }; },
   (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).nlink = 2; },
   (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).uid = 0; },
   (p) => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).mode = 0o644; },

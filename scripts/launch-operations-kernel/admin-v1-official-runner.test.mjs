@@ -647,12 +647,15 @@ function recoveryDependencies(auth, doc = recoveryDocument(auth), { failedRead =
     if (forged) return retainedRuntimeResult(auth);
     const { recoverConcreteAdminV1OfficialRetention } = await import("./admin-v1-official-live-platform.mjs");
     return recoverConcreteAdminV1OfficialRetention({ ...input, now_epoch_ms: deps.now_epoch_ms,
+      live_now_epoch_ms: () => deps.now_epoch_ms,
       transport: { async execute({ operation, input: request }) {
         adapterCalls++;
         if (failedRead) throw new Error("synthetic unproven readback");
         if (operation === "inspect_remote_ref") return { status: "ABSENT" };
         if (operation === "verify_preview_identity") return { status: "EXACT", deployment_id: request.deployment_id, unrelated_preserved: true };
         if (operation === "inspect_environment_contract") return { status: "EXACT", names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
+        if (operation === "verify_zero_data_residual") return { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true };
+        if (operation.startsWith("delete_") || operation === "cleanup_local_owned_temp_state") return { status: "DELETED_EXACT" };
         assert.match(operation, /^verify_environment_[1-7]$/u);
         return { status: "EXACT", ...request, project_id: auth.execution.preview_project_id,
           team_id: auth.execution.preview_team_id, git_branch: auth.execution.branch_name, unrelated_preserved: true };
@@ -692,8 +695,8 @@ const recoveryBadStates = [
   (d) => { d.state.retention.phase = "ARMED"; }, (d) => { d.state.retention.phase = "UNARMED"; },
   (d) => { d.state.retention.extra = true; }, (d) => { d.state.retention.environment_record_ids.pop(); },
   (d) => { d.state.retention.environment_record_ids[6] = d.state.retention.environment_record_ids[0]; },
-  (d) => { d.state.retention.environment_keys.reverse(); }, (d) => { d.state.retention.data_zero_residual = false; },
-  (d) => { d.state.cleanup.pop(); }, (d) => { d.state.cleanup.push("DELETE_PREVIEW"); },
+  (d) => { d.state.retention.environment_keys.reverse(); }, (d) => { d.state.retention.data_zero_residual = "false"; },
+  (d) => { d.state.effects.grant_revoke = 0; }, (d) => { d.state.cleanup.push("DELETE_PREVIEW"); },
   (d) => { d.state.owned.deployment_id = "dpl_other"; },
 ];
 for (const change of recoveryBadStates) {

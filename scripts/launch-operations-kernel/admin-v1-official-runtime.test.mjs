@@ -1309,20 +1309,23 @@ function v2Fixture({ fail = null, bad_verify = null, duplicate_id = false,
   const record = authorizationV2();
   const base = fakeAdapters();
   const calls = [], publications = [];
-  let current = null, retired = false, previews = 0;
+  let current = null, retired = false, previews = 0, sequence = 0;
   const journal = {
-    load() { return current === null ? null : { value: { state: structuredClone(current) }, retired }; },
+    load() { return current === null ? null : { value: { schema_version: 1, sequence,
+      identity: { authorization_id_sha256: record.authorization_id_sha256, run_id: record.run_id },
+      state: structuredClone(current) }, retired }; },
     publish(state) {
       if (journal_failure && state.stage === journal_failure) throw new Error("SYNTHETIC_JOURNAL_FAILURE");
-      current = structuredClone(state);publications.push(structuredClone(state));return DIGEST;
+      sequence += 1;current = structuredClone(state);publications.push(structuredClone(state));return DIGEST;
     },
-    retire(state) { current = { ...structuredClone(state), retired: true };retired = true;return DIGEST; },
+    retire(state) { sequence += 1;current = { ...structuredClone(state), retired: true };retired = true;return DIGEST; },
   };
   const adapters = { async invoke(operation, input = {}) {
     calls.push({ operation, input: Object.fromEntries(Object.entries(input).map(([key, value]) =>
       [key, value instanceof Uint8Array ? Buffer.from(value).toString("utf8") : structuredClone(value)])) });
     if (operation === fail) throw Object.assign(new Error("SYNTHETIC_AMBIGUOUS_CREATE"), {
       environment_create_failure_class: "ENVIRONMENT_CREATE_TRANSPORT_OR_HTTP_FAILURE", http_status_class: null });
+    if (operation === "verify_zero_data_residual" && /^delete_(owned|submitted)/u.test(fail ?? "")) return { status: "PRESENT" };
     if (operation === "create_environment_2" && duplicate_id) return { status: "CREATED_EXACT", record_id: "env-1" };
     if (operation.startsWith("verify_environment_")) {
       if (operation === bad_verify || previews > 1 && operation === final_failure) return { status: "AMBIGUOUS" };
@@ -1340,9 +1343,135 @@ function v2Fixture({ fail = null, bad_verify = null, duplicate_id = false,
     return base.invoke(operation, input);
   } };
   const run = (overrides = {}) => runAdminV1OfficialRuntime({ authorization: record,
-    now_epoch_ms: TEST_NOW_EPOCH_MS, sensitive: v2Sensitive(record), journal, adapters, ...overrides });
-  return { record, journal, calls, publications, run, state: () => current };
+    now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
+    sensitive: v2Sensitive(record), journal, adapters, ...overrides });
+  return { record, journal, adapters, calls, publications, run, state: () => current };
 }
+
+await check("v2 expiry at provider intent denies the adapter effect", async () => {
+  const f = v2Fixture();let clock = TEST_NOW_EPOCH_MS;
+  await f.run({ live_now_epoch_ms: () => clock, journal: { ...f.journal,
+    publish(state) {
+      f.journal.publish(state);
+      if (state.stage === "INTENT_CREATE_ENVIRONMENT_1") clock = TEST_EXPIRES_EPOCH_MS;
+    },
+  } });
+  assert.equal(f.calls.filter(({ operation }) => operation === "create_environment_1").length, 0);
+});
+
+await check("v2 expiry between sequential effects denies every later effect", async () => {
+  const f = v2Fixture();let clock = TEST_NOW_EPOCH_MS;
+  await f.run({ live_now_epoch_ms: () => clock, adapters: { async invoke(operation, input) {
+    const result = await f.adapters.invoke(operation, input);
+    if (operation === "create_environment_1") clock = TEST_EXPIRES_EPOCH_MS;
+    return result;
+  } } });
+  assert.equal(f.calls.filter(({ operation }) => operation === "create_environment_1").length, 1);
+  assert.equal(f.calls.filter(({ operation }) => operation === "create_environment_2").length, 0);
+  assert.equal(f.calls.some(({ operation }) => operation.startsWith("delete_")), false);
+});
+
+await check("v2 application mutation expiry denies the request", async () => {
+  const f = v2Fixture();let clock = TEST_NOW_EPOCH_MS;
+  await f.run({ live_now_epoch_ms: () => clock, journal: { ...f.journal,
+    publish(state) {
+      f.journal.publish(state);
+      if (state.stage === "OFFICIAL_REQUEST_8_ATTEMPTED") clock = TEST_EXPIRES_EPOCH_MS;
+    },
+  } });
+  assert.equal(f.calls.some(({ operation, input }) => operation === "application_request" &&
+    input.lane === "OFFICIAL" && input.sequence_ordinal === 8), false);
+  assert.equal(f.state().last_completed_official_ordinal, 7);
+});
+
+await check("v2 invalid or regressing live clock permanently fails closed", async () => {
+  for (const invalid of [NaN, Infinity, TEST_NOW_EPOCH_MS - 1, "invalid"]) {
+    const f = v2Fixture();
+    await f.run({ live_now_epoch_ms: () => invalid });
+    assert.equal(f.calls.length, 0);
+  }
+  const f = v2Fixture();let count = 0;
+  await f.run({ live_now_epoch_ms: () => ++count === 2 ? TEST_NOW_EPOCH_MS - 1 : TEST_NOW_EPOCH_MS });
+  assert.equal(f.calls.length, 1);
+});
+
+for (const failedOperation of ["delete_owned_audits", "delete_submitted_fixture_2", "delete_owned_tool_1",
+  "verify_zero_data_residual", "retire_protected_access", "delete_remote_ref", "cleanup_local_owned_temp_state"]) {
+  await check(`committed cleanup resumes only unfinished ${failedOperation}`, async () => {
+    const f = v2Fixture({ fail: failedOperation });
+    assert.equal((await f.run()).classification, "RECOVERY_PENDING");
+    const before = structuredClone(f.state());
+    const root = mkdtempSync("/tmp/aifinder-admin-v1-official-cleanup-recovery.");
+    const identity = { authorization_id_sha256: f.record.authorization_id_sha256, run_id: RUN_ID };
+    const original = createAdminV1OfficialJournal({ directory: root, identity });original.publish(before);
+    const journal = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true });
+    const resumed = v2Fixture();
+    const input = { authorization: f.record, journal, adapters: resumed.adapters,
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS };
+    const result = await runtimeModule.recoverAdminV1OfficialRetention(input);
+    assert.equal(result.classification, "RETENTION_COMPLETE");
+    const after = journal.load().value.state;
+    assert.deepEqual(after.owned, before.owned);
+    assert.deepEqual(after.evidence, before.evidence);
+    assert.equal(after.runtime_sessions, 1);
+    assert.equal(after.last_completed_qualification_ordinal, 6);
+    assert.equal(after.last_completed_official_ordinal, 20);
+    for (const step of before.cleanup) {
+      assert(after.cleanup.includes(step));
+      assert.equal(resumed.calls.some(({ operation }) => operation.toUpperCase() === step), false);
+    }
+    assert(resumed.calls.some(({ operation }) => operation === failedOperation));
+    assert.equal(resumed.calls.some(({ operation }) => /^(create_|application_request|acquire_automatic_preview|prepare_local_temporary_commit)/u.test(operation)), false);
+    const count = resumed.calls.length;
+    await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention(input), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
+    assert.equal(resumed.calls.length, count);
+  });
+}
+
+await check("recovery rejects malformed durable logo ownership before any adapter effect", async () => {
+  const f = v2Fixture({ fail: "delete_owned_tool_1" });await f.run();
+  for (const logo of [{}, { object_id: "owned" }, { object_id: "owned", version: "v1", extra: true }]) {
+    const record = f.journal.load();record.value.state.owned.logo = logo;
+    let calls = 0;
+    await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record,
+      journal: { ...f.journal, load: () => record }, adapters: { async invoke() { calls++; } },
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS }),
+    { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+    assert.equal(calls, 0);
+  }
+});
+
+await check("failed cleanup continuation preserves receipts and resumes only unfinished work", async () => {
+  const f = v2Fixture({ fail: "delete_owned_audits" });await f.run();
+  const failing = v2Fixture({ fail: "verify_zero_data_residual" });
+  const input = { authorization: f.record, journal: f.journal,
+    now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS };
+  assert.equal((await runtimeModule.recoverAdminV1OfficialRetention({ ...input,
+    adapters: failing.adapters })).classification, "RECOVERY_PENDING");
+  const pending = f.journal.load();
+  assert.equal(pending.retired, false);assert.equal(pending.value.state.retention.phase, "COMMITTED");
+  assert(pending.value.state.cleanup.includes("DELETE_OWNED_AUDITS"));
+  const resumed = v2Fixture();
+  assert.equal((await runtimeModule.recoverAdminV1OfficialRetention({ ...input,
+    adapters: resumed.adapters })).classification, "RETENTION_COMPLETE");
+  assert.equal(resumed.calls.some(({ operation }) => operation === "delete_owned_audits"), false);
+  assert.equal(f.journal.load().value.state.runtime_sessions, 1);
+});
+
+await check("unbound storage grant residual remains pending without recreating a grant", async () => {
+  const f = v2Fixture({ fail: "delete_storage_exact_version" });
+  assert.equal((await f.run()).classification, "RETENTION_PENDING");
+  const resumed = v2Fixture();
+  const result = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record,
+    journal: f.journal, now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
+    adapters: { async invoke(operation, input) {
+      if (operation === "verify_zero_data_residual") return { status: "PRESENT" };
+      return resumed.adapters.invoke(operation, input);
+    } } });
+  assert.equal(result.classification, "RECOVERY_PENDING");assert.equal(f.journal.load().retired, false);
+  assert.equal(f.state().retention.data_zero_residual, false);
+  assert.equal(resumed.calls.some(({ operation }) => /storage_cleanup_grant|delete_storage/u.test(operation)), false);
+});
 
 await check("versioned signed budget and action maps preserve v1", async () => {
   assert.deepEqual(runtimeModule.ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V1, ADMIN_V1_OFFICIAL_BUDGET_LIMITS);
@@ -1472,13 +1601,13 @@ await check("v2 committed finalization failures retain resources and recover by 
     throw new Error("MUTATION_IN_READ_ONLY_RECOVERY");
   } };
   const completed = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: f.journal,
-    adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS });
+    adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS });
   assert.equal(completed.classification, "RETENTION_COMPLETE");
   assert.deepEqual(reads, ["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract",
     ...Array.from({length:7}, (_, index) => `verify_environment_${index + 1}`)]);assert.equal(reads.some((operation) => operation.startsWith("delete_") ||
     operation === "verify_zero_external_residual" || operation === "verify_zero_data_residual"), false);
   await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: f.journal,
-    adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
+    adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
 });
 
 await check("v2 retained success retires durable journal and rejects replay", async () => {
@@ -1571,7 +1700,7 @@ await check("real durable final-failure journal admits recovery with historical 
   const reopened=createAdminV1OfficialJournal({directory:root,identity,existing_only:true});
   let reads=0;
   const result=await runtimeModule.recoverAdminV1OfficialRetention({authorization:f.record,journal:reopened,
-    now_epoch_ms:TEST_NOW_EPOCH_MS,adapters:{async invoke(operation,input={}){
+    now_epoch_ms:TEST_NOW_EPOCH_MS,live_now_epoch_ms:()=>TEST_NOW_EPOCH_MS,adapters:{async invoke(operation,input={}){
       reads++;if(operation==="inspect_remote_ref")return {status:"ABSENT"};
       if(operation==="verify_preview_identity")return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:true};
       if(operation==="inspect_environment_contract")return {status:"EXACT",names:[...runtimeModule.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES]};

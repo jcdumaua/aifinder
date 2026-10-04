@@ -28,6 +28,7 @@ import {
   ADMIN_V1_OFFICIAL_ACTION_COSTS,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2,
 } from "./admin-v1-official-runtime.mjs";
 
 let assertions = 0;
@@ -94,6 +95,7 @@ const reviewedPolicy = {
       "app/api/admin/upload-logo/route.ts", "lib/admin-v1-launch-scope.ts", "proxy.ts",
     ].map((name) => [name, "6".repeat(64)])),
     contract_sha256: structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256),
+    contract_sha256_v2: structuredClone(ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2),
     repository_contract: { root: observedRepository.root, branch: "main", remote_repository: "jcdumaua/aifinder",
       head_binding: "AUTHORIZATION_PUBLISHED_HEAD", origin_main_binding: "SAME_AS_HEAD",
       remote_main_binding: "SAME_AS_HEAD", status_binding: "AUTHORIZATION_STATUS_SHA256" },

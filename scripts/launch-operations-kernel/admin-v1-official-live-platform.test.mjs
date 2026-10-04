@@ -172,7 +172,7 @@ function completeFixture(schemaVersion = 2) {
   return { authorization, bundle };
 }
 
-function credentialProbe(schemaVersion = 2, { journal, spawn_sync } = {}) {
+function credentialProbe(schemaVersion = 2, { journal, retention_recovery, spawn_sync, live_now_epoch_ms = () => now } = {}) {
   const { authorization, bundle } = completeFixture(schemaVersion);
   const credentials = loadAdminV1OfficialCredentials(schemaVersion === 2
     ? { authorization, credential_bundle: bundle, credential_source_policy: ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
@@ -186,7 +186,8 @@ function credentialProbe(schemaVersion = 2, { journal, spawn_sync } = {}) {
   let responseFor = () => ({ id: authorization.execution.preview_project_id,
     name: authorization.execution.preview_project_name, accountId: authorization.execution.preview_team_id });
   const transport = officialPlatform.createAdminV1OfficialConcreteTransport({
-    execution_context: { ...(journal ? { journal } : {}),
+    live_now_epoch_ms,
+    execution_context: { ...(journal ? { journal } : {}), ...(retention_recovery ? { retention_recovery } : {}),
       ...(spawn_sync ? { git_execution_context: {
         git_dir: "/tmp/aifinder-official-synthetic-git-dir",
         object_directory: "/tmp/aifinder-official-synthetic-objects",
@@ -217,6 +218,22 @@ async function contractCheck(name, operation) {
   try { await operation(); assertions += 1; }
   catch (error) { contractFailures.push(`${name}:${error?.code ?? error?.message ?? "UNKNOWN"}`); }
 }
+
+await contractCheck("v2 expiry inside remote deletion denies physical mutation after ownership read", async () => {
+  let clock = now, calls = 0;
+  const probe = credentialProbe(2, { live_now_epoch_ms: () => clock, spawn_sync: (_file, args) => {
+    calls += 1;
+    if (args.includes("ls-remote")) {
+      clock = Date.parse(probe.authorization.expires_at);
+      return { status: 0, stdout: `${probe.authorization.execution.temporary_commit_sha}\trefs/heads/${probe.authorization.execution.branch_name}\n`, stderr: "" };
+    }
+    assert.fail("expired authorization must never reach Git push");
+  } });
+  try {
+    await assert.rejects(probe.execute("delete_remote_ref", { ref_id: `refs/heads/${probe.authorization.execution.branch_name}` }));
+    assert.equal(calls, 1);
+  } finally { probe.retire(); }
+});
 
 for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} valid preflight`, async () => {
   const probe = credentialProbe(schemaVersion);
@@ -646,6 +663,90 @@ function recoveryContext(journal, document) {
     journal_sha256: sha256Hex(`${canonicalJson(document)}\n`) } };
 }
 
+await contractCheck("concrete committed audit cleanup reconciles partial deletion and lost receipt idempotently", async () => {
+  const auth = completeFixture(2).authorization;
+  const document = recoveryDocument(auth);document.state.retention.data_zero_residual = false;
+  const journal = { load: () => ({ retired: false, value: structuredClone(document) }) };
+  let remaining = [{ id: "audit-owned", created_at: "v1" }];
+  for (const expectedDeletes of [1, 0]) {
+    const probe = credentialProbe(2, recoveryContext(journal, document));
+    try {
+      await probe.execute("inspect_environment_contract");
+      probe.respondWith(({ method }) => {
+        if (method === "DELETE") { remaining = [];return { http_status: 200, http_body: [] }; }
+        return { http_body: structuredClone(remaining) };
+      });
+      assert.deepEqual(await probe.execute("delete_owned_audits", { rows: document.state.owned.audit_rows }), { status: "DELETED_EXACT" });
+      assert.equal(probe.calls.filter((call) => call.method === "DELETE").length, expectedDeletes);
+    } finally { probe.retire(); }
+  }
+  const probe = credentialProbe(2, recoveryContext(journal, document));
+  try {
+    await probe.execute("inspect_environment_contract");
+    probe.respondWith(() => ({ http_body: [{ id: "audit-owned", created_at: "replacement" }] }));
+    await assert.rejects(probe.execute("delete_owned_audits", { rows: document.state.owned.audit_rows }));
+    assert.equal(probe.calls.some((call) => call.method === "DELETE"), false);
+  } finally { probe.retire(); }
+});
+
+await contractCheck("concrete recovery resumes an incomplete owned-row cleanup without replay", async () => {
+  const auth = completeFixture(2).authorization;
+  let current = { retired: false, value: recoveryDocument(auth) };
+  current.value.state.retention.data_zero_residual = false;
+  current.value.state.cleanup.unshift("DELETE_SUBMITTED_FIXTURE_1", "DELETE_OWNED_TOOL_1");
+  const calls = [];
+  const journal = {
+    load: () => structuredClone(current),
+    publish(state) { current.value.sequence += 1;current.value.state = structuredClone(state); },
+    retire(state) { current.value.sequence += 1;current.value.state = { ...structuredClone(state), retired: true };current.retired = true; },
+  };
+  const transport = { async execute({ operation, input }) {
+    calls.push(operation);
+    if (operation === "delete_owned_audits") return { status: "DELETED_EXACT" };
+    if (operation === "verify_zero_data_residual") return { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true };
+    if (operation === "inspect_remote_ref") return { status: "ABSENT" };
+    if (operation === "inspect_environment_contract") return { status: "EXACT", names: [...officialRuntime.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
+    if (operation === "verify_preview_identity") return { status: "EXACT", deployment_id: input.deployment_id, unrelated_preserved: true };
+    if (operation.startsWith("verify_environment_")) return { status: "EXACT", ...input, project_id: auth.execution.preview_project_id,
+      team_id: auth.execution.preview_team_id, git_branch: auth.execution.branch_name, unrelated_preserved: true };
+    assert.fail(`unexpected recovery operation ${operation}`);
+  } };
+  const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: auth,
+    credentials: {}, execution_context: recoveryContext(journal, current.value), transport,
+    now_epoch_ms: now, live_now_epoch_ms: () => now });
+  assert.equal(result.classification, "RETENTION_COMPLETE");
+  assert.deepEqual(calls.slice(0, 4), ["inspect_environment_contract", "delete_owned_audits", "verify_zero_data_residual", "inspect_remote_ref"]);
+  assert.equal(current.retired, true);
+  assert.equal(result.runtime_sessions, 1);
+});
+
+await contractCheck("concrete cleanup counts reconciliation requests against the unchanged signed budget", async () => {
+  const auth = completeFixture(2).authorization;
+  const doc = recoveryDocument(auth);doc.state.retention.data_zero_residual = false;
+  doc.state.owned.submissions = [1, 2, 3].map((id) => ({ row_id: `submission-${id}`, version: "v1" }));
+  doc.state.owned.tools = [1, 2].map((id) => ({ row_id: `tool-${id}`, version: "v1" }));
+  const journal = { load: () => ({ retired: false, value: structuredClone(doc) }) };
+  const probe = credentialProbe(2, recoveryContext(journal, doc));
+  let currentRows = [], requests = 0, versionKey = "created_at";
+  try {
+    await probe.execute("inspect_environment_contract");
+    probe.respondWith(({ method }) => {
+      requests += 1;
+      if (method === "DELETE") currentRows = [];
+      return { http_body: currentRows.map((row) => ({ id: row.row_id, [versionKey]: row.version })) };
+    });
+    const operations = [["delete_owned_audits", { rows: doc.state.owned.audit_rows }, doc.state.owned.audit_rows],
+      ...doc.state.owned.submissions.map((row, index) => [`delete_submitted_fixture_${index + 1}`, { row_id: row.row_id, expected_version: row.version }, [row]]),
+      ...doc.state.owned.tools.map((row, index) => [`delete_owned_tool_${index + 1}`, { row_id: row.row_id, expected_version: row.version }, [row]])];
+    for (const [index, [operation, input, rows]] of operations.entries()) {
+      currentRows = structuredClone(rows);versionKey = index === 0 ? "created_at" : "updated_at";
+      if (index < 4) assert.equal((await probe.execute(operation, input)).status, "DELETED_EXACT");
+      else await assert.rejects(probe.execute(operation, input), { code: "OFFICIAL_BUDGET_EXHAUSTED" });
+    }
+    assert.equal(requests, 14);
+  } finally { probe.retire(); }
+});
+
 for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   await contractCheck(`production recovery wrapper finalizes ${lifecycle} with metadata-free records after exact project preflight`, async () => {
     const fixture = completeFixture(2);const doc = recoveryDocument(fixture.authorization);doc.state.lifecycle = lifecycle;
@@ -670,7 +771,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
       return { id, key: expectedPreviewKeys[index], type: "encrypted", target: ["preview"], gitBranch: probe.authorization.execution.branch_name };
     });
     const input = { authorization: probe.authorization, credentials: probe.credentials, execution_context: recoveryContext(journal, doc),
-      transport: probe.transport, now_epoch_ms: now };
+      transport: probe.transport, now_epoch_ms: now, live_now_epoch_ms: () => now };
     const restricted = officialPlatform.createAdminV1OfficialRecoveryAdapter(input);
     for (const operation of ["application_request", "create_remote_ref", "create_environment_1", "delete_environment_7",
       "delete_preview", "retire_protected_access", "generate_oidc", "inspect_prior_residue", "cleanup_local_owned_temp_state"])
@@ -696,7 +797,7 @@ await contractCheck("recovery wrapper clears credentials and leaves durable pend
   const probe = credentialProbe(2, { journal, spawn_sync: () => ({status:0,signal:null,stdout:Buffer.alloc(0),stderr:Buffer.alloc(0)}) });
   probe.respondWith(() => ({http_status:503,http_body:{}}));
   const output = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization:probe.authorization,credentials:probe.credentials,
-    execution_context:recoveryContext(journal,current.value),transport:probe.transport,now_epoch_ms:now });
+    execution_context:recoveryContext(journal,current.value),transport:probe.transport,now_epoch_ms:now,live_now_epoch_ms:()=>now });
   assert.equal(output.classification,"RECOVERY_PENDING");assert.equal(current.value.state.retention.phase,"COMMITTED");assert.equal(retired,0);
   assert(Object.values(probe.credentials).every((value)=>value.every((byte)=>byte===0)));probe.retire();
 });
@@ -730,7 +831,7 @@ for (const failure of ["FINAL_READ_DRIFT", "PUBLISH_THROW", "RETIRE_THROW", "PUB
       return {status:"EXACT",...input,project_id:auth.execution.preview_project_id,team_id:auth.execution.preview_team_id,
         git_branch:auth.execution.branch_name,unrelated_preserved:true};
     } };
-    const input = {authorization:auth,credentials,execution_context:recoveryContext(journal,current.value),transport,now_epoch_ms:now};
+    const input = {authorization:auth,credentials,execution_context:recoveryContext(journal,current.value),transport,now_epoch_ms:now,live_now_epoch_ms:()=>now};
     if (failure === "RETIRE_THROW") {
       assert.equal((await officialPlatform.recoverConcreteAdminV1OfficialRetention(input)).classification,"RECOVERY_PENDING");
       assert.equal(current.retired,false);assert.equal(current.value.state.retention.phase,"COMMITTED");
@@ -761,7 +862,7 @@ await contractCheck("restricted recovery adapter refuses substituted input IDs a
   const denied=await officialPlatform.recoverConcreteAdminV1OfficialRetention({authorization:auth,credentials,execution_context:{
     retention_recovery:recoveryContext(journal,original.value).retention_recovery,
     journal:{load:()=>structuredClone(original),publish(state){original.value.state=structuredClone(state);original.value.sequence++;},retire(){assert.fail("unproven readback cannot retire");}}
-  },transport,now_epoch_ms:now});
+  },transport,now_epoch_ms:now,live_now_epoch_ms:()=>now});
   assert.equal(denied.classification,"RECOVERY_PENDING");
   assert(Object.values(credentials).every((value)=>value.every((byte)=>byte===0)));
 });
@@ -876,7 +977,7 @@ for (const failure of ["WRONG_PROJECT", "WRONG_TEAM", "FAILED_GET", "WRONG_RUN",
     });
     try {
       const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: probe.authorization,
-        credentials, execution_context: recoveryContext(journal, current.value), transport: probe.transport, now_epoch_ms: now });
+        credentials, execution_context: recoveryContext(journal, current.value), transport: probe.transport, now_epoch_ms: now, live_now_epoch_ms: () => now });
       assert.equal(result.classification, "RECOVERY_PENDING");
       assert.deepEqual({ publishes, retires, gitCalls }, { publishes: 0, retires: 0, gitCalls: 1 });
       assert.deepEqual(current, original);
@@ -909,7 +1010,7 @@ for (const replacementAt of ["DURING_PREFLIGHT", "AFTER_PREFLIGHT"]) {
       return { status: "EXACT", names: [...officialRuntime.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
     } };
     await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: auth, credentials,
-      execution_context: recoveryContext(journal, current.value), transport, now_epoch_ms: now }), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+      execution_context: recoveryContext(journal, current.value), transport, now_epoch_ms: now, live_now_epoch_ms: () => now }), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
     assert.deepEqual(reads, ["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract"]);
     assert.deepEqual({ publishes, retires }, { publishes: 0, retires: 0 });assert.deepEqual(current, replacement);
     assert(Object.values(credentials).every(value => value.every(byte => byte === 0)));

@@ -1040,6 +1040,8 @@ export function verifyOfficialRunUnspentBeforeImport(
 
 function validatePreImportRecoveryDocument(record, authorization) {
   const complete = false;
+  const boundedAscii = (value, maximum) => typeof value === "string" && value.length >= 1 &&
+    value.length <= maximum && /^[\x20-\x7e]+$/u.test(value);
 
   const value = record?.value;
   const state = value?.state;
@@ -1065,7 +1067,8 @@ function validatePreImportRecoveryDocument(record, authorization) {
       !ids.every((id) => typeof id === "string" && /^[\x21-\x7e]{1,128}$/u.test(id)) ||
       canonicalJson(receipt.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
       canonicalJson(authorization.execution.environment_keys) !== canonicalJson(OFFICIAL_RETENTION_ENVIRONMENT_KEYS) ||
-      receipt.data_zero_residual !== true || ![receipt.external_retained_exact, receipt.unrelated_preserved].every((flag) => typeof flag === "boolean") ||
+      typeof receipt.data_zero_residual !== "boolean" || complete && receipt.data_zero_residual !== true ||
+      ![receipt.external_retained_exact, receipt.unrelated_preserved].every((flag) => typeof flag === "boolean") ||
       complete && (receipt.external_retained_exact !== true || receipt.unrelated_preserved !== true) || state.zero_residual !== false ||
       !exactKeys(state.owned, ["local_temp_state", "remote_ref", "environment_record_ids", "deployment_id", "submissions", "tools", "audit_rows", "logo"]) ||
       state.owned.deployment_id !== receipt.deployment_id || canonicalJson(state.owned.environment_record_ids) !== canonicalJson(ids) ||
@@ -1078,8 +1081,21 @@ function validatePreImportRecoveryDocument(record, authorization) {
       !Object.values(state.effects).every((count) => Number.isSafeInteger(count) && count >= 0) ||
       !Array.isArray(state.evidence) || !(state.failure === null || state.failure && typeof state.failure === "object" && !Array.isArray(state.failure)) ||
       !Array.isArray(state.cleanup) || !state.cleanup.every((step) => typeof step === "string") ||
-      !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"].every((step) => state.cleanup.includes(step)) ||
+      complete && !["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"].every((step) => state.cleanup.includes(step)) ||
       state.cleanup.some((step) => step === "DELETE_PREVIEW" || /^DELETE_ENVIRONMENT_[1-7]$/u.test(step))) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  if (!complete && (!boundedAscii(state.owned.local_temp_state, 256) ||
+      state.owned.remote_ref !== `refs/heads/${authorization.execution.branch_name}` ||
+      state.owned.logo !== null && (!exactKeys(state.owned.logo, ["object_id", "version"]) ||
+        !boundedAscii(state.owned.logo.object_id, 256) || !boundedAscii(state.owned.logo.version, 128)) ||
+      state.effects.grant_prepare !== state.effects.grant_revoke ||
+      ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) =>
+        rows.every((row) => exactKeys(row, ["row_id", "version"]) && boundedAscii(row.row_id, 128) && boundedAscii(row.version, 128)) &&
+        new Set(rows.map((row) => row.row_id)).size === rows.length) ||
+      state.owned.submissions.length > 3 || state.owned.tools.length > 2 ||
+      new Set(state.cleanup).size !== state.cleanup.length ||
+      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
     throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
   }
   return Object.freeze(structuredClone(value));
