@@ -1713,6 +1713,87 @@ await check("real durable final-failure journal admits recovery with historical 
   assert.deepEqual(reopened.load().value.state.owned,before.value.state.owned);
 });
 
+await check("reopened recovery cannot reset failed provider-control spend", async () => {
+  const f = v2Fixture({ fail: "retire_protected_access" });await f.run();
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-cumulative.");
+  const identity = { authorization_id_sha256: f.record.authorization_id_sha256, run_id: RUN_ID };
+  createAdminV1OfficialJournal({ directory: root, identity }).publish(f.state());
+  let attempts = 0;
+  const maximum = runtimeModule.ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2.environment_metadata_controls;
+  for (let index = 0; index < maximum + 2; index++) {
+    const journal = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true });
+    assert.equal((await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal,
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
+      adapters: { async invoke(operation) {
+        assert.equal(operation, "inspect_environment_contract");attempts++;
+        throw new Error("SYNTHETIC_FAILED_CONTROL");
+      } } })).classification, "RECOVERY_PENDING");
+  }
+  assert.equal(attempts, maximum);
+  const final = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true }).load();
+  assert.equal(final.value.state.recovery_usage.environment_metadata_controls, maximum);
+});
+
+await check("recovery reservations are durable before effects and survive failed response and reopening", async () => {
+  const f = v2Fixture({ fail: "delete_owned_audits" });await f.run();
+  const root = mkdtempSync("/tmp/aifinder-admin-v1-official-reservation.");
+  const identity = { authorization_id_sha256: f.record.authorization_id_sha256, run_id: RUN_ID };
+  createAdminV1OfficialJournal({ directory: root, identity }).publish(f.state());
+  for (const fail of [true, false]) {
+    const journal = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true });
+    const resumed = v2Fixture();
+    const result = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal,
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
+      adapters: { async invoke(operation, input) {
+        if (operation === "delete_owned_audits") {
+          const disk = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true }).load();
+          assert.equal(disk.value.state.recovery_usage.database_rest_requests, fail ? 1 : 2);
+          if (fail) throw new Error("SYNTHETIC_LOST_RESPONSE");
+        }
+        return resumed.adapters.invoke(operation, input);
+      } } });
+    assert.equal(result.classification, fail ? "RECOVERY_PENDING" : "RETENTION_COMPLETE");
+  }
+  const completed = createAdminV1OfficialJournal({ directory: root, identity }).load();
+  assert.equal(completed.value.state.runtime_sessions, 1);
+  assert.equal(completed.value.state.last_completed_official_ordinal, 20);
+  assert.equal(completed.value.state.last_completed_qualification_ordinal, 6);
+});
+
+await check("invalid cumulative usage is denied before any adapter effect", async () => {
+  const f = v2Fixture({ fail: "delete_owned_audits" });await f.run();
+  for (const change of [state => { delete state.recovery_usage; }, state => { state.recovery_usage = null; },
+    state => { state.recovery_usage.extra = 0; }, state => { delete state.recovery_usage.git_remote_reads; },
+    ...[-1, 1.5, "1", null, NaN, Infinity, 65].map(value => state => { state.recovery_usage.environment_metadata_controls = value; })]) {
+    const record = f.journal.load();change(record.value.state);let effects = 0;
+    await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record,
+      journal: { ...f.journal, load: () => record }, adapters: { async invoke() { effects++; } },
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS }),
+    { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+    assert.equal(effects, 0);
+  }
+});
+
+await check("failed or tampered reservation readback prevents effects without overwriting evidence", async () => {
+  for (const failure of ["THROW", "NO_WRITE", "TAMPER", "EXPIRE"]) {
+    const f = v2Fixture({ fail: "delete_owned_audits" });await f.run();
+    let effects = 0, writes = 0, clock = TEST_NOW_EPOCH_MS;
+    const journal = { ...f.journal, publish(state) {
+      writes++;
+      if (failure === "THROW") throw new Error("SYNTHETIC_DISK_FAILURE");
+      if (failure === "NO_WRITE") return;
+      const next = structuredClone(state);
+      if (failure === "TAMPER") next.recovery_usage.environment_metadata_controls = 0;
+      f.journal.publish(next);
+      if (failure === "EXPIRE") clock = TEST_EXPIRES_EPOCH_MS;
+    } };
+    assert.equal((await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal,
+      adapters: { async invoke() { effects++; } }, now_epoch_ms: TEST_NOW_EPOCH_MS,
+      live_now_epoch_ms: () => clock })).classification, "RECOVERY_PENDING");
+    assert.equal(effects, 0);assert.equal(writes, 1);
+  }
+});
+
 if (failures.length > 0) {
   console.error(failures.join("\n"));
   process.exitCode = 1;

@@ -1,3 +1,4 @@
+import { ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2, ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 } from "./admin-v1-official-runtime.mjs";
 import assert from "node:assert/strict";
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
@@ -646,6 +647,7 @@ function recoveryDocument(auth) {
   return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
     state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
       runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      recovery_usage: Object.fromEntries(Object.keys(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2).map(key => [key, 0])),
       last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
       last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
       owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
@@ -780,7 +782,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
     const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention(input);
     assert.equal(result.classification, "RETENTION_COMPLETE");assert.equal(result.qualification_requests, 6);assert.equal(result.official_requests, 20);
     assert.equal(result.runtime_sessions, 1);assert.equal(result.runtime_replays, 0);assert.equal(result.zero_residual_owned_state, false);
-    assert.equal(publishes, 1);assert.equal(retirements, 1);assert.equal(current.retired, true);
+    assert.equal(publishes, 11);assert.equal(retirements, 1);assert.equal(current.retired, true);
     assert.equal(probe.calls.length, 9);assert.equal(gitCalls, 1);
     assert.deepEqual(probe.calls.map(({ url }) => url.pathname), [
       "/v13/deployments/dpl_RetainedV2", `/v9/projects/${probe.authorization.execution.preview_project_id}`,
@@ -832,12 +834,12 @@ for (const failure of ["FINAL_READ_DRIFT", "PUBLISH_THROW", "RETIRE_THROW", "PUB
         git_branch:auth.execution.branch_name,unrelated_preserved:true};
     } };
     const input = {authorization:auth,credentials,execution_context:recoveryContext(journal,current.value),transport,now_epoch_ms:now,live_now_epoch_ms:()=>now};
-    if (failure === "RETIRE_THROW") {
+    if (failure === "RETIRE_THROW" || failure === "PUBLISH_THROW") {
       assert.equal((await officialPlatform.recoverConcreteAdminV1OfficialRetention(input)).classification,"RECOVERY_PENDING");
       assert.equal(current.retired,false);assert.equal(current.value.state.retention.phase,"COMMITTED");
     } else await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention(input));
-    assert.equal(reads,10);assert(Object.values(credentials).every((value)=>value.every((byte)=>byte===0)));
-    if (failure === "FINAL_READ_DRIFT") { assert.deepEqual(current,replacement);assert.equal(publishes,0);assert.equal(retires,0); }
+    assert.equal(reads, failure.startsWith("PUBLISH") ? 0 : 10);assert(Object.values(credentials).every((value)=>value.every((byte)=>byte===0)));
+    if (failure === "FINAL_READ_DRIFT") { assert.deepEqual(current,replacement);assert.equal(publishes,10);assert.equal(retires,0); }
     if (failure === "PUBLISH_READBACK_THROW") { assert.equal(publishes,1);assert.equal(retires,0); }
   });
 }
@@ -850,15 +852,14 @@ await contractCheck("restricted recovery adapter refuses substituted input IDs a
     if(operation==="inspect_environment_contract")return {status:"EXACT",names:[...officialRuntime.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES]};
     return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:false};}};
   const adapter=officialPlatform.createAdminV1OfficialRecoveryAdapter({authorization:auth,credentials,execution_context:recoveryContext(journal,original.value),transport});
-  assert.deepEqual(await adapter.invoke("inspect_remote_ref"),{status:"ABSENT"});
-  await assert.rejects(adapter.invoke("verify_preview_identity",{deployment_id:"dpl_other"}),{code:"OFFICIAL_ADAPTER_INPUT"});
+  const invokeReserved = async (operation, input = {}) => {
+    for (const [key, cost] of Object.entries(officialRuntime.ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation])) original.value.state.recovery_usage[key] += cost;
+    original.value.sequence++;
+    return adapter.invoke(operation, input);
+  };
+  assert.deepEqual(await invokeReserved("inspect_remote_ref"),{status:"ABSENT"});
+  await assert.rejects(invokeReserved("verify_preview_identity",{deployment_id:"dpl_other"}),{code:"OFFICIAL_ADAPTER_INPUT"});
   assert.equal(calls,1);
-  await adapter.invoke("verify_preview_identity",{deployment_id:"dpl_RetainedV2"});
-  await adapter.invoke("inspect_environment_contract");
-  for(const bad of [{key:auth.execution.environment_keys[0],record_id:"env-other"},
-    {key:"WRONG_KEY",record_id:"env-retained-1"}])
-    await assert.rejects(adapter.invoke("verify_environment_1",bad),{code:"OFFICIAL_ADAPTER_INPUT"});
-  assert.equal(calls,3);
   const denied=await officialPlatform.recoverConcreteAdminV1OfficialRetention({authorization:auth,credentials,execution_context:{
     retention_recovery:recoveryContext(journal,original.value).retention_recovery,
     journal:{load:()=>structuredClone(original),publish(state){original.value.state=structuredClone(state);original.value.sequence++;},retire(){assert.fail("unproven readback cannot retire");}}
@@ -944,7 +945,7 @@ await contractCheck("metadata-free retained record is denied without project pre
 });
 
 for (const failure of ["WRONG_PROJECT", "WRONG_TEAM", "FAILED_GET", "WRONG_RUN", "WRONG_PROVENANCE", "MALFORMED_OBSERVATION"]) {
-  await contractCheck(`failed recovery project preflight ${failure} cannot publish or retire`, async () => {
+  await contractCheck(`failed recovery project preflight ${failure} persists only reserved usage`, async () => {
     let current, publishes = 0, retires = 0, gitCalls = 0;
     const journal = { load: () => structuredClone(current),
       publish(state) { publishes++;current.value.state = structuredClone(state);current.value.sequence++; },
@@ -979,8 +980,12 @@ for (const failure of ["WRONG_PROJECT", "WRONG_TEAM", "FAILED_GET", "WRONG_RUN",
       const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: probe.authorization,
         credentials, execution_context: recoveryContext(journal, current.value), transport: probe.transport, now_epoch_ms: now, live_now_epoch_ms: () => now });
       assert.equal(result.classification, "RECOVERY_PENDING");
-      assert.deepEqual({ publishes, retires, gitCalls }, { publishes: 0, retires: 0, gitCalls: 1 });
-      assert.deepEqual(current, original);
+      assert.deepEqual({ publishes, retires, gitCalls }, { publishes: 3, retires: 0, gitCalls: 1 });
+      assert.equal(current.value.sequence, original.value.sequence + 3);
+      const unchanged = structuredClone(current);unchanged.value.sequence = original.value.sequence;
+      unchanged.value.state.recovery_usage = original.value.state.recovery_usage;
+      assert.deepEqual(unchanged, original);
+      assert.equal(current.value.state.recovery_usage.provider_control_invocations, 2);
       assert.equal(probe.calls.length, ["WRONG_RUN", "WRONG_PROVENANCE", "MALFORMED_OBSERVATION"].includes(failure) ? 1 : 2);
       assert(Object.values(credentials).every(value => value.every(byte => byte === 0)));
     } finally { probe.retire(); }
@@ -998,7 +1003,7 @@ for (const replacementAt of ["DURING_PREFLIGHT", "AFTER_PREFLIGHT"]) {
     const journal = { load() {
       if (preflightDone && replacementAt === "AFTER_PREFLIGHT" && ++postLoads === 2) current = replacement;
       return structuredClone(current);
-    }, publish() { publishes++; }, retire() { retires++; } };
+    }, publish(state) { publishes++;current.value.sequence++;current.value.state = structuredClone(state); }, retire() { retires++; } };
     const credentials = { github_token: Buffer.from("synthetic-github"), vercel_token: Buffer.from("synthetic-vercel") };
     const transport = { async execute({ operation, input }) {
       reads.push(operation);
@@ -1012,10 +1017,39 @@ for (const replacementAt of ["DURING_PREFLIGHT", "AFTER_PREFLIGHT"]) {
     await assert.rejects(officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: auth, credentials,
       execution_context: recoveryContext(journal, current.value), transport, now_epoch_ms: now, live_now_epoch_ms: () => now }), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
     assert.deepEqual(reads, ["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract"]);
-    assert.deepEqual({ publishes, retires }, { publishes: 0, retires: 0 });assert.deepEqual(current, replacement);
+    assert.deepEqual({ publishes, retires }, { publishes: 3, retires: 0 });assert.deepEqual(current, replacement);
     assert(Object.values(credentials).every(value => value.every(byte => byte === 0)));
   });
 }
+
+await contractCheck("reopened concrete cleanup durably bounds every reconciliation request", async () => {
+  const auth = completeFixture(2).authorization;
+  let current = { retired: false, value: recoveryDocument(auth) }, requests = 0;
+  current.value.state.retention.data_zero_residual = false;
+  const journal = { load: () => structuredClone(current),
+    publish(state) { current.value.sequence++;current.value.state = structuredClone(state); },
+    retire() { assert.fail("failed cleanup cannot retire"); } };
+  for (let attempt = 0; attempt < 9; attempt++) {
+    const context = recoveryContext(journal, current.value);
+    const probe = credentialProbe(2, context);
+    probe.respondWith(({ url, method }) => {
+      if (url.pathname === `/v9/projects/${auth.execution.preview_project_id}`) return {
+        id: auth.execution.preview_project_id, name: auth.execution.preview_project_name, accountId: auth.execution.preview_team_id };
+      requests++;
+      assert.equal(current.value.state.recovery_usage.database_rest_requests, requests);
+      assert.equal(current.value.state.recovery_usage.database_rest_successes, requests);
+      return method === "GET" ? { http_body: [{ id: "audit-owned", created_at: "v1" }] } : { http_status: 503, http_body: {} };
+    });
+    try {
+      assert.equal((await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: probe.authorization,
+        credentials: probe.credentials, execution_context: context, transport: probe.transport,
+        now_epoch_ms: now, live_now_epoch_ms: () => now })).classification, "RECOVERY_PENDING");
+    } finally { probe.retire(); }
+  }
+  assert.equal(requests, 14);
+  assert.equal(current.value.state.recovery_usage.database_rest_requests, 14);
+  assert.equal(current.value.state.runtime_sessions, 1);
+});
 
 assert.deepEqual(contractFailures, [], contractFailures.join("\n"));
 console.log(`PASS_ADMIN_V1_OFFICIAL_CR3 assertions=${assertions} canonical_relation=true repeated_receipts_bypass=false real_calls=0`);

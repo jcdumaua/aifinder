@@ -1,3 +1,4 @@
+import { ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2, ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 } from "./admin-v1-official-runtime.mjs";
 import assert from "node:assert/strict";
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import { createAdminV1OfficialAuthorizationRecord } from "./admin-v1-official-authorization.mjs";
@@ -564,6 +565,7 @@ function recoveryDocument(auth) {
   return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
     state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
       runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      recovery_usage: Object.fromEntries(Object.keys(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2).map(key => [key, 0])),
       last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
       last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
       owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
@@ -668,7 +670,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   const flow = recoveryDependencies(auth, doc);
   assert.deepEqual(await officialRunnerModule.dispatchConcreteQualificationRunner(recoveryArgs, flow.deps, recoveryTrust(auth, doc)),
     { exit_code: 0, code: "RETENTION_COMPLETE" });
-  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 1, retirements: 1 });
+  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 11, retirements: 1 });
   assert.equal(flow.state().retired, true);assert.equal(flow.deps.outputs.at(-1).zero_residual_owned_state, false);
   for (const denied of ["prepareOfficialExecutionContext", "verifyTemporaryCommit", "verifyNoPriorOfficialRecovery", "runAuthorizedOfficialRuntime"])
     assert.equal(flow.deps.calls.includes(denied), false);
@@ -676,7 +678,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   assert(Object.values(flow.sensitive).every((value) => value.every((byte) => byte === 0)));
   assert.deepEqual(await officialRunnerModule.dispatchConcreteQualificationRunner(recoveryArgs, flow.deps, recoveryTrust(auth, doc)),
     { exit_code: 1, code: "OFFICIAL_AUTHORIZATION_SPENT" });
-  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 1, retirements: 1 });
+  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 11, retirements: 1 });
 }
 for (const options of [{ failedRead: true }, { throwAfterCredentials: true }]) {
   const auth = v2Record();const doc = recoveryDocument(auth);const flow = recoveryDependencies(auth, doc, options);

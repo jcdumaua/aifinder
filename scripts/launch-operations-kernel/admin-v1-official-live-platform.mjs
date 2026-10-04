@@ -9,6 +9,7 @@ import {
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
   createAdminV1OfficialExpiryGuard,
   createAdminV1OfficialBudget,
+  ADMIN_V1_OFFICIAL_ACTION_COSTS_V2,
   adminV1OfficialRetentionCleanupPlan,
   classifyAdminV1OfficialRecoveryState,
   runAdminV1OfficialRuntime,
@@ -1540,14 +1541,22 @@ export function createAdminV1OfficialConcreteTransport({
   live_now_epoch_ms = () => Date.now(),
 } = {}) {
   let activeGuard = () => {};
+  let recoveryRequestReservation = null;
+  let recoveryFirstRequest = false;
   const guards = new WeakMap();
   const lowLevel = createConcreteLiveTransport({
     before_effect: (effect) => {
       activeGuard();
-      if (bindings.cleanup_document && effect?.kind === "HTTP" && effect.service.startsWith("SUPABASE")) {
+      if ((bindings.cleanup_document || recoveryRequestReservation) && effect?.kind === "HTTP" && effect.service.startsWith("SUPABASE")) {
         // Reserve a success before dispatch too: even ambiguous replies may
         // have succeeded. Recovery must never exceed the signed upper bound.
-        recoveryBudget.take({ database_rest_requests: 1, database_rest_successes: 1 });
+        if (recoveryRequestReservation) {
+          // The operation reservation covers its first request; charge every
+          // additional reconciliation request durably before dispatch as well.
+          if (recoveryFirstRequest) recoveryFirstRequest = false;
+          else recoveryRequestReservation();
+          activeGuard();
+        } else recoveryBudget.take({ database_rest_requests: 1, database_rest_successes: 1 });
       }
     },
     fetch_impl,
@@ -1953,14 +1962,22 @@ export function createAdminV1OfficialConcreteTransport({
   }
 
   return Object.freeze({
-    async execute({ operation, input, authorization, credentials }) {
+    async execute({ operation, input, authorization, credentials, recovery }) {
       if (!guards.has(authorization)) guards.set(authorization,
         createAdminV1OfficialExpiryGuard(authorization, Date.parse(authorization.created_at), live_now_epoch_ms));
       activeGuard = guards.get(authorization);
       activeGuard();
       validatedOperation(operation, input, authorization);
+      recoveryRequestReservation = recovery?.reserve_database_request ?? null;
+      recoveryFirstRequest = true;
       if (execution_context?.retention_recovery && bindings.cleanup_document === undefined) {
-        bindings.cleanup_document = admitBoundOfficialRecoveryDocument(execution_context, authorization);
+        if (recovery) {
+          const admitted = validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: recovery.admitted_document }, authorization);
+          if (sha256Hex(`${canonicalJson(admitted)}\n`) !== execution_context.retention_recovery.journal_sha256) {
+            throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+          }
+          bindings.cleanup_document = admitted;
+        } else bindings.cleanup_document = admitBoundOfficialRecoveryDocument(execution_context, authorization);
         bindings.cleanup_plan = adminV1OfficialRetentionCleanupPlan(bindings.cleanup_document.state);
         bindings.cleanup_attempted = new Set();
       }
@@ -2573,7 +2590,7 @@ export function createAdminV1OfficialAdapter({
     typeof transport?.execute !== "function"
   ) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
   return Object.freeze({
-    async invoke(operation, input = {}) {
+    async invoke(operation, input = {}, recovery) {
       const mapping = validatedOperation(operation, input, authorization);
       const result = await transport.execute(Object.freeze({
         operation,
@@ -2582,6 +2599,7 @@ export function createAdminV1OfficialAdapter({
         authorization,
         credentials,
         execution_context,
+        ...(recovery === undefined ? {} : { recovery }),
       }));
       if (!boundedResult(result)) {
         const error = new AdminV1OfficialLivePlatformError(
@@ -2659,19 +2677,39 @@ export function createAdminV1OfficialRecoveryAdapter({ authorization, credential
   ];
   const adapter = createAdminV1OfficialAdapter({ authorization, credentials, execution_context, transport });
   let next = 0;
-  return Object.freeze({ async invoke(operation, input = {}) {
+  return Object.freeze({ async invoke(operation, input = {}, recovery) {
     if (operation !== sequence[next]?.operation) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_OPERATION_DENIED");
     }
     const current = execution_context.journal.load();
     if (current?.retired === true) throw new AdminV1OfficialLivePlatformError("OFFICIAL_AUTHORIZATION_SPENT");
+    const reserved = structuredClone(expectedDocument);
+    const budget = createAdminV1OfficialBudget({ schema_version: 2 });
+    Object.assign(budget.used, reserved.state.recovery_usage);
+    budget.take(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);
+    reserved.sequence += 1;reserved.state.recovery_usage = structuredClone(budget.used);
+    expectedDocument = reserved;
     if (canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(current, authorization)) !== canonicalJson(expectedDocument)) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
     }
-    const expected = sequence[next].input;
-    if (canonicalJson(input) !== canonicalJson(expected)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+    const expectedRecoveryInput = sequence[next].input;
+    if (canonicalJson(input) !== canonicalJson(expectedRecoveryInput)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
     next += 1;
-    const result = await adapter.invoke(operation, input);
+    const result = await adapter.invoke(operation, input, {
+      admitted_document: admitted,
+      reserve_database_request() {
+        if (typeof recovery?.reserve_database_request !== "function" ||
+            canonicalJson(execution_context.journal.load()?.value) !== canonicalJson(expectedDocument)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+        }
+        recovery.reserve_database_request();
+        budget.take({ database_rest_requests: 1, database_rest_successes: 1 });
+        expectedDocument.sequence += 1;expectedDocument.state.recovery_usage = structuredClone(budget.used);
+        if (canonicalJson(execution_context.journal.load()?.value) !== canonicalJson(expectedDocument)) {
+          throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
+        }
+      },
+    });
     const after = execution_context.journal.load();
     if (after?.retired !== false || canonicalJson(validateAdminV1OfficialRetentionRecoveryRecord(after, authorization)) !== canonicalJson(expectedDocument)) {
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");

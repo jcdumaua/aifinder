@@ -1038,6 +1038,40 @@ export function verifyOfficialRunUnspentBeforeImport(
   return Object.freeze({ status: "ABSENT" });
 }
 
+const OFFICIAL_RECOVERY_BUDGET_LIMITS_V2 = Object.freeze({
+  git_remote_mutations: 4,
+  git_remote_reads: 42,
+  local_temporary_commits: 1,
+  local_temporary_cleanups: 1,
+  provider_control_invocations: 353,
+  provider_inventory_traversals: 30,
+  provider_inventory_pages: 118,
+  provider_direct_mutations: 15,
+  preview_creations: 1,
+  protected_handshake_requests: 6,
+  oidc_generations: 4,
+  automation_bypass_cycles: 1,
+  browser_requests: 0,
+  application_requests: 26,
+  qualification_application_requests: 6,
+  official_application_requests: 20,
+  database_rest_requests: 26,
+  database_rest_successes: 14,
+  approval_rpc_calls: 1,
+  grant_prepare_rpc_calls: 1,
+  grant_revoke_rpc_calls: 1,
+  storage_reads: 7,
+  storage_uploads: 1,
+  storage_delete_attempts: 2,
+  environment_metadata_controls: 64,
+  environment_records_created: 7,
+  environment_records_deleted: 7,
+  runtime_sessions: 1,
+  runtime_retries: 0,
+  runtime_replays: 0,
+  cleanup_reconciliation_requests: 2,
+});
+
 function validatePreImportRecoveryDocument(record, authorization) {
   const complete = false;
   const boundedAscii = (value, maximum) => typeof value === "string" && value.length >= 1 &&
@@ -1046,7 +1080,7 @@ function validatePreImportRecoveryDocument(record, authorization) {
   const value = record?.value;
   const state = value?.state;
   const receipt = state?.retention;
-  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention"];
+  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention", "recovery_usage"];
   const ids = receipt?.environment_record_ids;
   if (authorization?.schema_version !== 2 ||
       authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
@@ -1055,6 +1089,10 @@ function validatePreImportRecoveryDocument(record, authorization) {
       !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
       value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
       !exactKeys(state, complete ? [...stateKeys, "retired"] : stateKeys) ||
+      sha256(canonicalJson(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) !== authorization.contract_sha256.budgets ||
+      !exactKeys(state.recovery_usage, Object.keys(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) ||
+      !Object.entries(state.recovery_usage).every(([key, count]) => Number.isSafeInteger(count) &&
+        count >= 0 && count <= OFFICIAL_RECOVERY_BUDGET_LIMITS_V2[key]) ||
       (complete ? state.retired !== true || state.lifecycle !== "RETENTION_COMPLETE" : !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state.lifecycle)) ||
       receipt?.phase !== (complete ? "COMPLETE" : "COMMITTED") ||
       state.token_spent !== true || state.runtime_sessions !== 1 || state.runtime_retries !== 0 || state.runtime_replays !== 0 ||

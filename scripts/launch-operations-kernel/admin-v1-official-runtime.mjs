@@ -283,8 +283,10 @@ export function adminV1OfficialRetentionCleanupPlan(state) {
   if (!state.retention.data_zero_residual) {
     if (state.effects.audits > 0) add("delete_owned_audits", { rows: structuredClone(state.owned.audit_rows) });
     for (const [kind, prefix] of [["submissions", "delete_submitted_fixture"], ["tools", "delete_owned_tool"]]) {
-      state.owned[kind].forEach((row, index) => add(`${prefix}_${index + 1}`,
-        { row_id: row.row_id, expected_version: row.version }));
+      for (let index = 0; index < state.owned[kind].length; index += 1) {
+        const row = state.owned[kind][index];
+        add(`${prefix}_${index + 1}`, { row_id: row.row_id, expected_version: row.version });
+      }
     }
   }
   if (!state.retention.data_zero_residual || plan.length > 0) plan.push({ operation: "verify_zero_data_residual",
@@ -315,12 +317,45 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
   const plan = adminV1OfficialRetentionCleanupPlan(state);
   const guard = createAdminV1OfficialExpiryGuard(validated, now_epoch_ms, live_now_epoch_ms);
   const budget = createAdminV1OfficialBudget({ schema_version: 2 });
+  Object.assign(budget.used, state.recovery_usage);
+  let persistenceFailed = false;
+  let expectedDocument = structuredClone(record.value);
+  const publish = () => {
+    try {
+      const before = journal.load();
+      if (before?.retired !== false || canonicalJson(before.value) !== canonicalJson(expectedDocument)) {
+        throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+      }
+      journal.publish(state);
+      expectedDocument = { ...expectedDocument, sequence: expectedDocument.sequence + 1, state: structuredClone(state) };
+      const after = journal.load();
+      if (after?.retired !== false || canonicalJson(after.value) !== canonicalJson(expectedDocument)) {
+        throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+      }
+    } catch (error) { persistenceFailed = true;throw error; }
+  };
+  const reserve = (cost) => {
+    guard();
+    budget.take(cost);
+    state.recovery_usage = structuredClone(budget.used);
+    publish();
+    guard();
+  };
   const read = async (operation, input = {}) => {
     const allowed = operation === "verify_preview_identity" || operation === "inspect_remote_ref" ||
       operation === "inspect_environment_contract" || /^verify_environment_[1-7]$/u.test(operation) ||
       plan.some((step) => step.operation === operation && canonicalJson(step.input) === canonicalJson(input));
     if (!allowed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
-    budget.take(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);guard();return adapters.invoke(operation, input);
+    reserve(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);
+    let active = true;
+    try {
+      return await adapters.invoke(operation, input, { reserve_database_request() {
+        if (!active || !ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation].database_rest_requests) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
+        }
+        reserve({ database_rest_requests: 1, database_rest_successes: 1 });
+      } });
+    } finally { active = false; }
   };
   let projectPreflightPending = false;
   try {
@@ -334,7 +369,7 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
       for (const { operation, input } of plan) {
         if (operation === "delete_remote_ref" && remoteAbsent) {
           state.cleanup.push("DELETE_REMOTE_REF");state.stage = "RECOVERY_COMPLETE_DELETE_REMOTE_REF";
-          journal.publish(state);continue;
+          publish();continue;
         }
         const result = await read(operation, input);
         if (operation === "inspect_remote_ref_before_delete") {
@@ -353,7 +388,7 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
           if (/^delete_(owned|submitted)/u.test(operation)) state.retention.data_zero_residual = false;
         }
         state.stage = `RECOVERY_COMPLETE_${operation.toUpperCase()}`;
-        journal.publish(state);
+        publish();
       }
     }
     if (state.retention.data_zero_residual !== true || !retentionEphemeralCleanupExact(state)) {
@@ -377,14 +412,14 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
     }
     state.retention.external_retained_exact = true;state.retention.unrelated_preserved = true;
     state.retention.phase = "COMPLETE";state.lifecycle = "RETENTION_COMPLETE";state.stage = "RETENTION_COMPLETE_PUBLISHED";
-    journal.publish(state);journal.retire(state);
+    publish();journal.retire(state);
     return Object.freeze({ classification: "RETENTION_COMPLETE", zero_residual_owned_state: false,
       retention: Object.freeze(structuredClone(state.retention)) });
   } catch {
     state.retention.phase = "COMMITTED";state.retention.external_retained_exact = false;state.retention.unrelated_preserved = false;
     state.lifecycle = "RECOVERY_PENDING";state.stage = "RETENTION_RECOVERY_UNPROVEN";
     // An unproven project preflight cannot authorize a durable recovery transition.
-    if (!projectPreflightPending) journal.publish(state);
+    if (!projectPreflightPending && !persistenceFailed) publish();
     return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });
   }
 }
@@ -822,7 +857,7 @@ export function validateAdminV1OfficialRetentionRecoveryRecord(record, authoriza
   const value = record?.value;
   const state = value?.state;
   const receipt = state?.retention;
-  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention"];
+  const stateKeys = ["lifecycle", "stage", "token_spent", "runtime_sessions", "runtime_retries", "runtime_replays", "last_attempted_qualification_ordinal", "last_completed_qualification_ordinal", "last_attempted_official_ordinal", "last_completed_official_ordinal", "owned", "effects", "evidence", "failure", "cleanup", "zero_residual", "retention", "recovery_usage"];
   const ids = receipt?.environment_record_ids;
   if (authorization?.schema_version !== 2 ||
       authorization.execution?.provider_cleanup_policy !== "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1" ||
@@ -831,6 +866,9 @@ export function validateAdminV1OfficialRetentionRecoveryRecord(record, authoriza
       !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
       value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
       !exactKeys(state, complete ? [...stateKeys, "retired"] : stateKeys) ||
+      !exactKeys(state.recovery_usage, Object.keys(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2)) ||
+      !Object.entries(state.recovery_usage).every(([key, count]) => Number.isSafeInteger(count) &&
+        count >= 0 && count <= ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2[key]) ||
       (complete ? state.retired !== true || state.lifecycle !== "RETENTION_COMPLETE" : !["RETENTION_PENDING", "RECOVERY_PENDING"].includes(state.lifecycle)) ||
       receipt?.phase !== (complete ? "COMPLETE" : "COMMITTED") ||
       state.token_spent !== true || state.runtime_sessions !== 1 || state.runtime_retries !== 0 || state.runtime_replays !== 0 ||
@@ -1165,6 +1203,7 @@ function publicState(state) {
     cleanup: structuredClone(state.cleanup),
     zero_residual: state.zero_residual,
     ...(state.retention === undefined ? {} : { retention: structuredClone(state.retention) }),
+    ...(state.recovery_usage === undefined ? {} : { recovery_usage: structuredClone(state.recovery_usage) }),
   };
 }
 
@@ -1590,7 +1629,7 @@ export async function runAdminV1OfficialRuntime({
     failure: null,
     cleanup: [],
     zero_residual: false,
-    ...(isolated ? { retention: { policy: validated.execution.provider_cleanup_policy,
+    ...(isolated ? { recovery_usage: blankCounts(), retention: { policy: validated.execution.provider_cleanup_policy,
       phase: "UNARMED", deployment_id: null, environment_record_ids: [],
       environment_keys: [...OFFICIAL_PREVIEW_ENVIRONMENT_KEYS], data_zero_residual: false,
       external_retained_exact: false, unrelated_preserved: false } } : {}),

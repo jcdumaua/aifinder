@@ -1,3 +1,4 @@
+import { ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2, ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 } from "../launch-operations-kernel/admin-v1-official-runtime.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
@@ -80,7 +81,7 @@ function policy() {
       contract_sha256: Object.fromEntries(CONTRACT_KEYS.map((entry) => [entry, sha("5")])),
       contract_sha256_v2: {
         ...Object.fromEntries(CONTRACT_KEYS.map((entry) => [entry, sha("5")])),
-        action_costs: sha("d"), budgets: sha("e"),
+        action_costs: sha("d"), budgets: ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2.budgets,
       },
       credential_source_policy: CREDENTIAL_POLICY,
       route_source_sha256: Object.fromEntries(ROUTE_PATHS.map((entry) => [entry, sha("6")])),
@@ -373,6 +374,7 @@ function recoveryDocument(auth) {
   return { schema_version: 1, identity: { authorization_id_sha256: auth.authorization_id_sha256, run_id: auth.run_id }, sequence: 4,
     state: { lifecycle: "RETENTION_PENDING", stage: "RETENTION_FINAL_VERIFICATION", token_spent: true,
       runtime_sessions: 1, runtime_retries: 0, runtime_replays: 0,
+      recovery_usage: Object.fromEntries(Object.keys(ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2).map(key => [key, 0])),
       last_attempted_qualification_ordinal: 6, last_completed_qualification_ordinal: 6,
       last_attempted_official_ordinal: 20, last_completed_official_ordinal: 20,
       owned: { local_temp_state: "local-historical-owned", remote_ref: `refs/heads/${auth.execution.branch_name}`, environment_record_ids: [...ids], deployment_id: "dpl_RetainedV2",
