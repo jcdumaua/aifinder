@@ -90,7 +90,7 @@ const FIRST_ENVIRONMENT_CANDIDATE_OVERLAY_PATHS = Object.freeze([
 const ORCHESTRATOR_OVERLAY_PATH =
   "testing/admin-v1-staging-runtime-orchestrator.mjs";
 const ORCHESTRATOR_OVERLAY_SHA256 =
-  "c7b5e6a6a3893366e4553ecaab37caee9441b18979f67c2ec5b293ece40bec4a";
+  "24c5de6e8b512e65fb6e0a941a4efcf500294eeb6b6d3301b441fb3fda1aaba5";
 const FRESH_REVIEW_CANDIDATE_OVERLAY_PATHS = Object.freeze([
   "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs",
   "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs",

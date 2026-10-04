@@ -352,12 +352,13 @@ const REVIEWED_NODE_MODULES_BY_PATH = new Map([
   ])],
   [OFFICIAL_AUTHORIZATION_PATH, new Set(["node:fs", "node:path"])],
   [OFFICIAL_AUTHORIZATION_TEST_PATH, new Set(["node:assert/strict"])],
+  [OFFICIAL_LIVE_PLATFORM_PATH, new Set(["node:crypto"])],
   [OFFICIAL_LIVE_PLATFORM_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_CONCRETE_BRIDGE_TEST_PATH, new Set(["node:assert/strict"])],
   [OFFICIAL_RUNNER_TEST_PATH, new Set(["node:assert/strict"])],
   [
     OFFICIAL_RUNTIME_PATH,
-    new Set(["node:fs", "node:path"]),
+    new Set(["node:crypto", "node:fs", "node:path"]),
   ],
   [
     OFFICIAL_RUNTIME_TEST_PATH,

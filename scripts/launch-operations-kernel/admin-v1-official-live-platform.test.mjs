@@ -1191,6 +1191,7 @@ for (const variant of ["exact", "replacement", "absent", "malformed"]) {
     document.state.retention.data_zero_residual = false;
     document.state.owned.logo = { object_id: "admin/55555555-5555-4555-8555-555555555555.png", version: "owned-v1" };
     document.state.cleanup = document.state.cleanup.filter(step => step !== "DELETE_STORAGE_EXACT_VERSION");
+    document.state.effects.grant_prepare = 0; document.state.effects.grant_revoke = 0;
     let current = { retired: false, value: document }, deleted = false, revoked = false, grantId;
     const journal = { load: () => structuredClone(current), publish(state) {
       current = { retired: false, value: { ...current.value, sequence: current.value.sequence + 1, state: structuredClone(state) } };
@@ -1240,6 +1241,7 @@ for (const failure of [null, "delete_storage_exact_version", "revoke_storage_cle
     const state = current.value.state;
     state.retention.data_zero_residual = false;
     state.cleanup = state.cleanup.filter(step => step !== "DELETE_STORAGE_EXACT_VERSION");
+    state.effects.grant_prepare = 0; state.effects.grant_revoke = 0;
     const journal = { load: () => structuredClone(current), publish(next) {
       current.value.sequence++;current.value.state = structuredClone(next);
     }, retire(next) { current.retired = true;current.value.sequence++;current.value.state = { ...structuredClone(next), retired: true }; } };
@@ -1254,12 +1256,12 @@ for (const failure of [null, "delete_storage_exact_version", "revoke_storage_cle
         assert.equal(current.value.state.recovery_usage.database_rest_requests, 2);
         return { status: "EXACT", version: "v1" };
       }
-      if (operation === "prepare_storage_cleanup_grant") return { status: "PREPARED", grant_id: "grant-owned" };
+      if (operation === "prepare_storage_cleanup_grant") return { status: "PREPARED", grant_id: input.grant_id };
       if (operation === "delete_storage_exact_version") {
-        assert.deepEqual(input, { object_id: "logo-owned", expected_version: "v1", grant_id: "grant-owned" });
+        assert.deepEqual(input, { object_id: "logo-owned", expected_version: "v1", grant_id: officialRuntime.officialStorageGrantId(auth, state.owned.logo) });
         return { status: "DELETED_EXACT" };
       }
-      if (operation === "revoke_storage_cleanup_grant") { assert.deepEqual(input, { grant_id: "grant-owned" });return { status: "REVOKED_EXACT" }; }
+      if (operation === "revoke_storage_cleanup_grant") { assert.deepEqual(input, { grant_id: officialRuntime.officialStorageGrantId(auth, state.owned.logo) });return { status: "REVOKED_EXACT" }; }
       if (operation === "verify_zero_data_residual") return { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true };
       if (operation === "inspect_remote_ref") return { status: "ABSENT" };
       if (operation === "verify_preview_identity") return { status: "EXACT", deployment_id: input.deployment_id, unrelated_preserved: true };
@@ -1275,6 +1277,107 @@ for (const failure of [null, "delete_storage_exact_version", "revoke_storage_cle
     assert.deepEqual(calls.filter(op => /storage/u.test(op)), ["storage_read_owned_version", "prepare_storage_cleanup_grant",
       "delete_storage_exact_version", "revoke_storage_cleanup_grant"]);
     assert.equal(calls.includes("verify_zero_data_residual"), failure === null);
+  });
+}
+
+await contractCheck("deterministic capability changes with every public binding and preserves the caller key", async () => {
+  const auth = completeFixture(2).authorization;
+  const logo = { object_id: "admin/55555555-5555-4555-8555-555555555555.png", version: "owned-v1" };
+  const syntheticKey = Buffer.from("SYNTHETIC_RESTART_AVAILABLE_KEY");
+  const before = Buffer.from(syntheticKey);
+  const id = officialRuntime.officialStorageGrantId(auth, logo);
+  const token = officialPlatform.deriveOfficialStorageCleanupToken(auth, logo, id, syntheticKey);
+  assert.match(id, /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u);
+  assert.match(token.toString(), /^[a-f0-9]{64}$/u);
+  assert.deepEqual(officialPlatform.deriveOfficialStorageCleanupToken(structuredClone(auth), structuredClone(logo), id, Buffer.from(syntheticKey)), token);
+  assert.deepEqual(syntheticKey, before);
+  for (const [changedAuth, changedLogo] of [
+    [{ ...auth, run_id: "77777777-7777-4777-8777-777777777777" }, logo],
+    [auth, { ...logo, object_id: "admin/77777777-7777-4777-8777-777777777777.png" }],
+    [auth, { ...logo, version: "owned-v2" }],
+    [{ ...auth, execution: { ...auth.execution, storage_bucket: "other-bucket" } }, logo],
+  ]) {
+    const changedId = officialRuntime.officialStorageGrantId(changedAuth, changedLogo);
+    assert.notEqual(changedId, id);
+    const changedToken = officialPlatform.deriveOfficialStorageCleanupToken(changedAuth, changedLogo, changedId, syntheticKey);
+    assert.notDeepEqual(changedToken, token); changedToken.fill(0);
+  }
+  assert.throws(() => officialPlatform.deriveOfficialStorageCleanupToken(auth, logo, "tampered", syntheticKey));
+  const otherAuth = { ...auth, authorization_id_sha256: "e".repeat(64) };
+  const otherToken = officialPlatform.deriveOfficialStorageCleanupToken(otherAuth, logo, id, syntheticKey);
+  assert.notDeepEqual(otherToken, token); otherToken.fill(0); token.fill(0); syntheticKey.fill(0); before.fill(0);
+});
+
+for (const [phase, prepare, revoke, attempts, presence, expectedCalls, reconciliation] of [
+  ["PREPARING", 0, 0, 0, "exact", [1, 1, 1], 0],
+  ["PREPARING", 1, 0, 0, "exact", [1, 1, 1], 1],
+  ["PREPARED", 1, 0, 0, "exact", [0, 1, 1], 0],
+  ["PREPARED", 1, 0, 0, "absent", [0, 0, 1], 0],
+  ["DELETE_ATTEMPTED", 1, 0, 1, "absent", [0, 0, 1], 0],
+  ["DELETE_ATTEMPTED", 1, 0, 1, "exact", [0, 1, 1], 0],
+  ["DELETE_ATTEMPTED", 1, 0, 1, "replacement", [0, 0, 0], 0],
+  ["REVOKE_ATTEMPTED", 1, 1, 1, "absent", [0, 0, 1], 1],
+  ["REVOKED", 1, 1, 1, "absent", [0, 0, 0], 0],
+]) {
+  await contractCheck(`recreated concrete transport resumes ${phase}/${prepare}/${presence} with identical capability`, async () => {
+    const auth = completeFixture(2).authorization;
+    const doc = recoveryDocument(auth);
+    const logo = doc.state.owned.logo = { object_id: "admin/55555555-5555-4555-8555-555555555555.png", version: "owned-v1" };
+    const id = officialRuntime.officialStorageGrantId(auth, logo);
+    const complete = ["REVOKE_ATTEMPTED", "REVOKED"].includes(phase);
+    doc.state.recovery_storage = { ...logo, contract: "DETERMINISTIC_STORAGE_CLEANUP_V1", grant_id: id,
+      phase, deletion: complete ? "DELETED_EXACT" : "PENDING" };
+    doc.state.retention.data_zero_residual = false;
+    doc.state.cleanup = doc.state.cleanup.filter(step => !["DELETE_STORAGE_EXACT_VERSION", "REVOKE_STORAGE_CLEANUP_GRANT"].includes(step));
+    if (complete) doc.state.cleanup.push("DELETE_STORAGE_EXACT_VERSION");
+    if (phase === "REVOKED") doc.state.cleanup.push("REVOKE_STORAGE_CLEANUP_GRANT");
+    Object.assign(doc.state.recovery_usage, { grant_prepare_rpc_calls: prepare, grant_revoke_rpc_calls: revoke, storage_delete_attempts: attempts });
+    doc.state.effects.grant_prepare = phase === "PREPARING" ? 0 : 1;
+    doc.state.effects.grant_revoke = phase === "REVOKED" ? 1 : 0;
+    let current = { retired: false, value: doc }, deleted = false;
+    const journal = { load: () => structuredClone(current), publish(state) {
+      current.value = { ...current.value, sequence: current.value.sequence + 1, state: structuredClone(state) };
+    }, retire() { assert.fail("residual deliberately unproven"); } };
+    const probe = credentialProbe(2, recoveryContext(journal, doc));
+    const token = officialPlatform.deriveOfficialStorageCleanupToken(probe.authorization, logo, id, probe.credentials.supabase_service_role_key);
+    const tokenHash = sha256Hex(token);
+    const calls = [0, 0, 0];
+    probe.respondWith(({ url, method, body }) => {
+      if (url.pathname === `/v9/projects/${auth.execution.preview_project_id}`) return {
+        id: auth.execution.preview_project_id, name: auth.execution.preview_project_name, accountId: auth.execution.preview_team_id };
+      if (method === "HEAD") return { http_status: deleted || presence === "absent" ? 404 : 200, http_body: {} };
+      if (url.pathname.startsWith("/storage/v1/object/info/")) return {
+        id: "owned-storage-id", bucket_id: "tool-logos", name: logo.object_id,
+        version: presence === "replacement" ? "replacement-v2" : logo.version,
+        created_at: "2026-10-02T11:30:00.000Z", updated_at: "2026-10-02T11:30:00.000Z",
+        metadata: { eTag: "owned-etag", mimetype: "image/png", size: 68 },
+      };
+      if (url.pathname.endsWith("aifinder_prepare_storage_cleanup_grant")) {
+        calls[0]++; assert.equal(body.p_grant_id, id); assert.equal(body.p_token_hash, tokenHash);
+        assert.equal(current.value.state.recovery_usage.grant_prepare_rpc_calls, 1);
+        assert(current.value.state.recovery_usage.database_rest_requests > 0);
+        return { grant_id: id, expected_version: logo.version, expires_at: "2026-10-02T12:05:00.000Z" };
+      }
+      if (method === "DELETE") {
+        calls[1]++; assert.deepEqual(body.prefixes, [logo.object_id]); deleted = true; return {};
+      }
+      if (url.pathname.endsWith("aifinder_revoke_storage_cleanup_grant")) {
+        calls[2]++; assert.equal(body.p_grant_id, id); assert.equal(body.p_token_hash, tokenHash);
+        assert.equal(current.value.state.recovery_usage.grant_revoke_rpc_calls, 1);
+        return { http_body: true };
+      }
+      return { http_status: 503, http_body: {} };
+    });
+    try {
+      const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: probe.authorization,
+        credentials: probe.credentials, execution_context: recoveryContext(journal, doc), transport: probe.transport,
+        now_epoch_ms: now, live_now_epoch_ms: () => now });
+      assert.equal(result.classification, "RECOVERY_PENDING");
+      assert.deepEqual(calls, expectedCalls);
+      assert.equal(current.value.state.recovery_usage.cleanup_reconciliation_requests, reconciliation);
+      const publicBytes = JSON.stringify({ current, result });
+      for (const forbidden of [token.toString(), tokenHash, probe.credentials.supabase_service_role_key.toString()]) assert.equal(publicBytes.includes(forbidden), false);
+    } finally { token.fill(0); probe.retire(); }
   });
 }
 

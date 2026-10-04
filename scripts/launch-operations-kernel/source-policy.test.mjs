@@ -108,6 +108,20 @@ async function check(name, operation) {
   }
 }
 
+await check("reviewed deterministic-grant crypto imports pass at the exact runtime and live-platform paths", async () => {
+  assert.equal(validateTransportSources(candidateSources).verified, true);
+});
+await check("unreviewed crypto import in kernel remains forbidden after explicit source reseal", async () => {
+  const relativePath = "scripts/launch-operations-kernel/kernel.mjs";
+  const sources = new Map(candidateSources);
+  sources.set(relativePath,
+    'import { createHash } from "node:crypto";\n' + sources.get(relativePath));
+  assert.throws(
+    () => validateTransportSources(sources),
+    (error) => error?.code === "SOURCE_POLICY_FORBIDDEN_CAPABILITY",
+  );
+});
+
 // BEGIN A20R4_TRANSPORT_POLICY_TESTS
 const transportRunnerPath =
   "scripts/launch-operations-kernel/nonproduction-qualification-runner.mjs";

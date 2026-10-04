@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { canonicalJson, isSha256, sha256Hex } from "./canonical.mjs";
 import {
   ADMIN_V1_OFFICIAL_ISOLATION_CONTRACT_SHA256,
@@ -28,6 +29,103 @@ import {
 
 export const ADMIN_V1_OFFICIAL_OPERATION_CLASS =
   "ADMIN_V1_OFFICIAL_RUNTIME_V1";
+
+export const STORAGE_CLEANUP_CONTRACT = "DETERMINISTIC_STORAGE_CLEANUP_V1";
+
+export function officialStorageGrantId(authorization, logo) {
+  if (authorization.schema_version !== 2 || !boundedAscii(logo?.object_id, 256) ||
+      !boundedAscii(logo?.version, 128)) throw new AdminV1OfficialRuntimeError("OFFICIAL_STORAGE_GRANT_MISMATCH");
+  const digest = createHash("sha256").update(canonicalJson({ domain: "AIFINDER_STORAGE_CLEANUP_GRANT_ID_V1",
+    operation_class: ADMIN_V1_OFFICIAL_OPERATION_CLASS, run_id: authorization.run_id,
+    bucket: authorization.execution.storage_bucket, object_id: logo.object_id, expected_version: logo.version })).digest();
+  // RFC UUIDv8 custom SHA-256 layout; variant 10, version 8.
+  digest[6] = (digest[6] & 15) | 0x80; digest[8] = (digest[8] & 63) | 0x80;
+  const hex = digest.subarray(0, 16).toString("hex");
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+export function officialRecoveryActionCost(operation, usage) {
+  const key = { prepare_storage_cleanup_grant: "grant_prepare_rpc_calls",
+    revoke_storage_cleanup_grant: "grant_revoke_rpc_calls" }[operation];
+  return key && usage[key] === 1 ? { cleanup_reconciliation_requests: 1 } : ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation];
+}
+
+// A pure protocol: both the executor and the independent adapter admission
+// advance this machine. Only the executor publishes or dispatches effects.
+export function* officialStorageCleanupSteps(state, authorization) {
+  const logo = state.owned.logo;
+  const input = { object_id: logo.object_id, expected_version: logo.version };
+  const grantId = officialStorageGrantId(authorization, logo);
+  const publish = { publish: true };
+  const add = marker => { if (!state.cleanup.includes(marker)) state.cleanup.push(marker); };
+  const requireStatus = (result, status) => {
+    if (result?.status !== status) throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
+  };
+  let storage = state.recovery_storage;
+  if (!storage || storage.deletion === "PENDING" && storage.phase !== "REVOKE_ATTEMPTED") {
+    const observed = yield { operation: "storage_read_owned_version", input };
+    if (observed?.status === "ABSENT" && storage && storage.phase !== "PREPARING") {
+      storage.deletion = "ABSENT_CONFIRMED";
+      add("STORAGE_DELETION_CONFIRMED_ABSENT");
+      if (storage.phase !== "REVOKED") storage.phase = "DELETION_COMPLETE";
+      yield publish;
+    } else {
+      requireStatus(observed, "EXACT");
+      if (observed.version !== logo.version) throw new AdminV1OfficialRuntimeError("OFFICIAL_STORAGE_CAS_MISMATCH");
+      if (!storage || storage.phase === "REVOKED") {
+        storage = state.recovery_storage = { ...logo, contract: STORAGE_CLEANUP_CONTRACT,
+          grant_id: grantId, phase: "PREPARING", deletion: "PENDING" };
+        state.cleanup = state.cleanup.filter(marker => marker !== "REVOKE_STORAGE_CLEANUP_GRANT");
+        yield publish;
+      }
+      if (storage.phase === "PREPARING") {
+        const prepared = yield { operation: "prepare_storage_cleanup_grant", input: { ...input, grant_id: grantId } };
+        requireStatus(prepared, "PREPARED");
+        if (prepared.grant_id !== grantId) throw new AdminV1OfficialRuntimeError("OFFICIAL_STORAGE_GRANT_MISMATCH");
+        storage.phase = "PREPARED"; state.effects.grant_prepare = 1; yield publish;
+      }
+      try {
+        storage.phase = "DELETE_ATTEMPTED"; yield publish;
+        const deleted = yield { operation: "delete_storage_exact_version", input: { ...input, grant_id: grantId } };
+        requireStatus(deleted, "DELETED_EXACT");
+        storage.deletion = "DELETED_EXACT"; storage.phase = "DELETION_COMPLETE";
+        add("DELETE_STORAGE_EXACT_VERSION"); yield publish;
+      } finally {
+        storage.phase = "REVOKE_ATTEMPTED"; yield publish;
+        const revoked = yield { operation: "revoke_storage_cleanup_grant", input: { grant_id: grantId } };
+        requireStatus(revoked, "REVOKED_EXACT");
+        storage.phase = "REVOKED"; state.effects.grant_revoke = 1; add("REVOKE_STORAGE_CLEANUP_GRANT"); yield publish;
+      }
+    }
+  }
+  if (storage.phase !== "REVOKED") {
+    storage.phase = "REVOKE_ATTEMPTED"; yield publish;
+    const revoked = yield { operation: "revoke_storage_cleanup_grant", input: { grant_id: grantId } };
+    requireStatus(revoked, "REVOKED_EXACT");
+    storage.phase = "REVOKED"; state.effects.grant_revoke = 1; add("REVOKE_STORAGE_CLEANUP_GRANT"); yield publish;
+  }
+  if (storage.deletion === "PENDING") {
+    // A revoke-uncertain continuation closes revoke first. Reopening can then
+    // reconcile the exact object with whatever signed budget remains.
+    throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
+  }
+}
+
+async function executeStorageCleanup(state, authorization, invoke, publish, aborted = () => false) {
+  const steps = officialStorageCleanupSteps(state, authorization);
+  let step = steps.next();
+  while (!step.done) {
+    if (step.value.publish) {
+      publish(); // Never feed a persistence failure into the effect-finally path.
+      step = steps.next();
+    } else {
+      let result;
+      try { result = await invoke(step.value.operation, step.value.input); }
+      catch (error) { if (aborted()) throw error; step = steps.throw(error); continue; }
+      step = steps.next(result);
+    }
+  }
+}
 
 const freezeRows = (rows) => Object.freeze(rows.map((row) => Object.freeze(row)));
 
@@ -283,7 +381,7 @@ export function adminV1OfficialRetentionCleanupPlan(state) {
     if (!state.cleanup.includes(operation.toUpperCase())) plan.push({ operation, input });
   };
   if (!state.retention.data_zero_residual) {
-    if (state.owned.logo !== null && (!state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION") ||
+    if (state.owned.logo !== null && (!(state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION") || state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT")) ||
         !state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT"))) {
       plan.push({ operation: "resume_storage_cleanup", input: structuredClone(state.owned.logo) });
     }
@@ -352,7 +450,8 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
     const logo = state.owned.logo;
     const storageInputs = logo === null ? {} : {
       storage_read_owned_version: { object_id: logo.object_id, expected_version: logo.version },
-      prepare_storage_cleanup_grant: { object_id: logo.object_id, expected_version: logo.version },
+      prepare_storage_cleanup_grant: { object_id: logo.object_id, expected_version: logo.version,
+        grant_id: state.recovery_storage?.grant_id },
       delete_storage_exact_version: { object_id: logo.object_id, expected_version: logo.version,
         grant_id: state.recovery_storage?.grant_id },
       revoke_storage_cleanup_grant: { grant_id: state.recovery_storage?.grant_id },
@@ -362,7 +461,7 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
       Object.hasOwn(storageInputs, operation) && canonicalJson(storageInputs[operation]) === canonicalJson(input) ||
       plan.some((step) => step.operation === operation && canonicalJson(step.input) === canonicalJson(input));
     if (!allowed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
-    reserve(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);
+    reserve(officialRecoveryActionCost(operation, state.recovery_usage));
     let active = true;
     try {
       return await adapters.invoke(operation, input, { reserve_database_request() {
@@ -385,42 +484,7 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
       let remoteAbsent = false;
       for (const { operation, input } of plan) {
         if (operation === "resume_storage_cleanup") {
-          // An interrupted effect has no replay authority. Completed delete/revoke
-          // markers are retained even if later residual verification fails.
-          if (state.recovery_storage !== undefined) throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
-          const observed = await read("storage_read_owned_version", { object_id: input.object_id, expected_version: input.version });
-          if (observed?.status !== "EXACT" || !boundedAscii(observed.version, 128) || observed.version !== input.version) {
-            throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
-          }
-          state.recovery_storage = { ...input, grant_id: null, phase: "PREPARING" };
-          state.cleanup = state.cleanup.filter(step => step !== "REVOKE_STORAGE_CLEANUP_GRANT");
-          publish();
-          let grantId = null;
-          try {
-            const grant = await read("prepare_storage_cleanup_grant", { object_id: input.object_id, expected_version: input.version });
-            if (!exactAdapterResponse(grant, "PREPARED") || !boundedAscii(grant.grant_id, 128)) {
-              throw new AdminV1OfficialRuntimeError("OFFICIAL_STORAGE_GRANT_MISMATCH");
-            }
-            grantId = grant.grant_id;
-            state.recovery_storage.grant_id = grantId;state.recovery_storage.phase = "PREPARED";
-            publish();
-            state.recovery_storage.phase = "DELETE_ATTEMPTED";
-            publish();
-            const deleted = await read("delete_storage_exact_version", {
-              object_id: input.object_id, expected_version: input.version, grant_id: grantId,
-            });
-            if (deleted?.status !== "DELETED_EXACT") throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
-            state.cleanup.push("DELETE_STORAGE_EXACT_VERSION");
-            publish();
-          } finally {
-            if (grantId !== null) {
-              const revoked = await read("revoke_storage_cleanup_grant", { grant_id: grantId });
-              if (revoked?.status !== "REVOKED_EXACT") throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_CLEANUP_UNPROVEN");
-              state.cleanup.push("REVOKE_STORAGE_CLEANUP_GRANT");
-              state.recovery_storage.phase = "REVOKED";
-              publish();
-            }
-          }
+          await executeStorageCleanup(state, validated, read, publish, () => persistenceFailed);
           continue;
         }
         if (operation === "delete_remote_ref" && remoteAbsent) {
@@ -907,6 +971,14 @@ function sanitizedJournalState(value) {
   return serialized;
 }
 
+function storageEffectsInvalid(state) {
+  return state.recovery_storage === undefined
+    ? state.effects.grant_prepare !== state.effects.grant_revoke
+    : state.effects.grant_prepare > 1 || state.effects.grant_revoke > 1 ||
+      state.effects.grant_prepare > state.recovery_usage.grant_prepare_rpc_calls ||
+      state.effects.grant_revoke > state.recovery_usage.grant_revoke_rpc_calls;
+}
+
 // Admission for a continuation of one completed, spent schema-v2 runtime.
 export function validateAdminV1OfficialRetentionRecoveryRecord(record, authorization, { complete = false } = {}) {
 
@@ -960,27 +1032,41 @@ export function validateAdminV1OfficialRetentionRecoveryRecord(record, authoriza
       state.owned.remote_ref !== `refs/heads/${authorization.execution.branch_name}` ||
       state.owned.logo !== null && (!exactKeys(state.owned.logo, ["object_id", "version"]) ||
         !boundedAscii(state.owned.logo.object_id, 256) || !boundedAscii(state.owned.logo.version, 128)) ||
-      state.effects.grant_prepare !== state.effects.grant_revoke ||
+      storageEffectsInvalid(state) ||
       ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) =>
         rows.every((row) => exactKeys(row, ["row_id", "version"]) && boundedAscii(row.row_id, 128) && boundedAscii(row.version, 128)) &&
         new Set(rows.map((row) => row.row_id)).size === rows.length) ||
       state.owned.submissions.length > 3 || state.owned.tools.length > 2 ||
       new Set(state.cleanup).size !== state.cleanup.length ||
-      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|DELETE_STORAGE_EXACT_VERSION|REVOKE_STORAGE_CLEANUP_GRANT|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
+      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|DELETE_STORAGE_EXACT_VERSION|STORAGE_DELETION_CONFIRMED_ABSENT|REVOKE_STORAGE_CLEANUP_GRANT|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
   }
   const storage = state.recovery_storage;
-  if (storage !== undefined && (!exactKeys(storage, ["object_id", "version", "grant_id", "phase"]) ||
-      storage.object_id !== state.owned.logo?.object_id || storage.version !== state.owned.logo?.version ||
-      !["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "REVOKED"].includes(storage.phase) ||
-      (storage.phase === "PREPARING" ? storage.grant_id !== null : !boundedAscii(storage.grant_id, 128)) ||
-      storage.phase !== "PREPARING" && state.recovery_usage.grant_prepare_rpc_calls !== 1 ||
-      storage.phase === "REVOKED" && (state.recovery_usage.grant_revoke_rpc_calls !== 1 ||
-        !state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT")) ||
-      storage.phase !== "REVOKED" && state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT") ||
-      state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION") && state.recovery_usage.storage_delete_attempts < 1 ||
-      receipt.data_zero_residual && (storage.phase !== "REVOKED" || !state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION")) ||
-      complete && storage.phase !== "REVOKED")) {
+  if (storage !== undefined) {
+    const used = state.recovery_usage;
+    const deleted = state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION");
+    const absent = state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT");
+    const revoked = state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT");
+    if (!exactKeys(storage, ["object_id", "version", "grant_id", "phase", "contract", "deletion"]) ||
+        storage.contract !== STORAGE_CLEANUP_CONTRACT ||
+        storage.object_id !== state.owned.logo?.object_id || storage.version !== state.owned.logo?.version ||
+        storage.grant_id !== officialStorageGrantId(authorization, state.owned.logo) ||
+        !["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "DELETION_COMPLETE", "REVOKE_ATTEMPTED", "REVOKED"].includes(storage.phase) ||
+        !["PENDING", "DELETED_EXACT", "ABSENT_CONFIRMED"].includes(storage.deletion) ||
+        deleted !== (storage.deletion === "DELETED_EXACT") || absent !== (storage.deletion === "ABSENT_CONFIRMED") ||
+        revoked !== (storage.phase === "REVOKED") ||
+        storage.phase !== "PREPARING" && used.grant_prepare_rpc_calls !== 1 ||
+        used.grant_prepare_rpc_calls === 0 && (used.grant_revoke_rpc_calls !== 0 || used.storage_delete_attempts !== 0) ||
+        absent && used.storage_reads < 1 ||
+        ["PREPARING", "PREPARED", "DELETE_ATTEMPTED"].includes(storage.phase) && storage.deletion !== "PENDING" ||
+        storage.phase === "DELETION_COMPLETE" && storage.deletion === "PENDING" ||
+        storage.phase === "REVOKED" && used.grant_revoke_rpc_calls !== 1 ||
+        deleted && used.storage_delete_attempts < 1 ||
+        (receipt.data_zero_residual || complete) && (storage.phase !== "REVOKED" || storage.deletion === "PENDING")) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+    }
+  } else if (state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT") ||
+      state.recovery_usage.grant_prepare_rpc_calls || state.recovery_usage.grant_revoke_rpc_calls || state.recovery_usage.storage_delete_attempts) {
     throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
   }
   return Object.freeze(structuredClone(value));
@@ -1275,6 +1361,7 @@ function publicState(state) {
     zero_residual: state.zero_residual,
     ...(state.retention === undefined ? {} : { retention: structuredClone(state.retention) }),
     ...(state.recovery_usage === undefined ? {} : { recovery_usage: structuredClone(state.recovery_usage) }),
+    ...(state.recovery_storage === undefined ? {} : { recovery_storage: structuredClone(state.recovery_storage) }),
   };
 }
 
@@ -1708,11 +1795,41 @@ export async function runAdminV1OfficialRuntime({
   };
   journal.publish(publicState(state));
 
+  let persistenceFailed = false;
+  const storageBudget = createAdminV1OfficialBudget({ schema_version: 2 });
+  const publishUsage = () => {
+    try {
+      const before = journal.load();
+      if (before?.retired !== false || before.value.identity.authorization_id_sha256 !== validated.authorization_id_sha256 ||
+          before.value.identity.run_id !== validated.run_id) throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+      journal.publish(publicState(state));
+      const after = journal.load();
+      if (after?.retired !== false || canonicalJson(after.value) !== canonicalJson({ ...before.value,
+        sequence: before.value.sequence + 1, state: publicState(state) })) {
+        throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+      }
+    }
+    catch (error) { persistenceFailed = true; throw error; }
+  };
   const invoke = async (operation, input = {}, extraCost = {}) => {
+    if (persistenceFailed) throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
     const fixed = actionCosts[operation];
     if (!fixed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
     budget.take({ ...fixed, ...extraCost });
     guard();
+    if (isolated && ["storage_read_owned_version", "prepare_storage_cleanup_grant", "delete_storage_exact_version", "revoke_storage_cleanup_grant"].includes(operation)) {
+      storageBudget.take(fixed);
+      state.recovery_usage = structuredClone(storageBudget.used);
+      publishUsage(); guard();
+      let active = true;
+      try {
+        return await adapters.invoke(operation, input, { reserve_database_request() {
+          if (!active || persistenceFailed) throw new AdminV1OfficialRuntimeError("OFFICIAL_RECOVERY_STATE_INVALID");
+          guard(); storageBudget.take({ database_rest_requests: 1, database_rest_successes: 1 });
+          state.recovery_usage = structuredClone(storageBudget.used); publishUsage(); guard();
+        } });
+      } finally { active = false; }
+    }
     return adapters.invoke(operation, input);
   };
 
@@ -1840,7 +1957,9 @@ export async function runAdminV1OfficialRuntime({
     state.lifecycle = retain ? "RETENTION_PENDING" : "CLEANUP_PENDING";
     state.stage = retain ? "RETENTION_FINALIZATION_PUBLISHED" : "CLEANUP_PENDING_PUBLISHED";
     journal.publish(publicState(state));
-    if (state.owned.logo !== null) {
+    if (state.owned.logo !== null && isolated && (!poststateOwnershipRequired || logoOwnershipConfirmed)) {
+      await executeStorageCleanup(state, validated, invoke, publishUsage, () => persistenceFailed);
+    } else if (state.owned.logo !== null) {
       if (poststateOwnershipRequired && !logoOwnershipConfirmed) {
         recoveryPending = true;
         state.cleanup.push("STORAGE_OWNERSHIP_UNPROVEN");
@@ -2318,7 +2437,7 @@ export async function runAdminV1OfficialRuntime({
     state.lifecycle = committedRetention && !retentionVerificationFailed ? "RETENTION_PENDING" : "RECOVERY_PENDING";
     state.stage = committedRetention ? "RETENTION_FINALIZATION_EXCEPTION" : "CLEANUP_EXCEPTION";
     try {
-      journal.publish(publicState(state));
+      if (!persistenceFailed) journal.publish(publicState(state));
     } catch (publicationError) {
       const error = new AdminV1OfficialRuntimeError(
         "OFFICIAL_RECOVERY_PUBLICATION_FAILED",
