@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "0a4b9c5705dc2e52383b3696f3115bd76a98dadf0a2ac281c442e3752a6038a6",
+  "testing_tree_digest": "de0074be8d04de8ea59aceacae83585ecf90f2364e9735382f32f77e533914e2",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -9,7 +9,7 @@
     "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs": "cccd017bded239e168271827369da023db168828e379b2f565117de3b3347bdc",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs": "7a63cafee06db312c5cdad3c361280357242030dcbdaed3c768bf02a34aab8f9",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "44fa52793a7ef48e79fd81d2f6fffe004787f694d47e3a75facb04228eca5926",
-    "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "8d478698190a894be0f1bf5ec9417dcd8a017d89174a08f81aa8a0874d61e8e3",
+    "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "14417a9e5065dcd87f34472aebaecbc1345d0b1f850598354e00d17f78c4c530",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "d3fcfb29e3e2abf546b0bb72a39a8f70dabdedbbb615c3e118eb1c1d647468b3",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "102a390539a1716a804ffc30b46e713fd75166589bba59c79f6894ef9b0e6257",
@@ -24,8 +24,8 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "f12e92d7ff3072b88673d378042396fe571670792ca69100587ff45bd87bea0d",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "7d675265a8035f99df641aeb7fe365ddcee3f40f9a1e6d4af5f4abf686ba9bf2",
     "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs": "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "c1d42f8f482887ac36b89c5438e88af6574c89f64cd4836bf9d87fec6291c011",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "4102615c79ebdb54c1273dbf0dbfb21d4cd5ef67f6756373da6a9a9ee4d62b30",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "06dfbab73c53221efcc56f797bf0fd5666966bc86eb6889a5193c508b2d2f063",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "9372f2742f9d558fc5954419ccb16049884b64471187f19c9be845a1efa8405b",
     "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "3ac8df55c0c5f121666e9ba258e56fedf1ae44a48de21e9dabd8fedb1c7e5a44",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "5092d6811949da9744a2a68aff9ea3b33d8c7c30a7a4c02e82d969b946e27212",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "ae66be99d48c05b6db19a9313ef8c74e2f29cc4b32828108b393385469a38880",
@@ -51,7 +51,7 @@
     "scripts/launch-operations-kernel/admin-v1-official-activation-bridge.test.mjs": "cccd017bded239e168271827369da023db168828e379b2f565117de3b3347bdc",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.mjs": "7a63cafee06db312c5cdad3c361280357242030dcbdaed3c768bf02a34aab8f9",
     "scripts/launch-operations-kernel/admin-v1-official-authorization.test.mjs": "44fa52793a7ef48e79fd81d2f6fffe004787f694d47e3a75facb04228eca5926",
-    "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "8d478698190a894be0f1bf5ec9417dcd8a017d89174a08f81aa8a0874d61e8e3",
+    "scripts/launch-operations-kernel/admin-v1-official-concrete-bridge.test.mjs": "14417a9e5065dcd87f34472aebaecbc1345d0b1f850598354e00d17f78c4c530",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.mjs": "d3fcfb29e3e2abf546b0bb72a39a8f70dabdedbbb615c3e118eb1c1d647468b3",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-credential-loader.test.mjs": "6166e1e8a0e77cb6849942bb5b4f3f9c12453785dd95322fda41d56baadd5e4e",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-keychain-supervisor-launcher.mjs": "102a390539a1716a804ffc30b46e713fd75166589bba59c79f6894ef9b0e6257",
@@ -66,8 +66,8 @@
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.mjs": "f12e92d7ff3072b88673d378042396fe571670792ca69100587ff45bd87bea0d",
     "scripts/launch-operations-kernel/admin-v1-official-first-environment-supervisor.test.mjs": "7d675265a8035f99df641aeb7fe365ddcee3f40f9a1e6d4af5f4abf686ba9bf2",
     "scripts/launch-operations-kernel/admin-v1-official-isolation.mjs": "da860495845cab8168f805fdeb9355bed18f9d2ab9450dccc41bd4f8a92c8e7c",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "c1d42f8f482887ac36b89c5438e88af6574c89f64cd4836bf9d87fec6291c011",
-    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "4102615c79ebdb54c1273dbf0dbfb21d4cd5ef67f6756373da6a9a9ee4d62b30",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.mjs": "06dfbab73c53221efcc56f797bf0fd5666966bc86eb6889a5193c508b2d2f063",
+    "scripts/launch-operations-kernel/admin-v1-official-live-platform.test.mjs": "9372f2742f9d558fc5954419ccb16049884b64471187f19c9be845a1efa8405b",
     "scripts/launch-operations-kernel/admin-v1-official-runner.test.mjs": "3ac8df55c0c5f121666e9ba258e56fedf1ae44a48de21e9dabd8fedb1c7e5a44",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.mjs": "5092d6811949da9744a2a68aff9ea3b33d8c7c30a7a4c02e82d969b946e27212",
     "scripts/launch-operations-kernel/admin-v1-official-runtime.test.mjs": "ae66be99d48c05b6db19a9313ef8c74e2f29cc4b32828108b393385469a38880",
@@ -1525,7 +1525,7 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "9cb10d803efa6bef7f9eee589cd3ff4b6e35772da6e541bc497a4c614a0b5232"
+    "sha256": "9181c704244e11f1dd1ec1e22907022cdd53dbe9201742514220d06b4ba69aad"
   },
   "c08_child_receipt_contract": {
     "path": "scripts/c08-child-receipts.mjs",

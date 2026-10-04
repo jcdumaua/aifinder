@@ -887,7 +887,7 @@ const POST_TRANSITION_JSON_PATHS = Object.freeze([
   "testing/static-test-safety-manifest.json",
 ]);
 const REVIEWED_PRELIVE_AGGREGATE_SHA256 =
-  "407f904b760bc885b368fb6bc8f52d9a3f0499b1926f444d09a8a21aa5b3cf5f";
+  "d30bca2aa521409cb4dfbba6afdf96d4429941d99ced90526200204fbb80c0b9";
 const REVIEWED_STABLE_SURFACE_SHA256 =
   "5336d8b17fb1f8a3dd61eeabe69adcab05e2edde66fd61a0f5f76b454897c7a5";
 const PROTECTED_DRAFT_PATHS = Object.freeze([

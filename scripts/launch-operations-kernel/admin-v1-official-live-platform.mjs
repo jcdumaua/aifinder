@@ -261,11 +261,27 @@ function exactOwnedDeployment(candidate, authorization) {
     meta.githubCommitRepo === repository && meta.githubCommitOrg === owner;
 }
 
+function expectedEnvironmentType(key) {
+  switch (key) {
+    case "ADMIN_PASSWORD":
+    case "ADMIN_SESSION_SECRET":
+    case "SUPABASE_SERVICE_ROLE_KEY":
+      return "sensitive";
+    case "NEXT_PUBLIC_SUPABASE_URL":
+    case "NEXT_PUBLIC_SUPABASE_ANON_KEY":
+    case "AIFINDER_VALIDATION_RUN_ID":
+    case "AIFINDER_VALIDATION_PROJECT_REF":
+      return "encrypted";
+    default:
+      throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
+  }
+}
+
 function exactEnvironmentRecord(record, authorization) {
   if (!(record && typeof record === "object" && !Array.isArray(record) &&
     boundedText(record.id, 256) && boundedText(record.key, 256) &&
     authorization.execution.environment_keys.includes(record.key) &&
-    record.type === "encrypted" &&
+    record.type === expectedEnvironmentType(record.key) &&
     canonicalJson(record.target) === '["preview"]' &&
     record.gitBranch === authorization.execution.branch_name &&
     (!Object.hasOwn(record, "projectId") ||
@@ -320,7 +336,7 @@ function exactCreatedEnvironmentReadbackRecord(
   if (
     !record || typeof record !== "object" || Array.isArray(record) ||
     record.id !== expectedId || record.key !== expectedKey ||
-    record.type !== "encrypted" ||
+    record.type !== expectedEnvironmentType(expectedKey) ||
     canonicalJson(record.target) !== '["preview"]' ||
     record.gitBranch !== authorization.execution.branch_name
   ) return false;
@@ -1202,7 +1218,7 @@ function providerDescriptor(operation, input, authorization, bindings) {
     body: {
       key: input.key,
       value: memoryText(input.value),
-      type: "encrypted",
+      type: expectedEnvironmentType(input.key),
       target: ["preview"],
       gitBranch: authorization.execution.branch_name,
     },
@@ -1909,7 +1925,7 @@ export function createAdminV1OfficialConcreteTransport({
       const environment = await request("verify_zero_external_residual", credentials, {
         service: "VERCEL",
         method: "GET",
-        path: `/v9/projects/${projectPath(authorization)}/env/${encodeURIComponent(recordId)}?${teamQuery(authorization)}`,
+        path: `/v9/projects/${projectPath(authorization)}/env/${encodeURIComponent(recordId)}?decrypt=false&${teamQuery(authorization)}`,
       });
       if (environment.status !== 404) {
         if (

@@ -74,6 +74,9 @@ const expectedPreviewKeys = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY",
   "AIFINDER_VALIDATION_RUN_ID", "AIFINDER_VALIDATION_PROJECT_REF",
 ];
+const expectedPreviewTypes = [
+  "sensitive", "sensitive", "encrypted", "encrypted", "sensitive", "encrypted", "encrypted",
+];
 const expectedIsolationV2 = {
   schema_version: 2,
   operation_class: "ADMIN_V1_OFFICIAL_RUNTIME_V1",
@@ -375,9 +378,9 @@ await contractCheck("all seven v2 create/verify/delete descriptors and exact rea
         const ordinal = expectedPreviewKeys.indexOf(body.key) + 1;
         assert.ok(ordinal >= 1 && ordinal <= 7);
         assert.deepEqual(body, { key: expectedPreviewKeys[ordinal - 1], value: `synthetic-preview-${ordinal}`,
-          type: "encrypted", target: ["preview"], gitBranch: probe.authorization.execution.branch_name });
+          type: expectedPreviewTypes[ordinal - 1], target: ["preview"], gitBranch: probe.authorization.execution.branch_name });
         const id = `env-owned-${ordinal}`;
-        records.set(id, { id, key: body.key, type: "encrypted", target: ["preview"], gitBranch: body.gitBranch });
+        records.set(id, { id, key: body.key, type: expectedPreviewTypes[ordinal - 1], target: ["preview"], gitBranch: body.gitBranch });
         return { http_status: 201, http_body: { id } };
       }
       const id = decodeURIComponent(url.pathname.split("/").at(-1));
@@ -413,11 +416,81 @@ await contractCheck("all seven v2 create/verify/delete descriptors and exact rea
   } finally { probe.retire(); }
 });
 
+// Exercise the actual descriptor and metadata predicates with independent types.
+// No readback contains a value; create values are synthetic and never echoed.
+for (const schemaVersion of [1, 2]) {
+  for (let index = 0; index < (schemaVersion === 1 ? 2 : 7); index += 1) {
+    const key = expectedPreviewKeys[index];
+    const type = expectedPreviewTypes[index];
+    await contractCheck(`schema-${schemaVersion} ${key} creates ${type}`, async () => {
+      const probe = credentialProbe(schemaVersion);
+      try {
+        probe.respondWith(() => ({ id: "env-type-probe" }));
+        await probe.execute(`create_environment_${index + 1}`, { key, value: Buffer.from("synthetic-type-probe") });
+        assert.equal(probe.calls.length, 1);
+        assert.equal(probe.calls[0].body.type, type);
+      } finally { probe.retire(); }
+    });
+    await contractCheck(`schema-${schemaVersion} ${key} immediate and later metadata reject wrong types`, async () => {
+      const probe = credentialProbe(schemaVersion);
+      try {
+        await probe.execute("inspect_environment_contract");
+        const record = { id: "env-type-probe", key, type, target: ["preview"],
+          gitBranch: probe.authorization.execution.branch_name };
+        probe.respondWith(() => ({ id: record.id }));
+        const created = await probe.execute(`create_environment_${index + 1}`, { key, value: Buffer.from("synthetic-type-probe") });
+        const input = { key, record_id: created.record_id };
+        for (const stage of ["immediate", "later"]) {
+          for (const wrongType of [type === "sensitive" ? "encrypted" : "sensitive", "plain", undefined, null, "secret"]) {
+            probe.respondWith(() => ({ ...record, type: wrongType }));
+            await assert.rejects(probe.execute(`verify_environment_${index + 1}`, input),
+              { code: "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN" }, stage);
+          }
+          probe.respondWith(() => record);
+          const verified = await probe.execute(`verify_environment_${index + 1}`, input);
+          assert.equal(verified.status, "EXACT");
+          assert.equal(Object.hasOwn(verified, "value"), false);
+        }
+        for (const call of probe.calls.filter((call) => call.url.pathname.endsWith(`/env/${record.id}`))) {
+          assert.equal(call.method, "GET");
+          assert.equal(call.url.searchParams.get("decrypt"), "false");
+        }
+      } finally { probe.retire(); }
+    });
+  }
+}
+
+for (let index = 0; index < 7; index += 1) {
+  await contractCheck(`${expectedPreviewKeys[index]} cleanup residue admission rejects wrong type without plaintext`, async () => {
+    const probe = credentialProbe(2, { spawn_sync: (_file, args) => {
+      assert.ok(args.includes("ls-remote"));
+      return { status: 0, stdout: "", stderr: "" };
+    } });
+    try {
+      const record = { id: "env-cleanup-type", key: expectedPreviewKeys[index], type: expectedPreviewTypes[index],
+        target: ["preview"], gitBranch: probe.authorization.execution.branch_name };
+      for (const direct of [true, false]) {
+        for (const wrong of [true, false]) {
+          probe.respondWith(({ url }) => {
+            if (url.pathname === "/v6/deployments") return { deployments: [], pagination: { count: 0, next: null } };
+            assert.equal(url.searchParams.get("decrypt"), "false");
+            const observed = { ...record, type: wrong ? (record.type === "sensitive" ? "encrypted" : "sensitive") : record.type };
+            return direct ? observed : { envs: [observed] };
+          });
+          await assert.rejects(probe.execute("verify_zero_external_residual", {
+            remote_ref: null, local_state_id: null, deployment_id: null, environment_record_ids: direct ? [record.id] : [],
+          }), { code: wrong ? "OFFICIAL_EXTERNAL_OBSERVATION_AMBIGUOUS" : "OFFICIAL_EXTERNAL_RESIDUAL_PRESENT" });
+        }
+      }
+    } finally { probe.retire(); }
+  });
+}
+
 for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion} environment readback rejects wrong exact identity`, async () => {
   const probe = credentialProbe(schemaVersion);
   try {
     await probe.execute("inspect_environment_contract");
-    const exact = { id: "env-owned-1", key: "ADMIN_PASSWORD", type: "encrypted", target: ["preview"],
+    const exact = { id: "env-owned-1", key: "ADMIN_PASSWORD", type: "sensitive", target: ["preview"],
       gitBranch: probe.authorization.execution.branch_name,
       projectId: probe.authorization.execution.preview_project_id, teamId: probe.authorization.execution.preview_team_id };
     for (const [field, value] of [["id", "env-unrelated"], ["key", "ADMIN_SESSION_SECRET"], ["type", "plain"],
@@ -437,7 +510,7 @@ for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion}
 await contractCheck("v2 metadata omissions require proven project/team preflight", async () => {
   const probe = credentialProbe();
   try {
-    probe.respondWith(() => ({ id: "env-owned-1", key: "ADMIN_PASSWORD", type: "encrypted", target: ["preview"],
+    probe.respondWith(() => ({ id: "env-owned-1", key: "ADMIN_PASSWORD", type: "sensitive", target: ["preview"],
       gitBranch: probe.authorization.execution.branch_name }));
     await assert.rejects(probe.execute("verify_environment_1", { key: "ADMIN_PASSWORD", record_id: "env-owned-1" }),
       { code: "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN" });
@@ -534,6 +607,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
     try {
       record = committedRecoveryRecord(probe.authorization, lifecycle);
       const deployment = retainedDeployment(probe.authorization);
+      let wrongType = false;
       probe.respondWith(({ url, method }) => {
         assert.equal(method, "GET");
         assert.equal(url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
@@ -545,7 +619,8 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
         assert.ok(ordinal >= 0);
         assert.equal(url.pathname, `/v9/projects/${probe.authorization.execution.preview_project_id}/env/${id}`);
         assert.equal(url.searchParams.get("decrypt"), "false");
-        return { id, key: expectedPreviewKeys[ordinal], type: "encrypted", target: ["preview"],
+        const type = expectedPreviewTypes[ordinal];
+        return { id, key: expectedPreviewKeys[ordinal], type: wrongType ? (type === "sensitive" ? "encrypted" : "sensitive") : type, target: ["preview"],
           gitBranch: probe.authorization.execution.branch_name,
           projectId: probe.authorization.execution.preview_project_id, teamId: probe.authorization.execution.preview_team_id };
       });
@@ -554,13 +629,17 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
       for (let ordinal = 1; ordinal <= 7; ordinal += 1) {
         const record_id = `env-owned-${ordinal}`;
         const key = expectedPreviewKeys[ordinal - 1];
+        wrongType = true;
+        await assert.rejects(probe.execute(`verify_environment_${ordinal}`, { key, record_id }),
+          { code: "OFFICIAL_ENVIRONMENT_CREATE_IDENTITY_UNPROVEN" });
+        wrongType = false;
         assert.deepEqual(await probe.execute(`verify_environment_${ordinal}`, { key, record_id }), {
           status: "EXACT", record_id, key, project_id: probe.authorization.execution.preview_project_id,
           team_id: probe.authorization.execution.preview_team_id, git_branch: probe.authorization.execution.branch_name,
           unrelated_preserved: true,
         });
       }
-      assert.equal(probe.calls.length, 8);
+      assert.equal(probe.calls.length, 15);
       const before = probe.calls.length;
       for (const operation of ["acquire_automatic_preview", "inspect_prior_residue", "create_environment_1",
         "delete_environment_1", "delete_preview", "generate_oidc", "protected_access_handshake",
@@ -770,7 +849,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
       };
       const id = decodeURIComponent(url.pathname.split("/").at(-1));const index = doc.state.retention.environment_record_ids.indexOf(id);
       assert(index >= 0);assert.equal(url.searchParams.get("decrypt"), "false");
-      return { id, key: expectedPreviewKeys[index], type: "encrypted", target: ["preview"], gitBranch: probe.authorization.execution.branch_name };
+      return { id, key: expectedPreviewKeys[index], type: expectedPreviewTypes[index], target: ["preview"], gitBranch: probe.authorization.execution.branch_name };
     });
     const input = { authorization: probe.authorization, credentials: probe.credentials, execution_context: recoveryContext(journal, doc),
       transport: probe.transport, now_epoch_ms: now, live_now_epoch_ms: () => now };
@@ -934,7 +1013,7 @@ await contractCheck("metadata-free retained record is denied without project pre
     record = committedRecoveryRecord(probe.authorization);
     probe.respondWith(({ url }) => {
       if (url.pathname === "/v13/deployments/dpl_owned") return retainedDeployment(probe.authorization);
-      return { id: "env-owned-1", key: expectedPreviewKeys[0], type: "encrypted", target: ["preview"],
+      return { id: "env-owned-1", key: expectedPreviewKeys[0], type: "sensitive", target: ["preview"],
         gitBranch: probe.authorization.execution.branch_name };
     });
     await probe.execute("verify_preview_identity", { deployment_id: "dpl_owned" });
