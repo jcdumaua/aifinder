@@ -740,7 +740,7 @@ function recoveryDocument(auth) {
         submissions: [{ row_id: "submission-owned", version: "v1" }], tools: [{ row_id: "tool-owned", version: "v1" }],
         audit_rows: [{ row_id: "audit-owned", version: "v1" }], logo: { object_id: "logo-owned", version: "v1" } },
       effects: { submitted_tools: 3, tools: 2, audits: 9, approval_rpc: 1, logo_objects: 1, grant_prepare: 1, grant_revoke: 1 },
-      evidence: [], failure: null, cleanup: ["RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"], zero_residual: false,
+      evidence: [], failure: null, cleanup: ["DELETE_STORAGE_EXACT_VERSION", "REVOKE_STORAGE_CLEANUP_GRANT", "RETIRE_PROTECTED_ACCESS", "DELETE_REMOTE_REF", "CLEANUP_LOCAL_OWNED_TEMP_STATE"], zero_residual: false,
       retention: { policy: "RETAIN_RUN_OWNED_VERCEL_PREVIEW_AND_ENVIRONMENT_V1", phase: "COMMITTED", deployment_id: "dpl_RetainedV2",
         environment_record_ids: [...ids], environment_keys: [...auth.execution.environment_keys], data_zero_residual: true,
         external_retained_exact: false, unrelated_preserved: false } } };
@@ -1181,6 +1181,100 @@ for (const variant of ["exact", "missing", "extra-secret", "wrong-origin", "unpr
       assert.equal(probe.calls.filter(({ url }) => url.pathname === "/api/admin/session").length,
         variant === "unprotected" ? 1 : 2);
     } finally { probe.retire(); }
+  });
+}
+
+for (const variant of ["exact", "replacement", "absent", "malformed"]) {
+  await contractCheck(`fresh concrete transport rebinds only journal-owned storage ${variant}`, async () => {
+    const auth = completeFixture(2).authorization;
+    const document = recoveryDocument(auth);
+    document.state.retention.data_zero_residual = false;
+    document.state.owned.logo = { object_id: "admin/55555555-5555-4555-8555-555555555555.png", version: "owned-v1" };
+    document.state.cleanup = document.state.cleanup.filter(step => step !== "DELETE_STORAGE_EXACT_VERSION");
+    let current = { retired: false, value: document }, deleted = false, revoked = false, grantId;
+    const journal = { load: () => structuredClone(current), publish(state) {
+      current = { retired: false, value: { ...current.value, sequence: current.value.sequence + 1, state: structuredClone(state) } };
+    }, retire() { assert.fail("residual read intentionally fails"); } };
+    const probe = credentialProbe(2, recoveryContext(journal, document));
+    const logo = document.state.owned.logo;
+    probe.respondWith(({ url, method, body }) => {
+      if (url.pathname === `/v9/projects/${auth.execution.preview_project_id}`) return {
+        id: auth.execution.preview_project_id, name: auth.execution.preview_project_name, accountId: auth.execution.preview_team_id };
+      if (method === "HEAD") return { http_status: deleted || variant === "absent" ? 404 : 200, http_body: {} };
+      if (url.pathname.startsWith("/storage/v1/object/info/")) return {
+        id: "owned-storage-id", bucket_id: "tool-logos", name: logo.object_id,
+        version: variant === "replacement" ? "replacement-v2" : logo.version,
+        created_at: "2026-10-02T11:30:00.000Z", updated_at: "2026-10-02T11:30:00.000Z",
+        metadata: variant === "malformed" ? {} : { eTag: "owned-etag", mimetype: "image/png", size: 68 },
+      };
+      if (url.pathname.endsWith("aifinder_prepare_storage_cleanup_grant")) {
+        assert.equal(body.p_object_name, logo.object_id);assert.equal(body.p_expected_version, logo.version);
+        grantId = body.p_grant_id;
+        return { grant_id: grantId, expected_version: logo.version, expires_at: "2026-10-02T12:05:00.000Z" };
+      }
+      if (method === "DELETE") { assert.deepEqual(body.prefixes, [logo.object_id]);deleted = true;return {}; }
+      if (url.pathname.endsWith("aifinder_revoke_storage_cleanup_grant")) {
+        assert.equal(body.p_grant_id, grantId);revoked = true;return { http_body: true };
+      }
+      return { http_status: 503, http_body: {} };
+    });
+    try {
+      const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: probe.authorization,
+        credentials: probe.credentials, execution_context: recoveryContext(journal, document), transport: probe.transport,
+        now_epoch_ms: now, live_now_epoch_ms: () => now });
+      assert.equal(result.classification, "RECOVERY_PENDING");
+      assert.equal(deleted, variant === "exact");assert.equal(revoked, variant === "exact");
+      if (variant === "exact") {
+        assert(current.value.state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION"));
+        assert(current.value.state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT"));
+        assert(current.value.state.recovery_usage.database_rest_requests >= 6);
+      } else assert.equal(probe.calls.some(call => ["DELETE", "POST"].includes(call.method)), false);
+    } finally { probe.retire(); }
+  });
+}
+
+for (const failure of [null, "delete_storage_exact_version", "revoke_storage_cleanup_grant"]) {
+  await contractCheck(`recovery adapter independently admits journal-bound storage sequence ${failure}`, async () => {
+    const auth = completeFixture(2).authorization;
+    let current = { retired: false, value: recoveryDocument(auth) };
+    const state = current.value.state;
+    state.retention.data_zero_residual = false;
+    state.cleanup = state.cleanup.filter(step => step !== "DELETE_STORAGE_EXACT_VERSION");
+    const journal = { load: () => structuredClone(current), publish(next) {
+      current.value.sequence++;current.value.state = structuredClone(next);
+    }, retire(next) { current.retired = true;current.value.sequence++;current.value.state = { ...structuredClone(next), retired: true }; } };
+    const calls = [];
+    const transport = { async execute({ operation, input, recovery }) {
+      calls.push(operation);
+      if (operation === failure) throw new Error("SYNTHETIC_FAILURE");
+      if (operation === "inspect_environment_contract") return { status: "EXACT", names: [...officialRuntime.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
+      if (operation === "storage_read_owned_version") {
+        assert.deepEqual(input, { object_id: "logo-owned", expected_version: "v1" });
+        recovery.reserve_database_request();recovery.reserve_database_request();
+        assert.equal(current.value.state.recovery_usage.database_rest_requests, 2);
+        return { status: "EXACT", version: "v1" };
+      }
+      if (operation === "prepare_storage_cleanup_grant") return { status: "PREPARED", grant_id: "grant-owned" };
+      if (operation === "delete_storage_exact_version") {
+        assert.deepEqual(input, { object_id: "logo-owned", expected_version: "v1", grant_id: "grant-owned" });
+        return { status: "DELETED_EXACT" };
+      }
+      if (operation === "revoke_storage_cleanup_grant") { assert.deepEqual(input, { grant_id: "grant-owned" });return { status: "REVOKED_EXACT" }; }
+      if (operation === "verify_zero_data_residual") return { status: "PROVEN_ABSENT", ownership_readback: "EXACT", unrelated_preserved: true };
+      if (operation === "inspect_remote_ref") return { status: "ABSENT" };
+      if (operation === "verify_preview_identity") return { status: "EXACT", deployment_id: input.deployment_id, unrelated_preserved: true };
+      if (operation.startsWith("verify_environment_")) return { status: "EXACT", ...input,
+        project_id: auth.execution.preview_project_id, team_id: auth.execution.preview_team_id,
+        git_branch: auth.execution.branch_name, unrelated_preserved: true };
+      return { status: "DELETED_EXACT" };
+    } };
+    const result = await officialPlatform.recoverConcreteAdminV1OfficialRetention({ authorization: auth,
+      credentials: { github_token: Buffer.from("synthetic-github"), vercel_token: Buffer.from("synthetic-vercel") },
+      execution_context: recoveryContext(journal, current.value), transport, now_epoch_ms: now, live_now_epoch_ms: () => now });
+    assert.equal(result.classification, failure ? "RECOVERY_PENDING" : "RETENTION_COMPLETE");
+    assert.deepEqual(calls.filter(op => /storage/u.test(op)), ["storage_read_owned_version", "prepare_storage_cleanup_grant",
+      "delete_storage_exact_version", "revoke_storage_cleanup_grant"]);
+    assert.equal(calls.includes("verify_zero_data_residual"), failure === null);
   });
 }
 

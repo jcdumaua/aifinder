@@ -267,6 +267,25 @@ const routedResult = await dispatchConcreteQualificationRunner(
 );
 assert.equal(routedResult.code, "OFFICIAL_RUNTIME_COMPLETE");
 
+const currentRoutePath = "app/api/admin/session/route.ts";
+const currentRouteDigest = createConcreteRunnerDependencies({ repositoryRoot: new URL("../../", import.meta.url).pathname.replace(/\/$/u, "") })
+  .hashOfficialRouteSource(currentRoutePath);
+const reviewedRouteBinding = "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce";
+for (const variant of ["exact", "tampered", "historical_binding"]) {
+  const auth = record();
+  auth.route_source_sha256[currentRoutePath] = variant === "historical_binding"
+    ? "ad22481088d2de333714c6d3d72330735ff759eea1aafaf937b713b817e68627" : reviewedRouteBinding;
+  const deps = dependencies({ authorization: auth });
+  const originalHash = deps.hashOfficialRouteSource;
+  deps.hashOfficialRouteSource = relativePath => relativePath === currentRoutePath
+    ? variant === "tampered" ? "f".repeat(64) : currentRouteDigest
+    : originalHash(relativePath);
+  const result = await dispatchAdminV1OfficialRunner(["--run-admin-v1-official", "--authorization",
+    `/Users/jamescarlodumaua/Downloads/admin-v1-official-${RUN_ID}.json`], deps, trust(auth));
+  assert.equal(result.code, variant === "exact" ? "OFFICIAL_RUNTIME_COMPLETE" : "OFFICIAL_ROUTE_SOURCE_MISMATCH");
+  assert.equal(deps.calls.includes("readOfficialCredentials"), variant === "exact");
+}
+
 function v2Record() {
   const value = record();
   value.schema_version = 2;

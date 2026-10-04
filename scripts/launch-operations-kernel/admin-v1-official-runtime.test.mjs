@@ -1534,19 +1534,25 @@ await check("failed cleanup continuation preserves receipts and resumes only unf
   assert.equal(f.journal.load().value.state.runtime_sessions, 1);
 });
 
-await check("unbound storage grant residual remains pending without recreating a grant", async () => {
+await check("committed owned logo resumes storage CAS before residual verification", async () => {
   const f = v2Fixture({ fail: "delete_storage_exact_version" });
   assert.equal((await f.run()).classification, "RETENTION_PENDING");
   const resumed = v2Fixture();
+  let deleted = false;
+  const sequence = [];
   const result = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record,
     journal: f.journal, now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
     adapters: { async invoke(operation, input) {
-      if (operation === "verify_zero_data_residual") return { status: "PRESENT" };
+      sequence.push(operation);
+      if (operation === "delete_storage_exact_version") deleted = true;
+      if (operation === "verify_zero_data_residual" && !deleted) return { status: "PRESENT" };
       return resumed.adapters.invoke(operation, input);
     } } });
-  assert.equal(result.classification, "RECOVERY_PENDING");assert.equal(f.journal.load().retired, false);
-  assert.equal(f.state().retention.data_zero_residual, false);
-  assert.equal(resumed.calls.some(({ operation }) => /storage_cleanup_grant|delete_storage/u.test(operation)), false);
+  assert.equal(result.classification, "RETENTION_COMPLETE");
+  assert.deepEqual(sequence.filter(operation => /storage|verify_zero_data/u.test(operation)), [
+    "storage_read_owned_version", "prepare_storage_cleanup_grant", "delete_storage_exact_version",
+    "revoke_storage_cleanup_grant", "verify_zero_data_residual",
+  ]);
 });
 
 await check("versioned signed budget and action maps preserve v1", async () => {
@@ -1867,6 +1873,88 @@ await check("failed or tampered reservation readback prevents effects without ov
       adapters: { async invoke() { effects++; } }, now_epoch_ms: TEST_NOW_EPOCH_MS,
       live_now_epoch_ms: () => clock })).classification, "RECOVERY_PENDING");
     assert.equal(effects, 0);assert.equal(writes, 1);
+  }
+});
+
+for (const scenario of ["replacement", "absent", "malformed", "bad_grant", "delete_failure", "revoke_failure",
+  "persistence", "budget", "expiry", "resume_complete"]) {
+  await check(`durable storage recovery ${scenario} is bounded and preserves completed effects`, async () => {
+    const f = v2Fixture({ fail: "delete_storage_exact_version" });await f.run();
+    const root = mkdtempSync("/tmp/aifinder-admin-v1-official-storage-recovery.");
+    const identity = { authorization_id_sha256: f.record.authorization_id_sha256, run_id: RUN_ID };
+    const initial = structuredClone(f.state());
+    if (scenario === "budget") initial.recovery_usage.grant_prepare_rpc_calls = 1;
+    createAdminV1OfficialJournal({ directory: root, identity }).publish(initial);
+    const calls = [];
+    let clock = TEST_NOW_EPOCH_MS;
+    const journal = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true });
+    const originalPublish = journal.publish;
+    const storageJournal = scenario !== "persistence" ? journal : { ...journal, publish(state) {
+      if (state.recovery_usage.storage_delete_attempts > 0) throw new Error("SYNTHETIC_DISK_FAILURE");
+      return originalPublish(state);
+    } };
+    const resumed = v2Fixture();
+    const result = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: storageJournal,
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => clock,
+      adapters: { async invoke(operation, input) {
+        calls.push(operation);
+        const disk = journal.load().value.state;
+        for (const [key, cost] of Object.entries(runtimeModule.ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation])) {
+          assert(disk.recovery_usage[key] >= cost, `unreserved ${operation}:${key}`);
+        }
+        if (operation === "storage_read_owned_version") {
+          assert.deepEqual(input, { object_id: initial.owned.logo.object_id, expected_version: initial.owned.logo.version });
+          if (scenario === "replacement") return { status: "EXACT", version: "replacement" };
+          if (scenario === "absent") return { status: "ABSENT" };
+          if (scenario === "malformed") return { status: "EXACT", version: {} };
+          if (scenario === "expiry") clock = TEST_EXPIRES_EPOCH_MS;
+        }
+        if (operation === "prepare_storage_cleanup_grant" && scenario === "bad_grant") return { status: "PREPARED", grant_id: "" };
+        if (operation === "delete_storage_exact_version") {
+          assert.deepEqual(input, { object_id: initial.owned.logo.object_id, expected_version: initial.owned.logo.version,
+            grant_id: disk.recovery_storage.grant_id });
+          if (scenario === "delete_failure") throw new Error("SYNTHETIC_DELETE_FAILURE");
+        }
+        if (operation === "revoke_storage_cleanup_grant" && scenario === "revoke_failure") throw new Error("SYNTHETIC_REVOKE_FAILURE");
+        if (operation === "verify_zero_data_residual" && scenario === "resume_complete") return { status: "PRESENT" };
+        return resumed.adapters.invoke(operation, input);
+      } } });
+    assert.equal(result.classification, "RECOVERY_PENDING");
+    const pending = journal.load();
+    if (["delete_failure", "revoke_failure", "resume_complete"].includes(scenario)) {
+      assert.equal(calls.filter(op => op === "delete_storage_exact_version").length, 1);
+      assert.equal(calls.filter(op => op === "revoke_storage_cleanup_grant").length, 1);
+      assert.equal(pending.value.state.recovery_usage.storage_delete_attempts, 1);
+      assert.equal(pending.value.state.recovery_usage.grant_revoke_rpc_calls, 1);
+    } else assert.equal(calls.includes("delete_storage_exact_version"), false);
+    if (scenario !== "resume_complete") assert.equal(calls.includes("verify_zero_data_residual"), false);
+    const secondCalls = [];
+    const second = v2Fixture();
+    const reopened = createAdminV1OfficialJournal({ directory: root, identity, existing_only: true });
+    const again = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: reopened,
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
+      adapters: { async invoke(operation, input) {
+        secondCalls.push(operation);
+        if (["replacement", "absent", "malformed"].includes(scenario) && operation === "storage_read_owned_version") return { status: "ABSENT" };
+        return second.adapters.invoke(operation, input);
+      } } });
+    assert.equal(again.classification, scenario === "resume_complete" ? "RETENTION_COMPLETE" : "RECOVERY_PENDING");
+    assert.equal(secondCalls.some(op => /prepare_storage|delete_storage|revoke_storage/u.test(op)), false);
+    assert(reopened.load().value.state.recovery_usage.storage_delete_attempts >= pending.value.state.recovery_usage.storage_delete_attempts);
+  });
+}
+
+await check("tampered durable storage progress denies all adapter effects", async () => {
+  const f = v2Fixture({ fail: "delete_storage_exact_version" });await f.run();
+  for (const progress of [null, {}, { ...f.state().owned.logo, grant_id: "grant", phase: "REVOKED" },
+    { ...f.state().owned.logo, object_id: "replacement", grant_id: null, phase: "PREPARING" },
+    { ...f.state().owned.logo, grant_id: "grant", phase: "PREPARING" },
+    { ...f.state().owned.logo, grant_id: null, phase: "PREPARING", token: "forbidden" }]) {
+    const record = f.journal.load();record.value.state.recovery_storage = progress;let calls = 0;
+    await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record,
+      journal: { ...f.journal, load: () => record }, adapters: { async invoke() { calls++; } },
+      now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+    assert.equal(calls, 0);
   }
 });
 

@@ -187,6 +187,13 @@ const generateV2 = (overrides = {}) => createAdminV1OfficialAuthorizationRecord(
   now_epoch_ms: Date.parse("2026-08-21T12:00:00.000Z"), ...overrides,
 });
 const v2 = await generateV2();
+const currentSourcePolicy = structuredClone(v2Policy);
+currentSourcePolicy.official_runtime.route_source_sha256["app/api/admin/session/route.ts"] =
+  "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce";
+const currentSourceAuthorization = await generateV2({ reviewed_policy: currentSourcePolicy });
+assert.equal(currentSourceAuthorization.route_source_sha256["app/api/admin/session/route.ts"],
+  "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce");
+assert.notEqual(currentSourceAuthorization.one_use_authorization_sha256, v2.one_use_authorization_sha256);
 assert.equal(v2.schema_version, 2);
 assert.equal(Object.keys(v2).length, 19);
 assert.equal(Object.keys(v2.repository).length, 11);

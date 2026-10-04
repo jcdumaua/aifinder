@@ -936,6 +936,11 @@ await check("Official class is verified before the same post-trust runner import
       },
       access_mode: "SELF_PROJECT_OIDC",
     };
+    const sessionPath = "app/api/admin/session/route.ts";
+    const currentSession = readFileSync(sessionPath);
+    writeFileSync(path.join(test.root, sessionPath), currentSession);
+    const currentPolicy = JSON.parse(readFileSync("scripts/launch-operations-supervisor/supervisor-policy.json", "utf8"));
+    test.policy.official_runtime.route_source_sha256[sessionPath] = currentPolicy.official_runtime.route_source_sha256[sessionPath];
     writeCanonical(test.policyPath, test.policy);
     const officialAuthorization = {
       schema_version: 1,
@@ -1054,6 +1059,15 @@ await check("Official class is verified before the same post-trust runner import
       runtime_retries: 0,
       runtime_replays: 0,
     }]);
+    // The current reviewed binding admits exact source, but not even one appended byte.
+    writeFileSync(path.join(test.root, sessionPath), Buffer.concat([currentSession, Buffer.from(" ")]));
+    assert.throws(() => verifyPreImportSupervisorTrust({
+      authorization_path: test.authorizationPath, repository_root: test.root,
+      supervisor_path: test.supervisorPath, policy_path: test.policyPath,
+      now_epoch_ms: Date.parse("2030-01-01T00:30:00.000Z"),
+      inspect_repository: () => structuredClone(officialRepository),
+    }), { code: "SUPERVISOR_ROUTE_SOURCE_MISMATCH" });
+    writeFileSync(path.join(test.root, sessionPath), currentSession);
     for (const change of [
       (reviewed) => { delete reviewed.official_runtime.contract_sha256_v2; },
       (reviewed) => { delete reviewed.official_runtime.contract_sha256_v2.action_costs; },
