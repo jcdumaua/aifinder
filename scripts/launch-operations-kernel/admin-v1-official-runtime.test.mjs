@@ -1468,12 +1468,14 @@ await check("v2 committed finalization failures retain resources and recover by 
       project_id: f.record.execution.preview_project_id, team_id: f.record.execution.preview_team_id,
       git_branch: f.record.execution.branch_name, unrelated_preserved: true };
     if (operation === "inspect_remote_ref") return { status: "ABSENT" };
+    if (operation === "inspect_environment_contract") return { status: "EXACT", names: [...runtimeModule.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
     throw new Error("MUTATION_IN_READ_ONLY_RECOVERY");
   } };
   const completed = await runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: f.journal,
     adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS });
   assert.equal(completed.classification, "RETENTION_COMPLETE");
-  assert.equal(reads.length, 9);assert.equal(reads.some((operation) => operation.startsWith("delete_") ||
+  assert.deepEqual(reads, ["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract",
+    ...Array.from({length:7}, (_, index) => `verify_environment_${index + 1}`)]);assert.equal(reads.some((operation) => operation.startsWith("delete_") ||
     operation === "verify_zero_external_residual" || operation === "verify_zero_data_residual"), false);
   await assert.rejects(runtimeModule.recoverAdminV1OfficialRetention({ authorization: f.record, journal: f.journal,
     adapters: recoveryAdapters, now_epoch_ms: TEST_NOW_EPOCH_MS }), { code: "OFFICIAL_AUTHORIZATION_SPENT" });
@@ -1572,9 +1574,10 @@ await check("real durable final-failure journal admits recovery with historical 
     now_epoch_ms:TEST_NOW_EPOCH_MS,adapters:{async invoke(operation,input={}){
       reads++;if(operation==="inspect_remote_ref")return {status:"ABSENT"};
       if(operation==="verify_preview_identity")return {status:"EXACT",deployment_id:input.deployment_id,unrelated_preserved:true};
+      if(operation==="inspect_environment_contract")return {status:"EXACT",names:[...runtimeModule.ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES]};
       return {status:"EXACT",...input,project_id:f.record.execution.preview_project_id,team_id:f.record.execution.preview_team_id,
         git_branch:f.record.execution.branch_name,unrelated_preserved:true};}}});
-  assert.equal(result.classification,"RETENTION_COMPLETE");assert.equal(reads,9);
+  assert.equal(result.classification,"RETENTION_COMPLETE");assert.equal(reads,10);
   const completed=reopened.load().value.state;
   assert.equal(completed.last_completed_official_ordinal,20);assert.equal(completed.last_completed_qualification_ordinal,6);assert.equal(completed.runtime_sessions,1);
   assert.equal(classifyAdminV1OfficialRecoveryState(reopened.load()),"RETENTION_COMPLETE");

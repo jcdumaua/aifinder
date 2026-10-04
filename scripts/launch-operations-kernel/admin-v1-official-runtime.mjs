@@ -267,10 +267,11 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
   const budget = createAdminV1OfficialBudget({ schema_version: 2 });
   const read = async (operation, input = {}) => {
     const allowed = operation === "verify_preview_identity" || operation === "inspect_remote_ref" ||
-      /^verify_environment_[1-7]$/u.test(operation);
+      operation === "inspect_environment_contract" || /^verify_environment_[1-7]$/u.test(operation);
     if (!allowed) throw new AdminV1OfficialRuntimeError("OFFICIAL_ADAPTER_OPERATION_DENIED");
     budget.take(ADMIN_V1_OFFICIAL_ACTION_COSTS_V2[operation]);return adapters.invoke(operation, input);
   };
+  let projectPreflightPending = false;
   try {
     if (state.retention.data_zero_residual !== true || !retentionEphemeralCleanupExact(state)) {
       throw new AdminV1OfficialRuntimeError("OFFICIAL_RETENTION_EPHEMERAL_CLEANUP_UNPROVEN");
@@ -280,6 +281,13 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
     }
     requireRetainedPreview(await read("verify_preview_identity", { deployment_id: state.retention.deployment_id }),
       state.retention.deployment_id);
+    projectPreflightPending = true;
+    const environment = await read("inspect_environment_contract");
+    if (environment?.status !== "EXACT" || canonicalJson(environment.names) !==
+        canonicalJson(ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES)) {
+      throw new AdminV1OfficialRuntimeError("OFFICIAL_ENVIRONMENT_CONTRACT");
+    }
+    projectPreflightPending = false;
     for (let index = 0; index < 7; index += 1) {
       const input = { key: state.retention.environment_keys[index], record_id: state.retention.environment_record_ids[index] };
       requireEnvironmentVerification(await read(`verify_environment_${index + 1}`, input), input, validated);
@@ -292,7 +300,8 @@ export async function recoverAdminV1OfficialRetention({ authorization, adapters,
   } catch {
     state.retention.phase = "COMMITTED";state.retention.external_retained_exact = false;state.retention.unrelated_preserved = false;
     state.lifecycle = "RECOVERY_PENDING";state.stage = "RETENTION_RECOVERY_UNPROVEN";
-    journal.publish(state);
+    // An unproven project preflight cannot authorize a durable recovery transition.
+    if (!projectPreflightPending) journal.publish(state);
     return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });
   }
 }

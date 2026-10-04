@@ -2545,7 +2545,7 @@ export async function runConcreteAdminV1OfficialRuntime({
   });
 }
 
-const RECOVERY_READ_OPERATIONS = Object.freeze(["inspect_remote_ref", "verify_preview_identity",
+const RECOVERY_READ_OPERATIONS = Object.freeze(["inspect_remote_ref", "verify_preview_identity", "inspect_environment_contract",
   ...Array.from({ length: 7 }, (_, index) => `verify_environment_${index + 1}`)]);
 
 function admitBoundOfficialRecoveryDocument(executionContext, authorization) {
@@ -2586,9 +2586,9 @@ export function createAdminV1OfficialRecoveryAdapter({ authorization, credential
       throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
     }
     const receipt = admitted.state.retention;
-    const expected = operation === "inspect_remote_ref" ? {} : operation === "verify_preview_identity"
+    const expected = operation === "inspect_remote_ref" || operation === "inspect_environment_contract" ? {} : operation === "verify_preview_identity"
       ? { deployment_id: receipt.deployment_id }
-      : { key: receipt.environment_keys[next - 2], record_id: receipt.environment_record_ids[next - 2] };
+      : { key: receipt.environment_keys[next - 3], record_id: receipt.environment_record_ids[next - 3] };
     if (canonicalJson(input) !== canonicalJson(expected)) throw new AdminV1OfficialLivePlatformError("OFFICIAL_ADAPTER_INPUT");
     next += 1;
     const result = await adapter.invoke(operation, input);
@@ -2615,6 +2615,7 @@ export async function recoverConcreteAdminV1OfficialRetention({ authorization, c
       try {
         const current = journal.load();
         if (changed || current?.retired !== expectedRetired || canonicalJson(current.value) !== canonicalJson(expectedDocument)) throw new Error("CHANGED");
+        return current;
       } catch {
         changed = true;
         throw new AdminV1OfficialLivePlatformError("OFFICIAL_RECOVERY_STATE_INVALID");
@@ -2637,7 +2638,7 @@ export async function recoverConcreteAdminV1OfficialRetention({ authorization, c
       },
     });
     const result = await recoverAdminV1OfficialRetention({ authorization, adapters, journal: guardedJournal, now_epoch_ms });
-    const durable = journal.load();
+    const durable = requireExpectedJournal();
     if (result?.classification !== "RETENTION_COMPLETE") {
       validateAdminV1OfficialRetentionRecoveryRecord(durable, authorization);
       return Object.freeze({ classification: "RECOVERY_PENDING", zero_residual_owned_state: false });

@@ -6,6 +6,7 @@ import * as officialRunnerModule from "./nonproduction-qualification-runner.mjs"
 import {
   ADMIN_V1_OFFICIAL_CONTRACT_SHA256,
   ADMIN_V1_OFFICIAL_CREDENTIAL_SOURCE_POLICY,
+  ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES,
   ADMIN_V1_OFFICIAL_OPERATION_CLASS,
 } from "./admin-v1-official-runtime.mjs";
 import {
@@ -651,6 +652,7 @@ function recoveryDependencies(auth, doc = recoveryDocument(auth), { failedRead =
         if (failedRead) throw new Error("synthetic unproven readback");
         if (operation === "inspect_remote_ref") return { status: "ABSENT" };
         if (operation === "verify_preview_identity") return { status: "EXACT", deployment_id: request.deployment_id, unrelated_preserved: true };
+        if (operation === "inspect_environment_contract") return { status: "EXACT", names: [...ADMIN_V1_OFFICIAL_ENVIRONMENT_NAMES] };
         assert.match(operation, /^verify_environment_[1-7]$/u);
         return { status: "EXACT", ...request, project_id: auth.execution.preview_project_id,
           team_id: auth.execution.preview_team_id, git_branch: auth.execution.branch_name, unrelated_preserved: true };
@@ -663,7 +665,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   const flow = recoveryDependencies(auth, doc);
   assert.deepEqual(await officialRunnerModule.dispatchConcreteQualificationRunner(recoveryArgs, flow.deps, recoveryTrust(auth, doc)),
     { exit_code: 0, code: "RETENTION_COMPLETE" });
-  assert.deepEqual(flow.counts(), { adapterCalls: 9, publishes: 1, retirements: 1 });
+  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 1, retirements: 1 });
   assert.equal(flow.state().retired, true);assert.equal(flow.deps.outputs.at(-1).zero_residual_owned_state, false);
   for (const denied of ["prepareOfficialExecutionContext", "verifyTemporaryCommit", "verifyNoPriorOfficialRecovery", "runAuthorizedOfficialRuntime"])
     assert.equal(flow.deps.calls.includes(denied), false);
@@ -671,7 +673,7 @@ for (const lifecycle of ["RETENTION_PENDING", "RECOVERY_PENDING"]) {
   assert(Object.values(flow.sensitive).every((value) => value.every((byte) => byte === 0)));
   assert.deepEqual(await officialRunnerModule.dispatchConcreteQualificationRunner(recoveryArgs, flow.deps, recoveryTrust(auth, doc)),
     { exit_code: 1, code: "OFFICIAL_AUTHORIZATION_SPENT" });
-  assert.deepEqual(flow.counts(), { adapterCalls: 9, publishes: 1, retirements: 1 });
+  assert.deepEqual(flow.counts(), { adapterCalls: 10, publishes: 1, retirements: 1 });
 }
 for (const options of [{ failedRead: true }, { throwAfterCredentials: true }]) {
   const auth = v2Record();const doc = recoveryDocument(auth);const flow = recoveryDependencies(auth, doc, options);
@@ -724,7 +726,7 @@ for (const change of [(a) => { a.expires_at = "2026-08-21T12:00:00.000Z"; }, (a)
 const driftAuth = v2Record();const driftDoc = recoveryDocument(driftAuth);const driftFlow = recoveryDependencies(driftAuth, driftDoc, { drift: true });
 assert.equal((await officialRunnerModule.dispatchConcreteQualificationRunner(recoveryArgs, driftFlow.deps, recoveryTrust(driftAuth, driftDoc))).exit_code, 1);
 assert.equal(driftFlow.deps.calls.includes("readOfficialCredentials"), false);
-console.log(`PASS_RETENTION_RECOVERY_RUNNER pending_routes=2 durable_ledgers=6/20 read_calls=9 zeroing=PASS invalid_journals=${recoveryBadStates.length} context_negatives=5 real_effects=0`);
+console.log(`PASS_RETENTION_RECOVERY_RUNNER pending_routes=2 durable_ledgers=6/20 read_calls=10 zeroing=PASS invalid_journals=${recoveryBadStates.length} context_negatives=5 real_effects=0`);
 
 let recoveryBindingNegatives = 0;
 for (const change of [
