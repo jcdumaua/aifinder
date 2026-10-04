@@ -1,4 +1,9 @@
-import { ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2, ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2 } from "../launch-operations-kernel/admin-v1-official-runtime.mjs";
+import {
+  ADMIN_V1_OFFICIAL_BUDGET_LIMITS_V2,
+  ADMIN_V1_OFFICIAL_CONTRACT_SHA256_V2,
+  officialStorageCleanupSteps,
+  validateAdminV1OfficialRetentionRecoveryRecord,
+} from "../launch-operations-kernel/admin-v1-official-runtime.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
@@ -463,3 +468,179 @@ const missingRecoveryRoot = recoveryFilesystem(recoveryAuth);missingRecoveryRoot
 assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, missingRecoveryRoot.filesystem));
 assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(authorization(), recoveryFilesystem(recoveryAuth).filesystem));
 console.log(`PASS_RETENTION_RECOVERY_PREIMPORT pending_routes=2 normal_spent_guard=preserved no_follow=true negatives=${recoveryPreImportNegatives + 2} credentials=0 provider_calls=0`);
+
+// Exercise the runtime's actual storage state machine with synthetic effect
+// responses. Capture each published progress state, including uncertain revoke
+// and already-absent reconciliation, then feed canonical bytes to the independent
+// pre-import validator. No candidate runner, credential loader or provider runs.
+function runtimeStorageDocuments({ absent = false, deleteFailure = false, includeReservations = false } = {}) {
+  const document = recoveryDocument(recoveryAuth);
+  const state = document.state;
+  state.retention.data_zero_residual = false;
+  state.cleanup = [];
+  state.effects.grant_prepare = 0;
+  state.effects.grant_revoke = 0;
+  const snapshots = [];
+  const drive = (steps, absentRead = false) => {
+    let step = steps.next();
+    while (!step.done) {
+      if (step.value.publish) {
+        snapshots.push(structuredClone(document));
+        if (absent && !absentRead && state.recovery_storage.phase === "DELETE_ATTEMPTED") return;
+        step = steps.next();
+        continue;
+      }
+      const { operation, input } = step.value;
+      const counter = {
+        storage_read_owned_version: "storage_reads",
+        prepare_storage_cleanup_grant: "grant_prepare_rpc_calls",
+        delete_storage_exact_version: "storage_delete_attempts",
+        revoke_storage_cleanup_grant: "grant_revoke_rpc_calls",
+      }[operation];
+      assert.ok(counter, operation);
+      state.recovery_usage[counter]++;
+      // The executor publishes its debit before dispatching the effect. These
+      // records model a crash after reservation and before a result is known.
+      if (includeReservations && state.recovery_storage) snapshots.push(structuredClone(document));
+      if (deleteFailure && operation === "delete_storage_exact_version") {
+        step = steps.throw(new Error("SYNTHETIC_DELETE_FAILURE"));
+      } else {
+        const result = {
+          storage_read_owned_version: absentRead ? { status: "ABSENT" } : { status: "EXACT", version: "v1" },
+          prepare_storage_cleanup_grant: { status: "PREPARED", grant_id: input.grant_id },
+          delete_storage_exact_version: { status: "DELETED_EXACT" },
+          revoke_storage_cleanup_grant: { status: "REVOKED_EXACT" },
+        }[operation];
+        step = steps.next(result);
+      }
+    }
+  };
+  if (deleteFailure) {
+    assert.throws(() => drive(officialStorageCleanupSteps(state, recoveryAuth)), /SYNTHETIC_DELETE_FAILURE/u);
+  } else {
+    drive(officialStorageCleanupSteps(state, recoveryAuth));
+    if (absent) drive(officialStorageCleanupSteps(state, recoveryAuth), true);
+  }
+  return snapshots;
+}
+
+const storageDocuments = runtimeStorageDocuments();
+assert.deepEqual(storageDocuments.map(d => d.state.recovery_storage.phase),
+  ["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "DELETION_COMPLETE", "REVOKE_ATTEMPTED", "REVOKED"]);
+const absentDocuments = runtimeStorageDocuments({ absent: true });
+const failedDeleteDocuments = runtimeStorageDocuments({ deleteFailure: true });
+const reservedDocuments = runtimeStorageDocuments({ includeReservations: true });
+assert.ok(reservedDocuments.some(d => d.state.recovery_storage.phase === "PREPARING" &&
+  d.state.recovery_usage.grant_prepare_rpc_calls === 1 && d.state.effects.grant_prepare === 0));
+assert.ok(reservedDocuments.some(d => d.state.recovery_storage.phase === "REVOKE_ATTEMPTED" &&
+  d.state.recovery_usage.grant_revoke_rpc_calls === 1 && d.state.effects.grant_revoke === 0));
+const storageFailures = [];
+let storagePositives = 0;
+let storageNegatives = 0;
+function storageCheck(name, action) {
+  try { action(); }
+  catch (error) { storageFailures.push(`${name}:${error.code ?? error.message}`); }
+}
+function admitStorageDocument(document) {
+  const p = recoveryFilesystem(recoveryAuth, document);
+  const admitted = verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem);
+  assert.deepEqual(admitted, { mode: "OFFICIAL_RETENTION_RECOVERY_V1",
+    journal_sha256: v2Sha256(`${canonicalRecovery(document)}\n`) });
+  assert.deepEqual(p.operations.filter(([op]) => op === "open").map(([, name]) => name), [
+    `${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-identity.json`,
+    `${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`,
+  ]);
+}
+for (const [index, document] of [...storageDocuments, ...absentDocuments, ...failedDeleteDocuments, ...reservedDocuments].entries()) {
+  const name = `${index}-${document.state.recovery_storage.phase}-${document.state.recovery_storage.deletion}`;
+  storageCheck(name, () => {
+    validateAdminV1OfficialRetentionRecoveryRecord({ retired: false, value: document }, recoveryAuth);
+    admitStorageDocument(document);
+    storagePositives++;
+  });
+}
+const completedStorage = structuredClone(storageDocuments.at(-1));
+completedStorage.state.retention.data_zero_residual = true;
+storageCheck("data-zero-residual-revoked", () => { admitStorageDocument(completedStorage); storagePositives++; });
+
+const storageMutations = [
+  ["legacy-unversioned", 0, s => { delete s.recovery_storage.contract; delete s.recovery_storage.deletion; }],
+  ["extra-key", 0, s => { s.recovery_storage.extra = true; }],
+  ["null-storage", 0, s => { s.recovery_storage = null; }],
+  ["wrong-contract", 0, s => { s.recovery_storage.contract = "LEGACY"; }],
+  ["wrong-grant", 0, s => { s.recovery_storage.grant_id = "00000000-0000-8000-8000-000000000000"; }],
+  ["wrong-object", 0, s => { s.recovery_storage.object_id = "other"; }],
+  ["wrong-version", 0, s => { s.recovery_storage.version = "v2"; }],
+  ["missing-logo", 0, s => { s.owned.logo = null; }],
+  ["wrong-phase", 0, s => { s.recovery_storage.phase = "DONE"; }],
+  ["wrong-deletion", 0, s => { s.recovery_storage.deletion = "DELETED"; }],
+  ["early-deleted", 1, s => { s.recovery_storage.deletion = "DELETED_EXACT"; s.cleanup.push("DELETE_STORAGE_EXACT_VERSION"); s.recovery_usage.storage_delete_attempts = 1; }],
+  ["complete-pending", 3, s => { s.recovery_storage.deletion = "PENDING"; s.cleanup = []; }],
+  ["missing-delete-marker", 3, s => { s.cleanup = []; }],
+  ["extra-absent-marker", 3, s => { s.cleanup.push("STORAGE_DELETION_CONFIRMED_ABSENT"); }],
+  ["early-revoke-marker", 4, s => { s.cleanup.push("REVOKE_STORAGE_CLEANUP_GRANT"); }],
+  ["missing-revoke-marker", 5, s => { s.cleanup.pop(); }],
+  ["no-prepare-usage", 1, s => { s.recovery_usage.grant_prepare_rpc_calls = 0; s.effects.grant_prepare = 0; }],
+  ["delete-without-prepare", 0, s => { s.recovery_usage.storage_delete_attempts = 1; }],
+  ["revoke-without-prepare", 0, s => { s.recovery_usage.grant_revoke_rpc_calls = 1; }],
+  ["no-delete-usage", 3, s => { s.recovery_usage.storage_delete_attempts = 0; }],
+  ["no-revoke-usage", 5, s => { s.recovery_usage.grant_revoke_rpc_calls = 0; s.effects.grant_revoke = 0; }],
+  ["prepare-effect-over-one", 1, s => { s.effects.grant_prepare = 2; }],
+  ["revoke-effect-over-one", 5, s => { s.effects.grant_revoke = 2; }],
+  ["prepare-effect-over-usage", 0, s => { s.effects.grant_prepare = 1; }],
+  ["revoke-effect-over-usage", 1, s => { s.effects.grant_revoke = 1; }],
+  ["premature-zero-residual", 3, s => { s.retention.data_zero_residual = true; }],
+  ["duplicate-marker", 3, s => { s.cleanup.push(s.cleanup[0]); }],
+  ["preview-delete", 3, s => { s.cleanup.push("DELETE_PREVIEW"); }],
+  ["environment-delete", 3, s => { s.cleanup.push("DELETE_ENVIRONMENT_7"); }],
+  ["unknown-marker", 3, s => { s.cleanup.push("DELETE_STORAGE"); }],
+];
+function rejectStorageDocument(document) {
+  assert.throws(() => validateAdminV1OfficialRetentionRecoveryRecord(
+    { retired: false, value: document }, recoveryAuth), { code: "OFFICIAL_RECOVERY_STATE_INVALID" });
+  const p = recoveryFilesystem(recoveryAuth, document);
+  assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem),
+    { code: "SUPERVISOR_RECOVERY_STATE_INVALID" });
+  storageNegatives++;
+}
+for (const [name, index, mutate] of storageMutations) {
+  storageCheck(name, () => {
+    const document = structuredClone(storageDocuments[index]);
+    mutate(document.state);
+    rejectStorageDocument(document);
+  });
+}
+storageCheck("absent-without-read", () => {
+  const document = structuredClone(absentDocuments.at(-1));
+  document.state.recovery_usage.storage_reads = 0;
+  rejectStorageDocument(document);
+});
+for (const key of ["grant_prepare_rpc_calls", "grant_revoke_rpc_calls", "storage_delete_attempts"]) {
+  storageCheck(`missing-storage-${key}`, () => {
+    const document = recoveryDocument(recoveryAuth);
+    document.state.recovery_usage[key] = 1;
+    rejectStorageDocument(document);
+  });
+}
+storageCheck("missing-storage-absent-marker", () => {
+  const document = recoveryDocument(recoveryAuth);
+  document.state.cleanup.push("STORAGE_DELETION_CONFIRMED_ABSENT");
+  rejectStorageDocument(document);
+});
+for (const change of [
+  p => { const read = p.filesystem.readFileSync; p.filesystem.readFileSync = fd => {
+    const bytes = read(fd); p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).inode++; return bytes;
+  }; },
+  p => { p.nodes.get(`${recoveryAuth.execution.journal_directory}/admin-v1-official-runtime-journal.json`).bytes = Buffer.from(JSON.stringify(storageDocuments[0])); },
+]) {
+  storageCheck("replacement-or-noncanonical", () => {
+    const p = recoveryFilesystem(recoveryAuth, storageDocuments[0]);
+    change(p);
+    assert.throws(() => verifyOfficialRetentionRecoveryBeforeImport(recoveryAuth, p.filesystem),
+      { code: "SUPERVISOR_RECOVERY_STATE_INVALID" });
+    storageNegatives++;
+  });
+}
+console.log(`${storageFailures.length ? "FAIL" : "PASS"}_STORAGE_RECOVERY_PREIMPORT positives=${storagePositives} negatives=${storageNegatives} failures=${storageFailures.length} candidate_imports=0 credentials=0 network=0`);
+for (const failure of storageFailures) console.log(failure);
+if (storageFailures.length) process.exitCode = 1;

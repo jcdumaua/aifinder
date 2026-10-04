@@ -1072,6 +1072,31 @@ const OFFICIAL_RECOVERY_BUDGET_LIMITS_V2 = Object.freeze({
   cleanup_reconciliation_requests: 2,
 });
 
+// Deliberately independent of candidate runtime imports: admission happens before
+// loading the runner or resolving credentials. Match the current UUIDv8 contract.
+function preImportStorageGrantId(authorization, logo) {
+  const digest = createHash("sha256").update(canonicalJson({
+    domain: "AIFINDER_STORAGE_CLEANUP_GRANT_ID_V1",
+    operation_class: OFFICIAL_OPERATION_CLASS,
+    run_id: authorization.run_id,
+    bucket: authorization.execution.storage_bucket,
+    object_id: logo.object_id,
+    expected_version: logo.version,
+  })).digest();
+  digest[6] = (digest[6] & 15) | 0x80;
+  digest[8] = (digest[8] & 63) | 0x80;
+  const hex = digest.subarray(0, 16).toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function preImportStorageEffectsInvalid(state) {
+  return state.recovery_storage === undefined
+    ? state.effects.grant_prepare !== state.effects.grant_revoke
+    : state.effects.grant_prepare > 1 || state.effects.grant_revoke > 1 ||
+      state.effects.grant_prepare > state.recovery_usage.grant_prepare_rpc_calls ||
+      state.effects.grant_revoke > state.recovery_usage.grant_revoke_rpc_calls;
+}
+
 function validatePreImportRecoveryDocument(record, authorization) {
   const complete = false;
   const boundedAscii = (value, maximum) => typeof value === "string" && value.length >= 1 &&
@@ -1088,7 +1113,8 @@ function validatePreImportRecoveryDocument(record, authorization) {
       value.schema_version !== 1 || !Number.isSafeInteger(value.sequence) || value.sequence < 1 ||
       !exactKeys(value.identity, ["authorization_id_sha256", "run_id"]) ||
       value.identity.authorization_id_sha256 !== authorization.authorization_id_sha256 || value.identity.run_id !== authorization.run_id ||
-      !exactKeys(state, complete ? [...stateKeys, "retired"] : stateKeys) ||
+      !exactKeys(state, [...stateKeys, ...(complete ? ["retired"] : []),
+        ...(Object.hasOwn(state ?? {}, "recovery_storage") ? ["recovery_storage"] : [])]) ||
       sha256(canonicalJson(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) !== authorization.contract_sha256.budgets ||
       !exactKeys(state.recovery_usage, Object.keys(OFFICIAL_RECOVERY_BUDGET_LIMITS_V2)) ||
       !Object.entries(state.recovery_usage).every(([key, count]) => Number.isSafeInteger(count) &&
@@ -1127,13 +1153,41 @@ function validatePreImportRecoveryDocument(record, authorization) {
       state.owned.remote_ref !== `refs/heads/${authorization.execution.branch_name}` ||
       state.owned.logo !== null && (!exactKeys(state.owned.logo, ["object_id", "version"]) ||
         !boundedAscii(state.owned.logo.object_id, 256) || !boundedAscii(state.owned.logo.version, 128)) ||
-      state.effects.grant_prepare !== state.effects.grant_revoke ||
+      preImportStorageEffectsInvalid(state) ||
       ![state.owned.submissions, state.owned.tools, state.owned.audit_rows].every((rows) =>
         rows.every((row) => exactKeys(row, ["row_id", "version"]) && boundedAscii(row.row_id, 128) && boundedAscii(row.version, 128)) &&
         new Set(rows.map((row) => row.row_id)).size === rows.length) ||
       state.owned.submissions.length > 3 || state.owned.tools.length > 2 ||
       new Set(state.cleanup).size !== state.cleanup.length ||
-      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
+      state.cleanup.some((step) => !/^(DELETE_OWNED_AUDITS|DELETE_SUBMITTED_FIXTURE_[1-3]|DELETE_OWNED_TOOL_[1-2]|DELETE_STORAGE_EXACT_VERSION|STORAGE_DELETION_CONFIRMED_ABSENT|REVOKE_STORAGE_CLEANUP_GRANT|RETIRE_PROTECTED_ACCESS|DELETE_REMOTE_REF|CLEANUP_LOCAL_OWNED_TEMP_STATE)$/u.test(step)))) {
+    throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+  }
+  const storage = state.recovery_storage;
+  if (storage !== undefined) {
+    const used = state.recovery_usage;
+    const deleted = state.cleanup.includes("DELETE_STORAGE_EXACT_VERSION");
+    const absent = state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT");
+    const revoked = state.cleanup.includes("REVOKE_STORAGE_CLEANUP_GRANT");
+    if (!exactKeys(storage, ["object_id", "version", "grant_id", "phase", "contract", "deletion"]) ||
+        storage.contract !== "DETERMINISTIC_STORAGE_CLEANUP_V1" ||
+        storage.object_id !== state.owned.logo?.object_id || storage.version !== state.owned.logo?.version ||
+        storage.grant_id !== preImportStorageGrantId(authorization, state.owned.logo) ||
+        !["PREPARING", "PREPARED", "DELETE_ATTEMPTED", "DELETION_COMPLETE", "REVOKE_ATTEMPTED", "REVOKED"].includes(storage.phase) ||
+        !["PENDING", "DELETED_EXACT", "ABSENT_CONFIRMED"].includes(storage.deletion) ||
+        deleted !== (storage.deletion === "DELETED_EXACT") || absent !== (storage.deletion === "ABSENT_CONFIRMED") ||
+        revoked !== (storage.phase === "REVOKED") ||
+        storage.phase !== "PREPARING" && used.grant_prepare_rpc_calls !== 1 ||
+        used.grant_prepare_rpc_calls === 0 && (used.grant_revoke_rpc_calls !== 0 || used.storage_delete_attempts !== 0) ||
+        absent && used.storage_reads < 1 ||
+        ["PREPARING", "PREPARED", "DELETE_ATTEMPTED"].includes(storage.phase) && storage.deletion !== "PENDING" ||
+        storage.phase === "DELETION_COMPLETE" && storage.deletion === "PENDING" ||
+        storage.phase === "REVOKED" && used.grant_revoke_rpc_calls !== 1 ||
+        deleted && used.storage_delete_attempts < 1 ||
+        (receipt.data_zero_residual || complete) && (storage.phase !== "REVOKED" || storage.deletion === "PENDING")) {
+      throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
+    }
+  } else if (state.cleanup.includes("STORAGE_DELETION_CONFIRMED_ABSENT") ||
+      state.recovery_usage.grant_prepare_rpc_calls || state.recovery_usage.grant_revoke_rpc_calls || state.recovery_usage.storage_delete_attempts) {
     throw new PreImportSupervisorError("SUPERVISOR_RECOVERY_STATE_INVALID");
   }
   return Object.freeze(structuredClone(value));
