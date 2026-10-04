@@ -1,7 +1,7 @@
 {
   "manifest_version": 1,
   "repository_baseline": "01a5c779f3f47f9619a2cd4a913622e010145afc",
-  "testing_tree_digest": "6e5c4bee88f5899b81213a99193789af2076615b5b0a9a57fb2af1005e7e654f",
+  "testing_tree_digest": "de856feb65ba89baef060ce5ae5cc2f99a0cd8be5236fdda350f2e613d091c84",
   "testing_tree_digest_state": "CURRENT_TESTING_TREE_DIGEST_GIT_MODE_V1_PHASE_34FA_STAGING_RUNTIME",
   "launch_operations_kernel_reviewed_unresolved_source_sha256_by_path": {
     "scripts/launch-operations-kernel/activation-bridge.mjs": "f46b6048f22ebf09c9bd19264fff05e497f3cf8e8c742957f5fd737aac93fbf4",
@@ -1525,7 +1525,7 @@
     "algorithm": "SHA256_PATH_NUL_SHA256_NUL_BYTES_ROWS_LF",
     "path_count": 18,
     "excluded_self_path": "testing/static-test-safety-manifest.json",
-    "sha256": "44922c0a88fa92747db0b3dad7ad89c56e3e72a0cc3a2bb32f36f45fa1119139"
+    "sha256": "a17191b145de36c031a0f181881b9126de0381c1e09fe654dddb34300d643203"
   },
   "c08_child_receipt_contract": {
     "path": "scripts/c08-child-receipts.mjs",
