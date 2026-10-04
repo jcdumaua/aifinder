@@ -531,17 +531,18 @@ export function qualifyOutcome({
 }
 
 function requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedger) {
+  const currentDelta = c2_1_ledger?.source_lane === "CURRENT_SOURCE_STATIC_ONLY" ? 2 : 0;
   const sourceContract = c2_1_ledger?.source_lane === "CURRENT_SOURCE_STATIC_ONLY"
     ? historicalLedger?.source_contract : c2_1_ledger?.source_contract;
   if (
     c2_1_ledger?.summary?.routes !== 28 ||
     c2_1_ledger.summary.methods !== 37 ||
-    c2_1_ledger.summary.ifs !== 366 ||
+    c2_1_ledger.summary.ifs !== 366 + currentDelta ||
     c2_1_ledger.summary.catches_with_binding !== 31 ||
     c2_1_ledger.summary.catches_optional !== 12 ||
     c2_1_ledger.summary.catches !== 43 ||
-    c2_1_ledger.summary.nodes !== 409 ||
-    c2_1_ledger.summary.outcomes !== 775 ||
+    c2_1_ledger.summary.nodes !== 409 + currentDelta ||
+    c2_1_ledger.summary.outcomes !== 775 + currentDelta * 2 ||
     c2_1_ledger.summary.imported_opaque_methods !== 15 ||
     c2_1_ledger.summary.route_local_methods !== 22 ||
     c2_1_ledger.summary.runtime_qualified_nodes !== 0 ||
@@ -564,14 +565,15 @@ function requireExactSourceContract(c2_1_ledger, governanceFacts, historicalLedg
 }
 
 function requireNodeOutcomeContract(c2_1_ledger) {
+  const currentDelta = c2_1_ledger.source_lane === "CURRENT_SOURCE_STATIC_ONLY" ? 2 : 0;
   const nodeById = new Map(c2_1_ledger.nodes.map((node) => [node.node_id, node]));
   const methodById = new Map(
     c2_1_ledger.methods.map((method) => [method.method_id, method]),
   );
   if (
-    nodeById.size !== 409 ||
+    nodeById.size !== 409 + currentDelta ||
     methodById.size !== 37 ||
-    new Set(c2_1_ledger.outcomes.map((outcome) => outcome.outcome_id)).size !== 775
+    new Set(c2_1_ledger.outcomes.map((outcome) => outcome.outcome_id)).size !== 775 + currentDelta * 2
   ) fail("C2_2_SOURCE_IDENTITY_SET");
   for (const outcome of c2_1_ledger.outcomes) {
     const node = nodeById.get(outcome.node_id);
@@ -597,12 +599,12 @@ function requireNodeOutcomeContract(c2_1_ledger) {
     else fail("C2_2_OWNERSHIP_SPLIT");
   }
   if (
-    split.uniqueIf + split.uniqueCatch !== 326 ||
+    split.uniqueIf + split.uniqueCatch !== 326 + currentDelta ||
     split.unattributedIf + split.unattributedCatch !== 83 ||
     split.shared !== 0
   ) fail("C2_2_OWNERSHIP_SPLIT");
   if (
-    split.uniqueIf !== 290 ||
+    split.uniqueIf !== 290 + currentDelta ||
     split.unattributedIf !== 76 ||
     split.uniqueCatch !== 36 ||
     split.unattributedCatch !== 7
@@ -814,8 +816,8 @@ export function qualifyCandidateOverlay({
     summary: {
       routes: 28,
       methods: 37,
-      nodes: 409,
-      outcomes: 775,
+      nodes: c2_1_ledger.nodes.length,
+      outcomes: c2_1_ledger.outcomes.length,
       unique_nodes: split.uniqueIf + split.uniqueCatch,
       unattributed_nodes: split.unattributedIf + split.unattributedCatch,
       unique_if_nodes: split.uniqueIf,
@@ -830,7 +832,7 @@ export function qualifyCandidateOverlay({
       candidate_count_contract: "DERIVED_FROM_OVERLAY",
       additional_deferred_unique_if_outcomes:
         split.uniqueIf * 2 - candidateOutcomes,
-      total_deferred_outcomes: 775 - candidateOutcomes,
+      total_deferred_outcomes: c2_1_ledger.outcomes.length - candidateOutcomes,
       opaque_imported_methods_deferred: methodDeferrals.length,
       status_histogram: statusHistogram,
       response_shape_histogram: responseShapeHistogram,

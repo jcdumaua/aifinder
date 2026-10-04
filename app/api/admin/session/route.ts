@@ -17,6 +17,12 @@ function jsonResponse(data: object, status = 200) {
 }
 
 export async function GET(request: Request) {
+  if (request.headers.get("x-aifinder-validation") === "client-origin-v1") {
+    const { observeValidationClient } = await import("../../../../lib/supabase-validation");
+    const observation = await observeValidationClient();
+    if (observation) return jsonResponse(observation);
+    return jsonResponse({ authenticated: false, message: "Unauthorized." }, 401);
+  }
   const adminSession = verifyAdminSession(request);
 
   if (!adminSession.isAdmin) {

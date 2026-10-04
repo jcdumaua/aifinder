@@ -72,7 +72,7 @@ const HISTORICAL_LAUNCH_LEDGER_SHA256 =
 const CURRENT_ROUTE_GIT_BLOBS = Object.freeze({
   "app/api/admin/login/route.ts": "16bdeb300fe46da9b65c5d72ef334de7ebf56947",
   "app/api/admin/logout/route.ts": "b6fa65aae98acfcaf1dc546e0595e194caa57d37",
-  "app/api/admin/session/route.ts": "410e0f2f42c1b0c696dd49305704f1daa36e9ffa",
+  "app/api/admin/session/route.ts": "7d4caf5764b5bd9b6c9f423670cd82d63264d7ed",
   "app/api/admin/csrf/route.ts": "5c0e077b712e58d1218f5aa071f61991bfe2020b",
   "app/api/admin/tools/route.ts": "9f97f4842e610e862a4568113fcb76550646ab05",
   "app/api/admin/submissions/route.ts": "1657fc967e6ad8bb23e3b08a9d0b3c726b7145b8",
@@ -604,7 +604,13 @@ const checks = [
   },
   () => {
     const conditional = Object.entries(ledger.conditional_route_baseline_blobs);
-    for (const [relativePath, blob] of conditional) assert.equal(gitBlob(bytes(relativePath)), blob);
+    for (const [relativePath, blob] of conditional) {
+      // The ledger remains a frozen historical record; current source has its own exact pin.
+      if (relativePath === "app/api/admin/session/route.ts") {
+        assert.equal(blob, "410e0f2f42c1b0c696dd49305704f1daa36e9ffa");
+        assert.equal(gitBlob(bytes(relativePath)), CURRENT_ROUTE_GIT_BLOBS[relativePath]);
+      } else assert.equal(gitBlob(bytes(relativePath)), blob);
+    }
   },
   () => {
     const matrix = strictJson(bytes("testing/readiness-coverage-matrix.json"));

@@ -22,6 +22,8 @@ import {
   OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
   OFFICIAL_PREVIEW_ENVIRONMENT_PLAN,
   validateOfficialIsolationAuthorization,
+  observeOfficialClientOrigin,
+  validateOfficialIsolationBinding,
 } from "./admin-v1-official-isolation.mjs";
 
 export const ADMIN_V1_OFFICIAL_OPERATION_CLASS =
@@ -1557,6 +1559,7 @@ export async function runAdminV1OfficialRuntime({
   adapters,
   journal,
   sensitive,
+  provisioning_receipt,
   test_budget_overrides,
   now_epoch_ms = Date.now(),
   live_now_epoch_ms = () => Date.now(),
@@ -2133,6 +2136,30 @@ export async function runAdminV1OfficialRuntime({
       });
       if (handshake?.status !== "BOUND") {
         throw new AdminV1OfficialRuntimeError("OFFICIAL_PROTECTED_ACCESS_MISMATCH");
+      }
+      if (isolated) {
+        if (!exactKeys(handshake.observation, ["runId", "projectRef", "origin"]) ||
+            !exactKeys(previewIdentity.isolation_identity, ["projectId", "teamId", "target",
+              "sourceCommit", "sourceBranch", "repository", "sourceIdentityVerified"])) {
+          throw new AdminV1OfficialRuntimeError("OFFICIAL_ISOLATION_OBSERVATION");
+        }
+        validateOfficialIsolationBinding({
+          authorization: validated,
+          provisioningReceipt: provisioning_receipt,
+          localObservation: observeOfficialClientOrigin({
+            runId: validated.run_id,
+            projectRef: validated.execution.isolation.project_ref,
+            actualClientOrigin: Buffer.from(sensitive.supabase_url).toString("utf8"),
+          }),
+          previewObservation: {
+            ...handshake.observation,
+            ...previewIdentity.isolation_identity,
+            deploymentId: previewIdentity.deployment_id,
+            protected: handshake.protected,
+            authenticated: handshake.authenticated,
+          },
+          nowEpochMs: live_now_epoch_ms(),
+        });
       }
     } finally {
       zeroBuffer(oidc.token);

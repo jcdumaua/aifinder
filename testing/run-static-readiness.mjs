@@ -238,7 +238,7 @@ const C2_2_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.test.mjs",
-    sha256: "17d809963c969b5b91b9aaff09c1c6cfb5037cb106e7ce9256444122eed6520f",
+    sha256: "34ccde6852a1fc1b598128d53c4d1420029ad30d9215d2a2b568bd0918dc06c8",
     imports: [
       "./authenticated-live-route-semantic-analyzer.mjs",
       "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
@@ -252,7 +252,7 @@ const C2_2_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-synthetic-rejection-candidate-ledger.test.mjs",
-    sha256: "2402291d377967d4fc3de6dc13c6522b79cd3c22b6ec15143748b467532acc1c",
+    sha256: "2c3e0cdc2a5cd8ee947aa8f47291e6547d41bcf69fa9ef0cbbb702464b3d3090",
     imports: [
       "./authenticated-live-route-semantic-analyzer.mjs",
       "./authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
@@ -268,7 +268,7 @@ const C2_2_CHILDREN = [
 const V1_ADMIN_CHILDREN = [
   {
     path: "testing/admin-v1-launch-scope.test.mjs",
-    sha256: "d5a3fad4f6b6e2994586985c0050a6efc793c36a5c2002ec16a5293af3bfbbb9",
+    sha256: "773e346c06908590455eb61c5c6b0f5abd8375ccf4337f3a9f320ae1082b4616",
     safetyClass: "SAFE_STATIC_POLICY",
   },
   {
@@ -468,7 +468,7 @@ const PHASE_COMPILER_CLOSURE_CONTRACTS = Object.freeze([
 const C2_1_CHILDREN = [
   {
     path: "testing/authenticated-live-route-semantic-analyzer.test.mjs",
-    sha256: "1bbe3dc085c0ef0a277a5df918304a6a21b98a995a2928a6c01bf342f42cac32",
+    sha256: "3b480e3c4e99535704f0e46a5e4063341861439bf077c3096d3e353ecd4b3a33",
     imports: [
       "./authenticated-live-route-semantic-analyzer.mjs",
       "node:assert/strict",
@@ -481,7 +481,7 @@ const C2_1_CHILDREN = [
   {
     path:
       "testing/authenticated-live-route-semantic-branch-ledger.test.mjs",
-    sha256: "bee1588c208420f685baaafacac173f1f9aa6b74e1b26c2302eaba3a55278ac7",
+    sha256: "7cfbc6e39784d10b22c458a23494854f6dd588d221b90b63e202de1a0c038fa8",
     imports: [
       "./authenticated-live-route-semantic-analyzer.mjs",
       "node:assert/strict",
@@ -495,13 +495,13 @@ const C2_1_CHILDREN = [
 ];
 const C2_1_ANALYZER = {
   path: "testing/authenticated-live-route-semantic-analyzer.mjs",
-  sha256: "fd4db6161ca16d87d2f06985defc2ff450679a3c25b4ba48d712d0c2d489627c",
+  sha256: "f12151bd9b126e5519ffef5cbf7e0311f83277d1bb395dfbfa022f4728fa4ea4",
   imports: ["node:crypto", "typescript"],
 };
 const C2_2_ANALYZER = {
   path:
     "testing/authenticated-live-route-synthetic-rejection-candidate-analyzer.mjs",
-  sha256: "cfa1d08670ce818b98efb4a282161ae7a381e87e8a2f197a2561c0122a92c022",
+  sha256: "3321bcab06f1413151b1159973ca1eac1a45cb864bec478065f165c977c122ca",
   imports: ["./authenticated-live-route-semantic-analyzer.mjs", "node:crypto", "typescript"],
 };
 const C2_1_ROUTE_PATHS = [

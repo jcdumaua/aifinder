@@ -1304,9 +1304,18 @@ function v2Sensitive(record) {
     supabase_anon_key: Buffer.from("synthetic-anon"),
     supabase_service_role_key: Buffer.from("synthetic-service") };
 }
+function v2Provisioning(record) {
+  return { schemaVersion: 1, runId: record.run_id,
+    projectRef: record.execution.isolation.project_ref, origin: record.execution.isolation.origin,
+    createdNew: true, emptyAtProvisioning: true, testOnly: true,
+    schemaContractSha256: DIGEST, credentialBundleProvenanceSha256: DIGEST };
+}
 function v2Fixture({ fail = null, bad_verify = null, duplicate_id = false,
   final_failure = null, journal_failure = null } = {}) {
   const record = authorizationV2();
+  const provisioning = v2Provisioning(record);
+  record.execution.isolation.provisioning_receipt_sha256 = sha256Hex(canonicalJson(provisioning));
+  record.one_use_authorization_sha256 = expectedV2OneUse(record);
   const base = fakeAdapters();
   const calls = [], publications = [];
   let current = null, retired = false, previews = 0, sequence = 0;
@@ -1335,18 +1344,85 @@ function v2Fixture({ fail = null, bad_verify = null, duplicate_id = false,
     }
     if (operation === "verify_preview_identity") {
       previews += 1;
-      return { status: "EXACT", deployment_id: "dpl_owned", unrelated_preserved: true };
+      return { status: "EXACT", deployment_id: "dpl_owned", unrelated_preserved: true,
+        isolation_identity: { projectId: record.execution.preview_project_id,
+          teamId: record.execution.preview_team_id, target: "preview",
+          sourceCommit: record.execution.temporary_commit_sha, sourceBranch: record.execution.branch_name,
+          repository: record.repository.remote_repository, sourceIdentityVerified: true } };
     }
+    if (operation === "protected_access_handshake") return { status: "BOUND", protected: true,
+      authenticated: true, observation: { runId: record.run_id,
+        projectRef: record.execution.isolation.project_ref, origin: record.execution.isolation.origin } };
     if (operation === "acquire_automatic_preview") return { status: "ACQUIRED_EXACT", deployment_id: "dpl_owned" };
     if (operation === "inspect_remote_ref_before_delete") return { status: "EXACT_OWNED",
       ref_id: EXPECTED_REMOTE_REF, commit_sha: record.execution.temporary_commit_sha };
     return base.invoke(operation, input);
   } };
   const run = (overrides = {}) => runAdminV1OfficialRuntime({ authorization: record,
+    provisioning_receipt: provisioning,
     now_epoch_ms: TEST_NOW_EPOCH_MS, live_now_epoch_ms: () => TEST_NOW_EPOCH_MS,
     sensitive: v2Sensitive(record), journal, adapters, ...overrides });
   return { record, journal, adapters, calls, publications, run, state: () => current };
 }
+
+await check("v2 stale preview client origin denies the first data mutation despite exact metadata", async () => {
+  const f = v2Fixture();
+  await f.run({ adapters: { async invoke(operation, input) {
+    const result = await f.adapters.invoke(operation, input);
+    if (operation === "protected_access_handshake") return { ...result,
+      observation: { runId: f.record.run_id, projectRef: "default-project",
+        origin: "https://default-project.supabase.co" }, protected: true, authenticated: true };
+    return result;
+  } } }).catch((error) => assert.equal(error.code, "OFFICIAL_ISOLATION_OBSERVATION"));
+  const mutations = f.calls.filter(({ operation }) => operation === "create_submitted_fixture");
+  assert.equal(mutations.length, 0, `stale preview attempted ${mutations.length} direct fixture mutations`);
+});
+
+const isolationCases = [
+  ["origin", "https://wrong-project.supabase.co"], ["projectRef", "wrong-project"],
+  ["runId", "22222222-2222-4222-8222-222222222222"],
+  ["projectRef", "mtpisopvdxuvmpzbzqjw"], ["origin", "https://mtpisopvdxuvmpzbzqjw.supabase.co"],
+  ["runId", undefined], ["projectRef", undefined], ["origin", undefined], ["origin", {}],
+  ["projectId", "prj_wrong"], ["teamId", "team_wrong"], ["sourceCommit", "e".repeat(40)],
+  ["sourceBranch", "wrong-branch"], ["repository", "wrong/repository"],
+  ["target", "production"], ["sourceIdentityVerified", false],
+  ["protected", false], ["authenticated", false], ["deployment_id", "dpl_wrong"],
+  ["observation", null], ["observation", { runId: RUN_ID }],
+];
+for (const [key, value] of isolationCases) {
+  await check(`v2 isolation binding rejects ${key}=${JSON.stringify(value)} with zero data/application mutations`, async () => {
+    const f = v2Fixture();
+    await f.run({ adapters: { async invoke(operation, input) {
+      const result = await f.adapters.invoke(operation, input);
+      if (operation === "verify_preview_identity") {
+        if (key === "deployment_id") result.deployment_id = value;
+        else if (Object.hasOwn(result.isolation_identity, key)) result.isolation_identity[key] = value;
+      }
+      if (operation === "protected_access_handshake") {
+        if (["protected", "authenticated", "observation"].includes(key)) result[key] = value;
+        else if (["runId", "projectRef", "origin"].includes(key)) result.observation[key] = value;
+      }
+      return result;
+    } } }).catch((error) => assert.ok(["OFFICIAL_ISOLATION_OBSERVATION",
+      "OFFICIAL_PREVIEW_IDENTITY_MISMATCH"].includes(error.code)));
+    assert.equal(f.calls.some(({ operation }) =>
+      operation === "create_submitted_fixture" || operation === "application_request" ||
+      /^(delete_submitted_fixture|delete_owned|storage_|prepare_storage)/u.test(operation)), false);
+    assert.equal(f.state().effects.submitted_tools, 0);
+  });
+}
+
+await check("v2 exact proof completes before first direct mutation and emits no secret", async () => {
+  const f = v2Fixture();let proofReturned = false;
+  await f.run({ adapters: { async invoke(operation, input) {
+    if (operation === "create_submitted_fixture") assert.equal(proofReturned, true);
+    const result = await f.adapters.invoke(operation, input);
+    if (operation === "protected_access_handshake") proofReturned = true;
+    return result;
+  } } });
+  assert.equal(f.calls.filter(({ operation }) => operation === "create_submitted_fixture").length, 3);
+  assert.doesNotMatch(JSON.stringify(f.publications), /synthetic-(admin|session|anon|service)|SENTINEL_OIDC/u);
+});
 
 await check("v2 expiry at provider intent denies the adapter effect", async () => {
   const f = v2Fixture();let clock = TEST_NOW_EPOCH_MS;

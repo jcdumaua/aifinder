@@ -601,11 +601,11 @@ const assertions = [
     const result = buildCandidate();
     assert.deepEqual(
       [result.summary.routes, result.summary.methods, result.summary.nodes, result.summary.outcomes],
-      [28, 37, 409, 775],
+      [28, 37, 411, 779],
     );
-    assert.equal(result.outcome_overlay.length, 775);
+    assert.equal(result.outcome_overlay.length, 779);
   }],
-  ["A04_OWNERSHIP_KIND_SPLIT_290_76_36_7", () => {
+  ["A04_OWNERSHIP_KIND_SPLIT_292_76_36_7", () => {
     const summary = buildCandidate().summary;
     assert.deepEqual(
       [
@@ -616,7 +616,7 @@ const assertions = [
         summary.unique_catch_nodes,
         summary.unattributed_catch_nodes,
       ],
-      [326, 83, 290, 76, 36, 7],
+      [328, 83, 292, 76, 36, 7],
     );
   }],
   ["A05_EXACT_ROUTE_SET_AND_IDENTITIES", () => {
@@ -624,7 +624,7 @@ const assertions = [
     assert.deepEqual(result.source_contract.route_paths, ROUTE_PATHS);
     assert.equal(result.source_contract.route_identities_verified, 28);
   }],
-  ["A06_OUTCOME_UNIVERSE_580_152_43", () => {
+  ["A06_OUTCOME_UNIVERSE_584_152_43", () => {
     const summary = buildCandidate().summary;
     assert.deepEqual(
       [
@@ -633,7 +633,7 @@ const assertions = [
         summary.mandatory_deferred_catch_outcomes,
         summary.mandatory_deferred_outcomes,
       ],
-      [580, 152, 43, 195],
+      [584, 152, 43, 195],
     );
   }],
   ["A07_EXPLICIT_BRANCH_MATERIALIZATION", () => {
@@ -819,12 +819,12 @@ const assertions = [
         entry.reason_code,
       ].join("\0") + "\n"
     ).join("");
-    assert.equal(result.outcome_overlay.length, 775);
+    assert.equal(result.outcome_overlay.length, 779);
     assert.equal(result.summary.candidate_set_digest, sha256(candidateRows));
     assert.equal(result.summary.overlay_digest, sha256(overlayRows));
     assert.equal(
       result.summary.candidate_outcomes + result.summary.total_deferred_outcomes,
-      775,
+      779,
     );
   }],
   ["A16_OPAQUE_METHOD_DEFERRALS_15", () => {

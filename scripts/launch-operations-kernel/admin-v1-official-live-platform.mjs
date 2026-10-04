@@ -1,6 +1,7 @@
 import { canonicalJson, sha256Hex } from "./canonical.mjs";
 import {
   OFFICIAL_PREVIEW_ENVIRONMENT_KEYS,
+  observeOfficialClientOrigin,
   validateOfficialProvisioningReceipt,
 } from "./admin-v1-official-isolation.mjs";
 import {
@@ -20,6 +21,8 @@ import {
 import {
   createConcreteLiveTransport,
 } from "./nonproduction-qualification-live-platform.mjs";
+
+const isolatedProvisioningReceipts = new WeakMap();
 
 const rows = [
   ["inspect_prior_residue", "PRE_EFFECT", "provider.inventory", "PROVIDER_CONTROL", "provider_control_invocations", "read", "READ_ONLY", "ZERO"],
@@ -1411,6 +1414,15 @@ function normalizedProviderResult(
       status: "EXACT",
       deployment_id: bindings.deployment_id,
       ...(authorization.schema_version === 2 ? { unrelated_preserved: true } : {}),
+      ...(authorization.schema_version === 2 && bindings.retention_recovery !== true ? { isolation_identity: {
+        projectId: authorization.execution.preview_project_id,
+        teamId: authorization.execution.preview_team_id,
+        target: "preview",
+        sourceCommit: authorization.execution.temporary_commit_sha,
+        sourceBranch: authorization.execution.branch_name,
+        repository: authorization.repository.remote_repository,
+        sourceIdentityVerified: true,
+      } } : {}),
     };
   }
   if (operation === "generate_oidc") {
@@ -2167,14 +2179,38 @@ export function createAdminV1OfficialConcreteTransport({
             headers: {
               accept: "application/json",
               [TRUSTED_SOURCE_OIDC_HEADER]: credentialText(input.oidc_token),
+              ...(authorization.schema_version === 2
+                ? { "x-aifinder-validation": "client-origin-v1" } : {}),
             },
           });
-          if (!exactAiFinderUnauthenticatedSession(positive)) {
+          let observation;
+          if (authorization.schema_version === 2) {
+            if (input.deployment_id !== bindings.deployment_id ||
+                positive?.status !== 200 || positive.response_json !== "EXACT_BOUNDED" ||
+                !Number.isSafeInteger(positive.response_bytes) || positive.response_bytes < 1 ||
+                positive.response_bytes > 4096 ||
+                !exactApplicationSecurityHeaders(positive.response_headers) ||
+                !Array.isArray(positive.response_headers.set_cookie) ||
+                positive.response_headers.set_cookie.length !== 0 ||
+                !exactPlainObject(positive.body, ["runId", "projectRef", "origin"])) {
+              return { status: "FAILED", physical_requests: 2 };
+            }
+            try {
+              observation = observeOfficialClientOrigin({ runId: positive.body.runId,
+                projectRef: positive.body.projectRef, actualClientOrigin: positive.body.origin });
+            } catch {
+              return { status: "FAILED", physical_requests: 2 };
+            }
+          } else if (!exactAiFinderUnauthenticatedSession(positive)) {
             return { status: "FAILED", physical_requests: 2 };
           }
           bindings.protected_access_oidc_token = Buffer.from(input.oidc_token);
           bindings.protected_access_verified = true;
-          return { status: "BOUND", physical_requests: 2 };
+          // Authenticated here means the same OIDC request passed the proven
+          // deployment protection boundary, not an application admin session.
+          return { status: "BOUND", physical_requests: 2,
+            ...(authorization.schema_version === 2
+              ? { observation, protected: true, authenticated: true } : {}) };
         } finally {
           zeroProjectedResponseCookies(negative);
           zeroProjectedResponseCookies(positive);
@@ -2494,6 +2530,8 @@ function loadIsolatedOfficialCredentials({
       }),
       writable: false,
     });
+    isolatedProvisioningReceipts.set(sensitive,
+      Object.freeze(structuredClone(credential_bundle.provisioning_receipt)));
     return Object.freeze(sensitive);
   } catch {
     zeroRecord(sensitive);
@@ -2648,6 +2686,7 @@ export async function runConcreteAdminV1OfficialRuntime({
     adapters,
     journal: execution_context.journal,
     sensitive: credentials,
+    provisioning_receipt: isolatedProvisioningReceipts.get(credentials),
     now_epoch_ms,
     live_now_epoch_ms,
   });

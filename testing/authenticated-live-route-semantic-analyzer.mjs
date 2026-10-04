@@ -936,11 +936,13 @@ export function buildLedger({
     (route) => route.observed_status === "UNOBSERVED",
   ).length;
   if (methods.length !== 37) fail("C2_1_GLOBAL_RECONCILIATION_METHODS");
-  if (ifs !== 366) fail("C2_1_GLOBAL_RECONCILIATION_IFS");
+  const session = analyses.find((entry) => entry.route_path === SESSION_ROUTE_PATH);
+  const sessionDelta = IDENTITY_FIELDS.every((key) => session?.[key] === CURRENT_SESSION_IDENTITY[key]) ? 2 : 0;
+  if (ifs !== 366 + sessionDelta) fail("C2_1_GLOBAL_RECONCILIATION_IFS");
   if (catchesWithBinding !== 31) fail("C2_1_GLOBAL_RECONCILIATION_BOUND_CATCHES");
   if (catchesOptional !== 12) fail("C2_1_GLOBAL_RECONCILIATION_OPTIONAL_CATCHES");
-  if (nodes.length !== 409) fail("C2_1_GLOBAL_RECONCILIATION_NODES");
-  if (outcomes.length !== 775) fail("C2_1_GLOBAL_RECONCILIATION_OUTCOMES");
+  if (nodes.length !== 409 + sessionDelta) fail("C2_1_GLOBAL_RECONCILIATION_NODES");
+  if (outcomes.length !== 775 + sessionDelta * 2) fail("C2_1_GLOBAL_RECONCILIATION_OUTCOMES");
   if (importedOpaqueMethods !== 15) {
     fail("C2_1_GLOBAL_RECONCILIATION_OPAQUE_METHODS");
   }
@@ -1064,20 +1066,20 @@ export function buildLedger({
     summary: {
       routes: 28,
       methods: 37,
-      ifs: 366,
+      ifs,
       catches_with_binding: 31,
       catches_optional: 12,
       catches: 43,
-      nodes: 409,
-      outcomes: 775,
+      nodes: nodes.length,
+      outcomes: outcomes.length,
       observed: 15,
       unobserved: 13,
       imported_opaque_methods: 15,
       route_local_methods: 22,
       manual_methods: 22,
       fresh_helper_methods: 15,
-      manual_nodes: 409,
-      manual_outcomes: 775,
+      manual_nodes: nodes.length,
+      manual_outcomes: outcomes.length,
       c2_2_candidates: 0,
       c2_3_candidates: 0,
       c2_4_candidates: 0,
@@ -1121,10 +1123,27 @@ const CURRENT_DECISION_IDENTITY = Object.freeze({
   bytes: 7558, lf_lines: 284,
 });
 const IDENTITY_FIELDS = Object.freeze(["sha256", "git_blob", "bytes", "lf_lines"]);
+const SESSION_ROUTE_PATH = "app/api/admin/session/route.ts";
+const HISTORICAL_SESSION_IDENTITY = Object.freeze({
+  sha256: "ad22481088d2de333714c6d3d72330735ff759eea1aafaf937b713b817e68627",
+  git_blob: "410e0f2f42c1b0c696dd49305704f1daa36e9ffa", bytes: 749, lf_lines: 36,
+});
+const CURRENT_SESSION_IDENTITY = Object.freeze({
+  sha256: "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce",
+  git_blob: "7d4caf5764b5bd9b6c9f423670cd82d63264d7ed", bytes: 1117, lf_lines: 42,
+});
 
 export function currentRouteIdentity(routePath, historicalIdentity) {
   if (!historicalIdentity || typeof routePath !== "string") {
     fail("C2_1_CURRENT_ROUTE_CONTRACT");
+  }
+  if (routePath === SESSION_ROUTE_PATH) {
+    if (IDENTITY_FIELDS.some((key) => historicalIdentity[key] !== HISTORICAL_SESSION_IDENTITY[key]) ||
+        ["if_count", "decision_total"].some((key) =>
+          historicalIdentity[key] !== undefined && historicalIdentity[key] !== 1)) {
+      fail("C2_1_HISTORICAL_ROUTE_CONTRACT");
+    }
+    return { ...historicalIdentity, ...CURRENT_SESSION_IDENTITY, if_count: 3, decision_total: 3 };
   }
   if (routePath !== CURRENT_DECISION_ROUTE_PATH) return { ...historicalIdentity };
   if (IDENTITY_FIELDS.some((key) =>
@@ -1198,6 +1217,10 @@ export function buildCurrentSourceView({ historicalLedger, routeInputs } = {}) {
     return {
       ...route,
       ...Object.fromEntries(IDENTITY_FIELDS.map((key) => [key, analysis[key]])),
+      if_count: analysis.if_count,
+      catch_bound_count: analysis.catch_bound_count,
+      catch_optional_count: analysis.catch_optional_count,
+      catch_total: analysis.catch_total,
       exported_method_ids: analysis.methods.map((entry) => entry.method_id),
       node_ids: analysis.nodes.map((entry) => entry.node_id),
       import_boundary_ids: analysis.import_boundaries.map((entry) =>
@@ -1205,15 +1228,21 @@ export function buildCurrentSourceView({ historicalLedger, routeInputs } = {}) {
     };
   });
   for (const [field, expected] of [
-    ["methods", 37], ["nodes", 409], ["outcomes", 775], ["routes", 28],
+    ["methods", 37], ["nodes", 411], ["outcomes", 779], ["routes", 28],
   ]) {
     if (current[field].length !== expected) fail("C2_1_CURRENT_RECONCILIATION");
   }
   current.source_lane = "CURRENT_SOURCE_STATIC_ONLY";
+  Object.assign(current.summary, {
+    ifs: 368, nodes: current.nodes.length, outcomes: current.outcomes.length,
+    manual_nodes: current.nodes.length, manual_outcomes: current.outcomes.length,
+  });
   current.historical_source_coverage = {
-    verified_identical_routes: 27,
+    verified_identical_routes: 26,
     changed_route: "UNVERIFIED_NOT_RUN",
     changed_route_path: CURRENT_DECISION_ROUTE_PATH,
+    changed_session_route: "HISTORICAL_BYTES_REQUIRE_SEPARATE_FIXTURE",
+    changed_session_route_path: SESSION_ROUTE_PATH,
     current_source_cannot_satisfy_historical_gate: true,
   };
   current.historical_provenance = {

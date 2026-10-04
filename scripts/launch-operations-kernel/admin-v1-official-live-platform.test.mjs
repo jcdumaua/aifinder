@@ -199,11 +199,13 @@ function credentialProbe(schemaVersion = 2, { journal, retention_recovery, spawn
     spawn_sync: spawn_sync ?? (() => assert.fail("unexpected synthetic Git call")),
     fetch_impl: async (rawUrl, init) => {
       const request = { url: new URL(String(rawUrl)), method: init.method,
+        headers: init.headers,
         body: init.body === undefined ? null : JSON.parse(init.body) };
       calls.push(request);
       const response = responseFor(request);
-      return { status: response?.http_status ?? 200, headers: { get: () => null, getSetCookie: () => [] },
-        text: async () => JSON.stringify(response?.http_body ?? response) };
+      return { status: response?.http_status ?? 200,
+        headers: { get: (name) => response?.http_headers?.[name] ?? null, getSetCookie: () => [] },
+        text: async () => response?.http_text ?? JSON.stringify(response?.http_body ?? response) };
     },
   });
   return { authorization, credentials, bundle, calls, transport,
@@ -537,7 +539,12 @@ for (const schemaVersion of [1, 2]) await contractCheck(`schema-${schemaVersion}
       assert.equal(probe.calls.length, before);
     }
     assert.deepEqual(await probe.execute("verify_preview_identity", schemaVersion === 2 ? { deployment_id: "dpl_owned" } : {}),
-      { status: "EXACT", deployment_id: "dpl_owned", ...(schemaVersion === 2 ? { unrelated_preserved: true } : {}) });
+      { status: "EXACT", deployment_id: "dpl_owned", ...(schemaVersion === 2 ? { unrelated_preserved: true,
+        isolation_identity: { projectId: probe.authorization.execution.preview_project_id,
+          teamId: probe.authorization.execution.preview_team_id, target: "preview",
+          sourceCommit: probe.authorization.execution.temporary_commit_sha,
+          sourceBranch: probe.authorization.execution.branch_name,
+          repository: probe.authorization.repository.remote_repository, sourceIdentityVerified: true } } : {}) });
     assert.equal(probe.calls.at(-1).url.pathname, "/v13/deployments/dpl_owned");
     assert.equal(probe.calls.at(-1).url.searchParams.get("teamId"), probe.authorization.execution.preview_team_id);
   } finally { probe.retire(); }
@@ -1129,6 +1136,53 @@ await contractCheck("reopened concrete cleanup durably bounds every reconciliati
   assert.equal(current.value.state.recovery_usage.database_rest_requests, 14);
   assert.equal(current.value.state.runtime_sessions, 1);
 });
+
+for (const variant of ["exact", "missing", "extra-secret", "wrong-origin", "unprotected", "wrong-status"]) {
+  await contractCheck(`v2 protected handshake attestation ${variant}`, async () => {
+    const probe = credentialProbe();
+    const auth = probe.authorization;
+    const deployment = { id: "dpl_owned", uid: "dpl_owned", url: "aifinder-owned-preview.vercel.app",
+      production: false, target: null, readyState: "READY", createdAt: now,
+      projectId: auth.execution.preview_project_id, name: "aifinder", ownerId: auth.execution.preview_team_id,
+      gitSource: { type: "github", sha: auth.execution.temporary_commit_sha,
+        ref: auth.execution.branch_name, repo: "jcdumaua/aifinder" } };
+    const security = { "cache-control": "no-store", "content-type": "application/json",
+      "content-security-policy": "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+      "cross-origin-opener-policy": "same-origin",
+      "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "x-content-type-options": "nosniff", "x-dns-prefetch-control": "off", "x-frame-options": "DENY" };
+    try {
+      probe.respondWith(({ url, headers }) => {
+        if (url.pathname === "/v6/deployments") return { deployments: [deployment], pagination: { count: 1, next: null } };
+        if (url.pathname === "/v13/deployments/dpl_owned") return deployment;
+        assert.equal(url.pathname, "/api/admin/session");
+        if (!headers["x-vercel-trusted-oidc-idp-token"]) return {
+          http_status: variant === "unprotected" ? 200 : 401, http_headers: { "content-type": "text/html" },
+          http_text: `<title>Authentication Required</title> vercel.com/sso-api url=${encodeURIComponent(String(url))}` };
+        assert.equal(headers["x-aifinder-validation"], "client-origin-v1");
+        assert.equal(headers["x-vercel-trusted-oidc-idp-token"], "SENTINEL_OIDC");
+        const body = { runId, projectRef, origin: `https://${projectRef}.supabase.co` };
+        if (variant === "missing") delete body.runId;
+        if (variant === "extra-secret") body.secret = "SENTINEL_SECRET";
+        if (variant === "wrong-origin") body.origin = "https://default-project.supabase.co";
+        return { http_status: variant === "wrong-status" ? 401 : 200, http_headers: security, http_body: body };
+      });
+      await probe.execute("acquire_automatic_preview");
+      await probe.execute("verify_preview_identity", { deployment_id: "dpl_owned" });
+      const result = await probe.execute("protected_access_handshake", {
+        deployment_id: "dpl_owned", oidc_token: Buffer.from("SENTINEL_OIDC") });
+      assert.equal(result.status, variant === "exact" ? "BOUND" : "FAILED");
+      if (variant === "exact") assert.deepEqual(result, { status: "BOUND", physical_requests: 2,
+        observation: { runId, projectRef, origin: `https://${projectRef}.supabase.co` },
+        protected: true, authenticated: true });
+      assert.doesNotMatch(JSON.stringify(result), /SENTINEL/u);
+      assert.equal(probe.calls.filter(({ url }) => url.pathname === "/api/admin/session").length,
+        variant === "unprotected" ? 1 : 2);
+    } finally { probe.retire(); }
+  });
+}
 
 assert.deepEqual(contractFailures, [], contractFailures.join("\n"));
 console.log(`PASS_ADMIN_V1_OFFICIAL_CR3 assertions=${assertions} canonical_relation=true repeated_receipts_bypass=false real_calls=0`);

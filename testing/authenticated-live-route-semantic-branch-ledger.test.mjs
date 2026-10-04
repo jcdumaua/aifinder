@@ -19,6 +19,13 @@ const CURRENT_DECISION_ROUTE_IDENTITY = Object.freeze({
   bytes: 7558,
   lf_lines: 284,
 });
+const SESSION_ROUTE_PATH = "app/api/admin/session/route.ts";
+// Exact historical bytes; checked against the frozen ledger before AST comparison.
+const HISTORICAL_SESSION_BYTES = Buffer.from("import \"server-only\";\n\nimport { NextResponse } from \"next/server\";\nimport { verifyAdminSession } from \"../../../../lib/admin-auth\";\n\nexport const runtime = \"nodejs\";\nexport const dynamic = \"force-dynamic\";\n\nfunction jsonResponse(data: object, status = 200) {\n  return NextResponse.json(data, {\n    status,\n    headers: {\n      \"Cache-Control\": \"no-store\",\n      \"X-Content-Type-Options\": \"nosniff\",\n    },\n  });\n}\n\nexport async function GET(request: Request) {\n  const adminSession = verifyAdminSession(request);\n\n  if (!adminSession.isAdmin) {\n    return jsonResponse(\n      {\n        authenticated: false,\n        message: \"Unauthorized.\",\n      },\n      401\n    );\n  }\n\n  return jsonResponse({\n    authenticated: true,\n    role: \"admin\",\n  });\n}\n", "utf8");
+const CURRENT_SESSION_ROUTE_IDENTITY = Object.freeze({
+  sha256: "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce",
+  git_blob: "7d4caf5764b5bd9b6c9f423670cd82d63264d7ed", bytes: 1117, lf_lines: 42,
+});
 const COMPATIBILITY_COVERAGE = Object.freeze({
   current_source_ast_routes: 28,
   historical_source_ast_routes: 27,
@@ -967,6 +974,7 @@ function currentOracleEvidence(routePath) {
     );
     currentIdentity = CURRENT_DECISION_ROUTE_IDENTITY;
   }
+  if (routePath === SESSION_ROUTE_PATH) currentIdentity = CURRENT_SESSION_ROUTE_IDENTITY;
   const bytes = FILE_BYTES.get(routePath);
   assert.deepEqual(
     [sha256(bytes), gitBlob(bytes), bytes.length,
@@ -977,6 +985,9 @@ function currentOracleEvidence(routePath) {
     ...historical,
     ...currentIdentity,
     git_object_identity: currentIdentity.git_blob,
+    source_visible_branch_groups: { ...historical.source_visible_branch_groups,
+      ...(routePath === SESSION_ROUTE_PATH ? { if_statements: 3, decision_catch_total: 3 } : {}),
+    },
   };
 }
 const currentOracleRoutes = ROUTE_PATHS.map((routePath) =>
@@ -1000,9 +1011,15 @@ function historicalRecordOnlyOracle(routePath) {
 const oracleRoutes = currentOracleRoutes.map((entry) =>
   entry.route.route_path === CURRENT_DECISION_ROUTE_PATH
     ? historicalRecordOnlyOracle(entry.route.route_path)
-    : entry
+    : entry.route.route_path === SESSION_ROUTE_PATH
+      ? oracleRoute(SESSION_ROUTE_PATH, HISTORICAL_SESSION_BYTES, evidenceByPath.get(SESSION_ROUTE_PATH))
+      : entry
 );
 function assertCurrentOracleAgreement() {
+  const historicalSession = evidenceByPath.get(SESSION_ROUTE_PATH);
+  assert.deepEqual([sha256(HISTORICAL_SESSION_BYTES), gitBlob(HISTORICAL_SESSION_BYTES),
+    HISTORICAL_SESSION_BYTES.length, [...HISTORICAL_SESSION_BYTES].filter((byte) => byte === 10).length],
+    [historicalSession.sha256, historicalSession.git_object_identity, historicalSession.bytes, historicalSession.lf_lines]);
   assert.equal(currentOracleRoutes.length, 28);
   assert.equal(
     oracleRoutes.filter((entry) => entry.route.route_path !== CURRENT_DECISION_ROUTE_PATH).length,
@@ -1042,6 +1059,12 @@ function assertCurrentOracleAgreement() {
   assert.equal(oldNodes.length, 12);
   assert.equal(newNodes.length, 12);
   assert.notDeepEqual(newNodes.map((entry) => entry.node_id), oldNodes.map((entry) => entry.node_id));
+  const currentSession = currentOracleRoutes.find((entry) => entry.route.route_path === SESSION_ROUTE_PATH);
+  const historicalSessionOracle = oracleRoutes.find((entry) => entry.route.route_path === SESSION_ROUTE_PATH);
+  assert.equal(currentSession.nodes.length, 3);
+  assert.equal(currentSession.outcomes.length, 6);
+  assert.equal(historicalSessionOracle.nodes.length, 1);
+  assert.equal(historicalSessionOracle.outcomes.length, 2);
 }
 const expectedRoutes = oracleRoutes.map((entry) => entry.route);
 const expectedMethods = oracleRoutes

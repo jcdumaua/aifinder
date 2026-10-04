@@ -20,6 +20,13 @@ const CURRENT_DECISION_ROUTE_IDENTITY = Object.freeze({
   bytes: 7558,
   lf_lines: 284,
 });
+const SESSION_ROUTE_PATH = "app/api/admin/session/route.ts";
+// Exact historical bytes; checked against the frozen ledger before AST comparison.
+const HISTORICAL_SESSION_BYTES = Buffer.from("import \"server-only\";\n\nimport { NextResponse } from \"next/server\";\nimport { verifyAdminSession } from \"../../../../lib/admin-auth\";\n\nexport const runtime = \"nodejs\";\nexport const dynamic = \"force-dynamic\";\n\nfunction jsonResponse(data: object, status = 200) {\n  return NextResponse.json(data, {\n    status,\n    headers: {\n      \"Cache-Control\": \"no-store\",\n      \"X-Content-Type-Options\": \"nosniff\",\n    },\n  });\n}\n\nexport async function GET(request: Request) {\n  const adminSession = verifyAdminSession(request);\n\n  if (!adminSession.isAdmin) {\n    return jsonResponse(\n      {\n        authenticated: false,\n        message: \"Unauthorized.\",\n      },\n      401\n    );\n  }\n\n  return jsonResponse({\n    authenticated: true,\n    role: \"admin\",\n  });\n}\n", "utf8");
+const CURRENT_SESSION_ROUTE_IDENTITY = Object.freeze({
+  sha256: "a15caa4c0b9b586894a06af90e88f11ac1e99a70f6e1acb8b25f1ee77e4a30ce",
+  git_blob: "7d4caf5764b5bd9b6c9f423670cd82d63264d7ed", bytes: 1117, lf_lines: 42,
+});
 const COMPATIBILITY_COVERAGE = Object.freeze({
   current_source_ast_routes: 28,
   historical_source_ast_routes: 27,
@@ -836,7 +843,8 @@ function buildIndependentOracle(c2_1, { historicalCandidateLedger = null } = {})
       // Historical source is unavailable: no AST claim or current-source substitute.
       continue;
     }
-    const bytes = FILE_BYTES.get(route.route_path);
+    const bytes = historicalRecordOnly && route.route_path === SESSION_ROUTE_PATH
+      ? HISTORICAL_SESSION_BYTES : FILE_BYTES.get(route.route_path);
     assert.equal(sha256(bytes), route.sha256);
     assert.equal(gitBlob(bytes), route.git_blob);
     assert.equal(bytes.length, route.bytes);
@@ -866,11 +874,11 @@ function buildIndependentOracle(c2_1, { historicalCandidateLedger = null } = {})
     for (const node of discovered) astByNodeId.set(node.node_id, node.ast);
   }
   assert.equal(parsedByPath.size, historicalRecordOnly ? 27 : 28);
-  assert.equal(astByNodeId.size, historicalRecordOnly ? 397 : 409);
+  assert.equal(astByNodeId.size, historicalRecordOnly ? 397 : 411);
   const nodeById = new Map(c2_1.nodes.map((node) => [node.node_id, node]));
   const methodById = new Map(c2_1.methods.map((method) => [method.method_id, method]));
   const routeByPath = new Map(c2_1.routes.map((route) => [route.route_path, route]));
-  assert.equal(nodeById.size, 409);
+  assert.equal(nodeById.size, historicalRecordOnly ? 409 : 411);
   assert.equal(methodById.size, 37);
   for (const method of c2_1.methods) {
     const route = routeByPath.get(method.route_path);
@@ -940,7 +948,7 @@ function buildIndependentOracle(c2_1, { historicalCandidateLedger = null } = {})
     unattributedCatch: c2_1.nodes.filter((node) => node.ownership_state === "UNATTRIBUTED" && node.kind === "CATCH").length,
   };
   assert.deepEqual(split, {
-    uniqueIf: 290,
+    uniqueIf: historicalRecordOnly ? 290 : 292,
     unattributedIf: 76,
     uniqueCatch: 36,
     unattributedCatch: 7,
@@ -1415,6 +1423,7 @@ function runFinalLedgerTest() {
       );
       expectedIdentity = { ...CURRENT_DECISION_ROUTE_IDENTITY };
     }
+    if (route.route_path === SESSION_ROUTE_PATH) expectedIdentity = { ...CURRENT_SESSION_ROUTE_IDENTITY };
     const bytes = FILE_BYTES.get(route.route_path);
     assert.deepEqual(
       [sha256(bytes), gitBlob(bytes), bytes.length, countLf(bytes)],

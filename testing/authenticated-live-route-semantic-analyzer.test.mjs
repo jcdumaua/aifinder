@@ -219,7 +219,10 @@ function currentRouteContract(routePath, historical) {
   });
   return { ...historical, sha256: current.sha256,
     git_object_identity: current.git_blob, bytes: current.bytes,
-    lf_lines: current.lf_lines };
+    lf_lines: current.lf_lines,
+    source_visible_branch_groups: { ...historical.source_visible_branch_groups,
+      ...(routePath === "app/api/admin/session/route.ts" ? { if_statements: 3, decision_catch_total: 3 } : {}),
+    } };
 }
 
 function loadRealContext() {
@@ -381,7 +384,7 @@ function validateAnalyzerLedger(candidate, partialEvidence) {
   if (candidate.nodes.some((node) => !["IF", "CATCH"].includes(node.kind))) {
     validationFailure("C2_1_MEMBER_CATCH_EXCLUDED");
   }
-  if (candidate.summary.nodes !== 409) {
+  if (candidate.summary.nodes !== 411) {
     validationFailure("C2_1_DECISION_CATCH_TOTAL");
   }
   const nodeIds = candidate.nodes.map((node) => node.node_id);
@@ -610,11 +613,11 @@ const assertions = [
     }
     assert.deepEqual(totals, {
       methods: 37,
-      ifs: 366,
+      ifs: 368,
       bound: 31,
       optional: 12,
       catches: 43,
-      nodes: 409,
+      nodes: 411,
     });
   }],
   ["A14_LEXICAL_OWNERSHIP", () => {
@@ -786,7 +789,7 @@ const assertions = [
         ledger.summary.imported_opaque_methods,
         ledger.summary.route_local_methods,
       ],
-      [28, 37, 366, 31, 12, 43, 409, 775, 15, 22],
+      [28, 37, 368, 31, 12, 43, 411, 779, 15, 22],
     );
     assert.equal(ledger.request_positions.length, 27);
     assert.equal(ledger.summary.runtime_qualified_nodes, 0);
@@ -843,7 +846,7 @@ if (argumentsList.length === 1 && argumentsList[0] === "--emit-ledger") {
     const mutationCount = runMutationProofs(ledger, partialEvidence);
     assert.equal(mutationCount, 14);
     process.stdout.write(
-      "PASS_AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER assertions=20 mutations=14 fixtures=4 routes=28 methods=37 ifs=366 catches_with_binding=31 catches_optional=12 catches=43 nodes=409 imported_opaque_methods=15 route_local_methods=22 member_catch_calls=1 member_catch_counted=0 raw_source_output=0 failures=0 internal_failures=0\n",
+      "PASS_AUTHENTICATED_LIVE_ROUTE_SEMANTIC_ANALYZER assertions=20 mutations=14 fixtures=4 routes=28 methods=37 ifs=368 catches_with_binding=31 catches_optional=12 catches=43 nodes=411 imported_opaque_methods=15 route_local_methods=22 member_catch_calls=1 member_catch_counted=0 raw_source_output=0 failures=0 internal_failures=0\n",
     );
   }
 } else {
