@@ -107,3 +107,7 @@ At the end of tasks, provide:
 ## Risks
 ## Next Recommended Step
 ```
+
+## AiFinder persistent handoff (Workflow V3 prospective)
+
+Before beginning any AiFinder task, read repository-root `HANDOFF.md` and its referenced failure registry. Check matching historical root causes before designing commands or using execution attempts. After a meaningful phase or new root-cause finding, propose a compact update to `HANDOFF.md` (root cause, verified fix or uncertainty, prevention, evidence pointer)—never paste the full CCR. Historical CCRs and spent authorities remain immutable. `HANDOFF.md` does not confer any execution, database, production, merge, or sandbox authority. On a branch without the handoff, locate the latest approved version rather than pretending it was read.
