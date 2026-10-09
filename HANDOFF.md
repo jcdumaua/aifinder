@@ -1,6 +1,6 @@
 # AiFinder — HANDOFF.md
 
-**Permanent cross-chat starting point.** Read this file before any new AiFinder/Codex work. Historical evidence and approvals remain authoritative in their original records. This document does **not** grant execution, modification, deployment, database, network, or merge authority.
+**Permanent cross-chat starting point (root causes summarized; full CCRs stay at source).** Read this file before any new AiFinder/Codex work. Historical evidence and approvals remain authoritative in their original records. This document does **not** grant execution, modification, deployment, database, network, or merge authority.
 
 ## Active state (snapshot 2026-10-09)
 
@@ -8,7 +8,8 @@
 - Failure-prevention integration: **draft PR #5**, branch `docs/failure-prevention-v1`, **not merged or activated on main**.
 - Registry v2 synchronized in this PR under `docs/governance/failure-prevention/`; matching copies in ChatGPT Library `/AiFinder/Failure-Prevention/`.
 - Offline checker: `scripts/failure-prevention/preflight.mjs`. Initial isolated tests **11/11 PASS**; independent source review found four gaps, **hardening not yet verified**: self-reported evidence, optional failure matching, descriptive rather than actual command inspection, and blanket REPAIR on known IDs. Treat checker as **advisory only**.
-- Next bounded productive task: repair the four checker findings, test negative cases and verify applicable safe matrix; independent review before owner merge decision. Do not imply Codex is currently running.
+- **Existing engineering track to resume (separate from PR #5):** G1-R1 offline per-source attribution correction. Reported **116/116 synthetic tests GREEN**; this does not establish runtime equivalence or independent expected outputs. Qualification ledger **25/29**; H1 host authorization and remaining native qualification are blocked. First verify whether the short independent re-review of the corrected comparator/tests/seal has already been completed (do not duplicate it). Then use the controlling E1/G1 offline host-readiness/independent-expected-output preparation handoff for the next authorized work, with no Docker, Node/native qualification, protected host/provider changes, or spent-attempt replay absent applicable approval.
+- **PR #5 side track:** The registry and root-cause handoff are documentary working references. The automated checker has four open independent-review findings (self-reported evidence, optional failure matching, descriptive command inspection, blanket REPAIR) and remains **advisory only**; further hardening is deferred to a separate explicitly authorized task. Do not let that side track block resuming the existing G1/E1 engineering phase.
 - AiFinder application/public-launch/DB operations are **not** authorized by this handoff. Existing qualification ledgers and spent attempts must remain unchanged.
 
 ## Working rules
@@ -16,13 +17,13 @@
 1. **ChatGPT** controls task scope, packages, reviews and CCR acceptance; **Codex** implements and diagnoses within the task's explicit authority; **owner** alone grants consequential approvals. Never use old approvals as reusable authority.
 2. Before Codex handoff, review this document, the detailed failure registry and the relevant permissions/launcher/source closure. Prefer deterministic offline preflight over spending native launches.
 3. On failure, seek most specific evidence-supported **root cause** and check for existing failure IDs before creating a new one. Shared cause = amend existing entry; distinct cause = new ID.
-4. **Update this handoff after meaningful new verified findings**, including unresolved root-cause uncertainty. Only include **root cause, verified fix or proposed remedy, prevention**, and evidence pointer; **no full CCR**. Keep raw CCRs untouched.
+4. **Update this handoff after meaningful new verified findings**, including unresolved root-cause uncertainty. Only include **root cause, verified fix or proposed remedy, prevention**, and evidence pointer; **no full CCR**. Keep raw CCRs untouched. Avoid duplicate IDs for the same evidence-supported mechanism; an error string alone is not a causal match.
 5. A failed or blocked phase does not become PASSED through documentation. Checker PASS is not permission to execute; no DB operations, migrations, production access, deploy/publish, environment or sandbox expansion, qualification starts, or merge without separate applicable authority.
 6. For relevant Codex tasks, discover and actually invoke applicable installed skills within current authority (systematic debugging, TDD, verification, review); a skill PASS cannot override project safety gates.
 
 ## Root-cause reference (compact)
 
-Each registry ID below maps to the **original CCR evidence**, trigger, status, and prevention rule in [failure-registry.json](docs/governance/failure-prevention/failure-registry.json). Status is about the historical finding, **not** general permission to apply the remedy.
+These **25 entries are a selected evidence-grounded baseline, not an exhaustive census** of every historical error or unique cause. Each registry ID below maps to the **original CCR evidence**, trigger, status, and prevention rule in [failure-registry.json](docs/governance/failure-prevention/failure-registry.json). Status is about the historical finding, **not** general permission to apply the remedy.
 
 | ID | Root-cause status | Established mechanism / current uncertainty | Correction or next treatment |
 |---|---|---|---|
@@ -66,6 +67,10 @@ Evidence: [original CCR location / commit / tests]
 ```
 
 Keep new findings short; update the table and detailed registry together after review. Don't paste full CCRs.
+
+## Update checkpoint
+
+On any completed engineering phase, first verify the current branch, governing handoff, last accepted CCR, actual approvals, and whether a purported next review has already been finished. Update the short active-state lines and *only new or changed root-cause entries*. Do not automatically expand into a historical census. A new chat must not assume this snapshot is current without checking live repository/evidence.
 
 ## Starting a fresh chat
 
