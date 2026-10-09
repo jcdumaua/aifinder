@@ -10,7 +10,7 @@ The current validated historical registry is **v2**, preserved in ChatGPT Librar
 - `AiFinder_Codex_Preflight_Gate_v2.md`
 - `START_HERE.md`
 
-**Until the registry and checklist are copied, independently checked, and committed here, this repository bootstrap is NOT the authoritative full registry.** Never claim a complete registry check merely from reading this pointer.
+The v2 registry and checklist are now mirrored in this draft branch as `failure-registry.json`, `failure-registry.md`, and `preflight-rules.md`. The offline checker is `scripts/failure-prevention/preflight.mjs` with Node tests at `scripts/failure-prevention/preflight.test.mjs`. The cross-chat Library remains a backup. The draft PR and its checker are not merged or activated for main-branch executions. A PASS is not approval to execute.
 
 ## Before every Codex handoff
 
