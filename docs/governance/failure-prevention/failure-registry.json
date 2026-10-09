@@ -1,0 +1,448 @@
+{
+  "audit_disposition": "WORKING_BASELINE_R2_SESSION_COUNT_RECONCILED; FULL_HISTORIC_CAUSAL_CENSUS_OPEN",
+  "author": "ChatGPT independent audit",
+  "coverage_limits": [
+    "Representative CCR root-cause case review, not all items causally adjudicated.",
+    "Excludes standalone app-specific storage and nonadmitted sources.",
+    "No live environment or Codex configuration authenticated.",
+    "Some later phases remain pending external independent seal and ChatGPT acceptance.",
+    "R2 narrative zero-file statement rejected by code/structured counts; 426 is a marker-based matching-file count, not causal classification."
+  ],
+  "data_sources": {
+    "R2_folder": "AiFinder-Codex-History-Forensics-20261008-R2/evidence/",
+    "ccr_bytes_scanned": 29950233,
+    "ccr_files_scanned": 1163,
+    "conflict": "RESOLVED_REPORTING_DEFECT: R2 narrative zero recognized session files contradicts its parser and structured count 426; parser increments relevant_session_files when any allowed machine string matches a category marker. No new full-corpus scan performed.",
+    "exact_duplicate_ccr_sha_groups": 53,
+    "inaccessible_reported": 0,
+    "malformed_jsonl_lines_reported": 0,
+    "oversized_lines_skipped": 2227,
+    "relevant_session_files_structured_report": 426,
+    "session_bytes_scanned": 7672125317,
+    "session_files_scanned": 1645,
+    "session_lines_scanned": 1201089,
+    "r2_reconciliation": {
+      "source": "AiFinder-Codex-History-Forensics-20261008-R2/evidence/forensic_parser.py and CODEX_FINDINGS.json and CODEX_FORENSIC_REPORT.md",
+      "observed_structured_relevant_session_files": 426,
+      "r2_narrative_zero_claim": "INCORRECT",
+      "method": "relevant_session_files increments once per session file if add_hits matches any category regex in permitted safe_machine_strings fields",
+      "technical_interpretation": "426 matching files, NOT 426 incidents, distinct causes, or proven failures",
+      "independent_full_rerun": "NOT_RUN",
+      "original_evidence_preserved": true
+    }
+  },
+  "date": "2026-10-09",
+  "effects": {
+    "AiFinder_repository_reads": 0,
+    "AiFinder_repository_writes": 0,
+    "Codex_workload_runs": 0,
+    "Git_stage_commit_push": 0,
+    "credential_access": 0,
+    "live_network_provider_database_deployment": 0,
+    "local_artifact_only": true,
+    "mac_security_setting_changes": 0
+  },
+  "entries": [
+    {
+      "correction": "No historical repair evidenced",
+      "evidence_source": "AiFinder-Admin-V1-Official-First-Environment-Derived-Reseal-Host-Hunk-Recovery-Design-V2-CCR-20260830T195356Z/CCR-REPORT.md:33",
+      "failure_family": "Derived-write EPERM",
+      "id": "AF-001",
+      "layer": "macOS / effective process sandbox",
+      "mechanism": "Write denied before any derived output changed",
+      "observed_failure": "EPERM; zero derived bytes; matrix not invoked",
+      "preflight_rule": "Independently prove exact write destination admission before spending one-shot execution; do not infer broader write access from read access",
+      "root_cause_status": "ESTABLISHED_DENIAL; HOST_ORIGIN_UNPROVEN",
+      "trigger": "Direct Node/fs derived writer in first-environment reseal",
+      "uncertainty": "EPERM alone does not attribute the denial to SIP or Codex.",
+      "verification": "No effects; not a successful attempt"
+    },
+    {
+      "correction": "Exact hw.pagesize_compat read grant in approved diagnostic profile",
+      "evidence_source": "AiFinder-C06-Pagesize-Causal-Diagnostic-V2-20260920T030918Z/CCR-REPORT.md §Findings",
+      "failure_family": "Node allocator startup / pagesize",
+      "id": "AF-002",
+      "layer": "selected macOS sandbox profile",
+      "mechanism": "Specific profile denied hw.pagesize_compat sysctl; getconf PAGESIZE denied",
+      "observed_failure": "ABAB: baseline SIGABRT; exact intervention exit 0; withdrawal SIGABRT; reintroduction exit 0",
+      "preflight_rule": "Check required startup sysctl grants using pinned runtime/profile; only adopt exact, separately authorized grants for matching execution",
+      "root_cause_status": "CAUSAL_ESTABLISHED_CASE_SPECIFIC",
+      "trigger": "Node empty-script baseline with low_level_alloc.cc:437 abort",
+      "uncertainty": "Internal allocator operands not inspected; do not generalize the grant.",
+      "verification": "getconf 16384; two clean Node interventions; not a project-qualification run"
+    },
+    {
+      "correction": "Scoped five-rule profile under specific V6 authority, not global sandbox relaxation",
+      "evidence_source": "AiFinder-C06-V6-Direct-Node-20260920T145712238865Z/CCR-REPORT.md §Outcome/Actual observations",
+      "failure_family": "Node GetOSInformation startup / C06",
+      "id": "AF-003",
+      "layer": "selected macOS sandbox profile",
+      "mechanism": "Five required selectors absent under baseline: hw.machine; kern.hostname; kern.osrelease; kern.ostype; kern.version",
+      "observed_failure": "GetOSInformation abort under baseline and each leave-one-out; restored with five-rule set",
+      "preflight_rule": "For an approved identical Node launcher, compare exact runtime/profile requirements before launch; never copy five grants into arbitrary workloads",
+      "root_cause_status": "CAUSAL_ESTABLISHED_AND_C06_PASSED",
+      "trigger": "Direct node:os import under the exact C06 V6 profile",
+      "uncertainty": "Only C06 qualified in this V6 phase; other 28 rows NOT_RUN.",
+      "verification": "ABAB; five necessity tests; seven-case containment canary; C06 24/24 assertions PASS"
+    },
+    {
+      "correction": "Independently admit actual helper identity and full import/package/JSON closure; use current exact hashes",
+      "evidence_source": "AiFinder-C07-V1-Contract-Compilation-20260920T152959819966Z/CCR-REPORT.md; AiFinder-C07-V2-Contract-Completion-20260920T154352614509Z/CCR-REPORT.md; AiFinder-C07-V5-Execution-20260921T002942199931Z/CCR-REPORT.md",
+      "failure_family": "C07 helper/dependency closure",
+      "id": "AF-004",
+      "layer": "static source contract / read admission",
+      "mechanism": "Selected source reads/imports were outside reviewed input set",
+      "observed_failure": "C07 V1/V2 BLOCKED_NOT_RUN; later V5 C07 PASS",
+      "preflight_rule": "Extract real imports and data reads before deriving an exact read profile or test launcher",
+      "root_cause_status": "RESOLVED_FOR_LATER_C07_V5",
+      "trigger": "V1 helper identity mismatch and V2 additional imported dependency",
+      "uncertainty": "V5 success does not authorize replay or all future dependencies.",
+      "verification": "V5 C07 launched once, exited 0; qualification proposed 2/29 subject to audit"
+    },
+    {
+      "correction": "Parser recognizes exact producer enum grammar; tests exercise real producer and downstream consumers",
+      "evidence_source": "AiFinder-C08-Consolidated-Repair-Qualification-V2-20260923T232650597805Z/CCR-REPORT.md §RC01",
+      "failure_family": "C08 terminal-parser/producer mismatch",
+      "id": "AF-005",
+      "layer": "test contract / assistant-authored script",
+      "mechanism": "Unchanged producer emits PRE_RUNTIME/POST_RUNTIME enums; tests and parser shared wrong synthetic assumption",
+      "observed_failure": "C08 original parser rejected successful child frame; qualification not accepted",
+      "preflight_rule": "Derive output grammar from producer, not invented fixtures; RED/GREEN positive and negative test cases before one-shot",
+      "root_cause_status": "ESTABLISHED_AND_VERIFIED_IN_FRESH_C08",
+      "trigger": "Terminal parser expected numeric governance values",
+      "uncertainty": "Historical failed C08 evidence remains failed; new phase used fresh authority.",
+      "verification": "Focused 36/36; JS 184/184; Python 73/73; fresh C08 PASS"
+    },
+    {
+      "correction": "Private capture, fsync, independent re-read/hash/byte identity before decoding/framing/parsing; preserve failure stage",
+      "evidence_source": "AiFinder-C08-Consolidated-Repair-Qualification-V2-20260923T232650597805Z/CCR-REPORT.md §RC02",
+      "failure_family": "C08 stdout capture loss",
+      "id": "AF-006",
+      "layer": "test harness / evidence retention",
+      "mechanism": "Controller parsed memory before durable write, then cleared raw streams",
+      "observed_failure": "Previous 48,554-byte stdout unrecoverable after parser rejection",
+      "preflight_rule": "Never clear process output before bounded durable independent capture; explicit privacy redaction and size ceilings",
+      "root_cause_status": "ESTABLISHED_AND_VERIFIED_IN_FRESH_C08",
+      "trigger": "First C08 parser failed after process output arrived",
+      "uncertainty": "Fresh bytes are not reconstructed historical lost bytes.",
+      "verification": "11/11 helper and integration; fresh 48,554-byte output retained and parsed"
+    },
+    {
+      "correction": "Update exact affected current hashes; inspect nested sha256/algorithm/excluded-self fields; regenerate bindings in order",
+      "evidence_source": "AiFinder-C08-Consolidated-Repair-Qualification-V2-20260923T232650597805Z/CCR-REPORT.md §RC04/RC05",
+      "failure_family": "C08 stale bindings / shape mismatch",
+      "id": "AF-007",
+      "layer": "script preflight / identity validation",
+      "mechanism": "Preflight compared wrong types/hashes after source change",
+      "observed_failure": "Static RED 4/6 and SURFACE_DIGEST rejection before native run",
+      "preflight_rule": "On input/schema change, validate actual JSON types and rebind dependent pins before native authorization",
+      "root_cause_status": "ESTABLISHED_AND_VERIFIED",
+      "trigger": "Binding still pinned old parser bytes; checklist treated structured manifest digest as string",
+      "uncertainty": "Errors in assistant/task-local scripts, not evidence of sandbox refusal.",
+      "verification": "JS 184/184, nine aggregates; checklist passed; later C08 PASS"
+    },
+    {
+      "correction": "Specifically bind required approved setting at actual direct and bound Git environment boundaries",
+      "evidence_source": "AiFinder-C18-Closure-20260926T205748Z/CCR-REPORT.md §What failed, why, and evidence; AiFinder-C18-Trace2-Continuation-20260926T221841414489Z/CCR-REPORT.md",
+      "failure_family": "C18 Trace2 environment propagation",
+      "id": "AF-008",
+      "layer": "process environment / tool chain",
+      "mechanism": "Direct/Node/bound Git launchers constructed replacement env maps, dropping parent variable",
+      "observed_failure": "Trace2 required at final exec was absent; C18 initial qualification blocked",
+      "preflight_rule": "Inspect final exec environment and intermediate replacement maps; parent-only env injection is insufficient",
+      "root_cause_status": "ESTABLISHED_CAUSE_OF_DIAGNOSTIC_BLOCK",
+      "trigger": "Parent attempted Trace2 activation for Git descendants",
+      "uncertainty": "Do not expand environment/trace scope outside expressly approved bounds.",
+      "verification": "Initial static eight checks; later diagnostic/foreground phases reached native Trace2 execution"
+    },
+    {
+      "correction": "Exact approved maintenance.autoDetach=false at two existing Git boundaries",
+      "evidence_source": "AiFinder-C18-Initialization-20260927T055504893620Z/CCR-REPORT.md; AiFinder-C18-Foreground-20260927T090607574957Z/CCR-REPORT.md",
+      "failure_family": "C18 detached Git maintenance children",
+      "id": "AF-009",
+      "layer": "process lifecycle / bounded accounting",
+      "mechanism": "Detached workers escaped complete selected lifecycle accounting",
+      "observed_failure": "C18 initialization suite passed terminal but full <=768 image bound unknown; qualification blocked",
+      "preflight_rule": "Preflight implicit subprocesses and detached maintenance; require complete source-derived descendant bound before qualification",
+      "root_cause_status": "ESTABLISHED_AND_FRESHLY_VERIFIED",
+      "trigger": "Git commit automatically spawned maintenance with --detach",
+      "uncertainty": "One earlier nonconforming capability launch remains material procedural failure.",
+      "verification": "Fresh suite with seven foreground --no-detach children; 356 process-image bound; capability2 and qualification PASS, pending independent seal/audit"
+    },
+    {
+      "correction": "Replace 17 read literals and 4 metadata projections with exact admitted originals",
+      "evidence_source": "AiFinder-C18-Foreground-20260927T090607574957Z/CCR-REPORT.md §Material failures",
+      "failure_family": "C18 mirrored path instead of admitted source",
+      "id": "AF-010",
+      "layer": "sandbox file-read admission / script design",
+      "mechanism": "17 file-read literals pointed at mirrors instead of 17 original admitted source files",
+      "observed_failure": "MODULE_NOT_FOUND; exit 1 before source tests loaded; launch spent",
+      "preflight_rule": "Prove effective readable source paths, not just source hash or mocked sequence; no launch before independent read closure",
+      "root_cause_status": "ESTABLISHED_AND_FRESHLY_VERIFIED",
+      "trigger": "First C18 capability used diagnostic mirror paths",
+      "uncertainty": "Do not treat the first spent and premature launch as compliant.",
+      "verification": "6 negative mutants; 77 synthetic checks; successful fresh capability2 and qualification"
+    },
+    {
+      "correction": "Use one continuous controller instance/PID with in-memory timestamps, recheck immediately before fork",
+      "evidence_source": "AiFinder-C19-Execution-20260927T153355926321Z/CCR-REPORT.md; AiFinder-C19-CommonClock-20260927T170502020579Z/CCR-REPORT.md §Root cause",
+      "failure_family": "C19 cross-process pressure freshness",
+      "id": "AF-011",
+      "layer": "controller timing / script defect",
+      "mechanism": "Comparable monotonic origin not established for authorization decision",
+      "observed_failure": "Freshness gate BLOCKED without C19 start; later receipt shows rejected comparisons",
+      "preflight_rule": "Bind all time comparisons to demonstrated same clock origin and instance; do not infer macOS clocks universally process-local",
+      "root_cause_status": "ESTABLISHED_AND_VERIFIED_IN_FRESH_C19",
+      "trigger": "Timestamp from Python process A was compared in process B",
+      "uncertainty": "Latest phase still conditional on separate seal and ChatGPT credit audit.",
+      "verification": "Two RED cases, 38 actual-function checks, nine lifecycle tests, fresh capability+qualification PASS"
+    },
+    {
+      "correction": "Require new qualifying capability first and stop on failed/spent/incomplete gates",
+      "evidence_source": "AiFinder-C20-Recovery-20260926T114211812197Z/CCR-REPORT.md §Findings",
+      "failure_family": "C20 prerequisite sequence",
+      "id": "AF-012",
+      "layer": "governance/controller ordering",
+      "mechanism": "Conditional prerequisite was missing after terminal R6",
+      "observed_failure": "Actual-function RED proved qualification-only path",
+      "preflight_rule": "Enforce phase prerequisites and one-shot counters mechanically; a PASS on old capability cannot supply new authority",
+      "root_cause_status": "ESTABLISHED_AND_VERIFIED_IN_FRESH_C20",
+      "trigger": "Old controller could execute qualification without a fresh capability",
+      "uncertainty": "C20 credit is proposed pending exact independent audit/seal.",
+      "verification": "Nine tests + 133 mandatory controls; C20 capability and qualification PASS"
+    },
+    {
+      "correction": "Approved exact profile/read prerequisites and new authority; do not claim one line is proven historic cause",
+      "evidence_source": "AiFinder-Qualification-Group-C5-R6-20260926T073826014873Z/CCR-REPORT.md; AiFinder-C20-Recovery-20260926T114211812197Z/CCR-REPORT.md §Findings",
+      "failure_family": "C20 historical EPERM",
+      "id": "AF-013",
+      "layer": "selected sandbox / unresolved historical site",
+      "mechanism": "Exact denied syscall/path was masked, so not reconstructible from retained evidence",
+      "observed_failure": "R6 qualification FAIL; later fresh conforming capability+qualification PASS",
+      "preflight_rule": "Compare selected profile/source/dependencies to current contract; never label the old site solved by guessing",
+      "root_cause_status": "CURRENT_FRESH_PASS; HISTORIC_SYSCALL_UNRESOLVED",
+      "trigger": "R6 C20 qualification returned EPERM",
+      "uncertainty": "Do not equate later PASS with causal proof of old denial.",
+      "verification": "133 controls; fresh native pair exit 0, but old EPERM not reproduced"
+    },
+    {
+      "correction": "Only approved exact executable/profile control in later fresh phased repair",
+      "evidence_source": "AiFinder-Qualification-Group-C5-R6-20260926T073826014873Z/CCR-REPORT.md §Outcome; AiFinder-C19-CommonClock-20260927T170502020579Z/CCR-REPORT.md",
+      "failure_family": "C19 historical executable-access EPERM",
+      "id": "AF-014",
+      "layer": "system executable access / selected sandbox",
+      "mechanism": "Selected sandbox process returned EPERM for exact executable check",
+      "observed_failure": "C19 R6 qualification FAIL; later new phases progressed and C19 passed",
+      "preflight_rule": "Before launcher build, verify exact required binary, X_OK admission and final effective profile, not inferred from path existence",
+      "root_cause_status": "ESTABLISHED_DENIED_OPERATION; HOST_REASON_UNPROVEN",
+      "trigger": "R6 C19 source tried access(/usr/bin/git,X_OK)",
+      "uncertainty": "Denial reason within host/macOS remains unproved and should not be globalized.",
+      "verification": "R6 reproduced selected denial; later fresh C19 capability+qualification PASS"
+    },
+    {
+      "correction": "Correct plan and separately authorized exact runtime identity; no unapproved substitute path",
+      "evidence_source": "AiFinder-Qualification-Group-C5-R1-20260925T131449685403Z/CCR-REPORT.md §Outcome",
+      "failure_family": "Missing pinned xcrun path",
+      "id": "AF-015",
+      "layer": "filesystem executable identity",
+      "mechanism": "Required absolute executable path was absent (ENOENT)",
+      "observed_failure": "R1 STOP before C18/C19/C20 starts",
+      "preflight_rule": "Check actual pinned executable identities/locations before creating command; do not hardcode absent CLT xcrun path",
+      "root_cause_status": "ESTABLISHED_MISSING_PATH",
+      "trigger": "R1 required /Library/Developer/CommandLineTools/usr/bin/xcrun",
+      "uncertainty": "The absence does not prove cause of host installation state.",
+      "verification": "lstat and descriptor observation both ENOENT; no replacement run"
+    },
+    {
+      "correction": "Use exact pinned link count for named runtime only; compare stated stable fields, not incidental atime; normalize mode/nlink representation",
+      "evidence_source": "AiFinder-Qualification-Group-C5-R1-20260925T131449685403Z/CCR-REPORT.md §Failures; AiFinder-C20-Recovery-20260926T114211812197Z/CCR-REPORT.md §Findings",
+      "failure_family": "Executable hardlink count / atime reader assumptions",
+      "id": "AF-016",
+      "layer": "assistant-generated file identity checker",
+      "mechanism": "Runtime executable legitimately had multiple links; atime can change from reads",
+      "observed_failure": "False admission errors before work; reviewer later had unspecified stat difference",
+      "preflight_rule": "Separate source-file policy from system executable identity; never silently weaken checks for arbitrary files",
+      "root_cause_status": "ESTABLISHED_NLINK_DEFECT; HISTORIC_ATIME_DIFFERENCE_UNRECORDED",
+      "trigger": "Generic source checker used nlink==1 for pinned Apple dispatcher; metadata equality included atime",
+      "uncertainty": "The first lost stat-field delta cannot be proven to be atime.",
+      "verification": "C20 current admission/metadata conversion tests and fresh workload PASS"
+    },
+    {
+      "correction": "Generate launcher strictly from approved complete contract and preflight receipt",
+      "evidence_source": "AiFinder-Qualification-Group-C5-R2-20260925T143130973691Z/CCR-REPORT.md §Result",
+      "failure_family": "R2 unsafe launcher contract",
+      "id": "AF-017",
+      "layer": "execution transport / script authoring",
+      "mechanism": "Actual invocation failed mandatory approved launcher contract",
+      "observed_failure": "R2 FAILED before native/runtime workload; not evidence Python/Git cannot run",
+      "preflight_rule": "Before execution, statically verify shell/TTY/isolation flags, binary identity, independent prelaunch and output limits",
+      "root_cause_status": "ESTABLISHED_CONTRACT_VIOLATION",
+      "trigger": "C5 R2 reader launched with /bin/zsh + tty + missing isolation/prelaunch receipts",
+      "uncertainty": "No authority to reroute or weaken launcher requirements.",
+      "verification": "Report preserved failed invocation; no native workload started"
+    },
+    {
+      "correction": "Recursive transport-layer classification with guarded accessors",
+      "evidence_source": "AiFinder-CF2-Response-Handling-Review-20260905T222800Z/CCR-REPORT.md:50-62",
+      "failure_family": "MCP envelope classifier",
+      "id": "AF-018",
+      "layer": "tool protocol / synthetic parser",
+      "mechanism": "CF1 unwrapping collapsed three classes to one",
+      "observed_failure": "Expected three diagnostics, observed one",
+      "preflight_rule": "Discriminate response shapes at each envelope layer before treating tool result as failure/root cause",
+      "root_cause_status": "ESTABLISHED_AND_LOCALLY_CORRECTED",
+      "trigger": "Three synthetic protocol envelope forms received",
+      "uncertainty": "Provider compatibility outside synthetic tests unverified.",
+      "verification": "33 synthetic checks passed"
+    },
+    {
+      "correction": "Measured fit-for-purpose budget and distinguish aggregate vs component",
+      "evidence_source": "AiFinder-Activation-Bridge-Compatibility-Closure-20260816-120323/AiFinder-Activation-Bridge-Compatibility-Closure-PASSED-CCR.md:237",
+      "failure_family": "90-second aggregate timeout",
+      "id": "AF-019",
+      "layer": "resource/time budget",
+      "mechanism": "Aggregate budget expired although isolated work later completed",
+      "observed_failure": "Aggregate timed out; isolated run took 83,722 ms",
+      "preflight_rule": "Use measured wall-time upper bound and explicit capture; timeouts are not sandbox denials by default",
+      "root_cause_status": "ESTABLISHED_TRANSIENT_IN_SAMPLE",
+      "trigger": "Aggregate phase-compiler-security child",
+      "uncertainty": "One instance cannot establish global timeout setting.",
+      "verification": "Later isolated completion and aggregate PASS"
+    },
+    {
+      "correction": "Prepare exact bounded package and request James approval before protected work",
+      "evidence_source": "AiFinder-Activation-Bridge-20260816-092931/AiFinder-Activation-Bridge-BLOCKED-CCR.md:222-223",
+      "failure_family": "Authorization gate",
+      "id": "AF-020",
+      "layer": "human governance not technical sandbox",
+      "mechanism": "Approval missing or action explicitly excluded",
+      "observed_failure": "NOT_RUN without observing workload",
+      "preflight_rule": "No substitute execution route when one-shot or protected authority denies action",
+      "root_cause_status": "ESTABLISHED_POLICY_BLOCK",
+      "trigger": "Requested build/check outside phase authority",
+      "uncertainty": "Never count an authority block as a technical failure.",
+      "verification": "Historical report declares NOT_RUN"
+    },
+    {
+      "correction": "New separately authorized, nondisclosing request-contract diagnosis if ever needed",
+      "evidence_source": "AiFinder-Admin-V1-Official-First-Environment-Gate-C-True-Create-Only-Runtime-Proven-No-Effect-Failure-CCR-20260830T164205Z/CCR-REPORT.md:172",
+      "failure_family": "Provider create BAD_REQUEST",
+      "id": "AF-021",
+      "layer": "external/provider request schema",
+      "mechanism": "Specific invalid field/request predicate not present in admitted evidence",
+      "observed_failure": "Rejected create with zero claimed validated result",
+      "preflight_rule": "Validate approved request schema offline before consuming one-shot provider call; no live retry without authority",
+      "root_cause_status": "UNVERIFIED_ROOT_CAUSE",
+      "trigger": "Provider create returned 4XX BAD_REQUEST",
+      "uncertainty": "No network/provider access in this review.",
+      "verification": "No correction demonstrated"
+    },
+    {
+      "correction": "Prospective nondisclosing structural discriminator; not executed",
+      "evidence_source": "AiFinder-Admin-V1-V186-Device-Schema-Blocked-CCR-20260905T203628Z/CCR-REPORT.md:27",
+      "failure_family": "Device-schema blocked category",
+      "id": "AF-022",
+      "layer": "source/response structural contract",
+      "mechanism": "Cannot localize which schema element failed",
+      "observed_failure": "Blocked category only",
+      "preflight_rule": "Require field-level safely redacted structural classification before asserting causality",
+      "root_cause_status": "UNVERIFIED_ROOT_CAUSE",
+      "trigger": "Diagnostic report omitted field/predicate discriminator",
+      "uncertainty": "Not evidence of expired credentials, server drift, or a specific invalid field.",
+      "verification": "None"
+    },
+    {
+      "correction": "Candidate/manifest alignment preflight proposed",
+      "evidence_source": "AiFinder-Admin-V1-Two-Zero-Disposition-Contract-Corrected-Reseal-CCR-20260830T082043Z/CCR-REPORT.md:17",
+      "failure_family": "Manifest candidate-test stopped",
+      "id": "AF-023",
+      "layer": "test/fixture mismatch candidate",
+      "mechanism": "Available anchor lacks discriminating test-vs-candidate proof",
+      "observed_failure": "Matrix stopped, following steps NOT_RUN",
+      "preflight_rule": "Verify expected identities and producer contract before one-shot test matrix; retain RED/failure details",
+      "root_cause_status": "UNVERIFIED_ROOT_CAUSE",
+      "trigger": "First candidate manifest test failed",
+      "uncertainty": "Do not classify it automatically as a sandbox issue.",
+      "verification": "No verified correction in anchor"
+    },
+    {
+      "correction": "Parse and validate individual JSONL records without changing captured bytes",
+      "evidence_source": "AiFinder-C18-Foreground-20260927T090607574957Z/CCR-REPORT.md §Material failures",
+      "failure_family": "JSON Lines report parse",
+      "id": "AF-024",
+      "layer": "assistant report-construction defect",
+      "mechanism": "Multiple line-delimited JSON objects not a single JSON value",
+      "observed_failure": "JSONDecodeError Extra data, before final artifact creation",
+      "preflight_rule": "Inspect file format rather than guessing from .json-like naming; syntax/shape check writer before final seal",
+      "root_cause_status": "ESTABLISHED_AND_CORRECTED_WITHOUT_NATIVE_RETRY",
+      "trigger": "C18 writer parsed events.json JSONL as one JSON document",
+      "uncertainty": "Correction confined to report writer.",
+      "verification": "Writer completed after correction; native workloads not rerun"
+    },
+    {
+      "correction": "Bound both per-record and response aggregation; emit narrow pages",
+      "evidence_source": "AiFinder-C20-Platform-Review-Only-20260926T090246Z/CCR-REPORT.md §Review deviations",
+      "failure_family": "Oversized preview/report output",
+      "id": "AF-025",
+      "layer": "assistant tool output guard",
+      "mechanism": "Missing downstream output guard allowed item larger than 4,096-byte limit",
+      "observed_failure": "C20 platform review RESULT=FAILED despite other conclusions",
+      "preflight_rule": "Preflight max output size, byte encoding and redaction; never use unguarded full source previews",
+      "root_cause_status": "ESTABLISHED_TOOLING_FAILURE",
+      "trigger": "C20 review reprinted 13,228-byte handoff after bounded intake",
+      "uncertainty": "Later repair does not retroactively change FAILED phase.",
+      "verification": "Subsequent narrower reads permitted; previous failure retained"
+    }
+  ],
+  "mandatory_preflight": [
+    {
+      "rule": "Bind one phase, exact owner approval, immutable baseline, admitted reads/writes, forbidden paths, attempts and expiry. Stop before protected access, Git staging/commit/push, DB/network/deployment without specific James approval.",
+      "step": "01 Authority/scope"
+    },
+    {
+      "rule": "Separate Codex selected mode, per-run sandbox-exec profile, macOS/TCC/SIP/system permissions, Desktop Commander access, provider/host policy, and AiFinder owner authority. Do not infer effective rights from Codex default danger-full-access.",
+      "step": "02 Effective sandbox layers"
+    },
+    {
+      "rule": "Match planned operations against registry by trigger + mechanism + exact profile; prioritize AF-001/002/003/010/014/015/017. Mark unknowns UNKNOWN, not allowed.",
+      "step": "03 Known-failure lookup"
+    },
+    {
+      "rule": "Discover actual imports, input files, native child executable paths, environment replacement maps, types, expected sizes/hashes, session/cwd dependencies. Confirm only explicitly admitted data; no credential reads.",
+      "step": "04 Full source closure"
+    },
+    {
+      "rule": "Check exact pinned path exists and executable/readable under actual launcher where authorized; keep source-file link rules separate from pinned system runtimes; compare stable metadata and full hashes.",
+      "step": "05 File and executable identity"
+    },
+    {
+      "rule": "Derive exact output grammar and manifest/schema shape from current producer; use bounded synthetic RED/GREEN including malformed and negative cases; verify expected enum vs numeric types.",
+      "step": "06 Producer–consumer contracts"
+    },
+    {
+      "rule": "Include transitive Git/Node/Python/process children and implicit maintenance, exact argv/env/cwd/FD, sysctl access, resource budget, no-detach bound, pressure and monotonic single-instance freshness.",
+      "step": "07 Process/OS bounds"
+    },
+    {
+      "rule": "Set stdout/stderr/aggregate caps, independently persist/verify output before parse/clear, redact secrets/PII, preserve failure-stage and ownership/EOF/reaping receipts.",
+      "step": "08 Capture and privacy"
+    },
+    {
+      "rule": "Run only tests that the phase authorizes; in inspection-only phases do not run tests. Validate parser syntax, imported dependencies, checksums, serialized profiles, negative mutation checks before one-shot work.",
+      "step": "09 Dry gates without spent launch"
+    },
+    {
+      "rule": "PASS only on verified gates. BLOCKED/UNKNOWN -> no workload or substitute path; provide smallest bounded diagnosis and obtain new approval if needed. Do not reuse spent calls.",
+      "step": "10 Decision checkpoint"
+    },
+    {
+      "rule": "Codex can diagnose/test/fix/retest in scope; preserve historical failed attempts, no bypass of platform refusals. Keep all protected operations excluded unless expressly authorized.",
+      "step": "11 Execution within authority"
+    },
+    {
+      "rule": "Report trigger -> mechanism -> failure -> correction -> verified result or blocked boundary, exact source, hashes/bytes, attempts, Git/project effects, scope, remaining uncertainty; audit before accepting a new permanent rule.",
+      "step": "12 Final CCR and registry update"
+    }
+  ],
+  "schema": "aifinder-failure-restriction-registry-v2"
+}
