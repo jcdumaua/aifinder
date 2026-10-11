@@ -1,0 +1,3 @@
+# Codex instructions in this directory
+
+Read `START_HERE.md`. The complete v2 registry and checklist are mirrored in this draft branch at `failure-registry.json`, `failure-registry.md`, `preflight-rules.md` and also stored in ChatGPT Library `/AiFinder/Failure-Prevention/`. Use the local files on this branch; on other branches verify availability before making claims. Do not claim to have read or verified unavailable files. Before any governed AiFinder script, check known constraints and permissions; stop if required inputs are missing. Never infer execution authorization from a registry PASS or from this documentation. Historical CCRs and spent attempts remain immutable. Update verified findings only after evidence-backed review.
